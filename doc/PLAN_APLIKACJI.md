@@ -36,7 +36,7 @@ Klasyczne fiszki = ręczna, sucha robota. Tu: user podaje impuls → AI buduje k
 | Język UI | **PL, EN + kilka najczęstszych** (propozycja startowa poniżej) |
 | Platforma MVP | Android |
 
-**Propozycja języków UI (v0.1):** PL, EN, ES, DE, FR, IT, PT, UK (ukraiński).  
+**Języki UI (v0.1):** PL, EN, ES, DE, FR, IT, PT, UK (ukraiński).  
 Łatwo dodać kolejne później (pliki tłumaczeń).
 
 ---
@@ -86,7 +86,7 @@ Karty zgodnie z ustawieniami usera, w kolejności SRS:
 |----------|---------|
 | Default | **20 nowych / dzień** (jak Anki — bezpieczny start) |
 | User może zmienić | tak (np. 5 / 10 / 20 / 50 / bez limitu) |
-| Powtórki due | **bez limitu** (zaległości trzeba odrobić; ewentualny soft-cap później) |
+| Powtórki due | **bez limitu** |
 
 #### Oceny
 
@@ -109,14 +109,21 @@ Karty zgodnie z ustawieniami usera, w kolejności SRS:
 
 #### Tolerancja wpisywania — DECYZJA
 
-Ustawienie usera:
+Dwa osobne mechanizmy:
+
+**A) Literówki** — ustawienie usera:
 
 | Tryb | Zachowanie |
 |------|------------|
-| **Ściśle** | tylko dokładna odpowiedź (modulo normalizacja spacji/case — do ustalenia) |
+| **Ściśle** | dokładna odpowiedź; i tak ignorujemy wielkość liter i zbędne spacje |
 | **Toleruj błędy i poprawiaj** | drobne literówki / diakrytyki → uznaj + modal: *wpisałeś X, powinno być Y* |
 
-Modal korekty też można wyłączyć osobno (jeśli zostawimy tę opcję).
+**B) Synonimy znaczenia** — zawsze (niezależnie od A):
+
+Przy trybie „Wpisz” (np. ES→PL) zaliczamy odpowiedź, jeśli zgadza się z **kanonicznym gloss albo synonimem zapisanym na karcie**.  
+Nie odpalamy AI do oceny „czy sensownie” — tylko to, co jest na karcie.
+
+Modal korekty literówek można wyłączyć osobno.
 
 #### Feedback przy złym wyborze (8 opcji)
 
@@ -310,24 +317,37 @@ Nie tylko „masz 12 kart do powtórki”, tylko konkretny materiał.
 
 ---
 
-## 17. Otwarte pytania (odpisz)
+## 17. Decyzje domknięte (wcześniej otwarte)
 
-1. **Synonimy przy wpisywaniu:** jeśli kanoniczne gloss = „pusty”, a user wpisze „próżny” — uznajemy?  
-   - A) tylko formy z karty  
-   - B) też synonimy znaczenia z karty  
-   - C) AI/fuzzy sens (droższe)  
-   **Propozycja: B**
+| # | Temat | Decyzja |
+|---|-------|--------|
+| 1 | Akceptacja przy wpisywaniu | **B — kanoniczne gloss + synonimy z karty** (nie pełne AI fuzzy) |
+| 2 | Łączenie uczeń↔nauczyciel | **kod klasy + link** |
+| 3 | Języki UI start | **PL, EN, ES, DE, FR, IT, PT, UK** |
+| 4 | Limit nowych | **default 20**, user zmienia |
+| 5 | Limit powtórek due | **bez limitu** |
+| 6 | Tryb ścisły — normalizacja | **tak:** ignoruj wielkość liter i zbędne spacje |
 
-2. **Łączenie ucznia z nauczycielem:** kod klasy / link zaproszenia / email?  
-   **Propozycja: kod klasy + link** (najprostsze w szkole)
+### Wyjaśnienie pkt 1 (akceptacja wpisanej odpowiedzi)
 
-3. **Języki UI — lista startowa:** PL, EN, ES, DE, FR, IT, PT, UK — OK, czy wyciąć/dodać coś?
+Chodzi tylko o tryb **„Wpisz”**, gdy apka pokazuje np. hiszpańskie *vacío* i pyta o znaczenie po polsku.
 
-4. **Limit 20 nowych/dzień jako default** — OK?
+Na karcie AI zapisuje np.:
 
-5. **Powtórki due bez limitu** — OK, czy chcesz też soft-limit (np. „skontynuuj później”)?
+- główne znaczenie (kanoniczne): **pusty**
+- synonimy tego znaczenia na karcie: **próżny**, **niepełny** (przykład)
 
-6. **Normalizacja w trybie ścisłym:** ignorować wielkość liter i zbędne spacje — tak?
+User wpisuje odpowiedź. Co uznajemy za dobrą?
+
+| Opcja | Zachowanie | Przykład |
+|-------|------------|----------|
+| A | tylko dokładne kanoniczne gloss | zalicza tylko „pusty” |
+| **B (wybrane)** | kanoniczne **albo** synonim **z tej karty** | zalicza „pusty” i „próżny”, jeśli oba są na karcie |
+| C | AI ocenia sens swobodnie | droższe, wolniejsze, mniej przewidywalne |
+
+**Wybrane B:** uczciwie wobec tego, czego uczy karta, bez odpalania AI przy każdej odpowiedzi.
+
+Uwaga: to jest osobne od ustawienia **ściśle / toleruj literówki** (to dotyczy literówek typu `pustyy` / brak `ó`). Synonimy = inne poprawne słowo-znaczenie z karty.
 
 ---
 
@@ -341,18 +361,22 @@ Nie tylko „masz 12 kart do powtórki”, tylko konkretny materiał.
 | Enrichment | po ＋; 2 przykłady/znaczenie |
 | Ćwicz kolejka | zaległe/due dziś → potem nowe |
 | Limit nowych | default **20**, user zmienia |
+| Powtórki due | bez limitu |
 | Oceny | trudne / łatwe / znam dobrze |
 | Odpowiedzi v0.1 | choice 8 + wpisz; powiedz = v0.2 |
-| Tolerancja | ustawienie: ściśle \| toleruj i poprawiaj |
+| Tolerancja literówek | ustawienie: ściśle \| toleruj i poprawiaj |
+| Akceptacja znaczeń (wpisz) | kanoniczne + synonimy **z karty** |
+| Normalizacja ścisła | case + spacje ignorowane |
 | Auth | email + Google |
 | Offline | nauka tak, AI add nie |
-| UI lang | PL, EN + najczęstsze |
+| UI lang | PL, EN, ES, DE, FR, IT, PT, UK |
 | Nauczyciel | osobny panel web; listy jako pakiety |
 | Lista u ucznia | all / wybrane → main, albo osobny SRS pakiet |
+| Join klasy | kod + link |
 | Progress dla nauczyciela | widać trudne/łatwe/znam dobrze |
 | Przypomnienia smart | przyszły release |
 | Featurę poza core | dalsze wersje / release’e |
 
 ---
 
-*Ostatnia aktualizacja: kolejka due→new, tolerancja user-set, teacher lists/pakiety, limit 20, smart reminders backlog.*
+*Ostatnia aktualizacja: domknięcie Q&A — wszystkie propozycje zaakceptowane; wyjaśnienie akceptacji synonimów przy wpisywaniu.*
