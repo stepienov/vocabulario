@@ -120,14 +120,29 @@ Dwa osobne mechanizmy:
 
 **B) Synonimy znaczenia** — zawsze (niezależnie od A):
 
-Przy trybie „Wpisz” (np. ES→PL) zaliczamy odpowiedź, jeśli zgadza się z **kanonicznym gloss albo synonimem zapisanym na karcie**.  
-Nie odpalamy AI do oceny „czy sensownie” — tylko to, co jest na karcie.
+Przy trybie „Wpisz” (np. ES→PL) zaliczamy odpowiedź, jeśli zgadza się z **kanonicznym gloss albo synonimem zapisanym na karcie**.
+
+Przykład: *vacío* ma na karcie „pusty” i „próżny” → **oba są poprawne**.  
+Jeśli znaczenie faktycznie obejmuje dany synonim, ma trafić na kartę przy enrichment i być akceptowane przy wpisywaniu.
+
+Nie odpalamy AI do oceny „czy sensownie” w trakcie odpowiedzi — tylko to, co jest na karcie (szybko i przewidywalnie).
 
 Modal korekty literówek można wyłączyć osobno.
 
 #### Feedback przy złym wyborze (8 opcji)
 
 Modal: znaczenie wybranego (błędnego) słowa; jeśli nie ma w nauce → ♥ / ＋.
+
+#### Ćwiczenia conjugación (czasowniki) — BACKLOG / późniejszy release
+
+Dla **czasowników** nie tylko fiszki do zapamiętania znaczenia, ale też **dodatkowe zestawy ćwiczeń odmiany**:
+
+- wpisywanie czasownika w odpowiedniej formie w zdaniu,
+- / albo odmienianie w zadanym czasie (zgodnie z czasami wybranymi globalnie / poleconymi przez nauczyciela),
+- nauczyciel może **polecać** takie zestawy uczniowi (osobny pakiet ćwiczeń).
+
+Szczegóły UX i SRS dla conjugación — do doprecyzowania w osobnej sekcji przy release’ie.  
+Na teraz: **jest w planie jako feature**, osobno od zwykłego zapamiętywania słówek.
 
 ---
 
@@ -246,6 +261,7 @@ Home = 2 CTA. Lekka lista wyników. Bogata karta po ＋. Play przy L2. Krótkie 
 |---------|----------------|
 | Tryb **powiedz** | v0.2 |
 | Lepszy cache AI, szlify UX | v0.2 |
+| **Ćwiczenia conjugación** (zdania / odmiana w czasie; polecane przez nauczyciela) | późniejszy release (po core; szczegóły później) |
 | **Panel nauczyciela** (osobny, web) + listy/pakiety | v0.3 |
 | **Smart przypomnienia** (push z treścią: trudne / do powtórki słowo już w notyfikacji) | późniejszy release |
 | Edycja karty | później |
@@ -261,6 +277,7 @@ Home = 2 CTA. Lekka lista wyników. Bogata karta po ＋. Play przy L2. Krótkie 
 
 - **Osobny panel dodatkowy (web)** — nie wciśnięty w ten sam prosty UI ucznia.
 - Nauczyciel tworzy listy słówek, przypisuje uczniom/grupom.
+- Uczeń dołącza przez **kod klasy + link**.
 - Widzi per uczeń / per słowo oceny: **trudne / łatwe / znam dobrze**.
 
 ### Jak uczeń korzysta z listy
@@ -272,6 +289,11 @@ Lista to osobny byt. User może:
 3. **Uczyć się listy osobno** — jak **niezależny pakiet z własnym SRS** (nie miesza się z główną kolejką).
 
 To samo podejście może działać dla list własnych / importowanych.
+
+### Ćwiczenia conjugación a nauczyciel
+
+Nauczyciel może polecać nie tylko listy słówek, ale też **zestawy ćwiczeń odmiany** (dla czasowników z listy / pakietu): uzupełnianie formy w zdaniu, trening wybranego czasu itd.  
+Szczegóły mechaniki — przy projektowaniu release’u conjugación.
 
 ---
 
@@ -292,7 +314,7 @@ Nie tylko „masz 12 kart do powtórki”, tylko konkretny materiał.
 1. **v0.1 Core** — auth, języki, AI add, Ćwicz (choice+type), SRS kolejka due→new, offline, TTS, limit  
 2. **v0.2** — powiedz, tolerancja/UX, cache  
 3. **v0.3 Teacher** — panel web, listy, przypisania, podgląd trudne/łatwe/znam dobrze  
-4. **v0.4+** — smart przypomnienia, edycja kart, cloud TTS, iOS/web…
+4. **v0.4+** — ćwiczenia conjugación (zdania/odmiana; polecenia nauczyciela), smart przypomnienia, edycja kart, cloud TTS, iOS/web…
 
 ---
 
@@ -365,7 +387,7 @@ Uwaga: to jest osobne od ustawienia **ściśle / toleruj literówki** (to dotycz
 | Oceny | trudne / łatwe / znam dobrze |
 | Odpowiedzi v0.1 | choice 8 + wpisz; powiedz = v0.2 |
 | Tolerancja literówek | ustawienie: ściśle \| toleruj i poprawiaj |
-| Akceptacja znaczeń (wpisz) | kanoniczne + synonimy **z karty** |
+| Akceptacja znaczeń (wpisz) | kanoniczne + synonimy **z karty** (np. pusty/próżny) |
 | Normalizacja ścisła | case + spacje ignorowane |
 | Auth | email + Google |
 | Offline | nauka tak, AI add nie |
@@ -374,9 +396,10 @@ Uwaga: to jest osobne od ustawienia **ściśle / toleruj literówki** (to dotycz
 | Lista u ucznia | all / wybrane → main, albo osobny SRS pakiet |
 | Join klasy | kod + link |
 | Progress dla nauczyciela | widać trudne/łatwe/znam dobrze |
+| Conjugación drills | późniejszy release — dodatkowe zestawy dla czasowników (zdania/odmiana; polecane przez nauczyciela) |
 | Przypomnienia smart | przyszły release |
 | Featurę poza core | dalsze wersje / release’e |
 
 ---
 
-*Ostatnia aktualizacja: domknięcie Q&A — wszystkie propozycje zaakceptowane; wyjaśnienie akceptacji synonimów przy wpisywaniu.*
+*Ostatnia aktualizacja: synonimy OK przy wpisywaniu; dopisany backlog ćwiczeń conjugación dla czasowników.*
