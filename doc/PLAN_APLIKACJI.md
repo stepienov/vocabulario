@@ -1,19 +1,22 @@
-# Vocabulario — plan aplikacji do nauki słówek
+# Vocabulario (repo) — plan aplikacji do nauki słówek
 
-Dokument roboczy do wspólnego planowania. Będziemy go uzupełniać i doprecyzowywać.
+Dokument roboczy do wspólnego planowania. **Nazwa repo:** `vocabulario`. **Nazwa produktu/aplikacji:** do wymyślenia później.
 
 ---
 
 ## 1. Wizja produktu
 
-**Vocabulario** to prosta aplikacja Android do nauki języka (MVP: **polski ↔ hiszpański**), która łączy:
+Prosta aplikacja **Android** do nauki słówek, która łączy:
 
-- **błyskawiczne dodawanie słówek** (wpisz → AI przygotuje kartę w ~2 s),
-- **bogatą, ale czytelną kartę słowa** (znaczenia, synonimy, antonimy, przykłady, odmiana, użycia),
-- **uproszczony SRS** (jak Anki, ale bez ręcznego „klepania” fiszek),
-- **wymowę** (przycisk play przy hiszpańskich słowach i zdaniach).
+- **błyskawiczne dodawanie** (wpisz → AI przygotuje kartę w ~2 s),
+- **bogatą, czytelną kartę słowa** (znaczenia, synonimy, antonimy, przykłady, odmiana, użycia),
+- **SRS** (powtórki rozłożone w czasie) z kilkoma trybami odpowiedzi,
+- **wymowę** (play przy słowach i zdaniach w języku nauki),
+- później: **tryb nauczyciela** (listy słówek, eksport, śledzenie postępów ucznia).
 
-Cel UX: otworzyć → dodać lub ćwiczyć → wrócić do nauki języka. Zero mozolnego przygotowywania materiałów.
+Cel UX: otworzyć → dodać lub ćwiczyć → wrócić do nauki. Zero mozolnego przygotowywania fiszek.
+
+**Core MVP = flow nauki:** dodawanie AI + sesja SRS muszą działać razem.
 
 ---
 
@@ -25,411 +28,395 @@ Klasyczne fiszki (Anki itd.):
 - często są „suche” (słowo → tłumaczenie),
 - kontekst, odmiana i użycia trzeba dokładać samemu.
 
-Chcemy odwrotności: **user podaje impuls** („pusty”), **AI + backend budują kompletną kartę**, user tylko zatwierdza (serduszko / plus).
+Chcemy odwrotności: **user podaje impuls** („pusty”), **AI + backend budują kompletną kartę**, user tylko zatwierdza (♥ / ＋).
 
 ---
 
-## 3. Persona i założenia językowe
+## 3. Języki, konfiguracja, onboarding
 
-| Założenie | Opis |
-|-----------|------|
-| Język ojczysty (L1) | polski |
-| Język docelowy (L2) | hiszpański |
-| Kierunek | dwukierunkowe wyszukiwanie (PL→ES oraz ES→PL) |
-| Poziom | ustawiany przez usera (np. A1–C1) — wpływa na przykładowe zdania |
+| Założenie | Decyzja |
+|-----------|--------|
+| Para języków | **dowolna** — przy rejestracji user wybiera język ojczysty (L1) i język nauki (L2) |
+| Wiele języków nauki | tak — user może mieć wiele par / konfiguracji i przełączać |
+| UI aplikacji | wielojęzyczny (język interfejsu wybierany przez usera) |
+| Start aplikacji | zawsze w **ostatnio używanej konfiguracji** (ta z chwili ostatniego zamknięcia) |
+| Pierwsze uruchomienie | po rejestracji: wybór L1 + L2 (+ poziom CEFR, czasy odmiany) |
 | Platforma MVP | Android |
-| UI | wizualnie miły, maksymalnie prosty, bez przeładowania |
+| UI | wizualnie miły, maksymalnie prosty |
 
-W przyszłości: para języków konfigurowalna (L1/L2 w ustawieniach).
+Przykład użycia: PL→ES dziś, jutro PL→EN — po restarcie wraca do ostatniej pary.
 
 ---
 
 ## 4. Główne flow aplikacji
 
-### 4.1 Ekran startowy (Home)
+### 4.1 Ekran startowy (Home) — DECYZJA
 
 Dwa duże przyciski:
 
 1. **Dodaj słowo**
 2. **Ćwicz**
 
-Plus dyskretny dostęp do: ulubione, obecnie uczone, ustawienia, profil.
+Dyskretnie: ulubione, obecnie uczone, ustawienia, profil, przełącznik aktywnej pary językowej.
 
-### 4.2 Rejestracja / logowanie
+### 4.2 Rejestracja / logowanie — DECYZJA
 
-Najprostsza autoryzacja na start:
-
-- email + hasło **lub** magic link / OTP,
-- ewentualnie Google Sign-In (Android-friendly).
-
-MVP rekomendacja: **email + hasło** (JWT) — szybkie do wdrożenia, wystarczające do synchronizacji z Postgres.
+- **Email + hasło** oraz **Google Sign-In od razu** (MVP).
+- Po rejestracji: onboarding językowy (L1, L2, poziom, czasy).
 
 ### 4.3 Dodaj słowo — wyszukiwanie
 
-1. User wybiera (lub ma zapisane): **mój język** (PL) i **język nauki** (ES).
-2. Wpisuje słowo (bez konieczności ręcznego wyboru kierunku — system wykrywa / proponuje).
-3. Po zatwierdzeniu backend + agent AI zwracają wyniki.
+1. Aktywna konfiguracja: L1 + L2 (ostatnio używana / wybrana).
+2. User wpisuje słowo; system wykrywa kierunek względem aktywnej pary (L1→L2 lub L2→L1).
+3. Backend + AI zwracają **szybką listę kandydatów** (krótki gloss).
+4. **Pełny enrichment AI dopiero po ＋** (nie na liście).
 
-#### Gdy wpisano słowo **polskie** (np. „pusty”)
+#### Gdy wpisano słowo w L1 (np. PL „pusty”)
 
-- lista **1+ hiszpańskich odpowiedników** (np. *vacío*, *vacante*, *hueco*…),
-- przy każdym:
-  - **♥** — dodaj do ulubionych,
-  - **＋** — dodaj do *obecnie uczonych* (tworzy rekord nauki / kartę SRS).
+- lista 1+ odpowiedników w L2,
+- przy każdym: **♥** (ulubione) i **＋** (do obecnie uczonych + pełna karta).
 
-#### Gdy wpisano słowo **hiszpańskie** (np. „vacío”)
+#### Gdy wpisano słowo w L2 (np. ES „vacío”)
 
-- jedno (lub kilka wariantów tego samego lematu) słowo hiszpańskie,
-- poniżej: znaczenia po polsku,
-- te same przyciski **♥** / **＋**.
+- lemat L2 + znaczenia w L1,
+- te same **♥** / **＋**.
 
-### 4.4 Karta słowa (po dodaniu „＋”)
+### 4.4 Ulubione vs obecnie uczone — DECYZJA
 
-Rekord w DB zawiera m.in.:
+- **♥ Ulubione:** tylko bookmark (bez SRS), można później dodać ＋.
+- **＋ Obecnie uczone:** tworzy rekord karty + wchodzi do kolejki SRS.
+
+### 4.5 Karta słowa (po ＋)
 
 | Pole | Opis |
 |------|------|
-| Słowo ES | forma bazowa (lemat) |
-| Synonimy | lista ES |
-| Antonimy | lista ES (rzeczowniki, przymiotniki, inne — gdy ma sens) |
-| Znaczenia PL | wszystkie występujące znaczenia osobno |
-| Zdanie przykładowe | **per znaczenie**, na poziomie nauki usera |
-| Tłumaczenie zdania | PL |
-| Oboczność / warianty | formy pokrewne, regionalizmy jeśli istotne |
-| Najczęstsze użycia | charakterystyczne kolokacje / wypowiedzi |
-| Odmiana (conjugación) | czasy zaznaczone przez usera w ustawieniach |
+| Lemat L2 | forma bazowa |
 | Część mowy | verb / noun / adj / … |
-| Audio | TTS lub nagrania — play przy ES słowach i zdaniach |
+| Synonimy / antonimy | gdy ma sens (szczególnie rzeczowniki, przymiotniki) |
+| Znaczenia L1 | osobno |
+| Przykłady | **2 zdania na znaczenie**, poziom CEFR usera + tłumaczenie L1 |
+| Oboczność / warianty | gdy istotne |
+| Najczęstsze użycia | kolokacje, charakterystyczne wypowiedzi |
+| Odmiana | czasy **globalnie** z ustawień usera |
+| Audio | play przy L2 (słowa i zdania) |
 
-Idea: ucząc się **jednego** słowa, budujesz **kompleksową, ale indywidualną** kartę — kontekst, nie tylko tłumaczenie.
+**Edycja karty przez usera:** później (nie MVP).
 
-### 4.5 Nauka (Ćwicz) + SRS
+### 4.6 Nauka (Ćwicz) + SRS — DECYZJA
 
-- Do sesji trafiają słowa oznaczone **＋** (obecnie uczone).
-- Uproszczony SRS (np. SM-2 uproszczony lub wariant Anki-like):
-  - interwały: np. ponów / trudne / ok / łatwe,
-  - `next_review_at`, `ease`, `interval`, `repetitions`.
-- Tryby ćwiczeń (MVP → później):
-  1. **MVP:** ES → PL (pokazujesz słowo/zdanie ES, odsłaniasz znaczenie),
-  2. PL → ES,
-  3. dyktando / pisanie,
-  4. odsłuch (audio → znaczenie).
+#### Oceny po odpowiedzi
 
-### 4.6 Ulubione vs obecnie uczone
+Trzy poziomy (mapowane na SRS):
 
-- **Ulubione (♥):** bookmark — niekoniecznie w kolejce SRS.
-- **Obecnie uczone (＋):** aktywna kolejka powtórek.
+1. **Trudne**
+2. **Łatwe**
+3. **Znam dobrze**
 
-User może później przenieść ulubione do nauki jednym tapnięciem.
+#### Kierunek i forma odpowiedzi — wybór usera lub losowo
+
+User w ustawieniach / na starcie sesji decyduje (lub „losuj”):
+
+| Tryb | Opis |
+|------|------|
+| Wybór zamknięty | pokazuje się słowo (L1 lub L2) + **8 opcji**, z czego 1 poprawna |
+| Wpisz | user wpisuje odpowiedź |
+| Powiedz | rozpoznawanie mowy (po TTS/free path; jakość do ustalenia) |
+
+**Kierunki:** L2→L1 oraz L1→L2 (np. polskie słowo → wybrać/wpisać hiszpańskie; hiszpańskie → wpisać polskie).
+
+#### Generowanie 8 opcji (wybór zamknięty)
+
+Skład zestawu (kolejność losowa):
+
+1. **1×** poprawna odpowiedź  
+2. **3×** z katalogu *obecnie uczonych* (ta sama część mowy, o ile możliwe)  
+3. **4×** dystraktory: ta sama część mowy + podobne brzmienie / pisownia do szukanego  
+
+Cel: nie ma być „łatwizny”.
+
+#### Feedback przy błędzie
+
+- **Wybór zamknięty (złe zaznaczenie):** mały modal — co oznacza wybrane (błędne) słowo; jeśli nie ma go na liście nauki → buttony **♥** / **＋**.
+- **Wpisanie z drobną pomyłką:** tolerancja literówek / znaków specjalnych (do doprecyzowania algorytmu); akceptuj z korektą w modalu: *„wpisałeś X, powinno być Y — zwróć uwagę”*. Modal korekty można **wyłączyć w ustawieniach**.
+
+#### Co trafia do sesji „Ćwicz”? (wyjaśnienie pkt 14)
+
+SRS działa tak, że każda karta ma datę **`next_review_at`** (kiedy znów ją pokazać).
+
+| Pojęcie | Znaczenie |
+|---------|-----------|
+| **Due** | karty, których termin powtórki już nadszedł (albo nowe, jeszcze niećwiczone wg reguł) |
+| **Nowe** | dopiero dodane ＋, jeszcze bez historii powtórek |
+| **Później** | karty z `next_review_at` w przyszłości — SRS mówi „nie ruszaj dziś” |
+
+**Pytanie do Ciebie (do decyzji):** po kliknięciu **Ćwicz** pokazywać:
+
+- **A)** tylko karty *due* (klasyczny Anki — uczysz to, co „zaplanowane na teraz”), czy  
+- **B)** due + możliwość dokładać nowe od razu w tej samej sesji, czy  
+- **C)** user wybiera na starcie sesji: „powtórki” / „tylko nowe” / „miks”?
+
+**Propozycja:** **C** (elastycznie), domyślnie miks due+nowe z limitem nowych/dzień.
 
 ---
 
-## 5. Agent AI — serce „szybkiego dodawania”
+## 5. Agent AI
 
-### 5.1 Rola agenta
+### 5.1 Rola
 
-Po wpisaniu słowa agent:
+1. wykrywa język wejścia i część mowy względem aktywnej pary,
+2. szybka lista kandydatów,
+3. po ＋: enrichment (znaczenia, 2 przykłady/znaczenie, syn/ant, użycia, odmiana),
+4. structured JSON → Postgres (+ lokalny cache na urządzeniu do offline nauki).
 
-1. wykrywa język wejścia (PL/ES) i część mowy,
-2. generuje listę kandydatów (tłumaczenia / lematy),
-3. dla wybranego słowa (przy „＋” lub od razu w podglądzie) buduje **enrichment**:
-   - znaczenia, synonimy, antonimy,
-   - przykłady na poziomie CEFR usera,
-   - użycia / kolokacje,
-   - conjugación w wybranych czasach,
-4. zwraca **ustrukturyzowany JSON** (nie luźny tekst) → zapis do Postgres.
-
-### 5.2 Latencja „~2 sekundy”
-
-Żeby było „szybkie i zajebiste”:
+### 5.2 Latencja
 
 | Technika | Opis |
 |----------|------|
-| Dwuetapowość | najpierw szybka lista kandydatów (~0.5–1 s), enrichment pełny przy „＋” lub w tle |
-| Cache | popularne słowa w Redis / tabeli cache (hash: słowo+kierunek+poziom+czasy) |
-| Streaming | UI pokazuje skeleton → dopływa treść |
-| Model | mały/szybki model do listy; mocniejszy do enrichmentu (lub jeden z dobrym promptem) |
-| Prefetch TTS | audio generowane asynchronicznie po zapisie karty |
+| Dwuetapowość | lista szybka → enrichment przy ＋ |
+| Cache | popularne lookup/enrichment w DB/Redis |
+| Streaming / skeleton | UI nie „wisi” |
+| Prefetch audio | TTS async po zapisie |
 
-### 5.3 Jakość i bezpieczeństwo treści
+### 5.3 Jakość
 
-- walidacja JSON schematem,
-- filtr halucynacji: opcjonalnie cross-check ze słownikiem (np. zewnętrzne API / lokalna baza lematów),
-- user może edytować kartę (korekta AI).
+- walidacja JSON,
+- później: edycja usera, cross-check słownikowy.
 
 ---
 
-## 6. Propozycja technologii
+## 6. Offline — DECYZJA
 
-### 6.1 Rekomendowany stack (MVP → skalowanie)
+| Funkcja | Online | Offline |
+|---------|--------|--------|
+| Dodaj słowo (AI lookup/enrichment) | tak | **nie** |
+| Ćwicz na już dodanych kartach | tak | **tak** (rekord w lokalnej bazie) |
+| Sync postępów SRS | gdy net wróci | kolejka sync |
+| Część funkcji (AI, nowe listy od nauczyciela, cloud TTS…) | tak | może nie działać |
 
-| Warstwa | Technologia | Dlaczego |
-|---------|-------------|----------|
-| **Mobile** | **Kotlin + Jetpack Compose** | natywny Android, prosty, ładny UI, dobra wydajność |
-| **Backend API** | **NestJS (Node/TS)** lub **FastAPI (Python)** | NestJS: spójny TS z mobile-adjacent ekosystemem; FastAPI: wygodniej przy AI/LLM |
-| **Baza** | **PostgreSQL** | relacje kart, znaczeń, SRS, userów — idealne |
-| **ORM** | Prisma (Nest) / SQLAlchemy (FastAPI) | szybki development |
-| **Auth** | JWT + refresh (email/hasło); opcjonalnie Firebase Auth | prosto i wystarczająco |
-| **AI** | OpenAI / Anthropic API (structured outputs) | enrichment kart |
-| **TTS** | Google Cloud TTS / Android TTS (offline fallback) | play przy ES |
-| **Cache** | Redis (opcjonalnie w MVP: Postgres cache table) | przyspieszenie powtórzeń zapytań |
-| **Hosting API+DB** | Railway / Fly.io / Supabase (Postgres) | szybki start |
-
-**Rekomendacja spójna dla tego projektu:**
-
-> **Android (Compose) → FastAPI → PostgreSQL → LLM (structured JSON) → TTS**
-
-FastAPI lepiej „klei się” z pipeline’em AI (Python), a Postgres zostaje źródłem prawdy. Alternatywa all-TS: NestJS + Prisma — też OK, jeśli wolisz jeden język po stronie serwera webowego.
-
-### 6.2 Alternatywy (jeśli chcesz cross-platform później)
-
-- **Flutter** lub **React Native / Expo** — jeden kod Android+iOS,
-- na MVP **natywny Android** jest prostszy i ładniejszy „out of the box”.
-
-### 6.3 Czego unikać na start
-
-- zbyt ciężkiego microservices (monolit API wystarczy),
-- pełnego offline-first (można dodać później: Room + sync),
-- własnego trenowania modeli NLP (API LLM + cache).
+Zasada: **jak słowo już dodane → rekord lokalny → nauka offline OK.**
 
 ---
 
-## 7. Architektura wysokopoziomowa
+## 7. Technologia — DECYZJA KIERUNKU
+
+Priorytet: **żeby było bardzo szybkie w developmentcie i w runtime.**
+
+| Warstwa | Wybór | Dlaczego |
+|---------|-------|----------|
+| Mobile | **Kotlin + Jetpack Compose** | natywna szybkość UI na Androidzie |
+| Lokalna baza | **Room** | offline nauka + sync |
+| Backend | **FastAPI (Python)** | najszybszy glue do LLM |
+| DB | **PostgreSQL** | prawda serwerowa |
+| Auth | email/hasło + **Google** | od razu |
+| AI | LLM structured outputs | enrichment |
+| TTS MVP | **Android system TTS** (darmowe) | cloud TTS później |
+| Cache | Postgres table → Redis gdy trzeba | |
+
+> **Android Compose + Room → FastAPI → PostgreSQL → LLM → system TTS**
+
+---
+
+## 8. Architektura
 
 ```
-┌─────────────────┐     HTTPS/JSON      ┌──────────────────────┐
-│  Android app    │ ◄─────────────────► │  API (FastAPI/Nest)  │
-│  Jetpack Compose│                     │  auth, words, srs    │
-└────────┬────────┘                     └──────────┬───────────┘
-         │ play audio                               │
-         ▼                                          ▼
-┌─────────────────┐                     ┌──────────────────────┐
-│ TTS (cloud lub  │                     │     PostgreSQL       │
-│  systemowy)     │                     │ users, cards, reviews│
-└─────────────────┘                     └──────────┬───────────┘
-                                                   │
-                                        ┌──────────▼───────────┐
+┌──────────────────────┐     HTTPS      ┌──────────────────────┐
+│  Android (Compose)   │ ◄────────────► │  FastAPI             │
+│  Room (offline cards)│                │  auth, lookup, srs   │
+└──────────┬───────────┘                └──────────┬───────────┘
+           │ TTS systemowy                          │
+           ▼                                        ▼
+┌──────────────────────┐                ┌──────────────────────┐
+│  Android TTS         │                │  PostgreSQL          │
+└──────────────────────┘                └──────────┬───────────┘
+                                                   ▼
+                                        ┌──────────────────────┐
                                         │  AI Agent (LLM)      │
-                                        │  lookup + enrichment │
                                         └──────────────────────┘
 ```
 
-### 7.1 Główne moduły backendu
-
-1. **Auth** — rejestracja, logowanie, JWT  
-2. **Profile / Settings** — L1, L2, poziom CEFR, wybrane czasy odmiany  
-3. **Lookup** — wyszukiwanie słowa → lista kandydatów (AI + cache)  
-4. **Cards** — tworzenie/edycja karty nauki, ulubione  
-5. **SRS** — kolejkowanie powtórek, ocenianie  
-6. **Audio** — URL/pliki wymowy lub proxy do TTS  
-7. **Admin/Health** — monitoring, rate limit AI  
+Moduły API: Auth, Settings/Languages, Lookup, Cards, Favorites, SRS, Audio meta, (później) Teacher.
 
 ---
 
-## 8. Model danych (szkic Postgres)
+## 9. Model danych (szkic)
 
 ```text
 users
-  id, email, password_hash, created_at
+  id, email, password_hash, google_id, ui_lang, created_at
+
+language_profiles          -- wiele par na usera
+  id, user_id, native_lang, learning_lang, cefr_level,
+  selected_tenses[], last_used_at, is_last_active
 
 user_settings
-  user_id, native_lang, learning_lang, cefr_level,
-  selected_tenses[], theme, ...
+  user_id,
+  practice_input_pref,     -- choice | type | speak | random
+  typo_modal_enabled,
+  ...
 
-words_cache / lexical_entries   -- opcjonalny globalny cache AI
-  id, language, lemma, pos, payload_json, created_at
+lexical_cache
+  id, lang_pair, input, payload_json, created_at
 
 favorite_words
-  id, user_id, lexical_entry_id / lemma, created_at
+  id, user_id, profile_id, lemma, pos, gloss, created_at
 
 learning_cards
-  id, user_id,
-  lemma_es, pos,
-  meanings_json,      -- [{pl, examples[], usages[]}]
-  synonyms_json,
-  antonyms_json,
-  conjugations_json,  -- wg selected_tenses
-  notes,
+  id, user_id, profile_id,
+  lemma_l2, pos,
+  meanings_json,           -- 2 examples each
+  synonyms_json, antonyms_json,
+  conjugations_json,
   created_at, updated_at
 
 srs_state
-  card_id, user_id,
-  ease, interval_days, repetitions, lapses,
+  card_id, ease, interval_days, repetitions, lapses,
   next_review_at, last_reviewed_at, status
 
 review_logs
-  id, card_id, user_id, grade, reviewed_at
+  id, card_id, grade, mode, reviewed_at
+
+-- później: teacher / classroom
+teachers, students, class_groups, assigned_word_lists,
+student_progress_snapshots
 ```
 
-Uwagi:
+---
 
-- na MVP dużo treści AI może żyć w **JSONB** (elastyczność),
-- później normalizacja (tabele `meanings`, `examples`) gdy zajdzie potrzeba zapytań/analityki,
-- unikalność: `(user_id, lemma_es, pos)` ≈ jedna karta nauki.
+## 10. UI / UX
+
+- Home = jedna kompozycja, 2 CTA.
+- Lista wyników lekka; bogactwo na karcie po ＋.
+- Sekcje zwijane na karcie.
+- Play przy L2.
+- Modale feedbacku: krótkie, wyłączalne (korekta literówek).
+- Dużo powietrza, czytelna typografia, bez clutteru.
 
 ---
 
-## 9. UI / UX — zasady
+## 11. Zakres MVP vs później — wyjaśnienie pkt 19
 
-- **Jeden ekran = jeden job** (home / dodaj / wynik / karta / sesja).
-- Duże CTA: *Dodaj słowo*, *Ćwicz*.
-- Lista wyników: słowo ES + krótkie gloss PL + ♥ + ＋.
-- Karta: sekcje zwijane (znaczenia → przykłady → odmiana → syn/ant).
-- Play obok każdego ES (słowo / zdanie).
-- Motyw: ciepły, czytelny, dużo powietrza; typografia czytelna do nauki; bez dashboardowego clutteru.
-- Motions: krótkie przejścia listy, subtle reveal karty, feedback przy ocenie SRS.
+**MVP (v0.1)** = najmniejsza wersja, w której **core nauki działa**:
 
----
-
-## 10. Analiza pomysłu — mocne strony i ryzyka
-
-### Mocne strony
-
-- jasna różnica vs Anki: **AI robi ciężką robotę**,
-- flow „wpadło mi słowo → 2 s → mam kartę” jest uzależniający,
-- bogaty kontekst zwiększa retencję,
-- Postgres + SRS = solidny fundament sync / multi-device później.
-
-### Ryzyka
-
-| Ryzyko | Mitygacja |
-|--------|-----------|
-| Halucynacje AI (złe tłumaczenie) | structured output + możliwość edycji + cache zweryfikowanych kart |
-| Koszt LLM / TTS | cache agresywny, enrichment dopiero przy „＋” |
-| Latencja > 2 s | dwuetapowe UI, streaming, szybki model do lookup |
-| Przeładowanie karty informacją | sekcje, progressive disclosure |
-| Scope creep | twarde MVP (sekcja 11) |
-
----
-
-## 11. Zakres MVP (v0.1)
-
-Must-have:
-
-1. Rejestracja / logowanie (email + hasło)  
-2. Ustawienia: PL/ES, poziom, wybrane czasy  
+1. Auth: email + Google  
+2. Onboarding L1/L2 + zapamiętanie ostatniej konfiguracji  
 3. Home: Dodaj / Ćwicz  
-4. Lookup słowa + lista wyników + ♥ / ＋  
-5. Generowanie karty AI (znaczenia, 1–2 przykłady, syn/ant, podstawowa conjugación)  
-6. Sesja SRS uproszczona (ES→PL)  
-7. Play audio (choćby Android TTS)  
-8. Postgres jako źródło prawdy  
+4. Lookup AI + ♥ / ＋ + enrichment (2 przykłady/znaczenie)  
+5. Sesja ćwiczeń: wybór zamknięty (8 opcji) + wpisywanie; oceny trudne/łatwe/znam dobrze  
+6. Lokalny zapis kart → nauka offline  
+7. System TTS  
 
-Out of scope MVP (później):
+**Świadomie później (nie blokuje core):**
 
-- iOS / web,
-- tryby pisania / dyktando,
-- społecznościowe talie,
-- OCR z książki / aparat,
-- pełny offline,
-- własne modele.
+| Później | Dlaczego nie w pierwszym buildzie |
+|---------|-----------------------------------|
+| iOS / web | najpierw Android |
+| Tryb „powiedz” (speech-to-text) | trudniejszy technicznie; najpierw wybór + wpisz |
+| Edycja karty | potwierdzone: później |
+| Cloud TTS premium | najpierw darmowy systemowy |
+| Pełny panel nauczyciela | duży osobny moduł — zaplanowany, ale etap 2 |
+| OCR z aparatu, import Anki, widgety | nice-to-have |
 
----
-
-## 12. Roadmapa rozwoju (po MVP)
-
-1. **Jakość AI** — weryfikacja słownikowa, preferencje stylu przykładów  
-2. **Więcej trybów ćwiczeń** — PL→ES, cloze, listening  
-3. **Statystyki** — streak, liczba kart due, heatmap  
-4. **Offline + sync** (Room)  
-5. **Więcej par językowych**  
-6. **Import z Anki / CSV**  
-7. **Widget Android** — „słowo dnia” / due reviews  
-8. **Agent konwersacyjny** — „użyj tego słowa w dialogu”  
+To nie znaczy „nigdy” — tylko **kolejność**: najpierw core flow nauki, potem rozszerzenia.
 
 ---
 
-## 13. Organizacja projektu (żeby leciało szybko)
+## 12. Tryb nauczyciela (backlog — do doprecyzowania)
 
-### 13.1 Kolejność prac
+Cel: apka użyteczna też dla lektorów.
 
-1. Schema Postgres + auth  
-2. Endpoint lookup (mock AI → prawdziwy LLM)  
-3. Zapis karty + ulubione  
-4. SRS scheduler + endpoint „due cards”  
-5. Android: home → add → results → card  
-6. Android: practice session  
-7. TTS  
-8. Szlify UX + cache  
+Proponowany zakres (etap 2+):
 
-### 13.2 Kontrakt AI (przykład JSON)
+- nauczyciel tworzy / importuje **listę słówek**,
+- przypisuje listę uczniowi / grupie,
+- uczeń dostaje słowa do ♥/＋ lub od razu do nauki,
+- nauczyciel widzi **postępy** (ile due, accuracy, streak, które słowa słabe),
+- eksport (CSV / link / kod klasy).
 
-```json
-{
-  "input": "pusty",
-  "input_lang": "pl",
-  "candidates": [
-    {
-      "lemma": "vacío",
-      "pos": "adj",
-      "gloss_pl": "pusty, próżny",
-      "preview": true
-    }
-  ]
-}
-```
-
-Enrichment przy dodaniu:
-
-```json
-{
-  "lemma": "vacío",
-  "pos": "adj",
-  "meanings": [
-    {
-      "pl": "pusty (niezawierający nic)",
-      "examples": [
-        {
-          "es": "La botella está vacía.",
-          "pl": "Butelka jest pusta.",
-          "level": "A2"
-        }
-      ],
-      "usages": ["estar vacío", "espacio vacío"]
-    }
-  ],
-  "synonyms": ["desocupado", "hueco"],
-  "antonyms": ["lleno", "pleno"],
-  "conjugations": null,
-  "notes": null
-}
-```
+**Pytania otwarte — nauczyciel:** patrz sekcja 16.
 
 ---
 
-## 14. Metryki sukcesu
+## 13. Roadmapa
 
-- czas od wpisania słowa do listy wyników **< 2 s** (p50),  
-- czas do pełnej karty po „＋” **< 3–4 s** (lub progressive),  
-- user dodaje ≥ N słów / tydzień bez porzucenia flow,  
-- retencja powtórek (SRS completion rate).
-
----
-
-## 15. Otwarte pytania do wspólnego doprecyzowania
-
-1. Czy lookup ma **zawsze** iść przez AI, czy najpierw lokalny/cache słownik?  
-2. Czy enrichment pełny od razu na liście, czy dopiero po „＋”? (rekomendacja: po „＋”)  
-3. Czy ulubione mają osobną kolejkę nauki, czy tylko bookmark?  
-4. Czy edycja karty przez usera jest w MVP?  
-5. Auth: tylko email, czy od razu Google?  
-6. Nazwa produktu ostateczna: **Vocabulario** OK?  
-7. Czy czasy conjugación wybieramy globalnie w ustawieniach, czy per karta?  
+1. **v0.1 Core** — auth, języki, dodaj AI, Ćwicz (choice+type), SRS, offline read/practice, TTS  
+2. **v0.2** — speech mode, lepsza tolerancja literówek, szlify UX, cache AI  
+3. **v0.3 Teacher** — listy, przypisania, podstawowy progress  
+4. **v0.4** — edycja kart, cloud TTS, statystyki ucznia, iOS/web jeśli potrzeba  
 
 ---
 
-## 16. Podsumowanie decyzji (do aktualizacji)
+## 14. Organizacja prac (szybkie tempo)
+
+1. Schema Postgres + auth (email+Google) + language profiles  
+2. Lookup mock → LLM  
+3. Cards + favorites + Room sync skeleton  
+4. SRS + practice engines (multiple choice 8 + type-in)  
+5. Android UI: home → add → results → practice  
+6. Offline practice path  
+7. TTS systemowy  
+8. Szlify + cache  
+
+### Kontrakt AI (skrót)
+
+Lookup → kandydaci z krótkim gloss.  
+Enrichment przy ＋ → pełny JSON (meanings z **2** examples, syn/ant, usages, conjugations).
+
+---
+
+## 15. Metryki sukcesu
+
+- lookup lista **< ~2 s** (p50),  
+- enrichment po ＋ **< ~3–4 s** (lub progressive),  
+- core: user może dodać słowo i od razu ćwiczyć,  
+- offline: powtórka działa bez netu na zapisanych kartach.
+
+---
+
+## 16. Otwarte pytania (odpisz punktami)
+
+### Sesja Ćwicz (dokończenie pkt 14)
+1. Po **Ćwicz** domyślnie: **A** tylko due / **B** due+nowe / **C** user wybiera (powtórki / nowe / miks)?  
+   **Propozycja: C, domyślnie miks.**
+
+### Ćwiczenia
+2. Tryb **„powiedz”** w MVP czy od v0.2?  
+   **Propozycja: v0.2** (najpierw wybór 8 + wpisz).
+3. Tolerancja literówek: akceptować błąd 1 znaku / brak znaków diakrytycznych (ñ, ó…) jako „prawie OK” z modalem korekty — zgoda?
+4. Przy wpisywaniu L1 (np. polski): czy synonimy znaczenia też uznajemy (np. „pusty” vs „próżny”), czy tylko kanoniczne gloss z karty?
+
+### Nauczyciel
+5. Nauczyciel to osobne konto/rola w tej samej apce, czy osobny panel web?
+6. Uczeń łączy się kodem klasy / emailem / linkiem?
+7. Lista od nauczyciela: wpada jako propozycje do dodania, czy od razu jako karty w SRS ucznia?
+8. Jakie minimum podglądu postępów dla nauczyciela w v0.3? (np. % opanowanych, słowa trudne, ostatnia aktywność)
+
+### Produkt
+9. Język UI na start: tylko PL+EN, czy od razu więcej?
+10. Limit nowych kart / dzień — wprowadzamy od razu (chroni przed przeładowaniem SRS)?
+
+---
+
+## 17. Podsumowanie decyzji (aktualne)
 
 | Temat | Status | Decyzja |
 |-------|--------|--------|
-| Platforma | propozycja | Android natywny (Compose) |
-| Backend | propozycja | FastAPI + PostgreSQL |
-| AI | propozycja | LLM + structured JSON + cache |
-| Auth MVP | propozycja | email + hasło + JWT |
-| SRS | propozycja | uproszczony SM-2 |
-| Enrichment | propozycja | przy akcji „＋”, nie przy samym search |
-| Dokument | living | ten plik w `doc/` |
+| Nazwa repo | OK | `vocabulario`; nazwa apki później |
+| Języki | OK | dowolne L1/L2 przy rejestracji; wiele; last-used przy starcie |
+| Home | OK | Dodaj / Ćwicz |
+| ♥ / ＋ | OK | bookmark vs nauka+enrichment |
+| Enrichment | OK | dopiero po ＋; 2 przykłady na znaczenie |
+| Conjugación | OK | globalnie w ustawieniach |
+| Edycja karty | OK | później |
+| CEFR | OK | globalny poziom → zdania |
+| Ćwiczenia | OK | user/losowo; choice 8 / wpisz / (powiedz później?); feedback+modale |
+| Dystraktory | OK | 1 correct + 3 learning + 4 similar POS |
+| Oceny SRS | OK | trudne / łatwe / znam dobrze |
+| Stack | OK | Compose + Room + FastAPI + Postgres + LLM + system TTS |
+| Auth | OK | email + Google od razu |
+| Offline | OK | nauka tak, dodawanie AI nie |
+| Core MVP | OK | flow nauki (AI add + SRS) |
+| Nauczyciel | backlog | listy, przypisania, progress — etap 2+ |
 
 ---
 
-*Ostatnia aktualizacja: start planu — wspólne doprecyzowanie w toku.*
+*Ostatnia aktualizacja: decyzje z sesji Q&A + tryb nauczyciela + wyjaśnienia pkt 14/19.*
