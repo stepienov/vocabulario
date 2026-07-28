@@ -1,0 +1,42 @@
+# === Sekrety / środowisko ===
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.keystore
+*.jks
+
+# === Python / backend ===
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# === Android ===
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.iml
+
+# === Node / teacher-web ===
+node_modules/
+.next/
+out/
+
+# === IDE / OS ===
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# === Docker / logi ===
+*.log
