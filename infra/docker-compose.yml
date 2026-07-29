@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vocabulario-postgres
+    environment:
+      POSTGRES_USER: vocabulario
+      POSTGRES_PASSWORD: vocabulario_dev
+      POSTGRES_DB: vocabulario
+    ports:
+      - "5433:5432"
+    volumes:
+      - vocabulario_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vocabulario -d vocabulario"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: vocabulario-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  vocabulario_pg:

@@ -19,15 +19,46 @@ Z sekcji „wątpliwości technicznych”. Jeśli nic nie napiszesz, idę z **pr
 
 | # | Decyzja | Propozycja | Twój wybór |
 |---|---------|-----------|-----------|
-| 1 | Provider AI | **OpenAI** (start), abstrakcja pozwala zmienić | |
+| 1 | Provider AI | **OpenAI** (start), abstrakcja pozwala zmienić | ✅ klucz w `.env` |
 | 2 | Enrichment sync/async | **sync + skeleton** na v0.1 | |
 | 3 | Sync offline | **replay review_logs** | |
-| 4 | Hosting | **Railway** (masz) | |
+| 4 | Hosting (później) | **Railway** | nie blokuje lokalnego startu |
 | 5 | Region bazy danych | **UE** (RODO) | |
 | 6 | Diakrytyki w trybie „ściśle” | brak ñ/ó = błąd (w „toleruj” akceptowane) | |
-| 7 | Nazwa aplikacji + `applicationId` (np. `com.twojafirma.vocabulario`) | do ustalenia | |
+| 7 | Nazwa aplikacji + `applicationId` | do ustalenia (placeholder OK lokalnie) | |
+| 8 | Auth v0.1 | **email + Google od razu** | ✅ |
+| 9 | Wspólna baza | **najpierw szukaj w DB, potem AI, zapis z powrotem** | ✅ |
+| 10 | Kierunek karty | przód w języku uczonym / ojczystym / losowo | ✅ |
+| 11 | Gotowe zestawy słówek (seed) | **później** — najpierw jakość tworzenia kart | ✅ |
+| 12 | Nazwa / identyfikator pakietu | tymczasowo Vocabulario / placeholder | ✅ |
 
 > `applicationId` (package name) jest **na zawsze** przypisany do aplikacji w Google Play — nie da się go później zmienić. Warto wybrać świadomie (np. własna domena odwrócona).
+
+---
+
+## 1b. Gotowość lokalna (stan maszyny — sprawdzone)
+
+| Element | Status | Uwagi |
+|---------|--------|-------|
+| Python 3.12 | ✅ | 3.12.0 |
+| pip | ✅ | |
+| Docker Desktop + Compose | ✅ | daemon działa |
+| `.env` + `OPENAI_API_KEY` | ✅ | lokalnie; **nie commitować** |
+| Android Studio | ✅ | zainstalowane |
+| Android SDK | ✅ | `%LOCALAPPDATA%\Android\Sdk` |
+| Emulatory AVD | ✅ | `Galaxy_S24`, `Medium_Phone` |
+| JDK 17 / 21 | ✅ | Studio ma własne JBR; masz też jdk-17 i jdk-21 |
+| `ANDROID_HOME` / `adb` w PATH | ⚠️ | nie w PATH — **OK z Android Studio**; CLI opcjonalnie |
+| Java w PATH = 1.8 | ⚠️ | nie szkodzi Studio; do Gradle CLI ustaw `JAVA_HOME` na jdk-17/21 |
+| Railway / Google Play | ⏭ | niepotrzebne do lokalnego v0.1 |
+
+**Emulator:** po zbudowaniu apki w Android Studio → Device Manager → `Galaxy_S24` lub `Medium_Phone` → Run. Emulator → backend hosta: `http://10.0.2.2:8000` (już w `ALLOWED_ORIGINS`).
+
+**Opcjonalnie (wygodniejszy terminal)** — dodaj do PATH użytkownika:
+- `%LOCALAPPDATA%\Android\Sdk\platform-tools`
+- `%LOCALAPPDATA%\Android\Sdk\emulator`
+- `ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk`
+- `JAVA_HOME=C:\Program Files\Java\jdk-17`
 
 ---
 
@@ -35,23 +66,37 @@ Z sekcji „wątpliwości technicznych”. Jeśli nic nie napiszesz, idę z **pr
 
 | Co | Kto | Priorytet | Uwagi |
 |----|-----|-----------|-------|
-| Konto **OpenAI** (lub Anthropic) z billingiem | [TY] | 🔴 | ustaw limit wydatków (np. $20/mies. na start) |
-| **API key** LLM | [TY] → wklejasz do Railway secrets | 🔴 | nigdy do repo; ja użyję z env |
-| Wybór modeli (lookup/enrichment) | [JA] proponuję, [TY] akceptujesz | 🟡 | np. tani do listy, średni do karty |
+| Konto **OpenAI** z billingiem | [TY] | 🔴 | ✅ masz; trzymaj limit wydatków |
+| **API key** LLM | [TY] | 🔴 | ✅ w lokalnym `.env`; później też Railway secrets |
+| Wybór modeli (lookup/enrichment) | [JA] proponuję, [TY] akceptujesz | 🟡 | start: `gpt-4o-mini` |
 
 Bez klucza AI zbuduję wszystko poza realnym generowaniem kart (użyję mocka do testów), ale do działającej apki klucz jest wymagany.
 
 ---
 
-## 3. Logowanie Google (🟡 — jeśli chcemy „Zaloguj przez Google” w v0.1)
+## 3. Logowanie Google (🔴 — chcesz od razu w pierwszej wersji)
+
+Potrzebuję od Ciebie z **Google Cloud** (konto Google wystarczy; to darmowe):
+
+1. Wejdź na [Google Cloud Console](https://console.cloud.google.com/).
+2. Utwórz **nowy projekt** (np. nazwa: Vocabulario).
+3. Włącz ekran zgody OAuth (Consent screen): typ **External**, nazwa apki tymczasowo „Vocabulario”, Twój email jako kontakt.
+4. Utwórz **dwa** identyfikatory klienta OAuth:
+   - typ **Web** — dla backendu (weryfikacja tokenu),
+   - typ **Android** — dla apki (tu później podamy odcisk SHA-1 z debug keystore; na początku mogę Ci powiedzieć dokładnie gdzie kliknąć i co wkleić).
+5. Skopiuj mi (albo wklej do `.env`):
+   - identyfikator klienta typu **Web** → `GOOGLE_OAUTH_CLIENT_ID`
+   - identyfikator klienta typu **Android** → `GOOGLE_OAUTH_CLIENT_ID_ANDROID`
+
+Na razie **nie musisz** nic płacić ani publikować apki w Google.  
+Jeśli wolisz, mogę Ci zrobić osobną, klik-po-kliku instrukcję ze zrzutami ścieżek w konsoli — napisz tylko „daj instrukcję Google krok po kroku”.
 
 | Co | Kto | Priorytet |
 |----|-----|-----------|
-| Projekt w **Google Cloud Console** | [TY] | 🟡 |
-| **OAuth Client ID** typu „Android” (potrzebny SHA-1 podpisu — dam Ci go) + typu „Web” (dla backendu) | [TY] wg mojej instrukcji | 🟡 |
-| Ekran zgody OAuth (consent screen) | [TY] | 🟡 |
-
-Jeśli chcesz szybciej: **v0.1 tylko email+hasło**, Google dokładamy zaraz potem. Powiedz, którą drogą idziemy.
+| Projekt w Google Cloud | [TY] | 🔴 |
+| Ekran zgody OAuth | [TY] | 🔴 |
+| Klient OAuth „Web” + „Android” | [TY] wg mojej instrukcji | 🔴 |
+| SHA-1 podpisu debug | [JA] wygeneruję / podam Ci komendę | 🔴 |
 
 ---
 
@@ -186,4 +231,16 @@ Realne działanie „end-to-end w chmurze + w sklepie” odblokują Twoje rzeczy
 
 ---
 
-*Odpisz na tabelę z sekcji 1 i powiedz: (a) email czy email+Google w v0.1, (b) czy dajesz mi dostęp do Railway czy wolisz sam wklejać sekrety, (c) proponowany applicationId. Wtedy startuję z Fazą 0.*
+## 12. Lokalne „Definition of Done” (zanim wrócimy do Railway/Play)
+
+Po implementacji lokalnej (pierwszy etap) będzie można:
+
+1. `docker compose up` → Postgres + Redis (+ backend).  
+2. Android Studio → emulator → rejestracja email **lub Google** → onboarding.  
+3. Wpisanie słowa → pełna, uporządkowana karta (to dopracowujemy w pierwszej kolejności).  
+4. Drugie wyszukanie tego samego słowa idzie z naszej bazy, bez ponownego płacenia AI.  
+5. Potem: ćwiczenia, offline, a **gotowe zestawy słówek** dopiero gdy karty będą OK.
+
+---
+
+*Do startu kodu: Google Cloud (projekt + dwa klienty OAuth) — mogę dać instrukcję krok po kroku. Reszta decyzji domknięta.*

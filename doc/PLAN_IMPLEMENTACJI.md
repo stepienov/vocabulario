@@ -204,14 +204,67 @@ language_profiles (              -- pary językowe usera (może mieć wiele)
 
 user_settings (
   user_id uuid pk fk -> users,
-  practice_input_pref text default 'random', -- choice|type|speak|random
+  practice_input_pref text default 'choice', -- choice|type|flashcard|speak
+  practice_direction text default 'l2_to_l1', -- l2_to_l1|l1_to_l2|random
   typing_tolerance text default 'tolerate',  -- strict|tolerate
   typo_modal_enabled boolean default true,
   new_cards_per_day int default 20,
-  theme text default 'system'
+  theme text default 'system',
+  show_usages boolean default true,              -- modal usages na rewersie fiszki
+  show_synonyms_antonyms boolean default true,
+  show_periphrases boolean default true,
+  conjugation_expanded_default boolean default false
 )
 
--- === Cache słownikowy (globalny, współdzielony) ===
+-- === Wspólna baza leksykalna (globalna, rośnie z seedem + AI) ===
+lexical_entries (
+  id uuid pk,
+  lang_pair text not null,            -- 'pl>es'
+  lemma_l2 text not null,
+  lemma_l1_primary text,              -- główny gloss L1 (do wyszukiwania odwrotnego)
+  pos text,
+  cefr text,                          -- A1..C1 (orientacyjny)
+  content jsonb not null,             -- pełna karta (patrz 5.3)
+  source text not null,               -- seed|ai|curated
+  created_by_user_id uuid fk -> users null, -- kto „wniósł” wpis AI (audit)
+  usage_count int not null default 0, -- ile razy dodane do nauki
+  created_at timestamptz, updated_at timestamptz,
+  unique (lang_pair, lemma_l2, pos)
+)
+
+lexical_categories (
+  id uuid pk,
+  slug text unique not null,          -- colors|numbers|connectors|...
+  name_i18n jsonb not null            -- {"pl":"Kolory","en":"Colors",...}
+)
+
+lexical_entry_categories (
+  entry_id uuid fk -> lexical_entries,
+  category_id uuid fk -> lexical_categories,
+  primary key (entry_id, category_id)
+)
+
+starter_packs (
+  id uuid pk,
+  slug text unique not null,          -- pl-es-a1-colors
+  lang_pair text not null,
+  cefr_level text not null,           -- A1..C1
+  category_slug text not null,
+  title_i18n jsonb not null,
+  description_i18n jsonb,
+  sort_order int default 0,
+  is_published boolean default true,
+  created_at timestamptz
+)
+
+starter_pack_items (
+  pack_id uuid fk -> starter_packs,
+  lexical_entry_id uuid fk -> lexical_entries,
+  sort_order int default 0,
+  primary key (pack_id, lexical_entry_id)
+)
+
+-- === Cache szybkich lookupów (input → kandydaci) ===
 lexical_cache (
   id uuid pk,
   lang_pair text not null,          -- 'pl>es'
@@ -219,8 +272,9 @@ lexical_cache (
   kind text not null,               -- 'lookup' | 'enrichment'
   cefr text null,                   -- dla enrichment
   tenses_hash text null,            -- hash wybranych czasów
-  payload jsonb not null,           -- wynik AI (structured)
-  model text, created_at timestamptz,
+  payload jsonb not null,           -- wynik (structured)
+  model text null,                  -- null gdy z DB/seed
+  created_at timestamptz,
   unique (lang_pair, input_norm, kind, cefr, tenses_hash)
 )
 
@@ -230,7 +284,7 @@ decks (
   owner_user_id uuid fk -> users,   -- właściciel (user lub teacher)
   profile_id uuid fk -> language_profiles null,
   title text not null,
-  source text not null default 'personal', -- personal|teacher_list|import
+  source text not null default 'personal', -- personal|starter|teacher_list|import
   independent_srs boolean not null default false, -- osobna kolejka
   created_at timestamptz
 )
@@ -241,6 +295,7 @@ learning_cards (
   user_id uuid fk -> users,
   profile_id uuid fk -> language_profiles,
   deck_id uuid fk -> decks null,    -- null = główna lista
+  lexical_entry_id uuid fk -> lexical_entries null, -- link do wspólnej bazy
   lemma_l2 text not null,           -- słowo w języku nauki
   pos text,                         -- part of speech
   gloss_primary text,               -- główne znaczenie L1 (do szybkich zapytań)
@@ -322,17 +377,45 @@ Indeksy m.in.: `srs_state(next_review_at, status)`, `learning_cards(user_id, pro
 
 ---
 
-## 5. Warstwa AI — pipeline i kontrakty
+## 5. Warstwa leksykalna + AI — pipeline i kontrakty
 
-### 5.1 Dwuetapowość
+### 5.0 Zasada: DB first, AI fallback, zapis zwrotny
+
+```
+User input
+    │
+    ▼
+Normalize (case, trim, diakrytyki wg reguł wyszukiwania)
+    │
+    ▼
+Szukaj w lexical_entries (+ lexical_cache)  ──hit──► kandydaci / pełna karta
+    │
+   miss
+    │
+    ▼
+OpenAI lookup / enrichment
+    │
+    ▼
+Zapisz do lexical_entries (+ cache)  ──► dostępne dla WSZYSTKICH userów
+    │
+    ▼
+Przy ＋: utwórz prywatną learning_cards (+ srs_state)
+```
+
+- Seed (`source=seed`) wgrywany migracją / skryptem — baza nie jest pusta na starcie.
+- Wpis z AI (`source=ai`) od razu staje się częścią wspólnej bazy.
+- `usage_count++` gdy user dodaje wpis do nauki (metryka popularności).
+
+### 5.1 Dwuetapowość (gdy miss w DB)
 
 1. **Lookup (szybki):** wejście = słowo + `lang_pair` + `cefr`. Model tani/szybki.
-   - Sprawdź cache → jeśli miss, wywołaj LLM z krótkim promptem „structured output”.
-   - Zwróć listę kandydatów (lemat, POS, krótki gloss).
+   - Sprawdź `lexical_entries` / cache → jeśli miss, wywołaj LLM z krótkim promptem „structured output”.
+   - Zwróć listę kandydatów (lemat, POS, krótki gloss); przy AI — zapisz lookup do cache.
 2. **Enrichment (pełny):** wywoływany przy **＋** (lub w tle przez workera).
-   - Model mocniejszy, structured output ze schematem karty.
-   - Zapis do `lexical_cache` (kind='enrichment') + utworzenie `learning_cards`.
-   - Zlecenie prefetch audio (v0.1: nic, bo TTS on-device; przy cloud TTS: worker generuje pliki).
+   - Najpierw pełny wpis z `lexical_entries` jeśli już jest.
+   - Inaczej: model mocniejszy, structured output → zapis do `lexical_entries` + `lexical_cache`.
+   - Utworzenie `learning_cards` dla usera.
+   - Prefetch audio (v0.1: nic — TTS on-device).
 
 ### 5.2 Structured output i walidacja
 
@@ -362,7 +445,7 @@ Indeksy m.in.: `srs_state(next_review_at, status)`, `learning_cards(user_id, pro
   ],
   "synonyms_l2": ["desocupado", "hueco"],
   "antonyms_l2": ["lleno", "pleno"],
-  "conjugation": null,        // dla czasowników: tabela wg selected_tenses
+  "conjugation": null,
   "notes": null,
   "confidence": 0.94
 }
@@ -381,17 +464,25 @@ Dla czasownika `conjugation` np.:
 
 ### 5.4 Reguły akceptacji odpowiedzi (tryb „Wpisz”)
 
-- Poprawne = `gloss_l1` **lub** dowolny `synonyms_l1` z danego znaczenia karty.
+- Poprawne zależą od **kierunku** (`practice_direction` / wylosowany kierunek sesji):
+  - **L2→L1:** `gloss_l1` lub `synonyms_l1` z karty.
+  - **L1→L2:** `lemma` (L2) lub `synonyms_l2` z karty.
 - Normalizacja: trim, lower-case, redukcja wielokrotnych spacji.
 - Tryb `tolerate`: dopuszczalny 1-znakowy dystans Levenshteina lub brak znaków diakrytycznych → uznaj, pokaż modal korekty (jeśli włączony).
 - Tryb `strict`: tylko po normalizacji case/spacji.
 - Logika czysta (bez AI w czasie odpowiedzi) → szybka i offline-friendly.
 
-### 5.5 Koszty i limity
+### 5.5 Seed packs — odłożone
 
-- Cache + rate limit per user (np. X lookupów/min) — ochrona kosztów i abuse.
-- Metryki: liczba wywołań LLM, cache hit ratio, koszt/dzień (log + Sentry/metrics).
+Schemat tabel (`starter_packs`, kategorie) zostaje w modelu na później.  
+**Pierwszy priorytet implementacji:** pipeline tworzenia pełnej, bogatej karty (wpisz → DB/AI → uporządkowany JSON → UI karty).  
+Curated seed (PL↔ES, CEFR × kategorie) wgrywamy dopiero po akceptacji jakości kart.
 
+### 5.6 Koszty i limity
+
+- DB hit = $0; AI tylko przy miss.
+- Cache + rate limit per user (np. X lookupów AI/min) — ochrona kosztów i abuse.
+- Metryki: cache/DB hit ratio, liczba wywołań LLM, koszt/dzień.
 ---
 
 ## 6. Silnik SRS
@@ -436,11 +527,15 @@ GET/PUT /api/v1/me/settings
 GET/POST /api/v1/profiles             # pary językowe
 PUT  /api/v1/profiles/{id}/activate   # ustaw ostatnio używaną
 
-POST /api/v1/lookup                   {text, profile_id} -> {candidates[]}
-POST /api/v1/cards                    {lemma, pos, profile_id, deck_id?} -> card (enrichment)
+POST /api/v1/lookup                   {text, profile_id} -> {candidates[], source: db|ai}
+POST /api/v1/cards                    {lemma, pos, profile_id, deck_id?} -> card (enrichment; DB first)
 GET  /api/v1/cards?profile_id=&deck_id=
 POST /api/v1/favorites                {lemma, pos, gloss, profile_id}
 GET  /api/v1/favorites
+
+GET  /api/v1/packs?profile_id=        -> starter packs (CEFR + kategorie)
+GET  /api/v1/packs/{id}               -> items
+POST /api/v1/packs/{id}/add           {mode: all|selected, entry_ids?, as_independent_deck?}
 
 GET  /api/v1/srs/queue?profile_id=&deck_id=  -> {due[], new[]}
 POST /api/v1/srs/review               {card_id, grade, mode, direction, correct}
@@ -476,18 +571,26 @@ Każda faza kończy się: działający wycinek + testy + zielone CI + krótka no
 - Android: ekrany rejestracji/logowania, przechowywanie tokenów (EncryptedSharedPrefs/DataStore), onboarding L1/L2/CEFR/czasy, zapamiętanie aktywnej pary.
 - **DoD:** można założyć konto, zalogować, przejść onboarding, wznowić apkę w ostatniej konfiguracji.
 
-### Faza 2 — AI lookup + karta + ♥/＋
-- Integracja LLM (lookup) + cache (Redis + `lexical_cache`).
-- Endpoint `/lookup` (lista kandydatów), `/cards` (enrichment + zapis).
-- Enrichment: schemat JSON + walidacja + retry.
-- Android: ekran „Dodaj słowo”, lista wyników z ♥/＋, ekran karty (sekcje zwijane, play=TTS).
-- **DoD:** wpisuję słowo → lista < ~2 s → ＋ tworzy pełną kartę w DB i lokalnie.
+### Faza 2 — Wspólna baza + AI lookup + bogata karta + ♥/＋  ★ CORE
+- Tabele `lexical_entries` (+ kategorie w schemacie, bez seedu treści).
+- Lookup: **DB first → OpenAI fallback → zapis do wspólnej bazy**.
+- **Priorytet:** jakość enrichmentu — pełna, uporządkowana karta (znaczenia, przykłady, syn/ant, użycia, odmiana…).
+- Iteracja promptów + walidacja JSON + UI karty, aż flow „wpisz słowo → OK → super karta” będzie satysfakcjonujący.
+- Endpoint `/lookup`, `/cards`; Android: „Dodaj słowo”, lista ♥/＋, ekran karty.
+- Starter packs / seed — **celowo pominięte** w tej fazie.
+- **DoD:** wpisuję słowo → pełna, czytelna karta w < ~kilka s; drugi raz to samo słowo idzie z DB bez AI.
 
 ### Faza 3 — SRS + sesja „Ćwicz”
 - `services/srs.py` + endpointy queue/review; log powtórek.
-- Tryby: wybór 8 opcji (generator dystraktorów) + wpisywanie (reguły akceptacji + tolerancja).
-- Android: ekran sesji, animacje, oceny trudne/łatwe/znam dobrze, modale feedbacku.
-- **DoD:** pełny cykl nauki: dodaję słowo → ćwiczę → SRS planuje kolejną powtórkę.
+- Tryby: wybór 8 opcji + wpisywanie + **fiszki** (przód → rewers); **kierunek karty** `l2_to_l1` / `l1_to_l2` / `random`.
+- Rewers fiszki: znaczenia + usages modal + syn/ant ♥/＋ + peryfrazy + odmiana collapsible (`selected_tenses`, `conjugation_expanded_default`).
+- Flagi: `show_usages`, `show_synonyms_antonyms`, `show_periphrases`.
+- Android: ekran sesji, oceny trudne/łatwe/znam dobrze, modale feedbacku, ustawienie kierunku i formy.
+- **DoD:** pełny cykl: słowo → ćwicz w obu kierunkach → SRS planuje powtórkę.
+
+### Faza 3b — Starter packs / seed (po akceptacji jakości kart)
+- Seed PL↔ES (CEFR × kategorie) + API `/packs` + UI list.
+- **DoD:** pakiety widoczne; dodanie do nauki bez AI.
 
 ### Faza 4 — Offline + sync
 - Room: encje card/srs/settings; repo z „single source of truth” (network + cache).
@@ -561,12 +664,13 @@ CI (GitHub Actions): lint+typy → testy backend (z usługami) → build+test An
 
 ## 12. Definicja „gotowej, działającej aplikacji” (v0.1)
 
-- User rejestruje się (email/Google), wybiera języki, poziom, czasy.
-- Dodaje słowo: dostaje listę < ~2 s, ＋ buduje pełną kartę (znaczenia, 2 przykłady, syn/ant, [odmiana]), play działa.
-- Ćwiczy: kolejka due→new (limit nowych), tryby wybór/wpisz, oceny 3-stopniowe, poprawny harmonogram SRS.
+- User rejestruje się (email/Google), wybiera języki, poziom, czasy, **kierunek karty**.
+- W bazie są **starter packs** (CEFR × kategorie); można dodać pakiet do nauki bez AI.
+- Dodaje słowo: **najpierw wspólna DB**, przy miss OpenAI; wynik **zapisany globalnie**; lista < ~2 s; ＋ buduje pełną kartę; play działa.
+- Ćwiczy: kolejka due→new, tryby wybór/wpisz/**fiszki**, **przód L2 lub L1**, oceny 3-stopniowe, SRS.
 - Działa offline dla już dodanych kart; sync bezstratny.
-- Stabilne: obsługa błędów sieci/LLM, brak crashy w happy path, testy zielone, monitoring włączony.
+- Stabilne: obsługa błędów sieci/LLM, brak crashy w happy path, testy zielone.
 
 ---
 
-*Dokument techniczny — do aktualizacji wraz z decyzjami z sekcji 11.*
+*Dokument techniczny — do aktualizacji wraz z decyzjami z sekcji 11. Ostatnia aktualizacja: shared lexical DB, seed packs, practice_direction.*

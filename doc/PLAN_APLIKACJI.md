@@ -98,14 +98,53 @@ Karty zgodnie z ustawieniami usera, w kolejności SRS:
 
 #### Forma odpowiedzi
 
-| Tryb | Wersja |
-|------|--------|
-| Wybór zamknięty (8 opcji) | v0.1 |
-| Wpisz | v0.1 |
-| Powiedz (speech) | **v0.2** |
-| Kierunek / forma | wybór usera lub losowo |
+| Tryb | Zachowanie | Wersja |
+|------|------------|--------|
+| **Wybór (8 opcji)** | przód = słowo L1/L2; 8 odpowiedzi (1 poprawna + learning tej POS + `similar_words`) | v0.1 |
+| **Wpisz** | przód = słowo; pole tekstowe + Enter | v0.1 |
+| **Fiszki** | przód = samo słowo; klik → rewers (jak Anki) | v0.1 |
+| Powiedz (speech) | — | **v0.2** |
 
-**8 opcji (kolejność losowa):** 1 poprawna + 3 z obecnie uczonych (ta sama POS) + 4 podobne brzmieniem/pisownią (ta sama POS).
+Ustawienie: `practice_input_pref` = `choice` \| `type` \| `flashcard` \| `speak`.
+
+#### Rewers fiszki (tryb „Fiszki”)
+
+Układ (od góry):
+
+1. **Sekcje znaczeń** (1–3) — każda zamknięta:
+   - gloss + synonimy L1 w nagłówku (np. „kończyć, zakończyć, dokończyć”),
+   - jedno zdanie L2 + tłumaczenie L1 (poziom z pasma CEFR usera),
+   - przycisk **Przykłady użycia** → modal z `usages` (zamykanie tapnięciem poza treścią).
+2. **Synonimy L2** (jeśli włączone w ustawieniach) — lemma + gloss; ♥ / ＋.
+3. **Antonimy L2** (jw.).
+4. **Peryfrazy** (jeśli włączone i czasownik) — formula + gloss + przykład.
+5. **Odmiana** — tylko czasy z `selected_tenses` profilu; nagłówki rozwijane/zwijane; opcja „domyślnie rozwinięte”.
+
+#### Widoczność sekcji na rewersie (ustawienia)
+
+| Flaga | Default | Opis |
+|-------|---------|------|
+| `show_usages` | true | przycisk + modal usages przy znaczeniach |
+| `show_synonyms_antonyms` | true | sekcje synonimów / antonimów |
+| `show_periphrases` | true | blok peryfraz |
+| `conjugation_expanded_default` | false | tabele odmiany startują rozwinięte |
+
+Czasy widoczne w odmianie: `language_profiles.selected_tenses` (ekran Profil).
+
+#### Kierunek karty (przód) — DECYZJA
+
+User wybiera w ustawieniach (lub losowo), **co widać na przedniej stronie** przed odpowiedzią:
+
+| Preferencja | Przód karty | User odpowiada |
+|-------------|-------------|----------------|
+| **L2 → L1** (default) | słowo w języku **uczanym** | znaczenie w L1 / rewers |
+| **L1 → L2** | słowo / gloss w języku **ojczystym** | forma w L2 / rewers |
+| **Losowo** | naprzemiennie / los | zgodnie z wylosowanym kierunkiem |
+
+Ustawienie: `practice_direction` = `l2_to_l1` \| `l1_to_l2` \| `random`.  
+Osobno od formy odpowiedzi (choice / type / flashcard / speak).
+
+**8 opcji (kolejność losowa):** 1 poprawna + do 3 z obecnie uczonych (ta sama POS) + reszta z `similar_words` (ta sama POS), łącznie zawsze 8.
 
 #### Tolerancja wpisywania — DECYZJA
 
@@ -146,9 +185,21 @@ Na teraz: **jest w planie jako feature**, osobno od zwykłego zapamiętywania s�
 
 ---
 
-## 5. Agent AI
+## 5. Agent AI + wspólna baza leksykalna — DECYZJA
 
-Dwuetapowo: szybki lookup → enrichment przy ＋ (2 examples/znaczenie, syn/ant, usages, conjugations). Cache + skeleton UI pod ~2 s.
+**Jedna duża, współdzielona baza słówek** (globalna dla wszystkich użytkowników). AI jest *fallbackiem*, nie pierwszym źródłem.
+
+### Flow „Dodaj słowo”
+
+1. User wpisuje tekst.  
+2. Backend **najpierw szuka w naszej DB** (`lexical_entries` + indeksy / cache).  
+3. **Hit** → zwracamy kandydatów / pełną kartę z bazy (szybko, bez kosztu AI).  
+4. **Miss** → OpenAI (lookup → przy ＋ enrichment) → **od razu zapisujemy wynik do wspólnej bazy**, żeby kolejni userzy (i ten sam user) dostali to za darmo.  
+5. Przy ＋ kopia trafia też do prywatnej `learning_cards` usera (SRS).
+
+Im więcej osób dodaje słowa, tym baza się **sama zapełnia**. Seed startowy (poniżej) daje wartość od pierwszego uruchomienia.
+
+Dwuetapowo przy miss AI: szybki lookup → enrichment przy ＋ (2 examples/znaczenie, syn/ant, usages, conjugations). Skeleton UI pod ~2 s.
 
 ---
 
@@ -190,25 +241,51 @@ language_profiles
 
 user_settings
   user_id,
-  practice_input_pref,      -- choice | type | speak | random
+  practice_input_pref,      -- choice | type | flashcard | speak
+  practice_direction,       -- l2_to_l1 | l1_to_l2 | random  (przód karty)
   typing_tolerance,         -- strict | tolerate_and_correct
   typo_modal_enabled,
   new_cards_per_day,        -- default 20
+  show_usages,              -- bool, default true (modal usages na fiszce)
+  show_synonyms_antonyms,   -- bool, default true
+  show_periphrases,         -- bool, default true
+  conjugation_expanded_default, -- bool, default false
+  theme,
   ...
 
-lexical_cache
-  id, lang_pair, input, payload_json, created_at
+-- Wspólna baza leksykalna (globalna, rośnie z użyciem + seed)
+lexical_entries
+  id, lang_pair, lemma_l2, lemma_l1_primary, pos, cefr,
+  content_json,             -- pełna karta (ten sam schemat co enrichment)
+  source,                   -- seed | ai | curated
+  created_by_user_id_nullable, usage_count, created_at
+
+lexical_categories          -- kolory, liczebniki, conectores, ...
+  id, slug, name_i18n
+
+lexical_entry_categories    -- M:N entry ↔ category
+  entry_id, category_id
+
+starter_packs               -- gotowe zestawy do 1-klika „dodaj do nauki”
+  id, slug, lang_pair, cefr_level, category_slug, title_i18n, sort_order
+
+starter_pack_items
+  pack_id, lexical_entry_id, sort_order
+
+lexical_cache               -- szybki cache lookupów (klucz: input_norm)
+  id, lang_pair, input_norm, kind, payload_json, created_at
 
 favorite_words
   id, user_id, profile_id, lemma, pos, gloss, created_at
 
-learning_decks              -- "pakiety" / listy (własne lub od nauczyciela)
-  id, user_id, profile_id, title, source,  -- personal | teacher_list
+learning_decks              -- "pakiety" / listy (własne, starter, nauczyciel)
+  id, user_id, profile_id, title, source,  -- personal | starter | teacher_list
   independent_srs,          -- true = osobny SRS; false = można merge do main
   created_at
 
 learning_cards
   id, user_id, profile_id, deck_id_nullable,  -- null = główna lista nauki
+  lexical_entry_id_nullable,-- link do wspólnej bazy (jeśli z niej)
   lemma_l2, pos,
   meanings_json, synonyms_json, antonyms_json,
   conjugations_json,
@@ -243,17 +320,20 @@ Home = 2 CTA. Lekka lista wyników. Bogata karta po ＋. Play przy L2. Krótkie 
 
 ### v0.1 Core (MVP)
 
-1. Auth email + Google  
+1. Auth email + Google (od razu)  
 2. Onboarding L1/L2 + last-used config  
 3. UI: PL, EN + kilka najczęstszych  
 4. Home Dodaj / Ćwicz  
-5. Lookup AI + ♥ / ＋ + enrichment (2 przykłady)  
-6. Ćwicz: due/zaległe → nowe (limit); choice 8 + wpisz  
-7. Tolerancja wpisywania: ścisłe / toleruj+poprawiaj  
-8. Oceny: trudne / łatwe / znam dobrze  
-9. Offline practice na zapisanych kartach  
-10. System TTS  
-11. Limit nowych (default 20, konfigurowalny)  
+5. Lookup: **najpierw wspólna DB → potem AI**; ＋ enrichment; zapis do wspólnej bazy  
+6. **Core priorytet:** jakość i kompletność karty po wpisaniu słowa (dopracowanie pipeline)  
+7. Starter packs / seed CEFR×kategorie — **później**, po dopracowaniu kart  
+8. Ćwicz: due/zaległe → nowe (limit); choice 8 + wpisz  
+9. **Kierunek karty:** L2→L1 / L1→L2 / losowo (ustawienie usera)  
+10. Tolerancja wpisywania: ścisłe / toleruj+poprawiaj  
+11. Oceny: trudne / łatwe / znam dobrze  
+12. Offline practice na zapisanych kartach  
+13. System TTS  
+14. Limit nowych (default 20, konfigurowalny)  
 
 ### Dalsze release’e (backlog)
 
@@ -273,6 +353,15 @@ Home = 2 CTA. Lekka lista wyników. Bogata karta po ＋. Play przy L2. Krótkie 
 
 ## 12. Listy / pakiety + nauczyciel — DECYZJE
 
+### Starter packs — PÓŹNIEJ (nie w pierwszym cięciu)
+
+Gotowe zestawy (CEFR × kategorie: kolory, liczebniki, conectores, …) **zostają w planie**, ale **nie wgrywamy ich na start**.
+
+Najpierw dopracowujemy do perfekcji **core: tworzenie pełnej karty** (wpisz słowo → OK → bogata, uporządkowana karta).  
+Seed / starter packs dodajemy dopiero gdy pipeline karty będzie satysfakcjonujący.
+
+Wspólna baza leksykalna (DB first → AI → zapis) **nadal obowiązuje** od początku — tylko bez curated seedów; baza rośnie z kart tworzonych przez AI / użytkowników.
+
 ### Panel nauczyciela
 
 - **Osobny panel dodatkowy (web)** — nie wciśnięty w ten sam prosty UI ucznia.
@@ -288,7 +377,7 @@ Lista to osobny byt. User może:
 2. **Dodać wybrane**, albo  
 3. **Uczyć się listy osobno** — jak **niezależny pakiet z własnym SRS** (nie miesza się z główną kolejką).
 
-To samo podejście może działać dla list własnych / importowanych.
+To samo podejście działa dla **starter packs**, list własnych i od nauczyciela.
 
 ### Ćwiczenia conjugación a nauczyciel
 
@@ -320,14 +409,15 @@ Nie tylko „masz 12 kart do powtórki”, tylko konkretny materiał.
 
 ## 15. Organizacja prac (v0.1)
 
-1. Schema + auth + language profiles + settings  
-2. Lookup → LLM  
-3. Cards + favorites + Room  
-4. SRS scheduler (due first → new within limit)  
-5. Practice: multiple choice 8 + type-in + tolerance modes  
-6. Android UI  
-7. Offline practice  
-8. TTS + szlify  
+1. Schema + auth + language profiles + settings (+ `practice_direction`)  
+2. Wspólna baza `lexical_entries` + seed packs (CEFR × kategorie)  
+3. Lookup: DB first → LLM fallback → zapis do wspólnej bazy  
+4. Cards + favorites + Room  
+5. SRS scheduler (due first → new within limit)  
+6. Practice: multiple choice 8 + type-in + tolerance + kierunek karty  
+7. Android UI (Home, Dodaj, Ćwicz, Starter packs)  
+8. Offline practice  
+9. TTS + szlify  
 
 ---
 
@@ -349,6 +439,10 @@ Nie tylko „masz 12 kart do powtórki”, tylko konkretny materiał.
 | 4 | Limit nowych | **default 20**, user zmienia |
 | 5 | Limit powtórek due | **bez limitu** |
 | 6 | Tryb ścisły — normalizacja | **tak:** ignoruj wielkość liter i zbędne spacje |
+| 7 | Wspólna baza leksykalna | **DB first → OpenAI fallback → zapis do wspólnej DB** |
+| 8 | Seed na start | **później** — najpierw dopracowanie tworzenia pełnej karty |
+| 9 | Kierunek karty (przód) | **l2_to_l1 \| l1_to_l2 \| random** (ustawienie usera) |
+| 10 | Auth | email + Google od razu |
 
 ### Wyjaśnienie pkt 1 (akceptacja wpisanej odpowiedzi)
 
@@ -377,29 +471,35 @@ Uwaga: to jest osobne od ustawienia **ściśle / toleruj literówki** (to dotycz
 
 | Temat | Decyzja |
 |-------|--------|
-| Nazwa apki | później; repo = vocabulario |
+| Nazwa apki | tymczasowo **Vocabulario**; docelowa później |
+| Identyfikator pakietu Android | tymczasowy; docelowy przed publikacją |
 | L1/L2 | dowolne; last-used przy starcie |
 | Home | Dodaj / Ćwicz |
-| Enrichment | po ＋; 2 przykłady/znaczenie |
+| Wspólna baza | **TAK** — jedna globalna `lexical_entries`; rośnie z AI (i seedem później) |
+| Lookup | **najpierw DB**, potem OpenAI; wynik AI → zapis do DB |
+| Priorytet core | **jakość pełnej karty** po wpisaniu słowa — dopracować do perfekcji |
+| Seed / gotowe zestawy | **później**, po akceptacji jakości kart |
+| Enrichment | po ＋; bogata, uporządkowana karta |
 | Ćwicz kolejka | zaległe/due dziś → potem nowe |
 | Limit nowych | default **20**, user zmienia |
 | Powtórki due | bez limitu |
 | Oceny | trudne / łatwe / znam dobrze |
 | Odpowiedzi v0.1 | choice 8 + wpisz; powiedz = v0.2 |
+| Kierunek karty | **l2_to_l1 \| l1_to_l2 \| random** (ustawienie usera) |
 | Tolerancja literówek | ustawienie: ściśle \| toleruj i poprawiaj |
 | Akceptacja znaczeń (wpisz) | kanoniczne + synonimy **z karty** (np. pusty/próżny) |
 | Normalizacja ścisła | case + spacje ignorowane |
-| Auth | email + Google |
+| Auth | email + Google **od razu** |
 | Offline | nauka tak, AI add nie |
 | UI lang | PL, EN, ES, DE, FR, IT, PT, UK |
 | Nauczyciel | osobny panel web; listy jako pakiety |
 | Lista u ucznia | all / wybrane → main, albo osobny SRS pakiet |
 | Join klasy | kod + link |
 | Progress dla nauczyciela | widać trudne/łatwe/znam dobrze |
-| Conjugación drills | późniejszy release — dodatkowe zestawy dla czasowników (zdania/odmiana; polecane przez nauczyciela) |
+| Conjugación drills | późniejszy release |
 | Przypomnienia smart | przyszły release |
 | Featurę poza core | dalsze wersje / release’e |
 
 ---
 
-*Ostatnia aktualizacja: synonimy OK przy wpisywaniu; dopisany backlog ćwiczeń conjugación dla czasowników.*
+*Ostatnia aktualizacja: Google od razu; seed odłożony; priorytet = jakość tworzenia kart.*
