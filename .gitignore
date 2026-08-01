@@ -1,11 +1,19 @@
 # Secrets — never commit
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 *.pem
 *.p12
 *.jks
 *.keystore
+credentials.json
+**/google-services.json
+**/service-account*.json
+secrets/
+*.secret
+
+# Private / working docs (keep locally, not on GitHub)
+doc/
 
 # Python
 __pycache__/
@@ -29,10 +37,13 @@ android/*.iml
 android/.idea/
 *.apk
 *.aab
+*.ap_
+captures/
 
-# IDE / OS
+# IDE / OS / Cursor
 .idea/
 .vscode/
+.cursor/
 *.swp
 .DS_Store
 Thumbs.db
@@ -41,7 +52,11 @@ Thumbs.db
 node_modules/
 .next/
 
-# Misc
+# Misc / local noise
 *.log
 dist/
 out/
+compile-out.txt
+*.tmp
+*.bak
+.DS_Store

@@ -3,7 +3,6 @@ package com.vocabulario.app.data
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 val SUPPORTED_UI_LANGS = listOf(
     "pl" to "Polski",
@@ -72,6 +71,16 @@ val TENSE_KEY_ALIASES = mapOf(
 
 fun normalizeTenseKey(key: String): String = TENSE_KEY_ALIASES[key] ?: key
 
+/** Alias → kanoniczny klucz + deduplikacja (kolejność jak w wejściu). */
+fun normalizeTenseKeys(keys: Collection<String>): List<String> {
+    val seen = LinkedHashSet<String>()
+    for (key in keys) {
+        val n = normalizeTenseKey(key.trim())
+        if (n.isNotEmpty()) seen.add(n)
+    }
+    return seen.toList()
+}
+
 /** Jedno zdanie na pasmo poziomów — A2 dla AX, B2 dla BX, C2 dla CX. */
 val EXAMPLE_BANDS = listOf("A2", "B2", "C2")
 
@@ -90,7 +99,7 @@ fun examplesForUserLevel(
     for (idx in bandIdx downTo 0) {
         val level = EXAMPLE_BANDS[idx]
         val matched = all.filter {
-            it["cefr"]?.jsonPrimitive?.content?.uppercase() == level
+            it["cefr"].asJsonString()?.uppercase() == level
         }
         if (matched.isNotEmpty()) return matched.take(maxCount)
     }

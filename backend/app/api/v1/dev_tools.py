@@ -25,10 +25,9 @@ def _require_dev() -> None:
         raise HTTPException(status_code=404, detail="Not found")
 
 
-def _entry_payload(entry) -> dict:
-    content = entry.content if isinstance(entry.content, dict) else {}
+def _entry_payload(entry, *, include_content: bool = False) -> dict:
     lang_pair = getattr(entry, "lang_pair", None)
-    return {
+    payload = {
         "id": str(entry.id),
         "lang_pair": lang_pair,
         "lemma_l2": entry.lemma_l2,
@@ -36,12 +35,14 @@ def _entry_payload(entry) -> dict:
         "pos": entry.pos,
         "source": getattr(entry, "source", "ephemeral"),
         "usage_count": getattr(entry, "usage_count", 0),
-        "content": content,
     }
+    if include_content:
+        payload["content"] = entry.content if isinstance(entry.content, dict) else {}
+    return payload
 
 
-def _card_payload(card: LearningCard) -> dict:
-    return {
+def _card_payload(card: LearningCard, *, include_content: bool = False) -> dict:
+    payload = {
         "id": str(card.id),
         "lemma_l2": card.lemma_l2,
         "pos": card.pos,
@@ -49,8 +50,10 @@ def _card_payload(card: LearningCard) -> dict:
         "lexical_entry_id": str(card.lexical_entry_id) if card.lexical_entry_id else None,
         "enrichment_status": card.enrichment_status,
         "enrichment_error": card.enrichment_error,
-        "content": card.content,
     }
+    if include_content:
+        payload["content"] = card.content
+    return payload
 
 
 async def _resolve_user_profile(
@@ -111,36 +114,12 @@ async def dev_search(
     profile_id: UUID | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
-    """Lookup jak w aplikacji + pełny stan z bazy dla trafień."""
+    """Lookup jak w aplikacji — tylko lekkie metadane (bez content JSON)."""
     _require_dev()
     user, profile = await _resolve_user_profile(db, email, profile_id)
     service = LexicalService(db)
 
     candidates, source = await service.lookup(user, profile.id, word)
-    pair = lang_pair_key(profile.native_lang, profile.learning_lang)
-
-    lemmas = [c["lemma"] for c in candidates if c.get("lemma")]
-    lexical_entries: list[LexicalEntry] = []
-    if lemmas:
-        result = await db.execute(
-            select(LexicalEntry).where(
-                LexicalEntry.lang_pair == pair,
-                LexicalEntry.lemma_l2.in_(lemmas),
-            )
-        )
-        lexical_entries = list(result.scalars().all())
-
-    learning_cards: list[LearningCard] = []
-    if lemmas:
-        result = await db.execute(
-            select(LearningCard).where(
-                LearningCard.user_id == user.id,
-                LearningCard.profile_id == profile.id,
-                LearningCard.lemma_l2.in_(lemmas),
-            )
-        )
-        learning_cards = list(result.scalars().all())
-
     await db.commit()
     return {
         "query": word,
@@ -153,10 +132,6 @@ async def dev_search(
             "cefr_level": profile.cefr_level,
         },
         "lookup": {"source": source, "candidates": candidates},
-        "db": {
-            "lexical_entries": [_entry_payload(e) for e in lexical_entries],
-            "learning_cards": [_card_payload(c) for c in learning_cards],
-        },
     }
 
 

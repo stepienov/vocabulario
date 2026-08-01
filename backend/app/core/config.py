@@ -1,6 +1,19 @@
 from functools import lru_cache
 
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def normalize_database_url(url: str) -> str:
+    """Railway/Postgres dają postgres(ql)://; SQLAlchemy async potrzebuje +asyncpg."""
+    value = (url or "").strip()
+    if value.startswith("postgres://"):
+        value = "postgresql+asyncpg://" + value[len("postgres://") :]
+    elif value.startswith("postgresql://"):
+        value = "postgresql+asyncpg://" + value[len("postgresql://") :]
+    # asyncpg używa ssl= zamiast libpq sslmode=
+    value = value.replace("sslmode=", "ssl=")
+    return value
 
 
 class Settings(BaseSettings):
@@ -13,13 +26,21 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
     api_host: str = "0.0.0.0"
-    api_port: int = 8000
+    # Railway wstrzykuje PORT
+    api_port: int = Field(default=8000, validation_alias=AliasChoices("API_PORT", "PORT"))
     allowed_origins: str = "http://localhost:3000,http://10.0.2.2:8000"
 
     database_url: str = (
         "postgresql+asyncpg://vocabulario:vocabulario_dev@localhost:5433/vocabulario"
     )
     redis_url: str = "redis://localhost:6379/0"
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_database_url(cls, value: object) -> object:
+        if isinstance(value, str):
+            return normalize_database_url(value)
+        return value
 
     jwt_secret: str = "change-me"
     jwt_algorithm: str = "HS256"

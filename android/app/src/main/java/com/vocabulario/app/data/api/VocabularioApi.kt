@@ -1,7 +1,9 @@
 package com.vocabulario.app.data.api
 
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -56,6 +58,55 @@ interface VocabularioApi {
     @GET("cards")
     suspend fun listCards(@Query("profile_id") profileId: String): List<CardResponse>
 
+    @GET("lists")
+    suspend fun listWordLists(@Query("profile_id") profileId: String): List<WordListResponse>
+
+    @POST("lists")
+    suspend fun createWordList(@Body body: WordListCreate): WordListResponse
+
+    @GET("lists/{list_id}/words")
+    suspend fun listWords(
+        @Path("list_id") listId: String,
+        @Query("profile_id") profileId: String,
+    ): List<CardResponse>
+
+    @POST("lists/{list_id}/words")
+    suspend fun addWordToList(
+        @Path("list_id") listId: String,
+        @Body body: WordListAddWordRequest,
+    ): CardResponse
+
+    @PATCH("lists/{list_id}")
+    suspend fun renameWordList(
+        @Path("list_id") listId: String,
+        @Query("profile_id") profileId: String,
+        @Body body: WordListUpdate,
+    ): WordListResponse
+
+    @DELETE("lists/{list_id}")
+    suspend fun deleteWordList(
+        @Path("list_id") listId: String,
+        @Query("profile_id") profileId: String,
+    ): retrofit2.Response<Unit>
+
+    @DELETE("cards/{card_id}")
+    suspend fun deleteCard(
+        @Path("card_id") cardId: String,
+        @Query("profile_id") profileId: String,
+    ): retrofit2.Response<Unit>
+
+    @POST("cards/{card_id}/move")
+    suspend fun moveCard(
+        @Path("card_id") cardId: String,
+        @Body body: WordMoveRequest,
+    ): CardResponse
+
+    @GET("stats")
+    suspend fun dashboardStats(
+        @Query("profile_id") profileId: String,
+        @Query("days") days: Int = 7,
+    ): DashboardStatsResponse
+
     @POST("favorites")
     suspend fun addFavorite(@Body body: FavoriteCreate): FavoriteResponse
 
@@ -73,4 +124,13 @@ interface VocabularioApi {
 
     @POST("srs/distractors")
     suspend fun srsDistractors(@Body body: DistractorsRequest): DistractorsResponse
+
+    @GET("sync/pull")
+    suspend fun syncPull(
+        @Query("profile_id") profileId: String,
+        @Query("since") since: String? = null,
+    ): SyncPullResponse
+
+    @POST("sync/push")
+    suspend fun syncPush(@Body body: SyncPushRequest): SyncPushResponse
 }

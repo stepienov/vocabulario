@@ -12,7 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -109,7 +109,6 @@ fun AddWordScreen(
                 items(state.candidates) { candidate ->
                     CandidateRow(
                         candidate = candidate,
-                        onFavorite = { viewModel.addFavorite(candidate) },
                         onAdd = { viewModel.addToLearning(candidate) },
                     )
                 }
@@ -121,7 +120,6 @@ fun AddWordScreen(
 @Composable
 private fun CandidateRow(
     candidate: LookupCandidate,
-    onFavorite: () -> Unit,
     onAdd: () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -137,10 +135,9 @@ private fun CandidateRow(
                 Text(candidate.gloss, style = MaterialTheme.typography.bodyMedium)
                 candidate.pos?.let { Text(it, style = MaterialTheme.typography.labelSmall) }
             }
-            IconButton(onClick = onFavorite) {
-                Icon(Icons.Default.Favorite, contentDescription = "Ulubione")
+            IconButton(onClick = onAdd) {
+                Icon(Icons.Default.Add, contentDescription = "Dodaj")
             }
-            TextButton(onClick = onAdd) { Text("＋") }
         }
     }
 }

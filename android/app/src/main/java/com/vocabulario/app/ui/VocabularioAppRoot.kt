@@ -1,21 +1,16 @@
 package com.vocabulario.app.ui
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -49,97 +44,77 @@ fun VocabularioAppRoot(
     authViewModel: AuthViewModel = hiltViewModel(),
 ) {
     val startRoute by appViewModel.startRoute.collectAsState()
-    val navController = rememberNavController()
 
     LaunchedEffect(Unit) { appViewModel.bootstrap() }
 
     if (startRoute == AppStartRoute.LOADING) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                CircularProgressIndicator()
-                Spacer(Modifier.height(16.dp))
-                Text("Ładowanie…", style = MaterialTheme.typography.bodyLarge)
-            }
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
         return
     }
 
-    val graphStart = when (startRoute) {
-        AppStartRoute.AUTH -> Routes.AUTH
-        AppStartRoute.ONBOARDING -> Routes.ONBOARDING
-        AppStartRoute.HOME -> Routes.HOME
-        AppStartRoute.LOADING -> Routes.AUTH
-    }
+    // Przebuduj graf przy zmianie trasy startowej (HOME ↔ AUTH ↔ ONBOARDING).
+    key(startRoute) {
+        val navController = rememberNavController()
+        val graphStart = when (startRoute) {
+            AppStartRoute.AUTH -> Routes.AUTH
+            AppStartRoute.ONBOARDING -> Routes.ONBOARDING
+            AppStartRoute.HOME -> Routes.HOME
+            AppStartRoute.LOADING -> Routes.AUTH
+        }
 
-    NavHost(navController = navController, startDestination = graphStart) {
-        composable(Routes.AUTH) {
-            AuthScreen(
-                onAuthenticated = { needsOnboarding ->
-                    appViewModel.onAuthenticated(needsOnboarding)
-                    val dest = if (needsOnboarding) Routes.ONBOARDING else Routes.HOME
-                    navController.navigate(dest) {
-                        popUpTo(Routes.AUTH) { inclusive = true }
-                    }
-                },
-                onRegisterComplete = {
-                    appViewModel.onAuthenticated(needsOnboarding = true)
-                    navController.navigate(Routes.ONBOARDING) {
-                        popUpTo(Routes.AUTH) { inclusive = true }
-                    }
-                },
-            )
-        }
-        composable(Routes.ONBOARDING) {
-            OnboardingScreen(
-                onComplete = {
-                    appViewModel.onOnboardingComplete()
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.ONBOARDING) { inclusive = true }
-                    }
-                },
-            )
-        }
-        composable(Routes.HOME) {
-            HomeScreen(
-                onPractice = { navController.navigate(Routes.PRACTICE) },
-                onFavorites = { navController.navigate(Routes.FAVORITES) },
-                onLearning = { navController.navigate(Routes.LEARNING) },
-                onPacks = { navController.navigate(Routes.PACKS) },
-                onSettings = { navController.navigate(Routes.SETTINGS) },
-            )
-        }
-        composable(Routes.PRACTICE) {
-            PracticeScreen(onBack = { navController.popBackStack() })
-        }
-        composable(Routes.SETTINGS) {
-            SettingsScreen(
-                onBack = { navController.popBackStack() },
-                onLogout = {
-                    authViewModel.logout {
-                        appViewModel.onLogout()
-                        navController.navigate(Routes.AUTH) {
-                            popUpTo(Routes.HOME) { inclusive = true }
+        NavHost(navController = navController, startDestination = graphStart) {
+            composable(Routes.AUTH) {
+                AuthScreen(
+                    onAuthenticated = { needsOnboarding ->
+                        appViewModel.onAuthenticated(needsOnboarding)
+                    },
+                    onRegisterComplete = {
+                        appViewModel.onAuthenticated(needsOnboarding = true)
+                    },
+                )
+            }
+            composable(Routes.ONBOARDING) {
+                OnboardingScreen(
+                    onComplete = { appViewModel.onOnboardingComplete() },
+                )
+            }
+            composable(Routes.HOME) {
+                HomeScreen(
+                    onPractice = { navController.navigate(Routes.PRACTICE) },
+                    onSettings = { navController.navigate(Routes.SETTINGS) },
+                    onOpenCard = { navController.navigate(Routes.LEARNING) },
+                )
+            }
+            composable(Routes.PRACTICE) {
+                PracticeScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.SETTINGS) {
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onLogout = {
+                        authViewModel.logout {
+                            appViewModel.onLogout()
                         }
-                    }
-                },
-            )
-        }
-        composable(Routes.PROFILE) {
-            ProfileScreen(
-                onBack = { navController.popBackStack() },
-                onAddProfile = {
-                    navController.navigate(Routes.ONBOARDING)
-                },
-            )
-        }
-        composable(Routes.FAVORITES) {
-            FavoritesScreen(onBack = { navController.popBackStack() })
-        }
-        composable(Routes.LEARNING) {
-            LearningScreen(onBack = { navController.popBackStack() })
-        }
-        composable(Routes.PACKS) {
-            PacksScreen(onBack = { navController.popBackStack() })
+                    },
+                )
+            }
+            composable(Routes.PROFILE) {
+                ProfileScreen(
+                    onBack = { navController.popBackStack() },
+                    onAddProfile = { navController.navigate(Routes.ONBOARDING) },
+                )
+            }
+            composable(Routes.FAVORITES) {
+                FavoritesScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.LEARNING) {
+                LearningScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.PACKS) {
+                PacksScreen(onBack = { navController.popBackStack() })
+            }
         }
     }
 }

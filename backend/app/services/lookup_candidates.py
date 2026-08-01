@@ -10,10 +10,9 @@ def _normalize_lemma(lemma: str) -> str:
 
 
 def sanitize_lookup_candidates(candidates: list[dict]) -> list[dict]:
-    """Odrzuca zwroty, peryfrazy i duplikaty noun z/bez rodzajnika."""
+    """Odrzuca zwroty, peryfrazy i gołe rzeczowniki bez rodzajnika."""
     cleaned: list[dict] = []
     seen: set[tuple[str, str | None]] = set()
-    nouns_with_article: set[str] = set()
 
     for item in candidates:
         if not isinstance(item, dict):
@@ -31,16 +30,13 @@ def sanitize_lookup_candidates(candidates: list[dict]) -> list[dict]:
             continue
 
         if pos_lower == "noun":
-            if len(words) == 1:
-                continue
+            # Rzeczownik musi mieć rodzajnik: "el contar", nie samo "contar".
             if len(words) != 2 or words[0].lower() not in _ARTICLES:
                 continue
-            nouns_with_article.add(words[1].lower())
-
-        if len(words) > 2:
+        elif len(words) != 1:
             continue
 
-        if pos_lower != "noun" and len(words) > 1:
+        if len(words) > 2:
             continue
 
         key = (_normalize_lemma(lemma), pos_lower or None)
@@ -49,15 +45,6 @@ def sanitize_lookup_candidates(candidates: list[dict]) -> list[dict]:
         seen.add(key)
         cleaned.append(item)
 
-    final: list[dict] = []
-    for item in cleaned:
-        lemma = item.get("lemma", "")
-        pos_lower = (item.get("pos") or "").lower()
-        words = lemma.split()
-        if pos_lower == "noun" and len(words) == 1:
-            continue
-        if pos_lower != "noun" and len(words) == 1 and words[0].lower() in nouns_with_article:
-            continue
-        final.append(item)
+    return cleaned[:8]
 
-    return final[:8]
+

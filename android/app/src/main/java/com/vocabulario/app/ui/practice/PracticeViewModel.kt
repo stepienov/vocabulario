@@ -5,8 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.ChoiceOption
 import com.vocabulario.app.data.api.SrsQueueItem
+import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.normalizeTenseKeys
 import com.vocabulario.app.ui.card.RelatedWord
+import com.vocabulario.app.ui.home.listNameConflictMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,10 +49,18 @@ data class PracticeUiState(
     val userCefr: String = "A2",
     val showUsages: Boolean = true,
     val showExampleSentences: Boolean = true,
-    val showSynonymsAntonyms: Boolean = true,
+    val showSynonyms: Boolean = true,
+    val showAntonyms: Boolean = true,
     val showPeriphrases: Boolean = true,
+    val showConjugation: Boolean = true,
     val conjugationExpandedDefault: Boolean = false,
     val relatedWordsExpandedDefault: Boolean = false,
+    val showCorrectToast: Boolean = false,
+    val addTarget: RelatedWord? = null,
+    val lists: List<WordListResponse> = emptyList(),
+    val pickListOpen: Boolean = false,
+    val showCreateListPrompt: Boolean = false,
+    val createListName: String = "",
 )
 
 @HiltViewModel
@@ -84,12 +95,14 @@ class PracticeViewModel @Inject constructor(
                     loading = false,
                     queue = newQueue,
                     currentIndex = if (append) _state.value.currentIndex else 0,
-                    userTenses = profile?.selected_tenses.orEmpty(),
+                    userTenses = normalizeTenseKeys(profile?.selected_tenses.orEmpty()),
                     userCefr = profile?.cefr_level ?: "A2",
                     showUsages = settings.show_usages,
                     showExampleSentences = settings.show_example_sentences,
-                    showSynonymsAntonyms = settings.show_synonyms_antonyms,
+                    showSynonyms = settings.show_synonyms_antonyms && settings.show_synonyms,
+                    showAntonyms = settings.show_synonyms_antonyms && settings.show_antonyms,
                     showPeriphrases = settings.show_periphrases,
+                    showConjugation = settings.show_conjugation,
                     conjugationExpandedDefault = settings.conjugation_expanded_default,
                     relatedWordsExpandedDefault = settings.related_words_expanded_default,
                 )
@@ -165,6 +178,7 @@ class PracticeViewModel @Inject constructor(
             _state.value = _state.value.copy(
                 selectedChoice = choice,
                 lastCorrect = true,
+                showCorrectToast = true,
                 phase = PracticePhase.SHOW_CARD,
             )
         } else {
@@ -174,6 +188,10 @@ class PracticeViewModel @Inject constructor(
                 phase = PracticePhase.WRONG_MODAL,
             )
         }
+    }
+
+    fun dismissCorrectToast() {
+        _state.value = _state.value.copy(showCorrectToast = false)
     }
 
     fun dismissWrongModal() {
@@ -199,6 +217,7 @@ class PracticeViewModel @Inject constructor(
                             lastCorrect = true,
                             typoWarning = result.accepted_as_typo,
                             expectedAnswer = result.expected,
+                            showCorrectToast = true,
                             phase = PracticePhase.SHOW_CARD,
                         )
                     }
@@ -240,34 +259,80 @@ class PracticeViewModel @Inject constructor(
         }
     }
 
-    fun addWrongToFavorites(choice: ChoiceOption? = _state.value.selectedChoice) {
-        val c = choice ?: return
-        val lemma = c.lemma_l2 ?: return
-        if (c.is_favorite) return
+    fun openAddRelated(word: RelatedWord) {
+        _state.value = _state.value.copy(
+            addTarget = word,
+            pickListOpen = false,
+            showCreateListPrompt = false,
+            createListName = "",
+        )
+    }
+
+    fun dismissAddSheet() {
+        _state.value = _state.value.copy(
+            addTarget = null,
+            pickListOpen = false,
+            showCreateListPrompt = false,
+            createListName = "",
+        )
+    }
+
+    fun openOtherLists() {
         viewModelScope.launch {
-            runCatching { repository.addFavorite(lemma, c.pos, c.gloss) }
-                .onSuccess {
+            runCatching { repository.listWordLists() }
+                .onSuccess { lists ->
+                    val custom = lists.filterNot { it.is_system }
                     _state.value = _state.value.copy(
-                        choices = _state.value.choices.map {
-                            if (it.text == c.text) it.copy(is_favorite = true) else it
-                        },
+                        lists = lists,
+                        pickListOpen = true,
+                        showCreateListPrompt = custom.isEmpty(),
                     )
                 }
-                .onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd ulubionych")) }
+                .onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd list")) }
         }
     }
 
-    fun addRelatedToLearning(word: RelatedWord) {
+    fun openCreateListPrompt() {
+        _state.value = _state.value.copy(showCreateListPrompt = true, pickListOpen = true)
+    }
+
+    fun onCreateListNameChange(value: String) {
+        _state.value = _state.value.copy(createListName = value)
+    }
+
+    fun addRelatedToLearning() {
+        val word = _state.value.addTarget ?: return
+        dismissAddSheet()
         viewModelScope.launch {
             runCatching { repository.createCard(word.lemma, word.pos, word.glossL1, null) }
                 .onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd dodawania")) }
         }
     }
 
-    fun addRelatedToFavorites(word: RelatedWord) {
+    fun addRelatedToList(listId: String) {
+        val word = _state.value.addTarget ?: return
+        dismissAddSheet()
         viewModelScope.launch {
-            runCatching { repository.addFavorite(word.lemma, word.pos, word.glossL1) }
-                .onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd ulubionych")) }
+            runCatching {
+                repository.addWordToList(listId, word.lemma, word.pos, word.glossL1, null)
+            }.onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd dodawania")) }
+        }
+    }
+
+    fun createListAndAddRelated() {
+        val word = _state.value.addTarget ?: return
+        val name = _state.value.createListName.trim()
+        if (name.isBlank()) return
+        listNameConflictMessage(_state.value.lists, name)?.let {
+            _state.value = _state.value.copy(error = it)
+            return
+        }
+        dismissAddSheet()
+        viewModelScope.launch {
+            runCatching {
+                val list = repository.createWordList(name)
+                repository.addWordToList(list.id, word.lemma, word.pos, word.glossL1, null)
+            }.onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd tworzenia listy")) }
         }
     }
 

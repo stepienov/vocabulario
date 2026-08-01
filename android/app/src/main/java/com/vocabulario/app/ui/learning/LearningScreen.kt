@@ -23,9 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vocabulario.app.ui.card.CardDetailContent
+import com.vocabulario.app.ui.components.AddToListSheet
 import com.vocabulario.app.ui.components.AppScreenScaffold
 import com.vocabulario.app.ui.components.EmptyState
 import com.vocabulario.app.ui.components.WordListItem
+import com.vocabulario.app.ui.home.listNameConflictMessage
 import kotlinx.serialization.json.jsonPrimitive
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,6 +38,25 @@ fun LearningScreen(
 ) {
     val state by viewModel.state.collectAsState()
     LaunchedEffect(Unit) { viewModel.load() }
+
+    state.addTarget?.let { target ->
+        AddToListSheet(
+            lemma = target.lemma,
+            gloss = target.glossL1,
+            lists = state.lists,
+            pickListOpen = state.pickListOpen,
+            showCreateListPrompt = state.showCreateListPrompt,
+            createListName = state.createListName,
+            createNameError = listNameConflictMessage(state.lists, state.createListName),
+            onDismiss = viewModel::dismissAddSheet,
+            onLearning = viewModel::addRelatedToLearning,
+            onOther = viewModel::openOtherLists,
+            onPickList = viewModel::addRelatedToList,
+            onCreateNameChange = viewModel::onCreateListNameChange,
+            onCreateAndAdd = viewModel::createListAndAddRelated,
+            onShowCreatePrompt = viewModel::openCreateListPrompt,
+        )
+    }
 
     AppScreenScaffold(title = "Nauka", onBack = onBack) { paddingModifier ->
         Column(modifier = paddingModifier.fillMaxSize()) {
@@ -56,8 +77,7 @@ fun LearningScreen(
                         userCefr = state.userCefr,
                         enrichmentStatus = card.enrichment_status,
                         enrichmentError = card.enrichment_error,
-                        onAddRelatedToLearning = viewModel::addRelatedToLearning,
-                        onAddRelatedToFavorites = viewModel::addRelatedToFavorites,
+                        onAddRelated = viewModel::openAddRelated,
                     )
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = viewModel::clearSelection) { Text("Wróć do listy") }

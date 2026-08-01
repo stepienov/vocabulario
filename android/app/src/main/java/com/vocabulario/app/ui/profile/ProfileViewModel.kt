@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.normalizeTenseKey
+import com.vocabulario.app.data.normalizeTenseKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,7 +47,7 @@ class ProfileViewModel @Inject constructor(
                     profiles = profiles,
                     activeProfile = active,
                     uiLang = uiLang,
-                    selectedTenses = active?.selected_tenses?.toSet() ?: emptySet(),
+                    selectedTenses = normalizeTenseKeys(active?.selected_tenses.orEmpty()).toSet(),
                     cefrLevel = active?.cefr_level ?: "A2",
                 )
             }.onFailure {
@@ -78,15 +80,20 @@ class ProfileViewModel @Inject constructor(
 
     fun toggleTense(key: String) {
         val current = _state.value.selectedTenses.toMutableSet()
-        if (key in current) {
-            if (current.size > 1) current.remove(key)
+        val canonicalKey = normalizeTenseKey(key)
+        if (canonicalKey in current) {
+            if (current.size > 1) current.remove(canonicalKey)
         } else {
-            current.add(key)
+            current.add(canonicalKey)
         }
+        val canonical = normalizeTenseKeys(current)
         viewModelScope.launch {
-            runCatching { repository.updateProfile(tenses = current.toList()) }
+            runCatching { repository.updateProfile(tenses = canonical) }
                 .onSuccess {
-                    _state.value = _state.value.copy(selectedTenses = current, message = "Zapisano czasy")
+                    _state.value = _state.value.copy(
+                        selectedTenses = canonical.toSet(),
+                        message = "Zapisano czasy",
+                    )
                 }
                 .onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd zapisu")) }
         }

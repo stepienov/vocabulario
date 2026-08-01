@@ -1,5 +1,6 @@
 package com.vocabulario.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,16 +18,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -36,6 +40,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,11 +52,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
-val AppCardShape = RoundedCornerShape(16.dp)
-val AppButtonShape = RoundedCornerShape(14.dp)
-val AppChipShape = RoundedCornerShape(20.dp)
+val AppCardShape = RoundedCornerShape(18.dp)
+val AppButtonShape = RoundedCornerShape(28.dp)
+val AppChipShape = RoundedCornerShape(999.dp)
+val AppDialogShape = RoundedCornerShape(24.dp)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,26 +99,34 @@ fun AppScreenScaffold(
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    val shape = AppCardShape
-    if (onClick != null) {
-        Card(
-            onClick = onClick,
-            modifier = modifier.fillMaxWidth(),
-            shape = shape,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        ) { content() }
-    } else {
-        Card(
-            modifier = modifier.fillMaxWidth(),
-            shape = shape,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        ) { content() }
-    }
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = AppCardShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        content = { content() },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = AppCardShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        content = { content() },
+    )
 }
 
 @Composable
@@ -142,7 +163,7 @@ fun SettingsRadioRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onSelect)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -151,11 +172,13 @@ fun SettingsRadioRow(
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            RadioButton(
-                selected = selected,
-                onClick = onSelect,
-                colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary),
-            )
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                RadioButton(
+                    selected = selected,
+                    onClick = onSelect,
+                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary),
+                )
+            }
         }
         if (showDivider) {
             Box(
@@ -182,7 +205,7 @@ fun SettingsCheckRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onCheckedChange(!checked) }
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -191,11 +214,13 @@ fun SettingsCheckRow(
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            Checkbox(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary),
-            )
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                Checkbox(
+                    checked = checked,
+                    onCheckedChange = onCheckedChange,
+                    colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary),
+                )
+            }
         }
         if (showDivider) {
             Box(
@@ -210,17 +235,61 @@ fun SettingsCheckRow(
 }
 
 @Composable
-fun TagChip(text: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = AppChipShape,
-        color = MaterialTheme.colorScheme.primaryContainer,
-    ) {
+fun TagChip(
+    text: String,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
+    val content: @Composable () -> Unit = {
         Text(
             text,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+    }
+    if (onClick != null) {
+        // Without this, clickable Surface expands to 48dp min touch target and misaligns next to plain chips.
+        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+            Surface(
+                onClick = onClick,
+                modifier = modifier,
+                shape = AppChipShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                content = content,
+            )
+        }
+    } else {
+        Surface(
+            modifier = modifier,
+            shape = AppChipShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            content = content,
+        )
+    }
+}
+
+@Composable
+fun SpeakIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
+    val size = if (compact) 36.dp else 44.dp
+    val iconSize = if (compact) 18.dp else 22.dp
+    IconButton(
+        onClick = onClick,
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primaryContainer),
+    ) {
+        Icon(
+            Icons.AutoMirrored.Filled.VolumeUp,
+            contentDescription = "Odtwórz",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(iconSize),
         )
     }
 }
@@ -240,19 +309,36 @@ fun PracticeProgressBar(progress: Float, modifier: Modifier = Modifier) {
 
 @Composable
 fun PromptCard(text: String, modifier: Modifier = Modifier) {
+    val baseStyle = MaterialTheme.typography.displaySmall
+    val isSingleWord = remember(text) {
+        val trimmed = text.trim()
+        trimmed.isNotEmpty() && trimmed.none { it.isWhitespace() }
+    }
+    var fontSize by remember(text, isSingleWord) { mutableStateOf(baseStyle.fontSize) }
+
     AppCard(modifier = modifier) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 32.dp, horizontal = 24.dp),
+                .padding(vertical = 32.dp, horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text,
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
+                style = baseStyle.copy(
+                    fontSize = if (isSingleWord) fontSize else baseStyle.fontSize,
+                    fontWeight = FontWeight.Bold,
+                ),
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface,
+                maxLines = if (isSingleWord) 1 else Int.MAX_VALUE,
+                softWrap = !isSingleWord,
+                overflow = TextOverflow.Clip,
+                onTextLayout = { layout ->
+                    if (isSingleWord && layout.hasVisualOverflow && fontSize.value > 16f) {
+                        fontSize = (fontSize.value - 2f).coerceAtLeast(16f).sp
+                    }
+                },
             )
         }
     }
@@ -269,74 +355,69 @@ fun ChoiceTile(
     dimmed: Boolean = false,
     gloss: String? = null,
     showActions: Boolean = false,
-    canFavorite: Boolean = true,
     canAddLearning: Boolean = true,
-    onFavorite: (() -> Unit)? = null,
     onAddLearning: (() -> Unit)? = null,
 ) {
+    val scheme = MaterialTheme.colorScheme
     val borderColor = when {
         selected && isCorrect == true -> com.vocabulario.app.ui.theme.GradeKnown
-        else -> MaterialTheme.colorScheme.outline
+        dimmed -> scheme.outline.copy(alpha = 0.5f)
+        else -> scheme.outline
     }
     val bgColor = when {
-        selected && isCorrect == true -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-        dimmed -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-        else -> MaterialTheme.colorScheme.surface
+        selected && isCorrect == true -> scheme.primaryContainer.copy(alpha = 0.45f)
+        dimmed -> scheme.surfaceVariant
+        else -> scheme.surface
     }
-    val textAlpha = if (dimmed) 0.55f else 1f
     Surface(
         onClick = onClick,
         enabled = enabled && !dimmed,
         modifier = Modifier.fillMaxWidth(),
         shape = AppButtonShape,
         color = bgColor,
-        shadowElevation = if (selected && !dimmed) 0.dp else 1.dp,
+        contentColor = scheme.onSurface,
+        shadowElevation = 0.dp,
+        border = BorderStroke(1.dp, borderColor),
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.5.dp, borderColor, AppButtonShape)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = textAlpha),
-            )
-            if (showActions && !gloss.isNullOrBlank()) {
-                Spacer(Modifier.height(6.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    gloss,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = scheme.onSurface.copy(alpha = if (dimmed) 0.7f else 1f),
                 )
+                if (showActions && !gloss.isNullOrBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        gloss,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = scheme.onSurfaceVariant,
+                    )
+                }
             }
             if (showActions) {
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(
-                        onClick = { onFavorite?.invoke() },
-                        enabled = canFavorite && onFavorite != null,
-                    ) {
-                        Icon(
-                            Icons.Default.FavoriteBorder,
-                            contentDescription = "Ulubione",
-                            tint = if (canFavorite) MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
-                        )
-                    }
-                    IconButton(
-                        onClick = { onAddLearning?.invoke() },
-                        enabled = canAddLearning && onAddLearning != null,
-                    ) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "Do nauki",
-                            tint = if (canAddLearning) MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
-                        )
-                    }
+                if (canAddLearning && onAddLearning != null) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Dodaj do listy",
+                        tint = scheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clickable(onClick = onAddLearning),
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = "Już na liście",
+                        tint = com.vocabulario.app.ui.theme.GradeKnown,
+                        modifier = Modifier.size(26.dp),
+                    )
                 }
             }
         }
@@ -345,17 +426,19 @@ fun ChoiceTile(
 
 @Composable
 fun GradeRow(
+    onAgain: () -> Unit,
     onHard: () -> Unit,
-    onLearning: () -> Unit,
-    onKnown: () -> Unit,
+    onGood: () -> Unit,
+    onEasy: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        GradeSquare("Powtórz", com.vocabulario.app.ui.theme.GradeAgain, Modifier.weight(1f), onAgain)
         GradeSquare("Trudne", com.vocabulario.app.ui.theme.GradeHard, Modifier.weight(1f), onHard)
-        GradeSquare("Uczę się", com.vocabulario.app.ui.theme.GradeLearning, Modifier.weight(1f), onLearning)
-        GradeSquare("Umiem", com.vocabulario.app.ui.theme.GradeKnown, Modifier.weight(1f), onKnown)
+        GradeSquare("Dobrze", com.vocabulario.app.ui.theme.GradeLearning, Modifier.weight(1f), onGood)
+        GradeSquare("Łatwe", com.vocabulario.app.ui.theme.GradeKnown, Modifier.weight(1f), onEasy)
     }
 }
 
@@ -369,17 +452,18 @@ private fun GradeSquare(
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier.height(64.dp),
+        modifier = modifier.height(56.dp),
         shape = RoundedCornerShape(12.dp),
         color = color,
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Text(
                 label,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
                 textAlign = TextAlign.Center,
+                maxLines = 1,
             )
         }
     }
@@ -447,7 +531,7 @@ fun WordListItem(
     enrichmentStatus: String? = null,
     onClick: (() -> Unit)? = null,
 ) {
-    AppCard(onClick = onClick) {
+    val body: @Composable () -> Unit = {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -462,9 +546,9 @@ fun WordListItem(
                 }
                 when (enrichmentStatus) {
                     "pending" -> {
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(
-                            "Przygotowuję kartę…",
+                            "Tworzę kartę",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -479,8 +563,21 @@ fun WordListItem(
                     }
                 }
             }
-            pos?.let { TagChip(it) }
+            if (enrichmentStatus == "pending") {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    strokeWidth = 2.5.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            } else {
+                pos?.let { TagChip(it) }
+            }
         }
+    }
+    if (onClick != null) {
+        AppCard(onClick = onClick, content = body)
+    } else {
+        AppCard(content = body)
     }
 }
 

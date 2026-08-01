@@ -10,78 +10,120 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vocabulario.app.R
 
-/** Stonowane kolory ocen SRS */
+val GradeAgain = Color(0xFF8B3A3A)
 val GradeHard = Color(0xFFB85C5C)
 val GradeLearning = Color(0xFFC4894A)
 val GradeKnown = Color(0xFF5A9E6F)
 val ProgressMuted = Color(0xFF6B7280)
 
-private val Indigo = Color(0xFF6366F1)
-private val IndigoMuted = Color(0xFF7C83D4)
-private val Slate50 = Color(0xFFF8FAFC)
-private val SoftBg = Color(0xFF12161C)
-private val SoftSurface = Color(0xFF1A222D)
-private val SoftSurfaceVariant = Color(0xFF243041)
-private val SoftOn = Color(0xFFE8EDF4)
-private val SoftMuted = Color(0xFF9AA6B5)
+val DmSans = FontFamily(
+    Font(R.font.dmsans_regular, FontWeight.Normal),
+    Font(R.font.dmsans_medium, FontWeight.Medium),
+    Font(R.font.dmsans_semibold, FontWeight.SemiBold),
+    Font(R.font.dmsans_bold, FontWeight.Bold),
+)
+
+/** Light: Coinbase-like cool blue + soft gray canvas */
+private val Blue = Color(0xFF0052FF)
+private val BlueSoft = Color(0xFFE8F0FF)
+private val LightBg = Color(0xFFF4F5F7)
+private val LightInk = Color(0xFF0A0B0D)
+private val LightMuted = Color(0xFF6B7280)
+private val LightBorder = Color(0xFFE5E7EB)
+
+/** Dark: true-black layers + teal accent */
+private val Teal = Color(0xFF2DD4BF)
+private val TealContainer = Color(0xFF163A36)
+private val DarkBg = Color(0xFF000000)
+private val DarkSurface = Color(0xFF17171A)
+private val DarkSurface2 = Color(0xFF222228)
+private val DarkInk = Color(0xFFF4F4F5)
+private val DarkMuted = Color(0xFFA1A1AA)
+private val DarkBorder = Color(0xFF2E2E36)
 
 private val LightColors = lightColorScheme(
-    primary = Indigo,
+    primary = Blue,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFEEF2FF),
-    onPrimaryContainer = Color(0xFF312E81),
-    secondary = Color(0xFF8B5CF6),
-    background = Slate50,
-    onBackground = Color(0xFF0F172A),
+    primaryContainer = BlueSoft,
+    onPrimaryContainer = Color(0xFF0033A0),
+    secondary = Color(0xFF2563EB),
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFEFF4FF),
+    onSecondaryContainer = Color(0xFF1E3A8A),
+    background = LightBg,
+    onBackground = LightInk,
     surface = Color.White,
-    onSurface = Color(0xFF0F172A),
-    surfaceVariant = Color(0xFFF1F5F9),
-    onSurfaceVariant = Color(0xFF475569),
-    outline = Color(0xFFE2E8F0),
-    outlineVariant = Color(0xFFF1F5F9),
+    onSurface = LightInk,
+    surfaceVariant = Color(0xFFEEF0F3),
+    onSurfaceVariant = LightMuted,
+    outline = LightBorder,
+    outlineVariant = Color(0xFFF0F1F3),
+    error = GradeHard,
+    onError = Color.White,
 )
 
 private val DarkColors = darkColorScheme(
-    primary = IndigoMuted,
-    onPrimary = SoftOn,
-    primaryContainer = Color(0xFF2A3148),
-    onPrimaryContainer = SoftOn,
-    secondary = Color(0xFF9B93C9),
-    background = SoftBg,
-    onBackground = SoftOn,
-    surface = SoftSurface,
-    onSurface = SoftOn,
-    surfaceVariant = SoftSurfaceVariant,
-    onSurfaceVariant = SoftMuted,
-    outline = Color(0xFF3A4556),
-    outlineVariant = SoftSurfaceVariant,
+    primary = Teal,
+    onPrimary = Color(0xFF042F2E),
+    primaryContainer = TealContainer,
+    onPrimaryContainer = Color(0xFFCCFBF1),
+    secondary = Color(0xFF5EEAD4),
+    onSecondary = Color(0xFF042F2E),
+    secondaryContainer = Color(0xFF1F2A2A),
+    onSecondaryContainer = Color(0xFFCCFBF1),
+    background = DarkBg,
+    onBackground = DarkInk,
+    surface = DarkSurface,
+    onSurface = DarkInk,
+    surfaceVariant = DarkSurface2,
+    onSurfaceVariant = DarkMuted,
+    outline = DarkBorder,
+    outlineVariant = Color(0xFF1F1F24),
     error = GradeHard,
-    onError = SoftOn,
+    onError = DarkInk,
+)
+
+private fun type(
+    size: Int,
+    weight: FontWeight,
+    line: Int,
+    tracking: Double = 0.0,
+) = TextStyle(
+    fontFamily = DmSans,
+    fontSize = size.sp,
+    fontWeight = weight,
+    lineHeight = line.sp,
+    letterSpacing = tracking.sp,
 )
 
 private val AppTypography = Typography(
-    displaySmall = TextStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp, lineHeight = 40.sp),
-    headlineMedium = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.25).sp, lineHeight = 32.sp),
-    headlineSmall = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.SemiBold, lineHeight = 30.sp),
-    titleLarge = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold, lineHeight = 28.sp),
-    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium, lineHeight = 24.sp),
-    bodyLarge = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Normal, lineHeight = 26.sp),
-    bodyMedium = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Normal, lineHeight = 22.sp),
-    bodySmall = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Normal, lineHeight = 20.sp),
-    labelLarge = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.1.sp, lineHeight = 20.sp),
-    labelMedium = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.3.sp, lineHeight = 16.sp),
+    displaySmall = type(32, FontWeight.Bold, 40, -0.5),
+    headlineMedium = type(26, FontWeight.Bold, 32, -0.3),
+    headlineSmall = type(22, FontWeight.SemiBold, 28),
+    titleLarge = type(20, FontWeight.SemiBold, 28),
+    titleMedium = type(16, FontWeight.SemiBold, 24),
+    titleSmall = type(14, FontWeight.SemiBold, 20),
+    bodyLarge = type(16, FontWeight.Normal, 24),
+    bodyMedium = type(14, FontWeight.Normal, 22),
+    bodySmall = type(13, FontWeight.Normal, 18),
+    labelLarge = type(14, FontWeight.SemiBold, 20, 0.1),
+    labelMedium = type(12, FontWeight.Medium, 16, 0.2),
+    labelSmall = type(11, FontWeight.Medium, 14, 0.2),
 )
 
 private val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(20.dp),
-    extraLarge = RoundedCornerShape(28.dp),
+    extraSmall = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(28.dp),
+    extraLarge = RoundedCornerShape(32.dp),
 )
 
 @Composable

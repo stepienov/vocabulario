@@ -2,68 +2,111 @@
 
 from app.ai.conjugation import conjugation_rules_for_prompt
 
-LOOKUP_PROMPT_V1 = """Jesteś leksykografem. Użytkownik szuka POJEDYNCZEGO słówka w słowniku — szybki podgląd, czasem z literówką.
+LANG_NAMES_PL: dict[str, str] = {
+    "pl": "polski",
+    "es": "hiszpański",
+    "en": "angielski",
+    "de": "niemiecki",
+    "fr": "francuski",
+    "it": "włoski",
+    "pt": "portugalski",
+    "uk": "ukraiński",
+    "ru": "rosyjski",
+    "cs": "czeski",
+    "sk": "słowacki",
+}
 
-Para językowa: L1 = {native}, L2 = {learning}
+
+def lang_name_pl(code: str) -> str:
+    return LANG_NAMES_PL.get((code or "").strip().lower(), code)
+
+
+LOOKUP_SYSTEM_V1 = (
+    "Lookup słownikowy: zwracasz wyłącznie prawdziwe hasła jako JSON. "
+    "Nie zmyślaj znaczeń dla nieistniejących ciągów. "
+    "Gdy zapytanie jest dokładnym hasłem w języku uczonym, ten lemat MUSI być "
+    "pierwszym kandydatem — nie zastępuj go formą zwrotną ani derywatem. "
+    "Gdy zapytanie to literówka, lemat poprawki musi być inny niż zapytanie. "
+    "Rzeczowniki z rodzajnikiem. Bez zwrotów i bez peryfraz. Tylko JSON."
+)
+
+LOOKUP_PROMPT_V1 = """Jesteś leksykografem. Użytkownik szuka JEDNEGO hasła w słowniku.
+
+Język ojczysty użytkownika: {native_name}
+Język, którego się uczy: {learning_name}
 Poziom CEFR: {cefr}
-Wpisał: "{text}"
+Wpisane zapytanie: "{text}"
 
-Wpisany tekst jest słowem w {native} albo w {learning} — NIGDY w innym języku.
-Jeśli angielski nie jest jednym z tych dwóch, nie czytaj wpisanego tekstu
-po angielsku, nawet gdy wygląda znajomo.
+Zapytanie czytaj wyłącznie jako {native_name} albo {learning_name}.
+Nie interpretuj go jako słowa z innego języka, chyba że ten język jest jednym z dwóch powyżej.
 
-Ustal kierunek w tej kolejności:
-1. Jeśli „{text}” istnieje w {learning}, MUSI być pierwszym kandydatem —
-   w niezmienionej formie, z tłumaczeniem na {native}. Dopiero po nim dodaj
-   powiązane lematy z tego samego rdzenia.
-2. W przeciwnym razie, jeśli „{text}” istnieje w {native}, podaj jego
-   odpowiedniki w {learning}.
-3. Jeśli istnieje w obu językach, zacznij od odczytania w {learning}.
-4. Jeśli nie istnieje w żadnym z nich, potraktuj to jako literówkę i zaproponuj
-   najbliższe prawdziwe słowa.
+ZADANIE
+Zwróć listę kandydatów — prawdziwych haseł w języku {learning_name}, które użytkownik
+mógł mieć na myśli (max 8, od najbardziej prawdopodobnego).
 
-Zwróć listę kandydatów — co użytkownik mógł mieć na myśli (max 8, od najbardziej prawdopodobnego).
+KROK A — czy „{text}” jest prawdziwym hasłem?
+Jeśli „{text}” jest standardowym hasłem słownikowym w języku {learning_name}
+(np. popularny bezokolicznik, rzeczownik, przymiotnik), MUSI znaleźć się na liście
+jako PIERWSZY kandydat, z lemma dokładnie równym „{text}” (dla rzeczownika:
+z prawidłowym rodzajnikiem, jeśli w języku {learning_name} tak się hasłuje).
+Dopiero PO dokładnym trafieniu wolno dodać formy pokrewne (zwrotne, rzeczownik odczasownikowy).
+ZAKAZANE: pominąć dokładne trafienie i zwrócić tylko derywaty
+(np. wpisano „contar” → ŹLE: same contarse / el contar bez „contar”).
+ZAKAZANE: zmyślać znaczenie dla ciągu, którego nie znasz ze słownika.
+ZAKAZANE: zwrócić lemma = „{text}” z wymyślonym glossem, gdy słowo nie istnieje.
 
-KAŻDY kandydat to JEDNO słówko ze słownika:
-- verb → bezosobowy infinitiv (np. apoyar, apoyarse)
-- noun → ZAWSZE z rodzajnikiem: el/la/los/las + rzeczownik (np. el apoyo). NIGDY samo „apoyo” bez rodzajnika.
-- adj → forma podstawowa męska lp. (np. vacío)
-- adv, prep itd. → pojedynczy lemat
+KROK B — literówka (gdy „{text}” NIE jest pewnym hasłem)
+Zaproponuj najbliższe PRAWDZIWE hasła w języku {learning_name}.
+- Lemat poprawki MUSI różnić się od „{text}”.
+- Odległość edycyjna najwyżej 2: zamiana litery, przestawienie, brakująca
+  albo nadmiarowa litera (także na początku lub na końcu), sąsiad na klawiaturze.
+- Przykład: „cabar” → „acabar” (brakujące „a” na początku) — TO JEST poprawka, nie odrzucaj jej.
+- Długość zbliżona (różnica długości najwyżej 2).
+- Nie proponuj słów tylko dlatego, że dzielą długi wspólny początek albo zawierają
+  „{text}” jako fragment, jeśli odległość edycyjna przekracza 2
+  (np. „cabar” ↛ „cabalgada”).
 
-ZAKAZANE w kandydatach:
-- słowa dobrane po samym wspólnym początku — wspólne pierwsze litery to NIE podobieństwo
-- zwroty i kolokacje wielowyrazowe (np. „el apoyo mutuo”, „el apoyo financiero”, „wzajemne wsparcie”)
-- czasownik + przyimek/spójnik (np. „apoyar a”, „dejar de”) — to idzie dopiero przy pełnej karcie słówka
-- duplikaty tego samego słowa (np. „apoyo” ORAZ „el apoyo” — zostaw tylko wersję z rodzajnikiem)
-- zdania, przykłady użycia, wyjaśnienia
+KROK C — tłumaczenie z języka ojczystego
+Jeśli „{text}” jest prawdziwym słowem w języku {native_name}, podaj jego
+odpowiedniki w języku {learning_name}.
 
-DOZWOLONE:
-- różne lematy powiązane rdzeniem (np. apoyar verb + el apoyo noun + apoyarse verb) — każdy raz, bez powtórzeń znaczenia
-- podobnie brzmiące słowa, jeśli użytkownik mógł się pomylić przy wpisywaniu (literówka)
-- tłumaczenie z L1 na L2 lub z L2 na L1 — w obu kierunkach
+FORMA KAŻDEGO KANDYDATA (język {learning_name}):
+- czasownik → bezokolicznik (np. apoyar, apoyarse, contar)
+- rzeczownik → ZAWSZE z rodzajnikiem: el/la/los/las + rzeczownik (np. el apoyo, el contar)
+- przymiotnik → forma podstawowa męska lp. (np. vacío)
+- inne → pojedynczy lemat
 
-Przykład dla wpisania „apoyar”:
+ZAKAZANE:
+- zwroty wielowyrazowe (np. „el apoyo mutuo”)
+- czasownik + przyimek (np. „apoyar a”, „dejar de”)
+- pominięcie dokładnego lematu na rzecz formy zwrotnej albo homonimicznego rzeczownika
+- zdania poza polem gloss
+
+PRZYKŁADY
+
+Wpisał „contar” (prawdziwy czasownik hiszpański):
+DOBRZE (kolejność): contar (verb, liczyć / opowiadać), potem opcjonalnie contarse, el contar
+ŹLE: tylko contarse i el contar — bez „contar”
+
+Wpisał „apoyar” (prawdziwy czasownik hiszpański):
 DOBRZE: apoyar (verb, wspierać), apoyarse (verb, opierać się), el apoyo (noun, wsparcie)
-ŹLE: apoyo (brak rodzajnika), el apoyo mutuo (zwrot), apoyar a (peryfraza), el apoyo financiero (zwrot)
+ŹLE: apoyo bez rodzajnika; el apoyo mutuo; apoyar a
+ŹLE: same apoyarse / el apoyo bez „apoyar”
 
-Literówki — dotyczy tylko sytuacji, gdy „{text}” nie jest prawdziwym słowem
-w żadnym z dwóch języków:
-- Poprawka może różnić się od „{text}” najwyżej DWOMA znakami: przestawione
-  litery, litera podwojona, brakująca, nadmiarowa albo klawisz obok właściwego.
-- Długość zbliżona — różnica najwyżej 2 znaki.
-- Sprawdź każdego kandydata: przeliteruj go obok „{text}” i policz różnice.
-  Powyżej dwóch to nie literówka, tylko inne słowo.
-- Jeśli w tym promieniu nie ma prawdziwych słów, zwróć MNIEJ kandydatów lub
-  pustą listę. Nigdy nie dopychaj listy popularnymi słowami na tę samą literę.
+Wpisał „aprneder” (literówka):
+DOBRZE: aprender
+ŹLE: aprovechar, el aprendizaje — tylko wspólny początek
 
-Przykład literówki — L2 = es, wpisano „aprneder”:
-DOBRZE: aprender (przestawione „ne” na „en” — dwa znaki)
-ŹLE: aprovechar, el aprendizaje, apoyar — dzielą tylko początek, to nie poprawki
+Wpisał „cabar” (nie istnieje w hiszpańskim):
+DOBRZE: caber (verb, mieścić się) — zamiana a→e
+DOBRZE: cavar (verb, kopać) — zamiana b→v
+DOBRZE: acabar (verb, kończyć) — brakujące „a” na początku (odległość 1)
+ŹLE: lemma „cabar” z jakimkolwiek glossem — zmyślanie nieistniejącego hasła
+ŹLE: cabalgada — wspólny początek, odległość edycyjna > 2
 
-Przykład na pułapkę językową — L1 = pl, L2 = es, wpisano „red”:
-DOBRZE: la red (noun, sieć) jako pierwszy kandydat, dalej la redada (noun, obława)
-ŹLE: rojo, colorado — to tłumaczenia ANGIELSKIEGO „red”, a angielski nie należy
-do tej pary językowej. „red” jest prawdziwym słowem w {learning}, więc ono jest odpowiedzią.
+Wpisał „red” przy języku uczonym = hiszpański, ojczystym = polski:
+DOBRZE: la red (sieć) — „red” istnieje po hiszpańsku
+ŹLE: rojo — to byłoby czytanie zapytania po angielsku
 
 Zwróć WYŁĄCZNIE JSON:
 {{
@@ -72,6 +115,7 @@ Zwróć WYŁĄCZNIE JSON:
   ]
 }}
 """
+
 
 ENRICHMENT_CORE_PROMPT_V1 = """Jesteś ekspertem leksykograficznym. Tworzysz rdzeń karty słówka (BEZ przykładów zdań, BEZ koniugacji, BEZ similar_words).
 
@@ -132,20 +176,27 @@ Znaczenia (meanings) — najważniejsza część karty:
   słownik je notuje.
 - Odrębnym sensem NIE jest wariant stylistyczny tego samego znaczenia ani jego
   węższy podtyp — takie warianty idą do synonyms_l1 albo wypadają.
-- Peryfrazy gramatyczne / aspektowe NIE są znaczeniami lematu. Należą wyłącznie
-  do sekcji conjugation.periphrases (generowanej osobno) — tu ich nie podawaj.
+- Znaczenia opisują WYŁĄCZNIE goły lemat (bez stałego przyimka / dopełnienia
+  wymaganego do tego sensu). Jeśli sens wymaga stałej konstrukcji
+  „lemat + przyimek” (albo innego stałego schematu), NIE jest to znaczenie
+  gołego lematu — należy do conjugation.periphrases (generowanej osobno).
+  Tu go nie podawaj ani jako osobnego gloss_l1, ani jako usages.
   Przykłady ZAKAZANE w meanings:
-  - acabar de + infinitivo → „właśnie coś zrobić” (to peryfraza, nie sens acabar)
-  - ir a + infinitivo → „zamierzać” (peryfraza ir)
+  - acabar de + infinitivo → „właśnie coś zrobić”
+  - ir a + infinitivo → „zamierzać”
   - volver a + infinitivo → „znów coś zrobić”
   - dejar de + infinitivo → „przestać”
   - tener que / hay que → „musieć”
-- DOZWOLONE w meanings: leksykalny sens czasownika z przyimkiem, gdy przyimek
-  zmienia znaczenie samego lematu (nie tworzy tylko aspektu gramatycznego).
-  Przykłady: acabar con → „likwidować”; tender a → „dążyć”; contar con → „liczyć na”.
-  Taką konstrukcję podaj w usages.
-- Forma zwrotna z innym sensu (acabarse → „skończyć się”) też może być osobnym
-  znaczeniem, jeśli należy do 3 najczęstszych.
+  - contar con + N → „liczyć na” / „dysponować”
+  - acabar con + N → „położyć kres / likwidować”
+  - tender a + infinitivo → „dążyć / skłaniać się”
+  Test: gdyby usunąć przyimek z L2, czy gloss_l1 nadal ma sens dla samego
+  lematu? Jeśli NIE (np. „liczyć na” bez „con”) — to NIE jest meaning.
+- usages przy znaczeniu muszą ilustrować goły lemat (contar el dinero,
+  contar una historia) — nie stałe „lemat + przyimek” z innym sensu.
+- Forma zwrotna z innym sensu (acabarse → „skończyć się”) może być osobnym
+  znaczeniem tylko gdy należy do 3 najczęstszych I dotyczy formy zwrotnej
+  jako lematu karty; przy karcie „acabar” nie dorabiaj acabarse jako 3. sensu.
 - Poziom {cefr} wpływa na dobór słownictwa w tłumaczeniach, NIE na liczbę
   znaczeń. Nie pomijaj częstego sensu, bo wygląda na trudny.
 - usages: 2–4 prawdziwe kolokacje w {learning} pokazujące dany sens, każda
@@ -156,10 +207,14 @@ Przykłady liczby znaczeń — L2 = es, L1 = pl:
 perro → 1 znaczenie: "pies".
   ŹLE: "pies", "samiec psa" (podtyp tego samego sensu), "człowiek" (slang).
 querer → 2 znaczenia: "chcieć", "kochać" — dwa naprawdę różne sensy.
-acabar → 2 znaczenia (NIE trzy):
-  1. gloss_l1 "kończyć"     usages: acabar el trabajo → skończyć pracę
-  2. gloss_l1 "likwidować"  usages: acabar con el problema → rozwiązać problem
-  ŹLE: "właśnie zrobić" (to acabar de + infinitivo — peryfraza, nie znaczenie)
+contar → 2 znaczenia (NIE trzy):
+  1. gloss_l1 "liczyć"     usages: contar el dinero, contar hasta diez
+  2. gloss_l1 "opowiadać"  usages: contar una historia, contar un chiste
+  ŹLE: "liczyć na" z usages contar con alguien — to peryfraza contar con,
+       nie znaczenie gołego contar (trafia do conjugation.periphrases).
+acabar → 1 znaczenie główne:
+  1. gloss_l1 "kończyć"  usages: acabar el trabajo, acabar la reunión
+  ŹLE: "właśnie zrobić" (acabar de) oraz "likwidować" (acabar con) — peryfrazy.
 echar → sensów jest więcej niż 3, więc zostają 3 najczęstsze:
   1. gloss_l1 "rzucać"    usages: echar una piedra → rzucić kamieniem
   2. gloss_l1 "wlewać"    usages: echar agua en el vaso → nalać wody do szklanki

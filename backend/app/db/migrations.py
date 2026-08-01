@@ -33,6 +33,18 @@ _STATEMENTS = (
     "show_example_sentences BOOLEAN NOT NULL DEFAULT true",
     "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS "
     "related_words_expanded_default BOOLEAN NOT NULL DEFAULT false",
+    "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS "
+    "show_synonyms BOOLEAN NOT NULL DEFAULT true",
+    "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS "
+    "show_antonyms BOOLEAN NOT NULL DEFAULT true",
+    "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS "
+    "show_conjugation BOOLEAN NOT NULL DEFAULT true",
+    "ALTER TABLE srs_state ADD COLUMN IF NOT EXISTS stability DOUBLE PRECISION",
+    "ALTER TABLE srs_state ADD COLUMN IF NOT EXISTS difficulty DOUBLE PRECISION",
+    "ALTER TABLE srs_state ADD COLUMN IF NOT EXISTS fsrs_step INTEGER",
+    "ALTER TABLE review_logs ADD COLUMN IF NOT EXISTS client_id UUID",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ix_review_logs_client_id "
+    "ON review_logs (client_id) WHERE client_id IS NOT NULL",
 )
 
 

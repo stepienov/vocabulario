@@ -56,7 +56,10 @@ class UserSettings(Base):
     theme: Mapped[str] = mapped_column(String(16), default="system")
     show_usages: Mapped[bool] = mapped_column(Boolean, default=True)
     show_synonyms_antonyms: Mapped[bool] = mapped_column(Boolean, default=True)
+    show_synonyms: Mapped[bool] = mapped_column(Boolean, default=True)
+    show_antonyms: Mapped[bool] = mapped_column(Boolean, default=True)
     show_periphrases: Mapped[bool] = mapped_column(Boolean, default=True)
+    show_conjugation: Mapped[bool] = mapped_column(Boolean, default=True)
     conjugation_expanded_default: Mapped[bool] = mapped_column(Boolean, default=False)
     show_example_sentences: Mapped[bool] = mapped_column(Boolean, default=True)
     related_words_expanded_default: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -112,7 +115,11 @@ class LearningCard(Base):
 
     user: Mapped["User"] = relationship(back_populates="cards")
     profile: Mapped["LanguageProfile"] = relationship(back_populates="cards")
-    srs_states: Mapped[list["SrsState"]] = relationship(back_populates="card")
+    srs_states: Mapped[list["SrsState"]] = relationship(
+        back_populates="card",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class FavoriteWord(Base):
@@ -145,6 +152,10 @@ class SrsState(Base):
     next_review_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_grade: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # FSRS memory state (None = jeszcze nie oceniane / legacy)
+    stability: Mapped[float | None] = mapped_column(Float, nullable=True)
+    difficulty: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fsrs_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     card: Mapped["LearningCard"] = relationship(back_populates="srs_states")
 
@@ -160,3 +171,19 @@ class ReviewLog(Base):
     direction: Mapped[str | None] = mapped_column(String(16), nullable=True)
     correct: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Idempotency for offline sync push (client-generated UUID)
+    client_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), unique=True, nullable=True)
+
+
+class WordList(Base):
+    """User word lists. System list 'Uczę się' maps to LearningCard.deck_id IS NULL."""
+
+    __tablename__ = "word_lists"
+    __table_args__ = (UniqueConstraint("profile_id", "name"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("language_profiles.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    is_system: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

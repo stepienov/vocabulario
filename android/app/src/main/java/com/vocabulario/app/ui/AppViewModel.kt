@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.data.AuthRepository
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.local.TokenStore
+import com.vocabulario.app.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,6 +30,7 @@ class AppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val learningRepository: LearningRepository,
     private val tokenStore: TokenStore,
+    private val syncScheduler: SyncScheduler,
 ) : ViewModel() {
 
     val isLoggedIn: StateFlow<Boolean> = tokenStore.accessToken
@@ -40,7 +42,8 @@ class AppViewModel @Inject constructor(
 
     fun bootstrap() {
         viewModelScope.launch {
-            withTimeoutOrNull(2_000) { tokenStore.awaitReady() }
+            // DataStore — krótko; UI nie może wisieć na sieci.
+            withTimeoutOrNull(1_500) { tokenStore.awaitReady() }
 
             val token = tokenStore.peekAccessToken()
             if (token.isNullOrBlank()) {
@@ -48,31 +51,26 @@ class AppViewModel @Inject constructor(
                 return@launch
             }
 
-            val result = withTimeoutOrNull(8_000) {
+            // Od razu pokaż Home — profil doprecyzujemy w tle.
+            _startRoute.value = AppStartRoute.HOME
+
+            val result = withTimeoutOrNull(5_000) {
                 runCatching { authRepository.hasProfile() }
             }
 
             when {
-                result == null -> {
-                    _startRoute.value = AppStartRoute.HOME
-                    syncInBackground()
-                }
+                result == null -> syncInBackground()
                 result.isFailure -> {
                     val err = result.exceptionOrNull()
-                    if (err is HttpException && err.code() == 401 ||
-                        tokenStore.peekAccessToken().isNullOrBlank()
-                    ) {
+                    val unauthorized = err is HttpException && err.code() == 401
+                    if (unauthorized || tokenStore.peekAccessToken().isNullOrBlank()) {
                         runCatching { authRepository.logout() }
                         _startRoute.value = AppStartRoute.AUTH
                     } else {
-                        _startRoute.value = AppStartRoute.HOME
                         syncInBackground()
                     }
                 }
-                result.getOrNull() == true -> {
-                    _startRoute.value = AppStartRoute.HOME
-                    syncInBackground()
-                }
+                result.getOrNull() == true -> syncInBackground()
                 else -> _startRoute.value = AppStartRoute.ONBOARDING
             }
         }
@@ -83,6 +81,8 @@ class AppViewModel @Inject constructor(
             runCatching { authRepository.ensureActiveProfile() }
             runCatching { learningRepository.syncPendingReviews() }
             runCatching { learningRepository.syncThemeFromSettings() }
+            syncScheduler.schedulePeriodic()
+            syncScheduler.requestNow()
         }
     }
 

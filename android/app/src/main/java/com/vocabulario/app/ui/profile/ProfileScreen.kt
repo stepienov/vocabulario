@@ -73,7 +73,7 @@ fun ProfileScreen(
         ) {
             state.activeProfile?.let { profile ->
                 Text(
-                    "Aktywna para: ${profile.native_lang.uppercase()} → ${profile.learning_lang.uppercase()}",
+                    "Aktywna para: ${profile.native_lang.uppercase()} -> ${profile.learning_lang.uppercase()}",
                     style = MaterialTheme.typography.titleLarge,
                 )
                 Text("Poziom: ${profile.cefr_level}", style = MaterialTheme.typography.bodyMedium)
@@ -88,7 +88,7 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("${profile.native_lang.uppercase()} → ${profile.learning_lang.uppercase()}")
+                            Text("${profile.native_lang.uppercase()} -> ${profile.learning_lang.uppercase()}")
                             Text("CEFR ${profile.cefr_level}", style = MaterialTheme.typography.bodySmall)
                             if (profile.is_active) {
                                 Text("Aktywna", color = MaterialTheme.colorScheme.primary)

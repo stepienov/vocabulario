@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 
 from app.models import LanguageProfile
 from app.services.llm import LLMService
@@ -14,6 +15,9 @@ EXAMPLE_CEFR_LEVELS = ["A2", "B2", "C2"]
 
 # Jedno znaczenie główne i do dwóch pobocznych — sensy bliskoznaczne grupuje prompt.
 MAX_MEANINGS = 3
+
+# Stałe przyimki po lemacie → sens należy do peryfrazy, nie do gołego lematu.
+_LEMMA_PREPS = ("con", "a", "de", "en", "por", "para", "sobre", "sin", "hacia")
 
 
 def _count_examples_by_cefr(examples: list[dict]) -> dict[str, int]:
@@ -118,6 +122,67 @@ def _normalize_usages(meanings: list[dict]) -> None:
         meaning["usages"] = normalized
 
 
+def _bare_lemma(lemma: str) -> str:
+    words = lemma.strip().lower().split()
+    if len(words) == 2 and words[0] in {"el", "la", "los", "las"}:
+        return words[1]
+    return " ".join(words)
+
+
+def _usage_is_fixed_prep_construction(lemma: str, usage_l2: str) -> bool:
+    """True gdy usage to stałe „lemat (+odmiana) + przyimek …”, np. contar con."""
+    bare = _bare_lemma(lemma)
+    if not bare or not usage_l2:
+        return False
+    text = usage_l2.strip().lower()
+    # Bezokolicznik: "contar con ayuda"
+    for prep in _LEMMA_PREPS:
+        if re.match(rf"^{re.escape(bare)}\s+{prep}(?:\s|$)", text):
+            return True
+    # Odmiana hiszpańska kończąca się na rdzeniu + " con/a/…" — tylko gdy
+    # usage zaczyna się od formy zawierającej rdzeń lematu i zaraz jest przyimek.
+    # Np. "cuento contigo" / "contábamos con llegar" — wykrywamy przyimek
+    # bezpośrednio po pierwszym tokenie albo scalone "contigo".
+    first, *rest = text.split()
+    if not first:
+        return False
+    # contigo / consigo traktuj jak "con"
+    if first.endswith("migo") or first.endswith("tigo") or first.endswith("sigo"):
+        # "cuento contigo" — drugi token to fused prep; first is conjugated verb
+        stem = bare.rstrip("ar") if bare.endswith("ar") else bare[:4]
+        if stem and stem in first:
+            return True
+    if rest:
+        prep = rest[0]
+        if prep in _LEMMA_PREPS:
+            stem = bare[: max(3, len(bare) - 2)]
+            if stem and stem in first:
+                return True
+    return False
+
+
+def _meaning_is_prep_construction(lemma: str, meaning: dict) -> bool:
+    """Sens peryfrazy: większość usages to stałe lemat+przyimek."""
+    usages = meaning.get("usages") or []
+    if not isinstance(usages, list) or not usages:
+        return False
+    l2_list = [
+        str(u.get("l2") or "").strip()
+        for u in usages
+        if isinstance(u, dict) and u.get("l2")
+    ]
+    if len(l2_list) < 2:
+        return False
+    hits = sum(1 for l2 in l2_list if _usage_is_fixed_prep_construction(lemma, l2))
+    return hits >= 2 and hits >= (len(l2_list) + 1) // 2
+
+
+def strip_prepositional_construction_meanings(lemma: str, meanings: list[dict]) -> list[dict]:
+    """Usuwa znaczenia, które w praktyce opisują peryfrazę (np. contar con)."""
+    kept = [m for m in meanings if not _meaning_is_prep_construction(lemma, m)]
+    return kept if kept else meanings[:1]
+
+
 async def enrich_card_content(
     profile: LanguageProfile,
     lemma: str,
@@ -142,8 +207,9 @@ async def enrich_card_content(
     # Przycięcie przed krokiem z przykładami, żeby indeksy znaczeń się zgadzały
     # i żeby nie płacić za zdania do sensów, które i tak nie wejdą na kartę.
     meanings = [m for m in (core.get("meanings") or []) if isinstance(m, dict)]
+    _normalize_usages(meanings)
+    meanings = strip_prepositional_construction_meanings(lemma_final, meanings)
     core["meanings"] = meanings[:MAX_MEANINGS]
-    _normalize_usages(core["meanings"])
     pos_for_related = pos_final if pos_final != "unknown" else None
     core["synonyms_l2"] = _normalize_related_words(
         core.get("synonyms_l2"), fallback_pos=pos_for_related

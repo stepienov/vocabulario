@@ -43,7 +43,10 @@ data class UserSettingsResponse(
     val theme: String,
     val show_usages: Boolean = true,
     val show_synonyms_antonyms: Boolean = true,
+    val show_synonyms: Boolean = true,
+    val show_antonyms: Boolean = true,
     val show_periphrases: Boolean = true,
+    val show_conjugation: Boolean = true,
     val conjugation_expanded_default: Boolean = false,
     val show_example_sentences: Boolean = true,
     val related_words_expanded_default: Boolean = false,
@@ -59,7 +62,10 @@ data class UserSettingsUpdate(
     val theme: String? = null,
     val show_usages: Boolean? = null,
     val show_synonyms_antonyms: Boolean? = null,
+    val show_synonyms: Boolean? = null,
+    val show_antonyms: Boolean? = null,
     val show_periphrases: Boolean? = null,
+    val show_conjugation: Boolean? = null,
     val conjugation_expanded_default: Boolean? = null,
     val show_example_sentences: Boolean? = null,
     val related_words_expanded_default: Boolean? = null,
@@ -102,12 +108,83 @@ data class LookupCandidate(
     val in_learning: Boolean = false,
     val is_favorite: Boolean = false,
     val learning_card_id: String? = null,
-)
+    val list_id: String? = null,
+    val list_name: String? = null,
+    val enrichment_status: String? = null,
+) {
+    val onList: Boolean get() = !list_name.isNullOrBlank()
+    val isCreating: Boolean get() = enrichment_status == "pending"
+}
 
 @Serializable
 data class LookupResponse(
     val candidates: List<LookupCandidate>,
     val source: String,
+)
+
+@Serializable
+data class WordListCreate(
+    val name: String,
+    val profile_id: String,
+)
+
+@Serializable
+data class WordListUpdate(
+    val name: String,
+)
+
+@Serializable
+data class WordListResponse(
+    val id: String,
+    val name: String,
+    val is_system: Boolean,
+    val word_count: Int = 0,
+    val created_at: String? = null,
+)
+
+@Serializable
+data class WordListAddWordRequest(
+    val lemma: String,
+    val pos: String? = null,
+    val gloss: String? = null,
+    val lexical_entry_id: String? = null,
+    val profile_id: String,
+)
+
+@Serializable
+data class WordMoveRequest(
+    val target_list_id: String,
+    val profile_id: String,
+)
+
+@Serializable
+data class DashboardForecastDay(
+    val day_offset: Int,
+    val label: String,
+    val due_count: Int,
+)
+
+@Serializable
+data class DashboardStatsResponse(
+    val due_count: Int = 0,
+    val new_remaining: Int = 0,
+    val new_done_today: Int = 0,
+    val new_limit: Int = 0,
+    val reviews_done_today: Int = 0,
+    val done_today: Int = 0,
+    val srs_new: Int = 0,
+    val srs_due: Int = 0,
+    val srs_learning: Int = 0,
+    val srs_mastered: Int = 0,
+    val new_reserve: Int = 0,
+    val cards_total: Int = 0,
+    val forecast: List<DashboardForecastDay> = emptyList(),
+    val last_added_at: String? = null,
+    val last_reviewed_at: String? = null,
+    val new_today: Int = 0,
+    val reviews_in_period: Int = 0,
+    val avg_words_per_day: Double = 0.0,
+    val period_days: Int = 1,
 )
 
 @Serializable
@@ -131,6 +208,8 @@ data class CardResponse(
     val persisted: Boolean = true,
     val enrichment_status: String = "ready",
     val enrichment_error: String? = null,
+    val srs_status: String? = null,
+    val srs_interval_days: Double? = null,
 )
 
 @Serializable
@@ -176,6 +255,68 @@ data class ReviewRequest(
     val direction: String,
     val correct: Boolean,
     val answer: String? = null,
+)
+
+@Serializable
+data class SyncSrsState(
+    val card_id: String,
+    val status: String,
+    val ease: Double = 2.5,
+    val interval_days: Double = 0.0,
+    val repetitions: Int = 0,
+    val lapses: Int = 0,
+    val next_review_at: String? = null,
+    val last_reviewed_at: String? = null,
+    val last_grade: String? = null,
+    val stability: Double? = null,
+    val difficulty: Double? = null,
+    val fsrs_step: Int? = null,
+)
+
+@Serializable
+data class SyncCardItem(
+    val id: String,
+    val profile_id: String,
+    val deck_id: String? = null,
+    val lemma_l2: String,
+    val pos: String? = null,
+    val gloss_primary: String? = null,
+    val content: kotlinx.serialization.json.JsonObject,
+    val enrichment_status: String = "ready",
+    val updated_at: String? = null,
+    val srs: SyncSrsState? = null,
+)
+
+@Serializable
+data class SyncPullResponse(
+    val server_time: String,
+    val settings: UserSettingsResponse,
+    val cards: List<SyncCardItem> = emptyList(),
+    val deleted_card_ids: List<String> = emptyList(),
+)
+
+@Serializable
+data class SyncReviewItem(
+    val client_id: String,
+    val card_id: String,
+    val grade: String,
+    val mode: String,
+    val direction: String,
+    val correct: Boolean,
+    val answer: String? = null,
+    val reviewed_at: String,
+)
+
+@Serializable
+data class SyncPushRequest(
+    val reviews: List<SyncReviewItem> = emptyList(),
+)
+
+@Serializable
+data class SyncPushResponse(
+    val applied: Int = 0,
+    val skipped: Int = 0,
+    val srs: List<SyncSrsState> = emptyList(),
 )
 
 @Serializable

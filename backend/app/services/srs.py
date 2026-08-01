@@ -1,59 +1,139 @@
+"""FSRS (Free Spaced Repetition Scheduler) — harmonogram powtórek."""
+
+from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
+
+from fsrs import Card, Rating, Scheduler
+from fsrs import State as FsrsState
 
 from app.models import SrsState
 
+GRADE_AGAIN = "again"
 GRADE_HARD = "hard"
+GRADE_GOOD = "good"
 GRADE_EASY = "easy"
-GRADE_KNOW_WELL = "know_well"
 
-LEARNING_STEPS_MINUTES = [1, 10, 1440]
+# Stare oceny z UI / logów → FSRS
+_LEGACY_GRADES = {
+    "know_well": GRADE_EASY,  # dawne „Umiem”
+}
+
+_RATING = {
+    GRADE_AGAIN: Rating.Again,
+    GRADE_HARD: Rating.Hard,
+    GRADE_GOOD: Rating.Good,
+    GRADE_EASY: Rating.Easy,
+}
+
+# Domyślne wagi FSRS-6 (py-fsrs) — te same ustawiamy w Android `LocalFsrs`.
+_scheduler = Scheduler()
 
 
-def apply_review(state: SrsState, grade: str, correct: bool) -> SrsState:
-    now = datetime.now(UTC)
+def normalize_grade(grade: str) -> str:
+    return _LEGACY_GRADES.get(grade, grade)
 
+
+def _to_rating(grade: str, correct: bool) -> Rating:
     if not correct:
-        grade = GRADE_HARD
-        state.lapses += 1
-        state.status = "learning"
-        state.repetitions = 0
-        state.interval_days = 0
-        state.ease = max(1.3, state.ease - 0.2)
-        state.next_review_at = now + timedelta(minutes=LEARNING_STEPS_MINUTES[0])
-        state.last_reviewed_at = now
-        state.last_grade = grade
-        return state
+        return Rating.Again
+    return _RATING.get(normalize_grade(grade), Rating.Good)
 
-    if state.status == "new":
-        state.status = "learning"
-        state.repetitions = 0
-        state.interval_days = 0
-        state.next_review_at = now + timedelta(minutes=LEARNING_STEPS_MINUTES[0])
-    elif state.status == "learning":
-        step_idx = min(state.repetitions, len(LEARNING_STEPS_MINUTES) - 1)
-        state.repetitions += 1
-        if state.repetitions >= len(LEARNING_STEPS_MINUTES):
-            state.status = "review"
-            state.interval_days = 1
-            state.next_review_at = now + timedelta(days=1)
-        else:
-            minutes = LEARNING_STEPS_MINUTES[step_idx]
-            state.next_review_at = now + timedelta(minutes=minutes)
+
+def _status_from_fsrs(fsrs_state: FsrsState) -> str:
+    if fsrs_state == FsrsState.Review:
+        return "review"
+    if fsrs_state == FsrsState.Relearning:
+        return "relearning"
+    return "learning"
+
+
+def _fsrs_state_from_status(status: str) -> FsrsState:
+    if status == "review":
+        return FsrsState.Review
+    if status == "relearning":
+        return FsrsState.Relearning
+    return FsrsState.Learning
+
+
+def _card_from_db(state: SrsState, now: datetime) -> Card:
+    """Odtwórz kartę FSRS ze stanu w DB (lub świeżą, gdy never reviewed)."""
+    if state.status == "new" or state.stability is None:
+        return Card(due=now)
+
+    fsrs_state = _fsrs_state_from_status(state.status)
+    step = None if fsrs_state == FsrsState.Review else (state.fsrs_step or 0)
+    return Card(
+        state=fsrs_state,
+        step=step,
+        stability=float(state.stability),
+        difficulty=float(state.difficulty) if state.difficulty is not None else 5.0,
+        due=state.next_review_at or now,
+        last_review=state.last_reviewed_at,
+    )
+
+
+def _seed_from_legacy(state: SrsState, now: datetime) -> Card:
+    """Przybliżona migracja starych kart SM-2 → FSRS przy pierwszej ocenie po upgrade."""
+    if state.status == "new" or state.next_review_at is None:
+        return Card(due=now)
+    interval = max(float(state.interval_days or 0), 0.1)
+    # ease 1.3..3.0 → difficulty ~7..1 (im łatwiej, tym niższa D)
+    ease = float(state.ease or 2.5)
+    difficulty = max(1.0, min(10.0, 11.0 - ease * 2.5))
+    fsrs_state = (
+        FsrsState.Review
+        if state.status == "review"
+        else FsrsState.Learning
+    )
+    return Card(
+        state=fsrs_state,
+        step=None if fsrs_state == FsrsState.Review else 0,
+        stability=interval,
+        difficulty=difficulty,
+        due=state.next_review_at,
+        last_review=state.last_reviewed_at
+        or (state.next_review_at - timedelta(days=interval)),
+    )
+
+
+def apply_review(
+    state: SrsState,
+    grade: str,
+    correct: bool,
+    reviewed_at: datetime | None = None,
+) -> SrsState:
+    now = reviewed_at or datetime.now(UTC)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=UTC)
+    rating = _to_rating(grade, correct)
+    stored_grade = GRADE_AGAIN if not correct else normalize_grade(grade)
+
+    if state.stability is None and state.status in ("learning", "review") and state.interval_days:
+        card = _seed_from_legacy(state, now)
     else:
-        if grade == GRADE_HARD:
-            state.ease = max(1.3, state.ease - 0.15)
-            state.interval_days = max(1, state.interval_days * 1.2)
-        elif grade == GRADE_KNOW_WELL:
-            state.ease = min(3.0, state.ease + 0.05)
-            state.interval_days = state.interval_days * state.ease * 1.3
-        else:
-            state.interval_days = state.interval_days * state.ease
+        card = _card_from_db(state, now)
 
-        state.interval_days = max(1, state.interval_days)
-        state.repetitions += 1
-        state.status = "review"
-        state.next_review_at = now + timedelta(days=state.interval_days)
+    card, _log = _scheduler.review_card(card, rating, review_datetime=now)
 
-    state.last_reviewed_at = now
-    state.last_grade = grade
+    state.stability = card.stability
+    state.difficulty = card.difficulty
+    state.fsrs_step = card.step
+    state.status = _status_from_fsrs(card.state)
+    state.next_review_at = card.due
+    state.last_reviewed_at = card.last_review or now
+    state.last_grade = stored_grade
+
+    if card.last_review and card.due:
+        state.interval_days = max(
+            0.0,
+            (card.due - card.last_review).total_seconds() / 86400.0,
+        )
+    if rating == Rating.Again:
+        state.lapses = (state.lapses or 0) + 1
+    state.repetitions = (state.repetitions or 0) + 1
+    # ease zostawiamy jako przybliżenie dla starych ekranów / kompatybilności
+    if card.difficulty is not None:
+        state.ease = max(1.3, min(3.0, (11.0 - float(card.difficulty)) / 2.5))
+
     return state

@@ -7,12 +7,14 @@ from openai import AsyncOpenAI
 
 from app.ai.prompts.v1 import (
     LOOKUP_PROMPT_V1,
+    LOOKUP_SYSTEM_V1,
     SIMILAR_WORDS_SYSTEM_V1,
     build_conjugation_prompt,
     build_enrichment_core_prompt,
     build_examples_prompt,
     build_similar_words_fill_prompt,
     build_similar_words_prompt,
+    lang_name_pl,
 )
 from app.ai.schemas.similar_words import similar_words_response_schema
 from app.core.config import get_settings
@@ -193,19 +195,15 @@ class LLMService:
         self, text: str, native: str, learning: str, cefr: str
     ) -> list[dict[str, Any]]:
         prompt = LOOKUP_PROMPT_V1.format(
-            native=native, learning=learning, text=text, cefr=cefr
+            native_name=lang_name_pl(native),
+            learning_name=lang_name_pl(learning),
+            text=text,
+            cefr=cefr,
         )
         data = await self._chat_json(
             self.lookup_model,
             prompt,
-            system=(
-                "Szybki słownik: zwracasz tylko pojedyncze lematy (jedno słowo). "
-                "Czytasz zapytanie wyłącznie w podanej parze językowej — nigdy jako "
-                "słowo z trzeciego języka. Jeśli zapytanie jest prawdziwym słowem "
-                "języka uczonego, to ono jest pierwszym kandydatem. "
-                "Bez zwrotów, bez peryfraz z przyimkami, bez duplikatów. "
-                "Rzeczowniki zawsze z rodzajnikiem. Tylko JSON."
-            ),
+            system=LOOKUP_SYSTEM_V1,
         )
         return data.get("candidates", [])
 
