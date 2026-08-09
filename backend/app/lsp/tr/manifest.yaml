@@ -1,0 +1,37 @@
+code: tr
+lsp_version: tr-1.0.0
+name_en: Turkish
+script: Latn
+rtl: false
+inflection_kind: agglutinative
+
+default_selected_tenses:
+  - simdi_zaman
+  - gecmis_zaman
+
+verbs:
+  tenses:
+    - { key: simdi_zaman, label_l2: Şimdiki zaman, person_grid: tr_6 }
+    - { key: genis_zaman, label_l2: Geniş zaman, person_grid: tr_6 }
+    - { key: gecmis_zaman, label_l2: Geçmiş zaman, person_grid: tr_6 }
+    - { key: gelecek_zaman, label_l2: Gelecek zaman, person_grid: tr_6 }
+  non_finite:
+    - { key: mastar, label_l2: Mastar }
+  person_grids:
+    tr_6:
+      keys: ["ben", "sen", "o", "biz", "siz", "onlar"]
+      labels: { ben: ben, sen: sen, o: o, biz: biz, siz: siz, onlar: onlar }
+  paradigm_rules: |
+    TURKISH (tr) for "{lemma}": agglutinative forms, vowel harmony. No placeholders.
+
+nouns:
+  numbers: [sg, pl]
+  genders: []
+
+adjectives:
+  full_declension: false
+
+ui_labels:
+  pl:
+    simdi_zaman: Czas teraźniejszy ciągły
+    gecmis_zaman: Czas przeszły

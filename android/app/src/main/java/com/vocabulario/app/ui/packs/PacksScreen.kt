@@ -16,7 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.vocabulario.app.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,21 +26,23 @@ fun PacksScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Listy") },
+                title = { Text(stringResource(R.string.packs_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wstecz")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_back),
+                        )
                     }
                 },
             )
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
-            Text("Gotowe zestawy słówek", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.packs_subtitle), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(12.dp))
             Text(
-                "Funkcja starter packs (CEFR × kategorie) jest w planie produktu. " +
-                    "Schemat bazy jest przygotowany — zestawy pojawią się po akceptacji jakości kart AI.",
+                stringResource(R.string.packs_body),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }

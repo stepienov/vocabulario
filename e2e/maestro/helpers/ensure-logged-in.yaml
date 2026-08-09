@@ -1,0 +1,33 @@
+appId: com.vocabulario.app
+---
+# Wait until Auth, Onboarding, or Home; finish onboarding or login if needed.
+- runFlow: dismiss-system-dialog.yaml
+- extendedWaitUntil:
+    visible:
+      id: "auth_email|tab_dashboard|onboarding_native_lang"
+    timeout: 40000
+- runFlow:
+    when:
+      visible:
+        id: onboarding_native_lang
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: onboarding_start
+          direction: DOWN
+          timeout: 40000
+      - tapOn:
+          id: onboarding_start
+      - extendedWaitUntil:
+          visible:
+            id: tab_dashboard
+          timeout: 45000
+- runFlow:
+    when:
+      visible:
+        id: auth_email
+    file: login.yaml
+- extendedWaitUntil:
+    visible:
+      id: tab_dashboard
+    timeout: 45000

@@ -1,0 +1,30 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - auth
+---
+# A-03 · Register → Onboarding (top chrome; Start may need scroll — see B-01)
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: auth_toggle_mode
+    timeout: 20000
+- tapOn:
+    id: auth_toggle_mode
+- tapOn:
+    id: auth_email
+- eraseText
+- inputRandomEmail
+- tapOn:
+    id: auth_password
+- eraseText
+- inputText: "e2e-test-pass-123"
+- tapOn:
+    id: auth_submit
+- extendedWaitUntil:
+    visible:
+      id: onboarding_native_lang
+    timeout: 45000
+- assertVisible:
+    id: onboarding_learning_lang

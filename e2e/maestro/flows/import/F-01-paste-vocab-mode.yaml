@@ -1,0 +1,32 @@
+appId: com.vocabulario.app
+tags:
+  - import
+  - ai-mock
+---
+# F-01 · Paste → Vocabulario mode (AI path)
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- tapOn:
+    id: tab_add
+- tapOn:
+    id: btn_import_paste
+- extendedWaitUntil:
+    visible:
+      id: import_paste_input
+    timeout: 10000
+- tapOn:
+    id: import_paste_input
+- inputText: "casa\nperro\ngato"
+- tapOn:
+    id: dialog_confirm
+- extendedWaitUntil:
+    visible:
+      id: "import_mode_vocab|import_mode_preserve"
+    timeout: 15000
+- tapOn:
+    id: import_mode_vocab
+- extendedWaitUntil:
+    visible:
+      id: "btn_import_confirm|btn_import_cancel|dialog_cancel|sheet_add_learning"
+    timeout: 90000

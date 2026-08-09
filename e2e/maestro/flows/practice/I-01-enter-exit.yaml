@@ -1,0 +1,33 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - practice
+---
+# I-01 · Practice enter/exit (alias of C-03; empty or queue OK)
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- tapOn:
+    id: btn_learn
+- extendedWaitUntil:
+    visible:
+      id: "btn_back|practice_empty_back|practice_show_answer|practice_choice|practice_answer_input"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: practice_empty_back
+    commands:
+      - tapOn:
+          id: practice_empty_back
+- runFlow:
+    when:
+      visible:
+        id: btn_back
+    commands:
+      - tapOn:
+          id: btn_back
+- extendedWaitUntil:
+    visible:
+      id: tab_dashboard
+    timeout: 15000

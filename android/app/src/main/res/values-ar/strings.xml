@@ -1,0 +1,628 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <string name="app_name">Vocabulario</string>
+
+    <string name="action_sort">Sort</string>
+    <string name="action_filter">Filter</string>
+    <string name="action_filter_active">Filter · %1$d</string>
+    <string name="action_clear_filters">Clear filters</string>
+    <string name="action_clear_all">Clear all</string>
+    <string name="action_apply">Apply</string>
+    <string name="list_words_meta">%1$d words</string>
+    <string name="list_filter_empty">No words match filters</string>
+    <string name="sort_title">Sort</string>
+    <string name="sort_lemma_asc">A → Z</string>
+    <string name="sort_lemma_desc">Z → A</string>
+    <string name="sort_pos">Part of speech</string>
+    <string name="sort_newest">Newest first</string>
+    <string name="sort_oldest">Oldest first</string>
+    <string name="sort_status">Card state</string>
+    <string name="filter_title">Filter</string>
+    <string name="filter_section_pos">Part of speech</string>
+    <string name="filter_section_state">Card state</string>
+    <string name="filter_pos_unknown">No POS</string>
+    <string name="status_review">review</string>
+    <string name="action_undo">Undo</string>
+    <string name="cd_undo">Undo last grade</string>
+    <string name="action_cancel">إلغاء</string>
+
+    <string name="action_ok">موافق</string>
+
+    <string name="action_back">رجوع</string>
+
+    <string name="action_delete">حذف</string>
+
+    <string name="action_move">نقل</string>
+
+    <string name="action_learn">تعلّم</string>
+
+    <string name="action_confirm">تأكيد</string>
+
+    <string name="action_create">إنشاء</string>
+
+    <string name="action_import">استيراد</string>
+
+    <string name="action_close">إغلاق</string>
+
+    <string name="action_save">حفظ</string>
+
+    <string name="action_reveal">إظهار</string>
+
+    <string name="action_add">إضافة</string>
+
+    <string name="action_search">بحث</string>
+
+    <string name="action_logout">تسجيل الخروج</string>
+
+    <string name="action_retry">إعادة المحاولة</string>
+
+    <string name="action_check">تحقق</string>
+
+    <string name="action_return">رجوع</string>
+
+    <string name="tab_dashboard">الرئيسية</string>
+
+    <string name="tab_add">إضافة</string>
+
+    <string name="tab_lists">قوائم</string>
+
+    <string name="auth_login_title">مرحبًا بعودتك</string>
+
+    <string name="auth_register_title">إنشاء حساب</string>
+
+    <string name="auth_login">تسجيل الدخول</string>
+
+    <string name="auth_register">إنشاء حساب</string>
+
+    <string name="auth_google">المتابعة مع Google</string>
+
+    <string name="auth_email">البريد الإلكتروني</string>
+
+    <string name="auth_password">كلمة المرور</string>
+
+    <string name="auth_tagline">تعلّم المفردات بوتيرتك</string>
+
+    <string name="auth_password_hint">8 أحرف على الأقل</string>
+
+    <string name="auth_have_account">لديّ حساب بالفعل</string>
+
+    <string name="onboarding_title">إعداد التعلّم</string>
+
+    <string name="onboarding_subtitle">اختر زوج اللغات ومستوى CEFR وأزمنة الأفعال.</string>
+
+    <string name="onboarding_native">اللغة الأم</string>
+
+    <string name="onboarding_learning">لغة التعلّم</string>
+
+    <string name="onboarding_start">ابدأ</string>
+
+    <string name="onboarding_cefr">مستوى CEFR</string>
+
+    <string name="onboarding_tenses">أزمنة الأفعال</string>
+
+    <string name="settings_title">الإعدادات</string>
+
+
+    <string name="settings_native_lang">App language</string>
+    <string name="settings_tense_labels">تسميات الأزمنة</string>
+    <string name="settings_tense_labels_app">بلغة التطبيق</string>
+    <string name="settings_tense_labels_learning">بلغة التعلّم</string>
+
+
+    <string name="settings_learning_lang">لغة التعلّم</string>
+
+    <string name="settings_langs_hint">App language is the language of the interface and card translations. Learning language is what you study.</string>
+
+    <string name="settings_theme">المظهر</string>
+
+    <string name="settings_mode">وضع الدراسة</string>
+
+    <string name="settings_group_study">الدراسة</string>
+
+    <string name="settings_group_general">عام</string>
+
+    <string name="settings_mode_choice">Quiz</string>
+
+    <string name="settings_mode_type">اكتب الكلمة</string>
+
+    <string name="settings_mode_flash">بطاقات</string>
+
+    <string name="settings_tolerate_typos">السماح بالأخطاء البسيطة</string>
+
+    <string name="settings_tolerate_typos_sub">الإملاء والتشكيل</string>
+
+    <string name="settings_direction">اتجاه الدراسة</string>
+
+    <string name="settings_direction_first">%1$s أولاً</string>
+
+    <string name="settings_direction_random">عشوائي</string>
+
+    <string name="settings_card_layout">تخطيط البطاقة</string>
+
+    <string name="settings_card_layout_sub">ما تراه بعد الإجابة</string>
+
+    <string name="settings_examples">جمل أمثلة</string>
+
+    <string name="settings_usages">أمثلة الاستخدام</string>
+
+    <string name="settings_periphrases">أنماط</string>
+
+    <string name="settings_syn_ant">مرادفات وأضداد</string>
+
+    <string name="settings_conjugation">التصريف</string>
+
+    <string name="settings_all_tenses">جميع الأزمنة</string>
+
+    <string name="settings_limits">الحدود</string>
+
+    <string name="settings_new_limit">حد الكلمات الجديدة اليومي</string>
+
+    <string name="settings_new_per_day">%1$d جديدة / يوم</string>
+
+    <string name="settings_theme_system">افتراضي النظام</string>
+
+    <string name="settings_languages">اللغات</string>
+
+    <string name="settings_cefr_known">المستوى في لغة التعلّم</string>
+
+    <string name="settings_label">الإعدادات</string>
+
+    <string name="profile_title">الملف الشخصي</string>
+
+    <string name="profile_new_pair">زوج جديد</string>
+
+    <string name="profile_pairs">أزواج لغاتك</string>
+
+    <string name="profile_active">نشط</string>
+
+    <string name="profile_activate">تفعيل</string>
+
+    <string name="profile_level">المستوى: %1$s</string>
+
+    <string name="profile_cefr_active">CEFR (الملف النشط)</string>
+
+
+    <string name="profile_tenses">أزمنة الأفعال</string>
+
+    <string name="practice_title">تدريب</string>
+
+    <string name="practice_show_answer">إظهار الإجابة</string>
+
+    <string name="practice_error_title">خطأ</string>
+
+    <string name="practice_bridge_l2">بـ %1$s هو</string>
+
+    <string name="practice_bridge_means">يعني</string>
+
+    <string name="practice_empty">لا بطاقات للتدريب</string>
+
+    <string name="practice_empty_hint">أضف كلمات من الشاشة الرئيسية</string>
+
+    <string name="practice_your_answer">إجابتك</string>
+
+    <string name="practice_spelling_warn">تحقق من الإملاء!</string>
+
+    <string name="practice_spelling_detail">كتبت %1$s — الإملاء الصحيح: %2$s</string>
+
+    <string name="practice_correct_answer">الإجابة الصحيحة: %1$s</string>
+
+    <string name="grade_again">مرة أخرى</string>
+
+    <string name="grade_hard">صعب</string>
+
+    <string name="grade_good">جيد</string>
+
+    <string name="grade_easy">سهل</string>
+
+    <string name="creating_card">جارٍ إنشاء البطاقة…</string>
+
+    <string name="creating_card_failed">تعذّر تجهيز البطاقة</string>
+
+    <string name="list_learning">أتعلّم</string>
+    <string name="list_pending">Pending</string>
+    <string name="offline_banner_title">You’re offline</string>
+    <string name="offline_banner_body">Added words go to the "Pending" list and will be looked up when you’re back online.</string>
+    <string name="offline_search_hint">Enter a word</string>
+    <string name="import_online_only">Import is only available online.</string>
+    <string name="offline_lookup_queued">Added to "Pending" — lookup when you’re back online.</string>
+    <string name="offline_lookup_duplicate">That word is already waiting on "Pending".</string>
+    <string name="status_awaiting_network">Waiting for network</string>
+
+    <string name="list_other">قائمة أخرى</string>
+
+    <string name="list_new">قائمة جديدة</string>
+
+    <string name="list_rename">إعادة تسمية</string>
+
+    <string name="list_move_all">نقل الكل</string>
+
+    <string name="list_empty">قائمة فارغة</string>
+
+    <string name="list_delete_selected">حذف</string>
+
+    <string name="list_move_to">نقل إلى قائمة</string>
+
+    <string name="list_name_hint">الاسم</string>
+
+    <string name="list_name_full_hint">اسم القائمة</string>
+
+    <string name="list_pick">اختر قائمة</string>
+
+    <string name="list_pick_target">اختر قائمة الوجهة</string>
+
+    <string name="list_create_and_add">إنشاء وإضافة</string>
+
+    <string name="list_delete_confirm_title">حذف القائمة؟</string>
+
+    <string name="list_delete_confirm_body">سيتم حذف القائمة «%1$s» وكلماتها.</string>
+
+    <string name="list_move_word">نقل الكلمة إلى قائمة</string>
+
+    <string name="list_delete_word_confirm">حذف هذه الكلمة؟</string>
+
+    <string name="list_delete_selected_title">حذف المحدد؟</string>
+
+    <string name="list_delete_selected_body">ستحذف %1$d كلمة من القائمة.</string>
+
+    <string name="list_create_move_all">أنشئ قائمة وانقل إليها كل الكلمات.</string>
+
+    <string name="list_create_move_sel">أنشئ قائمة وانقل إليها الكلمات المحددة.</string>
+
+    <string name="list_create_move_one">لا قائمة أخرى — أنشئ واحدة وستُنقل الكلمة إليها.</string>
+
+    <string name="import_from_file">استيراد ملف</string>
+
+    <string name="import_paste">لصق نص</string>
+
+    <string name="import_paste_hint">الصق النص…</string>
+
+    <string name="import_progress">جارٍ استيراد الكلمات</string>
+
+    <string name="import_add_file">إضافة ملف</string>
+
+    <string name="import_other_file">اختيار ملف آخر</string>
+
+    <string name="import_how">كيف تستورد؟</string>
+
+    <string name="import_vocab_mode">بطاقات Vocabulario</string>
+
+    <string name="import_preserve_mode">الاحتفاظ بمحتوى بطاقتي</string>
+
+    <string name="import_vocab_hint">بطاقات Vocabulario: الأفضل للكلمات المفردة — تُنشأ تلقائيًا مع المعاني والأمثلة والصيغ والأنماط والمرادفات والأضداد.</string>
+
+    <string name="import_invalid_title">كلمات غير صالحة</string>
+
+    <string name="import_file_errors">الملف يحتوي على أخطاء — راجعه.</string>
+
+    <string name="import_no_cards">لا بطاقات — ألغِ أو صحّح المصدر</string>
+
+    <string name="import_no_valid">لا كلمات صالحة — ألغِ أو صحّح المصدر</string>
+
+    <string name="import_empty_hint">اكتب كلمة أو استورد قائمة (CSV/TXT/apkg)</string>
+
+    <string name="import_file_label">الملف: \'%1$s\'</string>
+
+    <string name="section_meanings">المعاني</string>
+
+    <string name="section_synonyms">المرادفات</string>
+
+    <string name="section_syn_ant">المرادفات والأضداد</string>
+
+    <string name="section_antonyms">الأضداد</string>
+
+    <string name="section_antonyms_title">الأضداد</string>
+
+    <string name="section_conjugation">الصيغ</string>
+
+    <string name="section_periphrases">الأنماط</string>
+
+    <string name="section_usages">أمثلة الاستخدام</string>
+
+    <string name="home_search_hint">ابحث عن كلمة…</string>
+
+    <string name="home_due_now">جاهز للمراجعة الآن</string>
+
+    <string name="home_new_today">كلمات جديدة اليوم</string>
+
+    <string name="home_reviewed_today">روجعت اليوم</string>
+
+    <string name="home_learning_now">أتعلّم الآن</string>
+
+    <string name="home_new_left">ما زال للتعلّم</string>
+
+    <string name="home_mastered">تُعلّم حتى الآن</string>
+
+    <string name="home_forecast_title">مراجعات الأيام القادمة</string>
+
+    <string name="home_words_count">%1$d كلمة</string>
+
+    <string name="home_new_words_count">%1$d كلمة جديدة</string>
+
+    <string name="new_list_cd">قائمة جديدة</string>
+
+    <string name="new_cards_per_day">%1$d / يوم</string>
+
+    <string name="new_cards_unlimited">بلا حد</string>
+
+    <string name="cd_settings">الإعدادات</string>
+
+    <string name="cd_play">تشغيل</string>
+
+    <string name="cd_on_list">موجودة في قائمة</string>
+
+    <string name="cd_delete">حذف</string>
+
+    <string name="cd_move">نقل</string>
+
+    <string name="cd_selected">محدد</string>
+
+    <string name="cd_list_options">خيارات القائمة</string>
+
+    <string name="status_error">خطأ</string>
+
+    <string name="status_new">جديدة</string>
+
+    <string name="status_learning">قيد التعلّم</string>
+
+    <string name="status_mastered">مُتقنة</string>
+
+    <string name="kind_lemma">كلمة</string>
+
+    <string name="kind_phrase">عبارة</string>
+
+    <string name="kind_construction">تركيب</string>
+
+    <string name="kind_sentence">جملة</string>
+
+    <string name="kind_other">أخرى</string>
+
+    <string name="no_meanings">لا معاني</string>
+
+    <string name="add_word_title">إضافة كلمة</string>
+
+    <string name="add_word_hint">اكتب كلمة</string>
+
+    <string name="add_word_source">المصدر: %1$s</string>
+
+    <string name="add_word_hide">إخفاء البطاقة</string>
+
+    <string name="packs_title">قوائم</string>
+
+    <string name="packs_subtitle">حزم كلمات جاهزة</string>
+
+    <string name="learning_back_list">العودة إلى القائمة</string>
+
+    <string name="card_preparing">جارٍ تجهيز البطاقة الكاملة في الخلفية — عد بعد لحظة.</string>
+
+    <string name="card_headword">المدخل</string>
+
+    <string name="weekday_mon">الإثنين</string>
+
+    <string name="weekday_tue">الثلاثاء</string>
+
+    <string name="weekday_wed">الأربعاء</string>
+
+    <string name="weekday_thu">الخميس</string>
+
+    <string name="weekday_fri">الجمعة</string>
+
+    <string name="weekday_sat">السبت</string>
+
+    <string name="weekday_sun">الأحد</string>
+
+    <string name="settings_theme_light">فاتح</string>
+
+    <string name="settings_theme_dark">داكن</string>
+
+    <string name="settings_languages_summary">%1$s · التعلّم: %2$s</string>
+
+    <string name="err_load_settings">تعذّر تحميل الإعدادات</string>
+
+    <string name="err_save">تعذّر الحفظ</string>
+
+    <string name="err_save_tenses">تعذّر حفظ الأزمنة</string>
+
+
+    <string name="err_learning_lang">تعذّر تغيير لغة التعلّم</string>
+
+    <string name="err_cefr">تعذّر تغيير مستوى CEFR</string>
+
+    <string name="err_load_queue">تعذّر تحميل قائمة التدريب</string>
+
+    <string name="err_options_count">متوقع 8 خيارات، حصلنا على %1$d. أضف الكلمة مجددًا.</string>
+
+    <string name="err_load_options">تعذّر تحميل الخيارات</string>
+
+    <string name="err_check">تعذّر التحقق من الإجابة</string>
+
+    <string name="err_add">تعذّرت الإضافة</string>
+
+    <string name="err_lists">تعذّر تحميل القوائم</string>
+
+    <string name="err_create_list">تعذّر إنشاء القائمة</string>
+
+    <string name="err_save_grade">تعذّر حفظ التقييم</string>
+
+    <string name="err_load_profile">تعذّر تحميل الملف الشخصي</string>
+
+    <string name="err_activate">تعذّر تفعيل الملف الشخصي</string>
+
+    <string name="err_load_stats">تعذّر تحميل الإحصاءات</string>
+
+    <string name="err_list_words">تعذّر تحميل كلمات القائمة</string>
+
+    <string name="err_search">فشل البحث</string>
+
+    <string name="err_import_empty">لا كلمات للاستيراد</string>
+
+    <string name="err_import">فشل الاستيراد</string>
+
+    <string name="err_import_file">فشل استيراد الملف</string>
+
+    <string name="err_import_empty_file">ملف فارغ</string>
+
+    <string name="err_import_validate">فشل التحقق من الاستيراد</string>
+
+    <string name="err_add_partial">تعذّر إضافة %1$d كلمة (مثلًا موجودة في القائمة)</string>
+
+    <string name="msg_import_result">أُضيفت %1$d، وتُخطيت %2$d (موجودة في القائمة)</string>
+
+    <string name="err_save_cards">تعذّر حفظ البطاقات</string>
+
+    <string name="err_add_to_list">تعذّرت الإضافة إلى القائمة</string>
+
+    <string name="err_rename">تعذّرت إعادة التسمية</string>
+
+    <string name="err_delete_list">تعذّر حذف القائمة</string>
+
+    <string name="err_delete_word">تعذّر حذف الكلمة</string>
+
+    <string name="err_move">تعذّر النقل</string>
+
+    <string name="err_delete_partial">تعذّر حذف %1$d كلمة</string>
+
+    <string name="err_move_partial">تعذّر نقل %1$d كلمة</string>
+
+    <string name="list_name_reserved">هذا الاسم محجوز</string>
+
+    <string name="list_name_taken">توجد قائمة بهذا الاسم بالفعل</string>
+
+    <string name="list_fallback">قائمة</string>
+
+    <string name="msg_added_learning">أُضيفت للتعلّم: %1$s</string>
+
+    <string name="msg_added">أُضيفت: %1$s</string>
+
+    <string name="msg_saved_cefr">تم حفظ مستوى CEFR</string>
+
+    <string name="msg_saved_tenses">تم حفظ الأزمنة</string>
+
+
+    <string name="err_load_cards">تعذّر تحميل البطاقات</string>
+
+    <string name="err_langs_must_differ">يجب أن تختلف اللغة الأم عن لغة التعلّم</string>
+
+    <string name="err_create_profile">تعذّر إنشاء الملف الشخصي</string>
+
+    <string name="err_create_card">تعذّر إنشاء البطاقة</string>
+
+    <string name="err_password_required">أدخل كلمة المرور</string>
+
+    <string name="err_password_short">يجب أن تكون كلمة المرور 8 أحرف على الأقل</string>
+
+    <string name="err_login">فشل تسجيل الدخول</string>
+
+    <string name="err_register">فشل إنشاء الحساب</string>
+
+    <string name="err_google_login">فشل تسجيل الدخول عبر Google</string>
+
+    <string name="learning_title">التعلّم</string>
+
+    <string name="learning_empty">لا كلمات في التعلّم بعد</string>
+
+    <string name="learning_empty_hint">ابحث عن كلمة في الشاشة الرئيسية</string>
+
+    <string name="packs_body">حزم البداية (CEFR × فئات) ضمن خطة المنتج. مخطط قاعدة البيانات جاهز — ستظهر الحزم بعد اعتماد جودة بطاقات الذكاء الاصطناعي.</string>
+
+    <string name="profile_active_pair">الزوج النشط: %1$s → %2$s</string>
+
+    <string name="section_synonyms_short">مرادفات</string>
+
+    <string name="section_antonyms_short">أضداد</string>
+
+    <string name="section_conjugation_short">تصريف</string>
+
+    <string name="section_usages_short">استخدامات</string>
+
+    <string name="cd_back">رجوع</string>
+
+    <string name="err_email_required">أدخل عنوان بريد إلكتروني</string>
+
+    <string name="err_email_invalid">أدخل بريدًا إلكترونيًا صالحًا</string>
+
+    <string name="err_google_token">تعذّر الحصول على رمز Google</string>
+
+    <string name="section_fallback">قسم</string>
+
+    <string name="cd_add_to_list">إضافة إلى القائمة</string>
+
+    <string name="list_clear_all">Delete all words</string>
+
+    <string name="list_clear_all_title">Delete all words?</string>
+
+    <string name="list_clear_all_body">You’ll remove every word from “%1$s”. The list itself stays.</string>
+
+    <string name="settings_level">Level</string>
+
+    <string name="settings_selected_tenses">Selected tenses</string>
+
+    <string name="action_edit">Edit</string>
+
+    <string name="import_cards_count">Imported cards (%1$d)</string>
+
+    <string name="import_flashcards_count">Flashcards: %1$d</string>
+
+    <string name="import_done_count">Imported: %1$d</string>
+
+    <string name="list_unnamed">list</string>
+
+    <string name="periphrase_n">Periphrase %1$d</string>
+
+    <string name="practice_well_done">Nice!</string>
+
+    <string name="cd_search">Search</string>
+
+
+    <string name="correction_fix_card">Fix card</string>
+    <string name="correction_report_title">Report a problem</string>
+    <string name="correction_section_lemma">Lemma</string>
+    <string name="correction_section_pos">Part of speech</string>
+    <string name="correction_section_gloss">Primary gloss</string>
+    <string name="correction_section_meanings">Meanings</string>
+    <string name="correction_section_examples">Examples</string>
+    <string name="correction_section_conjugation">Conjugation</string>
+    <string name="correction_section_similar">Similar words</string>
+    <string name="correction_section_pronunciation">Pronunciation</string>
+    <string name="correction_section_other">Other</string>
+    <string name="correction_note_label">Note</string>
+    <string name="correction_note_hint">Describe what is wrong…</string>
+    <string name="correction_validation">Select at least one section or write a note (min. 3 characters).</string>
+    <string name="correction_submit">Submit report</string>
+    <string name="correction_requires_online">Requires internet connection.</string>
+    <string name="correction_result_accepted_title">Report accepted — card updated.</string>
+    <string name="correction_result_rejected_title">Report not accepted.</string>
+    <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
+    <string name="correction_edit_self">Edit myself</string>
+    <string name="correction_self_edit_title">Edit card</string>
+    <string name="correction_field_lemma">Lemma</string>
+    <string name="correction_field_pos">Part of speech</string>
+    <string name="correction_field_gloss">Primary gloss</string>
+    <string name="correction_field_extra_glosses">Extra glosses (one per line)</string>
+    <string name="review_status_reported">Correction reported</string>
+    <string name="review_status_accepted">Updated</string>
+    <string name="review_status_rejected">Report rejected</string>
+    <string name="review_status_user_edited">Edited manually</string>
+    <string name="cd_voice_search">Voice search</string>
+    <string name="voice_listening">Listening…</string>
+    <string name="voice_listening_hint">Speak now</string>
+    <string name="voice_tap_to_start">Tap Start to speak</string>
+    <string name="voice_start">Start</string>
+    <string name="voice_stop">Stop</string>
+    <string name="voice_permission_denied">Microphone permission denied.</string>
+    <string name="voice_unavailable">Speech recognition unavailable on this device.</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_summary">Study reminders and card readiness</string>
+    <string name="settings_notif_study">Study reminders</string>
+    <string name="settings_notif_cards">Cards ready</string>
+    <string name="settings_reminder_hour">Reminder hour (0–23)</string>
+    <string name="notif_channel_study">Study</string>
+    <string name="notif_channel_cards">Cards</string>
+    <string name="notif_study_title">Time to review</string>
+    <string name="notif_study_body">%1$d cards due</string>
+    <string name="notif_cards_ready_title">Cards ready</string>
+    <string name="notif_cards_ready_body">%1$d word(s) ready to study</string>
+
+</resources>
+

@@ -20,7 +20,7 @@ class SyncWorker @AssistedInject constructor(
             return Result.success()
         }
         return try {
-            learningRepository.syncNow(fullReplace = true)
+            learningRepository.syncNow()
             Result.success()
         } catch (_: Exception) {
             if (runAttemptCount >= 4) Result.failure() else Result.retry()

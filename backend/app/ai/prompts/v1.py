@@ -1,7 +1,12 @@
 """Wersjonowane prompty AI — zgodnie z PLAN_IMPLEMENTACJI.md sekcja 5."""
 
-from app.ai.conjugation import conjugation_rules_for_prompt
+from app.ai.language_typology import (
+    LANG_NAMES_EN,
+    lang_name_en,
+    language_pair_guidance,
+)
 
+# Alias PL dla kompatybilności (nazwy w promptach PL UI historycznie).
 LANG_NAMES_PL: dict[str, str] = {
     "pl": "polski",
     "es": "hiszpański",
@@ -14,101 +19,186 @@ LANG_NAMES_PL: dict[str, str] = {
     "ru": "rosyjski",
     "cs": "czeski",
     "sk": "słowacki",
+    "zh": "chiński",
+    "ja": "japoński",
+    "ko": "koreański",
+    "ar": "arabski",
+    "hi": "hindi",
+    "tr": "turecki",
+    "nl": "niderlandzki",
+    "sv": "szwedzki",
+    "no": "norweski",
+    "da": "duński",
+    "fi": "fiński",
+    "el": "grecki",
+    "he": "hebrajski",
+    "th": "tajski",
+    "vi": "wietnamski",
+    "id": "indonezyjski",
 }
 
 
 def lang_name_pl(code: str) -> str:
-    return LANG_NAMES_PL.get((code or "").strip().lower(), code)
+    c = (code or "").strip().lower()
+    return LANG_NAMES_PL.get(c) or LANG_NAMES_EN.get(c) or code
 
+
+LOOKUP_OUTPUT_FORM_RULES = """
+OUTPUT FORM — MANDATORY FOR EVERY CANDIDATE (all languages, all scripts)
+The user query may be ANY shape (typo, missing diacritics, plural, conjugated verb,
+declined noun, wrong case, mixed alphabet). Your job is to INTERPRET that generously,
+but every field you RETURN must be the dictionary citation form — never echo the query.
+
+lemma (always in L2={learning_name}):
+- verb → infinitive / citation infinitive for that language
+- noun → singular dictionary headword; include definite article when the language uses one
+  (Spanish el/la, French le/la, German der/die/das, Italian il/la, Portuguese o/a, …)
+- adjective → base citation form (no article)
+- other POS → standard dictionary headword for that language
+
+gloss (always in L1={native_name}):
+- noun → singular dictionary form (the form on a flashcard back)
+- verb → infinitive / canonical citation form for {native_name}
+- adjective → base citation form
+- fix spelling and diacritics, but NEVER copy the user's inflection, number, case,
+  or conjugation from the query string
+
+CRITICAL: interpretation ≠ output. Examples (query → gloss / lemma):
+- "libry" (PL plural OR typo OR anything) → gloss "libra", lemma "la libra" — NOT "libry",
+  NOT "litry"/"liry" invented to rhyme with the query
+- "books" → gloss "book"; "książki" → gloss "książka"; "hablando" → lemma "hablar"
+- "Häuser" → lemma "das Haus"; "книги" → singular dictionary forms in both languages
+- "食べた" → lemma dictionary citation (e.g. 食べる); gloss L1 infinitive/base form
+
+Never fabricate inflected glosses for unrelated lemmas. Every gloss must be the real
+dictionary form of THAT word's translation, in {native_name}.
+"""
 
 LOOKUP_SYSTEM_V1 = (
-    "Lookup słownikowy: zwracasz wyłącznie prawdziwe hasła jako JSON. "
-    "Nie zmyślaj znaczeń dla nieistniejących ciągów. "
-    "Gdy zapytanie jest dokładnym hasłem w języku uczonym, ten lemat MUSI być "
-    "pierwszym kandydatem — nie zastępuj go formą zwrotną ani derywatem. "
-    "Gdy zapytanie to literówka, lemat poprawki musi być inny niż zapytanie. "
-    "Rzeczowniki z rodzajnikiem. Bez zwrotów i bez peryfraz. Tylko JSON."
+    "Bilingual dictionary lookup. Return ONLY valid L2 headwords as JSON. "
+    "INTERPRET the query generously: typos, missing diacritics, plurals, conjugations, "
+    "any alphabet — high recall, union all plausible readings. "
+    "OUTPUT always dictionary citation forms: lemma = L2 headword, gloss = L1 headword "
+    "(singular noun / infinitive verb / base adjective) — never echo the query shape. "
+    "If the string fits L1 and L2, return BOTH. JSON only."
 )
 
-LOOKUP_PROMPT_V1 = """Jesteś leksykografem. Użytkownik szuka JEDNEGO hasła w słowniku.
+LOOKUP_PROMPT_V1 = """You are a bilingual lexicographer for ONE language pair.
 
-Język ojczysty użytkownika: {native_name}
-Język, którego się uczy: {learning_name}
-Poziom CEFR: {cefr}
-Wpisane zapytanie: "{text}"
+{pair_guidance}
 
-Zapytanie czytaj wyłącznie jako {native_name} albo {learning_name}.
-Nie interpretuj go jako słowa z innego języka, chyba że ten język jest jednym z dwóch powyżej.
+L1 (app / native language): {native_name}
+L2 (learning language — every candidate.lemma MUST be in this language): {learning_name}
+CEFR: {cefr}
+User query string: "{text}"
 
-ZADANIE
-Zwróć listę kandydatów — prawdziwych haseł w języku {learning_name}, które użytkownik
-mógł mieć na myśli (max 8, od najbardziej prawdopodobnego).
+Treat the query ONLY as {native_name} and/or {learning_name} (not a third language).
 
-KROK A — czy „{text}” jest prawdziwym hasłem?
-Jeśli „{text}” jest standardowym hasłem słownikowym w języku {learning_name}
-(np. popularny bezokolicznik, rzeczownik, przymiotnik), MUSI znaleźć się na liście
-jako PIERWSZY kandydat, z lemma dokładnie równym „{text}” (dla rzeczownika:
-z prawidłowym rodzajnikiem, jeśli w języku {learning_name} tak się hasłuje).
-Dopiero PO dokładnym trafieniu wolno dodać formy pokrewne (zwrotne, rzeczownik odczasownikowy).
-ZAKAZANE: pominąć dokładne trafienie i zwrócić tylko derywaty
-(np. wpisano „contar” → ŹLE: same contarse / el contar bez „contar”).
-ZAKAZANE: zmyślać znaczenie dla ciągu, którego nie znasz ze słownika.
-ZAKAZANE: zwrócić lemma = „{text}” z wymyślonym glossem, gdy słowo nie istnieje.
+FIRST, INTERPRET THE QUERY (very important — high recall)
+- Users type on mobile keyboards and are lazy/careless. Before interpreting:
+  - Ignore surrounding and stray punctuation and spaces (commas, periods, quotes,
+    e.g. "ksiazka." / " libro , " → "ksiazka" / "libro").
+  - Assume diacritics may be MISSING or wrong. A word typed without accents is the
+    SAME word: "czesc" = "cześć"/"część", "zubr" = "żubr", "ksiazka" = "książka",
+    "gdansk" = "Gdańsk", "nino" = "niño", "cafe" = "café".
+  - Assume small typos: transposed letters ("ksaizka"→"książka"), doubled or dropped
+    letters, and adjacent-key slips.
+  - The query may be an INFLECTED form: plural, conjugated verb, case ending, etc.
+    Treat it as a search key pointing to the dictionary headword — not as the form
+    to return. "libry" may be plural of "libra", a typo for "libro", or another
+    near-miss — consider ALL plausible readings.
+  - Works for every script and language in the pair (Latin, Cyrillic, CJK, Arabic, …).
 
-KROK B — literówka (gdy „{text}” NIE jest pewnym hasłem)
-Zaproponuj najbliższe PRAWDZIWE hasła w języku {learning_name}.
-- Lemat poprawki MUSI różnić się od „{text}”.
-- Odległość edycyjna najwyżej 2: zamiana litery, przestawienie, brakująca
-  albo nadmiarowa litera (także na początku lub na końcu), sąsiad na klawiaturze.
-- Przykład: „cabar” → „acabar” (brakujące „a” na początku) — TO JEST poprawka, nie odrzucaj jej.
-- Długość zbliżona (różnica długości najwyżej 2).
-- Nie proponuj słów tylko dlatego, że dzielą długi wspólny początek albo zawierają
-  „{text}” jako fragment, jeśli odległość edycyjna przekracza 2
-  (np. „cabar” ↛ „cabalgada”).
+GOAL — HIGH RECALL
+Return up to 8 DISTINCT L2 headword proposals the user might plausibly mean.
+Build the list as a UNION of ALL plausible interpretations — do NOT stop after the
+first one. When unsure whether a candidate belongs, INCLUDE it (extra candidate is
+cheap; a missing one breaks the app). Only return [] if nothing is remotely close.
 
-KROK C — tłumaczenie z języka ojczystego
-Jeśli „{text}” jest prawdziwym słowem w języku {native_name}, podaj jego
-odpowiedniki w języku {learning_name}.
+DIACRITIC COMPLETION HAS PRIORITY (this is the #1 source of bugs)
+- If stripping diacritics from a real, common word gives EXACTLY the query, that word
+  is the primary intent. ALWAYS include its reading, and list it BEFORE looser
+  typo-based guesses of a different word.
+- Example: L1=Polish query "ksiazka" → "książka" → L2 translation (gloss "książka").
+  You may ALSO add "kiszka" (typo reading) AFTER it, but you must NOT omit "książka".
 
-FORMA KAŻDEGO KANDYDATA (język {learning_name}):
-- czasownik → bezokolicznik (np. apoyar, apoyarse, contar)
-- rzeczownik → ZAWSZE z rodzajnikiem: el/la/los/las + rzeczownik (np. el apoyo, el contar)
-- przymiotnik → forma podstawowa męska lp. (np. vacío)
-- inne → pojedynczy lemat
+INCLUDE ALL THAT APPLY (each as its own candidate):
 
-ZAKAZANE:
-- zwroty wielowyrazowe (np. „el apoyo mutuo”)
-- czasownik + przyimek (np. „apoyar a”, „dejar de”)
-- pominięcie dokładnego lematu na rzecz formy zwrotnej albo homonimicznego rzeczownika
-- zdania poza polem gloss
+1) L2 reading
+   - "{text}" is (or is a typo / missing-diacritics form of) a real L2 dictionary headword
+     → candidate with that L2 lemma (correct orthography/diacritics) + gloss in L1.
+   - Example: L2=Polish, query "brat" → lemma "brat", gloss "brother".
+   - Example: L2=Polish, query "brac" → lemma "brać", gloss "to take".
 
-PRZYKŁADY
+2) L1 reading
+   - "{text}" is (or is a typo / missing-diacritics form of) a real L1 word
+     → one candidate per distinct L2 translation; gloss = the intended L1 word
+       (corrected spelling, WITH diacritics).
+   - Example: L1=Polish, L2=Spanish, query "ksiazka" → lemma "libro", gloss "książka".
+   - Example: L1=English, query "fart" → L2 translations with gloss "fart".
 
-Wpisał „contar” (prawdziwy czasownik hiszpański):
-DOBRZE (kolejność): contar (verb, liczyć / opowiadać), potem opcjonalnie contarse, el contar
-ŹLE: tylko contarse i el contar — bez „contar”
+3) Both at once
+   - If the same string is a valid word in L1 AND in L2, return BOTH (1) and (2).
+   - Homographs across the pair are common (EN/PL brat, EN/ES red, …).
 
-Wpisał „apoyar” (prawdziwy czasownik hiszpański):
-DOBRZE: apoyar (verb, wspierać), apoyarse (verb, opierać się), el apoyo (noun, wsparcie)
-ŹLE: apoyo bez rodzajnika; el apoyo mutuo; apoyar a
-ŹLE: same apoyarse / el apoyo bez „apoyar”
+TYPO / DIACRITICS RULES
+- Missing or wrong diacritics NEVER count as an "edit" — treat as the same word.
+- On top of that, allow edit distance ≤ 2 and letter transpositions.
+- Correct orthography in the OUTPUT fields (lemma / gloss), not by copying the query.
+- Do not invent non-words.
 
-Wpisał „aprneder” (literówka):
-DOBRZE: aprender
-ŹLE: aprovechar, el aprendizaje — tylko wspólny początek
+{lookup_output_form_rules}
 
-Wpisał „cabar” (nie istnieje w hiszpańskim):
-DOBRZE: caber (verb, mieścić się) — zamiana a→e
-DOBRZE: cavar (verb, kopać) — zamiana b→v
-DOBRZE: acabar (verb, kończyć) — brakujące „a” na początku (odległość 1)
-ŹLE: lemma „cabar” z jakimkolwiek glossem — zmyślanie nieistniejącego hasła
-ŹLE: cabalgada — wspólny początek, odległość edycyjna > 2
+POS FIELD (strict — same for every language pair)
+- pos MUST be exactly one English bucket: noun, verb, adj, adv, prep, conj, pron, det, interj
+- NEVER localized names (no "sustantivo", "rzeczownik", "verbo", "Nom", …)
+- NEVER gender or number in pos (no "masculino", "femenino", "męski", "feminine", …)
+- Gender is shown ONLY via the article in lemma (el = masculine, la = feminine, etc.)
 
-Wpisał „red” przy języku uczonym = hiszpański, ojczystym = polski:
-DOBRZE: la red (sieć) — „red” istnieje po hiszpańsku
-ŹLE: rojo — to byłoby czytanie zapytania po angielsku
+DEDUPE & ORDER
+- Same headword once per pos bucket. Different POS senses may both appear.
+- Order: exact matches, then diacritic-completed matches, then looser typo near-misses.
 
-Zwróć WYŁĄCZNIE JSON:
+Return ONLY JSON:
+{{
+  "candidates": [
+    {{"lemma": "...", "pos": "...", "gloss": "..."}}
+  ]
+}}
+"""
+
+LOOKUP_L1_TYPO_PROMPT_V1 = """The user typed an L1 (native) word, most likely WITHOUT
+diacritics and/or with a small typo. Recover what they meant. Be high-recall.
+
+{pair_guidance}
+
+L1: {native_name}
+L2 (lemmas to return): {learning_name}
+Typed string: "{text}"
+
+STEP 1 — interpret the query: ignore stray punctuation/spaces; assume diacritics are
+missing or wrong; assume small typos (transposed / doubled / dropped letters,
+adjacent-key slips); the query may be plural, conjugated, or otherwise inflected —
+treat that as a clue to the headword, not as the form to output.
+
+STEP 2 — find EVERY plausible intended word (L1 and/or L2):
+- FIRST and most important: the diacritic-completed word. If adding accents to "{text}"
+  yields a real {native_name} word, that is the primary intent — include it FIRST.
+  Example: "ksiazka" → "książka"; "zubr" → "żubr"; "czesc" → "cześć"/"część".
+- THEN any word within edit distance ≤ 2 or one transposition.
+- List MULTIPLE candidate intended words when several are plausible (do not commit to
+  only one). Better to offer an extra than to miss the right one.
+
+STEP 3 — for each reading, output L2 translation(s) (max 8 total).
+
+{lookup_output_form_rules}
+
+Also, if "{text}" (or a 1-edit / inflected form) is itself a valid L2 headword,
+include that L2 lemma too (in citation form).
+
+POS: exactly noun|verb|adj|adv|prep|conj|pron|det|interj — English only, no gender.
+
+Return ONLY JSON:
 {{
   "candidates": [
     {{"lemma": "...", "pos": "...", "gloss": "..."}}
@@ -117,7 +207,16 @@ Zwróć WYŁĄCZNIE JSON:
 """
 
 
+def lookup_output_form_rules_text(native: str, learning: str) -> str:
+    return LOOKUP_OUTPUT_FORM_RULES.format(
+        native_name=lang_name_en(native),
+        learning_name=lang_name_en(learning),
+    )
+
+
 ENRICHMENT_CORE_PROMPT_V1 = """Jesteś ekspertem leksykograficznym. Tworzysz rdzeń karty słówka (BEZ przykładów zdań, BEZ koniugacji, BEZ similar_words).
+
+{pair_guidance}
 
 Para językowa: L1 (ojczysty) = {native}, L2 (uczony) = {learning}
 Lemat (L2): {lemma}
@@ -125,11 +224,20 @@ Część mowy: {pos_line}
 
 Zwróć WYŁĄCZNIE JSON:
 {{
-  "schema_version": "1.0",
+  "schema_version": "vocabulario.card.v1",
   "lemma": "słowo w L2",
   "language": "{learning}",
   "pos": "noun|verb|adj|...",
   "ipa": "transkrypcja IPA",
+  "ui_hints": {{
+    "script": "Latn|Cyrl|Arab|Hans|Jpan|Kore|Deva|Thai|Hebr|Grek",
+    "rtl": false,
+    "show_conjugation": true,
+    "conjugation_kind": "person_tense|agglutinative|aspect_particles|minimal|none",
+    "has_articles": false,
+    "has_cases": false,
+    "has_gender": false
+  }},
   "meanings": [
     {{
       "gloss_l1": "sens w L1 — kolejno od najczęstszego",
@@ -157,6 +265,7 @@ Reguły:
   najbliższe realne tłumaczenie — nigdy nie twórz słowa przez dodanie
   końcówki {native} do lematu L2.
 - Język L2 = {learning}, tłumaczeń L1 = {native}.
+- ui_hints: ustaw show_conjugation zgodnie z typologią L2 (np. chiński/tajski → false).
 - NIE generuj: similar_words, conjugation, przykładów zdań.
 
 Znaczenia (meanings) — najważniejsza część karty:
@@ -167,104 +276,28 @@ Znaczenia (meanings) — najważniejsza część karty:
 - MAKSYMALNIE 3 znaczenia: jedno główne i do dwóch pobocznych. Liczba wynika
   ze słowa, nie z limitu — jeśli sens jest praktycznie jeden, podaj DOKŁADNIE
   jedno znaczenie i nie dorabiaj drugiego.
-- ZGRUPUJ sensy bliskoznaczne w jedno znaczenie. „ścielić” i „pościelić” to jeden
-  sens; „dążyć” i „zmierzać” to jeden sens. Najczęstsze tłumaczenie wpisz
-  jako gloss_l1, pozostałe do synonyms_l1 — nie jako osobne znaczenia.
-- Jeśli po zgrupowaniu zostaje więcej niż 3 sensy, zostaw 3 NAJCZĘŚCIEJ używane
-  w codziennym języku, a resztę pomiń.
-- ZAKAZ sensów rzadkich, archaicznych, slangowych i niszowych, nawet jeśli
-  słownik je notuje.
-- Odrębnym sensem NIE jest wariant stylistyczny tego samego znaczenia ani jego
-  węższy podtyp — takie warianty idą do synonyms_l1 albo wypadają.
-- Znaczenia opisują WYŁĄCZNIE goły lemat (bez stałego przyimka / dopełnienia
-  wymaganego do tego sensu). Jeśli sens wymaga stałej konstrukcji
-  „lemat + przyimek” (albo innego stałego schematu), NIE jest to znaczenie
-  gołego lematu — należy do conjugation.periphrases (generowanej osobno).
-  Tu go nie podawaj ani jako osobnego gloss_l1, ani jako usages.
-  Przykłady ZAKAZANE w meanings:
-  - acabar de + infinitivo → „właśnie coś zrobić”
-  - ir a + infinitivo → „zamierzać”
-  - volver a + infinitivo → „znów coś zrobić”
-  - dejar de + infinitivo → „przestać”
-  - tener que / hay que → „musieć”
-  - contar con + N → „liczyć na” / „dysponować”
-  - acabar con + N → „położyć kres / likwidować”
-  - tender a + infinitivo → „dążyć / skłaniać się”
-  Test: gdyby usunąć przyimek z L2, czy gloss_l1 nadal ma sens dla samego
-  lematu? Jeśli NIE (np. „liczyć na” bez „con”) — to NIE jest meaning.
-- usages przy znaczeniu muszą ilustrować goły lemat (contar el dinero,
-  contar una historia) — nie stałe „lemat + przyimek” z innym sensu.
-- Forma zwrotna z innym sensu (acabarse → „skończyć się”) może być osobnym
-  znaczeniem tylko gdy należy do 3 najczęstszych I dotyczy formy zwrotnej
-  jako lematu karty; przy karcie „acabar” nie dorabiaj acabarse jako 3. sensu.
-- Poziom {cefr} wpływa na dobór słownictwa w tłumaczeniach, NIE na liczbę
-  znaczeń. Nie pomijaj częstego sensu, bo wygląda na trudny.
-- usages: 2–4 prawdziwe kolokacje w {learning} pokazujące dany sens, każda
-  z tłumaczeniem na {native}. Tłumacz całą kolokację, nie samo słowo — ma być
-  naturalne w {native}, a nie kalką słowo w słowo.
+- ZGRUPUJ sensy bliskoznaczne w jedno znaczenie.
+- ZAKAZ sensów rzadkich, archaicznych, slangowych i niszowych.
+- Znaczenia opisują WYŁĄCZNIE goły lemat (bez stałego przyimka wymaganego do sensu).
+  Stałe „lemat + przyimek” z innym sensu → periphrases (osobny krok), nie meanings.
+- usages ilustrują goły lemat.
+- Poziom {cefr} wpływa na dobór słownictwa w tłumaczeniach, NIE na liczbę znaczeń.
+- usages: 2–4 prawdziwe kolokacje w {learning} z tłumaczeniem na {native}.
+- Forma zwrotna z innym sensu tylko gdy należy do 3 najczęstszych I dotyczy formy
+  zwrotnej jako lematu karty.
 
-Przykłady liczby znaczeń — L2 = es, L1 = pl:
-perro → 1 znaczenie: "pies".
-  ŹLE: "pies", "samiec psa" (podtyp tego samego sensu), "człowiek" (slang).
-querer → 2 znaczenia: "chcieć", "kochać" — dwa naprawdę różne sensy.
-contar → 2 znaczenia (NIE trzy):
-  1. gloss_l1 "liczyć"     usages: contar el dinero, contar hasta diez
-  2. gloss_l1 "opowiadać"  usages: contar una historia, contar un chiste
-  ŹLE: "liczyć na" z usages contar con alguien — to peryfraza contar con,
-       nie znaczenie gołego contar (trafia do conjugation.periphrases).
-acabar → 1 znaczenie główne:
-  1. gloss_l1 "kończyć"  usages: acabar el trabajo, acabar la reunión
-  ŹLE: "właśnie zrobić" (acabar de) oraz "likwidować" (acabar con) — peryfrazy.
-echar → sensów jest więcej niż 3, więc zostają 3 najczęstsze:
-  1. gloss_l1 "rzucać"    usages: echar una piedra → rzucić kamieniem
-  2. gloss_l1 "wlewać"    usages: echar agua en el vaso → nalać wody do szklanki
-  3. gloss_l1 "wyrzucać"  usages: echar a alguien del trabajo → zwolnić kogoś z pracy
-  ŹLE: "rzucać", "ciskać", "miotać" — jeden sens w trzech wariantach;
-  „ciskać” i „miotać” to synonyms_l1 pierwszego znaczenia.
+Synonimy — DEFINICJA:
+Synonim = inne słowo TEJ SAMEJ części mowy, które w tym znaczeniu można użyć
+ZAMIAST gloss_l1 (L1) lub lematu (L2).
 
-Synonimy — DEFINICJA (obowiązkowa):
-Synonim = inne słowo TEJ SAMEJ części mowy, które w tym znaczeniu można użyć ZAMIAST gloss_l1 (L1) lub lematu (L2).
-
-synonyms_l1:
-- Tylko słowa w języku {native}.
-- MUSZĄ mieć tę samą część mowy co gloss_l1 danego znaczenia.
-- Jeśli gloss_l1 to czasownik (np. „oferować”) → synonyms_l1 to inne CZASOWNIKI (np. „darować”, „przedstawiać”).
-- Jeśli gloss_l1 to rzeczownik (np. „oferta”) → synonyms_l1 to inne RZECZOWNIKI (np. „propozycja”, „wstawka”).
-- Jeśli gloss_l1 to przymiotnik → synonyms_l1 to inne PRZYMIOTNIKI.
-
-synonyms_l2 (poziom karty):
-- 2–4 synonimy lematu w języku {learning}.
-- Każdy jako obiekt: lemma, pos, gloss_l1.
-- MUSZĄ mieć tę samą część mowy co lemat ({pos}).
-- verb → inne czasowniki (infinitiv); noun → inne rzeczowniki (z el/la jeśli tak jest w lemacie).
-- gloss_l1 = krótkie tłumaczenie tego synonimu na {native} (1–3 słowa).
-
-antonyms_l2 (poziom karty):
-- 1–3 antonimy lematu w języku {learning}.
-- Ten sam format co synonyms_l2: {{"lemma", "pos", "gloss_l1"}}.
-- Ta sama część mowy co lemat.
-- gloss_l1 = krótkie tłumaczenie antonimu na {native}.
-
-ZAKAZANE w synonimach i antonimach:
-- Inna część mowy niż lemat (np. dla „oferować” ZAKAZ: oferta, propozycja — to rzeczowniki).
-- Derywaty i słowa z tej samej rodziny (ofrecer → la oferta, oferować → oferta).
-- Ogólniki, wyjaśnienia, kolokacje, tłumaczenia dosłowne z innej POS.
-- Powtórzenia lematu.
-- Same stringi zamiast obiektów — zawsze obiekt z lemma, pos, gloss_l1.
-
-Przykład — ofrecer (verb), gloss_l1 głównego znaczenia: „oferować”:
-DOBRZE synonyms_l1: darować, przedstawiać, udzielać
-ŹLE synonyms_l1: oferta, propozycja (rzeczowniki!), oferent (rzeczownik)
-DOBRZE synonyms_l2:
-  {{"lemma": "regalar", "pos": "verb", "gloss_l1": "darować"}},
-  {{"lemma": "brindar", "pos": "verb", "gloss_l1": "oferować"}},
-  {{"lemma": "presentar", "pos": "verb", "gloss_l1": "przedstawiać"}}
-ŹLE synonyms_l2: "regalar", la oferta, la propuesta
-DOBRZE antonyms_l2:
-  {{"lemma": "rechazar", "pos": "verb", "gloss_l1": "odrzucać"}}
+synonyms_l1: tylko {native}, ta sama POS co gloss_l1.
+synonyms_l2 / antonyms_l2: obiekty {{lemma, pos, gloss_l1}}, ta sama POS co lemat.
+ZAKAZ: inna POS, derywaty z tej samej rodziny, ogólniki, powtórzenia lematu.
 """
 
 EXAMPLES_PROMPT_V1 = """Jesteś ekspertem od przykładów zdań do nauki języków.
+
+{pair_guidance}
 
 Para językowa: L1 = {native}, L2 = {learning}
 Lemat (L2): {lemma}
@@ -277,13 +310,13 @@ po jednym na poziom A2, B2 i C2.
 Każde zdanie obsługuje całe pasmo poziomów, więc różnica między nimi musi być
 wyraźna:
 - A2 — dla początkującego (zobaczą je poziomy A1 i A2): krótkie, czas
-  teraźniejszy, podstawowe słownictwo.
+  teraźniejszy / formy podstawowe typowe dla L2, podstawowe słownictwo.
 - B2 — dla średnio zaawansowanego (poziomy B1 i B2): dłuższe, zdanie złożone,
-  czasy przeszłe lub przyszłe.
-- C2 — dla zaawansowanego (poziomy C1 i C2): naturalne i idiomatyczne, bogate
-  słownictwo, konstrukcje rzadsze w mowie potocznej.
+  bogatsza morfologia L2.
+- C2 — dla zaawansowanego (poziomy C1 i C2): naturalne i idiomatyczne.
 
 Każde zdanie MUSI pokazywać dokładnie to znaczenie, przy którym stoi.
+Tekst L2 w skrypcie L2; tłumaczenie L1 w skrypcie L1.
 Każdy przykład: {{"l2": "zdanie w L2", "l1": "tłumaczenie w L1", "cefr": "A2"}}
 {retry_note}
 
@@ -300,22 +333,6 @@ Zwróć WYŁĄCZNIE JSON:
     }}
   ]
 }}
-"""
-
-CONJUGATION_ONLY_PROMPT_V1 = """Jesteś ekspertem od hiszpańskiej koniugacji czasowników.
-
-Lemat (L2): {lemma}
-
-Zwróć WYŁĄCZNIE JSON:
-{{
-  "conjugation": {{
-    "non_finite": {{"gerundio": "...", "participio": "..."}},
-    "tenses": {{}},
-    "periphrases": []
-  }}
-}}
-
-{conjugation_rules}
 """
 
 
@@ -335,6 +352,7 @@ def build_enrichment_core_prompt(
         pos=pos if known_pos else "(ustal samodzielnie)",
         pos_line=pos if known_pos else "nie podano — ustal ją samodzielnie z lematu",
         cefr=cefr,
+        pair_guidance=language_pair_guidance(native=native, learning=learning),
     )
 
 
@@ -360,13 +378,7 @@ def build_examples_prompt(
         pos=pos,
         glosses="; ".join(glosses),
         retry_note=retry_note,
-    )
-
-
-def build_conjugation_prompt(*, lemma: str) -> str:
-    return CONJUGATION_ONLY_PROMPT_V1.format(
-        lemma=lemma,
-        conjugation_rules=conjugation_rules_for_prompt(lemma),
+        pair_guidance=language_pair_guidance(native=native, learning=learning),
     )
 
 
@@ -504,3 +516,220 @@ Warunki — każdy obowiązkowy:
 
 Nie muszą być do niczego podobne. Zwróć pełne {count} pozycji.
 """
+
+IMPORT_FORMAT_SYSTEM_V1 = (
+    "Jesteś warstwą ANALIZY FORMATU importu w Vocabulario. "
+    "Dostajesz SUROWĄ próbkę pliku/wklejki (nie gotowe notatki). "
+    "Zwracasz JSON z instrukcją segmentacji: jak dzielić tekst na fiszki i pola. "
+    "Backend wykona tę instrukcję deterministycznie na CAŁYM pliku. "
+    "Wnioskuj z próbki — szczególnie rozróżniaj separator MIĘDZY kartami "
+    "od separatora MIĘDZY terminem a definicją (Quizlet pozwala ustawić oba dowolnie). "
+    "Tylko JSON."
+)
+
+IMPORT_FORMAT_PROMPT_V1 = """Użytkownik importuje fiszki. Najpierw musisz opisać FORMAT pliku.
+
+Para językowa: L1={native_name}, L2={learning_name}
+Hint rodzaju źródła: {kind_hint}
+Znane nazwy pól (jeśli już z Anki/DB): {field_names}
+
+SUROWA próbka tekstu (może być obcięta; zachowaj wnioski z tego, co widać):
+-----
+{raw_sample}
+-----
+
+Zadanie:
+1. Rozpoznaj format (Quizlet export, Anki, TSV, CSV, bloki wieloliniowe, lista słów…).
+2. Zwróć instrukcję segmentacji:
+   - already_segmented=true TYLKO gdy to już uporządkowane notatki z polami (apkg / Anki notes).
+   - card_separator = jak dzielić na OSOBNE fiszki:
+       newline | blank_lines | semicolon | custom_string | none
+     Quizlet „Exportar”: często JEDNA linia: term,def;term,def;term,def
+     → card_separator=semicolon, field_delimiter=comma, field_split=first_only
+   - field_delimiter = separator WEWNĄTRZ fiszki (tab/comma/semicolon/none)
+   - field_split=first_only gdy definicja może zawierać ten sam znak co delimiter
+     (np. przecinek w tłumaczeniu)
+   - row_mode: zwykle delimited dla Quizlet/TSV; multiline_first_rest dla bloków
+   - append_continuation_lines_to_answer gdy trzeba
+3. preview_notes: 3–8 notatek [front, back] PO Twojej instrukcji (osobne fiszki!).
+4. rationale po polsku.
+
+WAŻNE:
+- NIE myl card_separator z field_delimiter.
+- Jeśli widać wiele „term,def” rozdzielonych średnikami w jednej linii — to WIELE fiszek,
+  nie jedna.
+- Nie kopiuj CSS/JS Anki. Nie wymyślaj treści spoza próbki.
+"""
+
+IMPORT_CLASSIFY_SYSTEM_V1 = (
+    "Klasyfikujesz zaimportowane fiszki pod karty Vocabulario. "
+    "Dla każdej notatki ustalasz entry_kind i headword_l2 (język uczony). "
+    "Nie odrzucasz zwrotów ani konstrukcji — to ważne hasła do nauki. "
+    "valid=false tylko przy pustce / śmieciach / braku treści L2. Tylko JSON."
+)
+
+IMPORT_CLASSIFY_PROMPT_V1 = """Użytkownik importuje fiszki do Vocabulario (tryb bogatych kart).
+
+Para: L1={native_name}, L2={learning_name}
+
+Notatki (każda = lista pól; zwykle [front L2, back L1]):
+{notes_json}
+
+Dla KAŻDEJ notatki (po indeksie) zwróć wpis:
+- entry_kind:
+  - lemma — pojedyncze hasło słownikowe (fumar, el banco)
+  - construction — peryfraza / wzorzec (volver a hacer algo, dejar de + inf.)
+  - phrase — krótki zwrot (pedir perdón, hacer la cama)
+  - sentence — pełne zdanie / dialog
+  - other — reszta sensowna do nauki
+- headword_l2 — forma w L2 (front jeśli to L2; nie tłumaczenie L1)
+- gloss_l1 — z tyłu fiszki jeśli jest, inaczej null
+- base_lemma — opcjonalnie goły czasownik/rzeczownik bazy (volver)
+- pattern — opcjonalnie wzorzec (volver a + infinitivo)
+- pos — verb|noun|adj|phrase|construction|sentence|…
+- valid — false tylko jeśli brak treści do nauki
+- invalid_reason — gdy valid=false
+
+WAŻNE: „volver a hacer algo” = construction, NIE invalid.
+Zwróć entries dla wszystkich indeksów 0..N-1.
+rationale po polsku.
+"""
+
+IMPORT_ADAPTIVE_SYSTEM_V1 = (
+    "Budujesz bogatą kartę Vocabulario dla zwrotu / konstrukcji / zdania. "
+    "Przykłady i użycia są obowiązkowe. Pełnej tabeli koniugacji NIE generujesz. "
+    "Tylko JSON."
+)
+
+IMPORT_ADAPTIVE_PROMPT_V1 = """Zbuduj kartę Vocabulario (adaptive) dla jednostki nauki.
+
+Para: L1={native_name}, L2={learning_name}
+CEFR użytkownika: {cefr}
+entry_kind: {entry_kind}
+headword (L2): {headword}
+gloss z importu (L1, może być pusty): {gloss}
+base_lemma (opcjonalnie): {base_lemma}
+pattern (opcjonalnie): {pattern}
+
+Wymagania:
+1. lemma = headword (dokładnie to, czego się uczymy — nie redukuj do base_lemma)
+2. 1–2 meanings z gloss_l1 (użyj gloss z importu jeśli sensowny)
+3. usages: 2–4 krótkie wskazówki użycia w L1
+4. examples: min. 3 zdania (l2 + l1 + cefr A2/B2/C2) z użyciem headword
+5. pattern — uzupełnij jeśli construction (np. volver a + infinitivo)
+6. related_lemma — base_lemma jeśli pasuje
+7. Bez pełnej conjugation; notes opcjonalnie po polsku
+
+Nie zmyślaj nieistniejących konstrukcji. Tylko JSON.
+"""
+
+IMPORT_STRUCTURE_SYSTEM_V1 = (
+    "Jesteś warstwą decyzji importu w aplikacji Vocabulario. "
+    "Dostajesz próbkę pliku/wklejki (Anki, Quizlet Export, CSV/TSV, lista słów) "
+    "i MUSISZ zwrócić JSON ze strategią wyciągnięcia haseł L2. "
+    "Bez tej strategii backend nie wie, jak zbudować karty. "
+    "Hasło L2 = forma słownikowa w języku uczonym (lemma / bezokolicznik), "
+    "NIE tłumaczenie L1, NIE nazwa czasu, NIE zdanie przykładowe, NIE tabela odmiany."
+)
+
+IMPORT_STRUCTURE_PROMPT_V1 = """Użytkownik importuje materiał do Vocabulario.
+
+Kontekst aplikacji:
+- Język ojczysty (L1): {native_name}
+- Język uczony (L2): {learning_name}
+- Po Twojej decyzji backend WYCIĄGNIE hasła L2 z CAŁEGO pliku według Twojej strategii,
+  potem ZWALIDUJE exact (hasło musi być prawdziwym słowem L1 lub L2),
+  a użytkownik zatwierdzi listę → powstanie jedna karta Vocabulario na unikalne hasło L2
+  (enrichment AI robi Vocabulario osobno — Ty tylko wskazujesz SKĄD brać lemma).
+
+Źródło:
+- Format: {kind}
+- Liczba notatek/wierszy: {total_notes}
+- Nazwy pól (jeśli znane): {field_names}
+
+Próbka notatek (każda = lista pól w kolejności; HTML może być surowy):
+{sample_json}
+
+Twoje zadanie (obowiązkowe):
+1. Rozpoznaj format (Quizlet term+def, Anki notes, HTML cards, plain list…).
+2. Wskaż JEDNO źródło hasła L2 (indeks pola / klasa HTML / plain_list).
+3. W rationale napisz czarno na białym po polsku:
+   - co to za dane,
+   - które pole = hasło L2,
+   - które pola IGNOROWAĆ (L1, czas, przykład, odmiana),
+   - że z każdego unikalnego hasła L2 powstanie osobna karta po walidacji.
+4. sample_headwords: 5–15 realnych haseł L2 z próbki po Twojej strategii.
+5. unique_estimate: ile unikalnych haseł L2 w całej talii (ta sama lemma w wielu
+   czasach Anki = jedno hasło).
+
+Strategia:
+- field_index — stały indeks pola (0-based) we wszystkich notatkach
+- html_class — karty HTML; podaj klasę CSS z hasłem L2 (np. answer-word)
+- plain_list — każdy wiersz to już jedno hasło L2 (jedna kolumna)
+
+l2_field_label: krótka etykieta źródła hasła (np. "kolumna 0 (Quizlet term)",
+"pole Spanish", "class=answer-word").
+"""
+
+IMPORT_DISPLAY_SYSTEM_V1 = (
+    "Jesteś warstwą layoutu importu fiszek w Vocabulario. "
+    "Notatki są JUŻ posegmentowane (wcześniejsza analiza formatu / Anki fields). "
+    "Dostajesz próbkę notatek i zwracasz JSON: które pole to hasło (prompt), "
+    "które to odpowiedź, oraz SZABLON bloków UI (front/back) z field_index. "
+    "Nie kopiujesz CSS/JS Anki. Nie zmyślasz treści — tylko mapowanie i strukturę. "
+    "Tylko JSON."
+)
+
+IMPORT_DISPLAY_PROMPT_V1 = """Użytkownik chce ZACHOWAĆ swoje fiszki (nie wyciągamy samych lematów słownikowych).
+Notatki poniżej są już podzielone na fiszki i pola — NIE dziel ich od nowa.
+
+Para językowa: L1={native_name}, L2={learning_name}
+Format: {kind}
+Liczba notatek: {total_notes}
+Nazwy pól: {field_names}
+
+Próbka notatek (każda = lista pól; może być HTML):
+{sample_json}
+
+Zadanie:
+1. Dla każdego indeksu pola ustaw role:
+   prompt | answer | secondary | example | meta | detail | ignore
+2. Zbuduj prompt_blocks (front) i answer_blocks (tył) jako SZABLON:
+   - Używaj field_index / l2_field_index / l1_field_index zamiast wklejać długi tekst.
+   - type ∈ title, paragraph, bilingual, list, table, meta, chip, section, divider, pre
+   - section: heading + collapsed + children (1 poziom)
+   - Długie odmiany / HTML / tabele → section collapsed=true, type pre lub table
+   - Na froncie max 1 główny title (+ meta/chip)
+   - Na tył: najpierw główna odpowiedź (title/paragraph), potem przykłady, potem detale
+3. prompt_style: word | phrase | sentence | html_block
+4. answer_needs_structure=true gdy prawa strona jest długa, HTML-owa lub wielosegmentowa
+5. Wszystkie nieużywane pola w bloku ustaw na null (text, emphasis, field_index, …, children)
+6. rationale po polsku
+
+Przykład (Anki: Tiempo, Spanish, Polish, Example_ES, Example_PL, Conjugation):
+- roles: meta, prompt, answer, example, example, detail
+- prompt: meta(field 0) + title(field 1, lemma)
+- answer: title(field 2, gloss) + section Przykład[bilingual 3/4] + section Odmiana collapsed[pre 5]
+"""
+
+IMPORT_ANSWER_STRUCTURE_SYSTEM_V1 = (
+    "Dzielisz treść prawej strony fiszki na czytelne bloki UI (JSON). "
+    "Nie dodajesz nowych faktów — tylko nagłówki, sekcje, zwijanie. Tylko JSON."
+)
+
+IMPORT_ANSWER_STRUCTURE_PROMPT_V1 = """Poniżej próbki prawej strony fiszki (po oczyszczeniu HTML).
+Zaproponuj strategię podziału na bloki mobilne.
+
+Para: L1={native_name}, L2={learning_name}
+
+Próbki:
+{samples_json}
+
+Zwróć:
+- strategy: paragraphs | headings | keep_pre | sections_from_sample
+- heading_hints: typowe nagłówki jeśli widać
+- sample_blocks: layout DLA PIERWSZEJ próbki z wypełnionym text (nie field_index)
+- Nieużywane pola bloku = null
+- rationale po polsku
+"""
+

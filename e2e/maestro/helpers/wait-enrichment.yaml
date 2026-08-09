@@ -1,0 +1,6 @@
+appId: com.vocabulario.app
+---
+# Wait until enrichment spinner / preparing copy is gone (best-effort, multi-locale).
+- extendedWaitUntil:
+    notVisible: "Preparing|Preparando|Przygotowuję|card_preparing"
+    timeout: 60000

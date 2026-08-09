@@ -5,8 +5,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import java.text.Normalizer
-import kotlin.math.abs
-import kotlin.math.max
+import kotlin.math.ceil
 
 object LocalAnswerCheck {
     fun check(
@@ -66,15 +65,20 @@ object LocalAnswerCheck {
 
     private fun fuzzyOk(a: String, b: String): Boolean {
         if (a == b) return true
-        if (abs(a.length - b.length) > 1) return false
-        val ratio = similarity(a, b)
-        return ratio >= 0.85
+        if (a.isEmpty() || b.isEmpty()) return false
+        if (minOf(a.length, b.length) < 2) return false
+        val distance = levenshtein(a, b)
+        val n = maxOf(a.length, b.length)
+        if (distance <= 1) return true
+        val ratio = 1.0 - distance.toDouble() / n.toDouble()
+        if (ratio >= 0.85) return true
+        return distance <= maxAllowedTypos(n)
     }
 
-    private fun similarity(a: String, b: String): Double {
-        if (a.isEmpty() && b.isEmpty()) return 1.0
-        val dist = levenshtein(a, b)
-        return 1.0 - dist.toDouble() / max(a.length, b.length).toDouble()
+    private fun maxAllowedTypos(wordLen: Int): Int {
+        if (wordLen < 2) return 0
+        val byRatio = ceil(wordLen * 0.15).toInt()
+        return maxOf(1, byRatio)
     }
 
     private fun levenshtein(a: String, b: String): Int {

@@ -2,11 +2,13 @@ package com.vocabulario.app.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vocabulario.app.R
 import com.vocabulario.app.auth.GoogleAuthHelper
 import com.vocabulario.app.data.AuthRepository
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.local.TokenStore
+import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,6 +25,7 @@ class AuthViewModel @Inject constructor(
     private val learningRepository: LearningRepository,
     private val tokenStore: TokenStore,
     private val googleAuthHelper: GoogleAuthHelper,
+    private val strings: UiStrings,
 ) : ViewModel() {
 
     val isLoggedIn: StateFlow<Boolean> = tokenStore.accessToken
@@ -38,10 +41,10 @@ class AuthViewModel @Inject constructor(
 
     private fun validate(email: String, password: String, isRegister: Boolean): String? {
         val trimmedEmail = email.trim()
-        if (trimmedEmail.isBlank()) return "Podaj adres email"
-        if (!trimmedEmail.contains("@")) return "Podaj poprawny adres email"
-        if (password.isBlank()) return "Podaj hasło"
-        if (isRegister && password.length < 8) return "Hasło musi mieć co najmniej 8 znaków"
+        if (trimmedEmail.isBlank()) return strings.get(R.string.err_email_required)
+        if (!trimmedEmail.contains("@")) return strings.get(R.string.err_email_invalid)
+        if (password.isBlank()) return strings.get(R.string.err_password_required)
+        if (isRegister && password.length < 8) return strings.get(R.string.err_password_short)
         return null
     }
 
@@ -56,10 +59,15 @@ class AuthViewModel @Inject constructor(
                 authRepository.login(email.trim(), password)
                 !authRepository.hasProfile()
             }.onSuccess { needsOnboarding ->
-                if (!needsOnboarding) authRepository.ensureActiveProfile()
+                if (!needsOnboarding) {
+                    authRepository.ensureActiveProfile()
+                    learningRepository.applyAppLocaleFromActiveProfile()
+                }
                 learningRepository.syncThemeFromSettings()
                 onSuccess(needsOnboarding)
-            }.onFailure { _errorMessage.value = it.userMessage("Błąd logowania") }
+            }.onFailure {
+                _errorMessage.value = it.userMessage(strings.get(R.string.err_login))
+            }
         }
     }
 
@@ -73,7 +81,9 @@ class AuthViewModel @Inject constructor(
             runCatching {
                 authRepository.register(email.trim(), password)
             }.onSuccess { onSuccess() }
-                .onFailure { _errorMessage.value = it.userMessage("Błąd rejestracji") }
+                .onFailure {
+                    _errorMessage.value = it.userMessage(strings.get(R.string.err_register))
+                }
         }
     }
 
@@ -85,10 +95,15 @@ class AuthViewModel @Inject constructor(
                 authRepository.googleLogin(idToken)
                 !authRepository.hasProfile()
             }.onSuccess { needsOnboarding ->
-                if (!needsOnboarding) authRepository.ensureActiveProfile()
+                if (!needsOnboarding) {
+                    authRepository.ensureActiveProfile()
+                    learningRepository.applyAppLocaleFromActiveProfile()
+                }
                 learningRepository.syncThemeFromSettings()
                 onSuccess(needsOnboarding)
-            }.onFailure { _errorMessage.value = it.userMessage("Błąd logowania Google") }
+            }.onFailure {
+                _errorMessage.value = it.userMessage(strings.get(R.string.err_google_login))
+            }
         }
     }
 

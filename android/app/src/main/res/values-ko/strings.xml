@@ -1,0 +1,703 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <string name="app_name">Vocabulario</string>
+
+    <string name="action_sort">정렬</string>
+
+    <string name="action_filter">필터</string>
+
+    <string name="action_filter_active">필터 · %1$d</string>
+
+    <string name="action_clear_filters">필터 지우기</string>
+
+    <string name="action_clear_all">모두 지우기</string>
+
+    <string name="action_apply">적용</string>
+
+    <string name="list_words_meta">%1$d 단어</string>
+
+    <string name="list_filter_empty">필터에 맞는 단어가 없습니다</string>
+
+    <string name="sort_title">정렬</string>
+
+    <string name="sort_lemma_asc">A → Z</string>
+
+    <string name="sort_lemma_desc">Z → A</string>
+
+    <string name="sort_pos">품사</string>
+
+    <string name="sort_newest">최신순</string>
+
+    <string name="sort_oldest">오래된순</string>
+
+    <string name="sort_status">카드 상태</string>
+
+    <string name="filter_title">필터</string>
+
+    <string name="filter_section_pos">품사</string>
+
+    <string name="filter_section_state">카드 상태</string>
+
+    <string name="filter_pos_unknown">알 수 없는 품사</string>
+
+    <string name="status_review">복습</string>
+
+    <string name="action_undo">실행 취소</string>
+
+    <string name="cd_undo">마지막 점수 취소</string>
+
+    <string name="action_cancel">취소</string>
+
+    <string name="action_ok">확인</string>
+
+    <string name="action_back">뒤로</string>
+
+    <string name="action_delete">삭제</string>
+
+    <string name="action_move">이동</string>
+
+    <string name="action_learn">학습</string>
+
+    <string name="action_confirm">확인</string>
+
+    <string name="action_create">생성</string>
+
+    <string name="action_import">가져오기</string>
+
+    <string name="action_close">닫기</string>
+
+    <string name="action_save">저장</string>
+
+    <string name="action_reveal">보여주기</string>
+
+    <string name="action_add">추가</string>
+
+    <string name="action_search">검색</string>
+
+    <string name="action_logout">로그아웃</string>
+
+    <string name="action_retry">재시도</string>
+
+    <string name="action_check">확인</string>
+
+    <string name="action_return">뒤로</string>
+
+    <string name="tab_dashboard">홈</string>
+
+    <string name="tab_add">추가</string>
+
+    <string name="tab_lists">목록</string>
+
+    <string name="auth_login_title">다시 오신 것을 환영합니다</string>
+
+    <string name="auth_register_title">계정 만들기</string>
+
+    <string name="auth_login">로그인</string>
+
+    <string name="auth_register">가입하기</string>
+
+    <string name="auth_google">Google로 계속하기</string>
+
+    <string name="auth_email">이메일</string>
+
+    <string name="auth_password">비밀번호</string>
+
+    <string name="auth_tagline">자신의 속도로 어휘를 배우세요</string>
+
+    <string name="auth_password_hint">최소 8자 이상</string>
+
+    <string name="auth_have_account">이미 계정이 있습니다</string>
+
+    <string name="onboarding_title">학습 설정</string>
+
+    <string name="onboarding_subtitle">언어 쌍, CEFR 수준 및 동사 시제를 선택하세요.</string>
+
+    <string name="onboarding_native">앱 언어</string>
+
+    <string name="onboarding_learning">학습 언어</string>
+
+    <string name="onboarding_start">시작</string>
+
+    <string name="onboarding_cefr">CEFR 수준</string>
+
+    <string name="onboarding_tenses">동사 시제</string>
+
+    <string name="settings_title">설정</string>
+
+
+    <string name="settings_native_lang">앱 언어</string>
+    <string name="settings_tense_labels">시제 라벨</string>
+    <string name="settings_tense_labels_app">앱 언어</string>
+    <string name="settings_tense_labels_learning">학습 언어</string>
+
+
+    <string name="settings_learning_lang">학습 언어</string>
+
+    <string name="settings_langs_hint">앱 언어는 인터페이스와 카드 번역의 언어입니다. 학습 언어는 공부하는 언어입니다.</string>
+
+    <string name="settings_theme">테마</string>
+
+    <string name="settings_mode">학습 모드</string>
+
+    <string name="settings_group_study">학습</string>
+
+    <string name="settings_group_general">일반</string>
+
+    <string name="settings_mode_choice">Quiz</string>
+
+    <string name="settings_mode_type">단어 입력</string>
+
+    <string name="settings_mode_flash">플래시카드</string>
+
+    <string name="settings_tolerate_typos">경미한 오타 허용</string>
+
+    <string name="settings_tolerate_typos_sub">철자 및 발음 기호</string>
+
+    <string name="settings_direction">학습 방향</string>
+
+    <string name="settings_direction_first">%1$s 먼저</string>
+
+    <string name="settings_direction_random">무작위</string>
+
+    <string name="settings_card_layout">카드 레이아웃</string>
+
+    <string name="settings_card_layout_sub">정답 후에 보이는 내용</string>
+
+    <string name="settings_examples">예문</string>
+
+    <string name="settings_usages">용법 예시</string>
+
+    <string name="settings_periphrases">패턴</string>
+
+    <string name="settings_syn_ant">동의어 및 반의어</string>
+
+    <string name="settings_conjugation">활용</string>
+
+    <string name="settings_all_tenses">모든 시제</string>
+
+    <string name="settings_limits">제한</string>
+
+    <string name="settings_new_limit">일일 신규 단어 제한</string>
+
+    <string name="settings_new_per_day">%1$d개 / 하루</string>
+
+    <string name="settings_theme_system">시스템 기본값</string>
+
+    <string name="settings_languages">언어</string>
+
+    <string name="settings_cefr_known">학습 언어 수준</string>
+
+    <string name="settings_label">설정</string>
+
+    <string name="profile_title">프로필</string>
+
+    <string name="profile_new_pair">새 쌍</string>
+
+    <string name="profile_pairs">당신의 언어 쌍</string>
+
+    <string name="profile_active">활성</string>
+
+    <string name="profile_activate">활성화</string>
+
+    <string name="profile_level">레벨: %1$s</string>
+
+    <string name="profile_cefr_active">CEFR (활성 프로필)</string>
+
+
+    <string name="profile_tenses">동사 시제</string>
+
+    <string name="practice_title">연습</string>
+
+    <string name="practice_show_answer">정답 보기</string>
+
+    <string name="practice_error_title">틀림</string>
+
+    <string name="practice_bridge_l2">%1$s에서</string>
+
+    <string name="practice_bridge_means">의미</string>
+
+    <string name="practice_empty">연습할 카드가 없습니다</string>
+
+    <string name="practice_empty_hint">홈 화면에서 단어 추가</string>
+
+    <string name="practice_your_answer">당신의 답변</string>
+
+    <string name="practice_spelling_warn">철자를 확인하세요!</string>
+
+    <string name="practice_spelling_detail">입력한 내용: %1$s — 올바른 철자: %2$s</string>
+
+    <string name="practice_correct_answer">정답: %1$s</string>
+
+    <string name="grade_again">다시</string>
+
+    <string name="grade_hard">어려움</string>
+
+    <string name="grade_good">좋음</string>
+
+    <string name="grade_easy">쉬움</string>
+
+    <string name="creating_card">카드 생성 중…</string>
+
+    <string name="creating_card_failed">카드를 준비할 수 없습니다</string>
+
+    <string name="list_learning">학습 중</string>
+
+    <string name="list_pending">대기 중</string>
+
+    <string name="offline_banner_title">오프라인입니다</string>
+
+    <string name="offline_banner_body">추가된 단어는 &quot;대기 중&quot; 목록으로 가며, 온라인으로 돌아오면 조회됩니다.</string>
+
+    <string name="offline_search_hint">단어 입력</string>
+
+    <string name="import_online_only">가져오기는 온라인에서만 가능합니다.</string>
+
+    <string name="offline_lookup_queued">&quot;대기 중&quot;에 추가됨 — 온라인으로 돌아오면 조회됩니다.</string>
+
+    <string name="offline_lookup_duplicate">해당 단어는 이미 &quot;대기 중&quot;에 있습니다.</string>
+
+    <string name="status_awaiting_network">네트워크 대기 중</string>
+
+    <string name="list_other">기타 목록</string>
+
+    <string name="list_new">새 목록</string>
+
+    <string name="list_rename">이름 변경</string>
+
+    <string name="list_move_all">모두 이동</string>
+
+    <string name="list_empty">빈 목록</string>
+
+    <string name="list_delete_selected">삭제</string>
+
+    <string name="list_move_to">목록으로 이동</string>
+
+    <string name="list_name_hint">이름</string>
+
+    <string name="list_name_full_hint">목록 이름</string>
+
+    <string name="list_pick">목록 선택</string>
+
+    <string name="list_pick_target">대상 목록 선택</string>
+
+    <string name="list_create_and_add">생성 및 추가</string>
+
+    <string name="list_delete_confirm_title">목록 삭제?</string>
+
+    <string name="list_delete_confirm_body">목록 “%1$s” 및 그 단어가 삭제됩니다.</string>
+
+    <string name="list_move_word">단어를 목록으로 이동</string>
+
+    <string name="list_delete_word_confirm">이 단어를 삭제하시겠습니까?</string>
+
+    <string name="list_delete_selected_title">선택 항목 삭제?</string>
+
+    <string name="list_delete_selected_body">목록에서 %1$d 단어를 삭제합니다.</string>
+
+    <string name="list_create_move_all">목록을 생성하고 모든 단어를 이동합니다.</string>
+
+    <string name="list_create_move_sel">목록을 생성하고 선택한 단어를 이동합니다.</string>
+
+    <string name="list_create_move_one">다른 목록이 없습니다 — 하나를 생성하면 단어가 그곳으로 이동합니다.</string>
+
+    <string name="import_from_file">파일 가져오기</string>
+
+    <string name="import_paste">텍스트 붙여넣기</string>
+
+    <string name="import_paste_hint">텍스트 붙여넣기…</string>
+
+    <string name="import_progress">단어 가져오는 중</string>
+
+    <string name="import_add_file">파일 추가</string>
+
+    <string name="import_other_file">다른 파일 선택</string>
+
+    <string name="import_how">가져오는 방법?</string>
+
+    <string name="import_vocab_mode">Vocabulario 카드</string>
+
+    <string name="import_preserve_mode">내 플래시카드 내용 유지</string>
+
+    <string name="import_vocab_hint">Vocabulario 카드: 단일 단어에 최적 — 의미, 예시, 형태, 패턴, 동의어 및 반의어가 자동 생성됩니다.</string>
+
+    <string name="import_invalid_title">유효하지 않은 단어</string>
+
+    <string name="import_file_errors">파일에 오류가 있습니다 — 확인하세요.</string>
+
+    <string name="import_no_cards">카드가 없습니다 — 소스를 취소하거나 수정하세요.</string>
+
+    <string name="import_no_valid">유효한 단어가 없습니다 — 소스를 취소하거나 수정하세요.</string>
+
+    <string name="import_empty_hint">단어를 입력하거나 목록을 가져오세요 (CSV/TXT/apkg)</string>
+
+    <string name="import_file_label">파일: \'%1$s\'</string>
+
+    <string name="section_meanings">의미</string>
+
+    <string name="section_synonyms">동의어</string>
+
+    <string name="section_syn_ant">동의어 &amp; 반의어</string>
+
+    <string name="section_antonyms">반의어</string>
+
+    <string name="section_antonyms_title">반의어</string>
+
+    <string name="section_conjugation">형태</string>
+
+    <string name="section_periphrases">패턴</string>
+
+    <string name="section_usages">사용 예시</string>
+
+    <string name="home_search_hint">단어 검색…</string>
+
+    <string name="home_due_now">지금 복습할 준비 완료</string>
+
+    <string name="home_new_today">오늘 배운 새로운 단어</string>
+
+    <string name="home_reviewed_today">오늘 복습한 단어</string>
+
+    <string name="home_learning_now">현재 학습 중</string>
+
+    <string name="home_new_left">아직 배워야 할 단어</string>
+
+    <string name="home_mastered">지금까지 배운 단어</string>
+
+    <string name="home_forecast_title">앞으로의 복습</string>
+
+    <string name="home_words_count">%1$d 단어</string>
+
+    <string name="home_new_words_count">%1$d 새로운 단어</string>
+
+    <string name="new_list_cd">새 목록</string>
+
+    <string name="new_cards_per_day">%1$d / 일</string>
+
+    <string name="new_cards_unlimited">무제한</string>
+
+    <string name="cd_settings">설정</string>
+
+    <string name="cd_play">재생</string>
+
+    <string name="cd_on_list">이미 목록에 있음</string>
+
+    <string name="cd_delete">삭제</string>
+
+    <string name="cd_move">이동</string>
+
+    <string name="cd_selected">선택됨</string>
+
+    <string name="cd_list_options">목록 옵션</string>
+
+    <string name="status_error">오류</string>
+
+    <string name="status_new">새로운</string>
+
+    <string name="status_learning">학습 중</string>
+
+    <string name="status_mastered">완료</string>
+
+    <string name="kind_lemma">단어</string>
+
+    <string name="kind_phrase">구</string>
+
+    <string name="kind_construction">구성</string>
+
+    <string name="kind_sentence">문장</string>
+
+    <string name="kind_other">기타</string>
+
+    <string name="no_meanings">의미 없음</string>
+
+    <string name="add_word_title">단어 추가</string>
+
+    <string name="add_word_hint">단어 입력</string>
+
+    <string name="add_word_source">출처: %1$s</string>
+
+    <string name="add_word_hide">카드 숨기기</string>
+
+    <string name="packs_title">목록</string>
+
+    <string name="packs_subtitle">미리 만들어진 단어 팩</string>
+
+    <string name="learning_back_list">목록으로 돌아가기</string>
+
+    <string name="card_preparing">전체 카드를 백그라운드에서 준비 중입니다 — 잠시 후에 돌아오세요.</string>
+
+    <string name="card_headword">주요 단어</string>
+
+    <string name="weekday_mon">월</string>
+
+    <string name="weekday_tue">화</string>
+
+    <string name="weekday_wed">수</string>
+
+    <string name="weekday_thu">목</string>
+
+    <string name="weekday_fri">금</string>
+
+    <string name="weekday_sat">토</string>
+
+    <string name="weekday_sun">일</string>
+
+    <string name="settings_theme_light">라이트</string>
+
+    <string name="settings_theme_dark">다크</string>
+
+    <string name="settings_languages_summary">%1$s · 학습: %2$s</string>
+
+    <string name="err_load_settings">설정을 불러올 수 없습니다.</string>
+
+    <string name="err_save">저장할 수 없습니다.</string>
+
+    <string name="err_save_tenses">시제를 저장할 수 없습니다.</string>
+
+
+    <string name="err_learning_lang">학습 언어를 변경할 수 없습니다.</string>
+
+    <string name="err_cefr">CEFR 수준을 변경할 수 없습니다.</string>
+
+    <string name="err_load_queue">연습 큐를 불러올 수 없습니다.</string>
+
+    <string name="err_options_count">8개의 옵션이 필요합니다, %1$d개가 있습니다. 단어를 다시 추가하세요.</string>
+
+    <string name="err_load_options">옵션을 불러올 수 없습니다.</string>
+
+    <string name="err_check">답변을 확인할 수 없습니다.</string>
+
+    <string name="err_add">추가할 수 없습니다.</string>
+
+    <string name="err_lists">목록을 불러올 수 없습니다.</string>
+
+    <string name="err_create_list">목록을 생성할 수 없습니다.</string>
+
+    <string name="err_save_grade">등급을 저장할 수 없습니다.</string>
+
+    <string name="err_load_profile">프로필을 불러올 수 없습니다.</string>
+
+    <string name="err_activate">프로필을 활성화할 수 없습니다.</string>
+
+    <string name="err_load_stats">통계를 불러올 수 없습니다.</string>
+
+    <string name="err_list_words">목록 단어를 불러올 수 없습니다.</string>
+
+    <string name="err_search">검색 실패</string>
+
+    <string name="err_import_empty">가져올 단어가 없습니다</string>
+
+    <string name="err_import">가져오기 실패</string>
+
+    <string name="err_import_file">파일 가져오기 실패</string>
+
+    <string name="err_import_empty_file">빈 파일</string>
+
+    <string name="err_import_validate">가져오기 검증 실패</string>
+
+    <string name="err_add_partial">%1$d 단어를 추가할 수 없습니다 (예: 이미 목록에 있음)</string>
+
+    <string name="msg_import_result">%1$d 개 추가, %2$d 개 건너뜀 (이미 목록에 있음)</string>
+
+    <string name="err_save_cards">카드를 저장할 수 없습니다</string>
+
+    <string name="err_add_to_list">목록에 추가할 수 없습니다</string>
+
+    <string name="err_rename">이름을 변경할 수 없습니다</string>
+
+    <string name="err_delete_list">목록을 삭제할 수 없습니다</string>
+
+    <string name="err_delete_word">단어를 삭제할 수 없습니다</string>
+
+    <string name="err_move">이동할 수 없습니다</string>
+
+    <string name="err_delete_partial">%1$d 단어를 삭제할 수 없습니다</string>
+
+    <string name="err_move_partial">%1$d 단어를 이동할 수 없습니다</string>
+
+    <string name="list_name_reserved">이 이름은 예약되어 있습니다</string>
+
+    <string name="list_name_taken">이 이름의 목록이 이미 존재합니다</string>
+
+    <string name="list_fallback">목록</string>
+
+    <string name="msg_added_learning">학습에 추가됨: %1$s</string>
+
+    <string name="msg_added">추가됨: %1$s</string>
+
+    <string name="msg_saved_cefr">CEFR 수준 저장됨</string>
+
+    <string name="msg_saved_tenses">시제 저장됨</string>
+
+
+    <string name="err_load_cards">카드를 불러올 수 없습니다</string>
+
+    <string name="err_langs_must_differ">앱 언어와 학습 언어는 달라야 합니다</string>
+
+    <string name="err_create_profile">프로필을 생성할 수 없습니다</string>
+
+    <string name="err_create_card">카드를 생성할 수 없습니다</string>
+
+    <string name="err_password_required">비밀번호를 입력하세요</string>
+
+    <string name="err_password_short">비밀번호는 최소 8자 이상이어야 합니다</string>
+
+    <string name="err_login">로그인 실패</string>
+
+    <string name="err_register">등록 실패</string>
+
+    <string name="err_google_login">구글 로그인 실패</string>
+
+    <string name="learning_title">학습</string>
+
+    <string name="learning_empty">아직 학습할 단어가 없습니다</string>
+
+    <string name="learning_empty_hint">홈 화면에서 단어를 검색하세요</string>
+
+    <string name="packs_body">스타터 팩 (CEFR × 카테고리)은 제품 로드맵에 있습니다. 데이터베이스 스키마는 준비 완료 — AI 카드 품질이 승인된 후 팩이 나타납니다.</string>
+
+    <string name="profile_active_pair">활성 쌍: %1$s → %2$s</string>
+
+    <string name="section_synonyms_short">동의어</string>
+
+    <string name="section_antonyms_short">반의어</string>
+
+    <string name="section_conjugation_short">활용</string>
+
+    <string name="section_usages_short">용법</string>
+
+    <string name="cd_back">뒤로</string>
+
+    <string name="err_email_required">이메일 주소를 입력하세요</string>
+
+    <string name="err_email_invalid">유효한 이메일 주소를 입력하세요</string>
+
+    <string name="err_google_token">구글 토큰을 가져올 수 없습니다</string>
+
+    <string name="section_fallback">섹션</string>
+
+    <string name="cd_add_to_list">목록에 추가</string>
+
+    <string name="list_clear_all">모든 단어 삭제</string>
+
+    <string name="list_clear_all_title">모든 단어를 삭제하시겠습니까?</string>
+
+    <string name="list_clear_all_body">“%1$s”에서 모든 단어를 제거합니다. 목록 자체는 유지됩니다.</string>
+
+    <string name="settings_level">레벨</string>
+
+    <string name="settings_selected_tenses">선택된 시제</string>
+
+    <string name="action_edit">편집</string>
+
+    <string name="import_cards_count">가져온 카드 (%1$d)</string>
+
+    <string name="import_flashcards_count">플래시카드: %1$d</string>
+
+    <string name="import_done_count">가져온: %1$d</string>
+
+    <string name="list_unnamed">목록</string>
+
+    <string name="periphrase_n">서술어 %1$d</string>
+
+    <string name="practice_well_done">잘했어요!</string>
+
+    <string name="cd_search">검색</string>
+
+    <string name="correction_fix_card">카드 수정</string>
+
+    <string name="correction_report_title">문제 신고</string>
+
+    <string name="correction_section_lemma">표제어</string>
+
+    <string name="correction_section_pos">품사</string>
+
+    <string name="correction_section_gloss">주요 의미</string>
+
+    <string name="correction_section_meanings">의미</string>
+
+    <string name="correction_section_examples">예시</string>
+
+    <string name="correction_section_conjugation">활용</string>
+
+    <string name="correction_section_similar">유사 단어</string>
+
+    <string name="correction_section_pronunciation">발음</string>
+
+    <string name="correction_section_other">기타</string>
+
+    <string name="correction_note_label">노트</string>
+
+    <string name="correction_note_hint">문제가 무엇인지 설명하세요…</string>
+
+    <string name="correction_validation">최소 하나의 섹션을 선택하거나 노트를 작성하세요 (최소 3자).</string>
+
+    <string name="correction_submit">신고 제출</string>
+
+    <string name="correction_requires_online">인터넷 연결이 필요합니다.</string>
+
+    <string name="correction_result_accepted_title">신고 수락됨 — 카드 업데이트됨.</string>
+
+    <string name="correction_result_rejected_title">신고가 수락되지 않았습니다.</string>
+
+    <string name="correction_result_rejected_body">카드를 직접 수정할 수 있습니다 — 본인의 책임 하에. 이는 개인 복사본을 생성합니다.</string>
+
+    <string name="correction_edit_self">내 정보 수정</string>
+
+    <string name="correction_self_edit_title">카드 수정</string>
+
+    <string name="correction_field_lemma">어근</string>
+
+    <string name="correction_field_pos">품사</string>
+
+    <string name="correction_field_gloss">주요 의미</string>
+
+    <string name="correction_field_extra_glosses">추가 의미 (한 줄에 하나씩)</string>
+
+    <string name="review_status_reported">수정 보고됨</string>
+
+    <string name="review_status_accepted">업데이트됨</string>
+
+    <string name="review_status_rejected">보고서 거부됨</string>
+
+    <string name="review_status_user_edited">수동으로 수정됨</string>
+
+    <string name="cd_voice_search">음성 검색</string>
+
+    <string name="voice_listening">듣는 중…</string>
+
+    <string name="voice_listening_hint">지금 말하세요</string>
+
+    <string name="voice_tap_to_start">시작하려면 탭하세요</string>
+
+    <string name="voice_start">시작</string>
+
+    <string name="voice_stop">중지</string>
+
+    <string name="voice_permission_denied">마이크 권한이 거부되었습니다.</string>
+
+    <string name="voice_unavailable">이 기기에서 음성 인식이 사용할 수 없습니다.</string>
+
+    <string name="settings_notifications">알림</string>
+
+    <string name="settings_notifications_summary">학습 알림 및 카드 준비 상태</string>
+
+    <string name="settings_notif_study">학습 알림</string>
+
+    <string name="settings_notif_cards">카드 준비 완료</string>
+
+    <string name="settings_reminder_hour">알림 시간 (0–23)</string>
+
+    <string name="notif_channel_study">학습</string>
+
+    <string name="notif_channel_cards">카드</string>
+
+    <string name="notif_study_title">복습할 시간</string>
+
+    <string name="notif_study_body">%1$d 카드가 만료됨</string>
+
+    <string name="notif_cards_ready_title">카드 준비 완료</string>
+
+    <string name="notif_cards_ready_body">%1$d 단어가 학습 준비 완료</string>
+
+</resources>

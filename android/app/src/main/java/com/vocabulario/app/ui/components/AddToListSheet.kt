@@ -1,12 +1,14 @@
 package com.vocabulario.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -17,15 +19,25 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import com.vocabulario.app.ui.TestTags
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vocabulario.app.R
 import com.vocabulario.app.data.api.WordListResponse
+import com.vocabulario.app.ui.home.isReservedListNameMessage
+
+private val SheetControlHeight = 52.dp
+private val SheetControlSpacing = 10.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,13 +56,23 @@ fun AddToListSheet(
     onCreateNameChange: (String) -> Unit,
     onCreateAndAdd: () -> Unit,
     onShowCreatePrompt: () -> Unit,
+    onBackFromCreatePrompt: () -> Unit,
+    onBackFromListPicker: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val customLists = remember(lists) { lists.filterNot { it.is_system } }
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = scheme.surfaceVariant,
+        unfocusedContainerColor = scheme.surfaceVariant,
+        unfocusedBorderColor = scheme.outline.copy(alpha = 0f),
+        focusedBorderColor = scheme.outline.copy(alpha = 0f),
+    )
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = AppButtonShape,
         containerColor = scheme.surface,
         tonalElevation = 0.dp,
     ) {
@@ -65,6 +87,8 @@ fun AddToListSheet(
                 lemma,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
             if (!gloss.isNullOrBlank()) {
                 Text(
@@ -72,94 +96,171 @@ fun AddToListSheet(
                     style = MaterialTheme.typography.bodyMedium,
                     color = scheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp),
                 )
             }
             Spacer(Modifier.height(22.dp))
 
             when {
                 !pickListOpen -> {
-                    Button(
+                    SheetPrimaryButton(
+                        text = stringResource(R.string.list_learning),
                         onClick = onLearning,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = AppButtonShape,
-                        colors = ButtonDefaults.buttonColors(containerColor = scheme.primary),
-                    ) {
-                        Text("Uczę się", fontWeight = FontWeight.SemiBold)
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedButton(
+                        modifier = Modifier.testTag(TestTags.SHEET_ADD_LEARNING),
+                    )
+                    Spacer(Modifier.height(SheetControlSpacing))
+                    SheetOutlinedButton(
+                        text = stringResource(R.string.list_other),
                         onClick = onOther,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = AppButtonShape,
-                        border = BorderStroke(1.dp, scheme.outline),
-                    ) {
-                        Text("Inna lista", fontWeight = FontWeight.SemiBold, color = scheme.onSurface)
-                    }
+                        modifier = Modifier.testTag(TestTags.SHEET_ADD_OTHER),
+                    )
                 }
                 showCreateListPrompt -> {
+                    val context = LocalContext.current
+                    val reservedName = isReservedListNameMessage(context, createListName)
                     OutlinedTextField(
                         value = createListName,
                         onValueChange = onCreateNameChange,
-                        placeholder = { Text("Nazwa listy") },
+                        placeholder = { Text(stringResource(R.string.list_name_full_hint)) },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        isError = createNameError != null,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = scheme.surfaceVariant,
-                            unfocusedContainerColor = scheme.surfaceVariant,
-                            unfocusedBorderColor = scheme.outline.copy(alpha = 0f),
-                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(SheetControlHeight)
+                            .testTag(TestTags.SHEET_LIST_NAME),
+                        shape = AppButtonShape,
+                        isError = createNameError != null && !reservedName,
+                        colors = fieldColors,
+                        textStyle = MaterialTheme.typography.bodyLarge,
                     )
                     if (createNameError != null) {
                         Spacer(Modifier.height(8.dp))
                         Text(
                             createNameError,
                             style = MaterialTheme.typography.labelMedium,
-                            color = scheme.error,
+                            color = if (reservedName) scheme.onSurfaceVariant else scheme.error,
                             modifier = Modifier.fillMaxWidth(),
                             textAlign = TextAlign.Start,
                         )
                     }
-                    Spacer(Modifier.height(14.dp))
-                    Button(
-                        onClick = onCreateAndAdd,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = AppButtonShape,
-                        enabled = createListName.trim().isNotBlank() && createNameError == null,
+                    Spacer(Modifier.height(SheetControlSpacing))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(SheetControlSpacing),
                     ) {
-                        Text("Stwórz i dodaj", fontWeight = FontWeight.SemiBold)
+                        SheetOutlinedButton(
+                            text = stringResource(R.string.action_back),
+                            onClick = onBackFromCreatePrompt,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag(TestTags.SHEET_BACK_FROM_CREATE),
+                        )
+                        SheetPrimaryButton(
+                            text = stringResource(R.string.action_add),
+                            onClick = onCreateAndAdd,
+                            enabled = createListName.trim().isNotBlank() && createNameError == null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag(TestTags.SHEET_CREATE_AND_ADD),
+                        )
                     }
                 }
                 else -> {
-                    lists.filterNot { it.is_system }.forEach { list ->
-                        Surface(
+                    customLists.forEach { list ->
+                        SheetListRow(
+                            text = list.name,
                             onClick = { onPickList(list.id) },
-                            shape = RoundedCornerShape(16.dp),
-                            color = scheme.surfaceVariant,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp),
-                        ) {
-                            Text(
-                                list.name,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-                                style = MaterialTheme.typography.titleSmall,
-                            )
-                        }
+                        )
+                        Spacer(Modifier.height(SheetControlSpacing))
                     }
-                    TextButton(onClick = onShowCreatePrompt) {
-                        Text("Nowa lista", color = scheme.primary)
-                    }
+                    SheetOutlinedButton(
+                        text = stringResource(R.string.list_new),
+                        onClick = onShowCreatePrompt,
+                        modifier = Modifier.testTag(TestTags.SHEET_NEW_LIST),
+                    )
+                    Spacer(Modifier.height(SheetControlSpacing))
+                    SheetOutlinedButton(
+                        text = stringResource(R.string.action_back),
+                        onClick = onBackFromListPicker,
+                        modifier = Modifier.testTag(TestTags.SHEET_BACK_FROM_LIST_PICKER),
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SheetPrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(SheetControlHeight),
+        shape = AppButtonShape,
+        colors = ButtonDefaults.buttonColors(containerColor = scheme.primary),
+    ) {
+        Text(text, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun SheetOutlinedButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val scheme = MaterialTheme.colorScheme
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(SheetControlHeight),
+        shape = AppButtonShape,
+        border = BorderStroke(1.dp, scheme.outline),
+    ) {
+        Text(text, fontWeight = FontWeight.SemiBold, color = scheme.onSurface)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SheetListRow(
+    text: String,
+    onClick: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        shape = AppButtonShape,
+        color = scheme.surfaceVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(SheetControlHeight),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Text(
+                text,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

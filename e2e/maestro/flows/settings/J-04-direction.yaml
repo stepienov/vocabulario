@@ -1,0 +1,22 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - settings
+---
+# J-04 · Direction radios
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/goto-settings.yaml
+- tapOn:
+    id: settings_section_direction
+- tapOn:
+    id: settings_dir_l1_to_l2
+- tapOn:
+    id: settings_dir_l2_to_l1
+- tapOn:
+    id: settings_dir_random
+- tapOn:
+    id: settings_dir_l2_to_l1
+- tapOn:
+    id: btn_back

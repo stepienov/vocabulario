@@ -2,11 +2,13 @@ package com.vocabulario.app.ui.learning
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vocabulario.app.R
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.normalizeTenseKeys
+import com.vocabulario.app.i18n.UiStrings
 import com.vocabulario.app.ui.card.RelatedWord
 import com.vocabulario.app.ui.home.listNameConflictMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,6 +26,8 @@ data class LearningUiState(
     val selectedCard: CardResponse? = null,
     val userTenses: List<String> = emptyList(),
     val userCefr: String = "A2",
+    val learningLang: String = "en",
+    val activeProfile: com.vocabulario.app.data.api.LanguageProfileResponse? = null,
     val loading: Boolean = false,
     val error: String? = null,
     val message: String? = null,
@@ -37,6 +41,7 @@ data class LearningUiState(
 @HiltViewModel
 class LearningViewModel @Inject constructor(
     private val repository: LearningRepository,
+    private val strings: UiStrings,
 ) : ViewModel() {
     private val _state = MutableStateFlow(LearningUiState())
     val state: StateFlow<LearningUiState> = _state.asStateFlow()
@@ -54,13 +59,15 @@ class LearningViewModel @Inject constructor(
                         selectedCard = syncSelected(cards, _state.value.selectedCard),
                         userTenses = normalizeTenseKeys(profile?.selected_tenses.orEmpty()),
                         userCefr = profile?.cefr_level ?: "A2",
+                        learningLang = profile?.learning_lang ?: "en",
+                        activeProfile = profile,
                     )
                     startPollingIfNeeded(cards)
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
                         loading = false,
-                        error = it.userMessage("Błąd ładowania kart"),
+                        error = it.userMessage(strings.get(R.string.err_load_cards)),
                     )
                 }
         }
@@ -100,15 +107,27 @@ class LearningViewModel @Inject constructor(
                     _state.value = _state.value.copy(
                         lists = lists,
                         pickListOpen = true,
-                        showCreateListPrompt = custom.isEmpty(),
+                        showCreateListPrompt = false,
                     )
                 }
-                .onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd list")) }
+                .onFailure {
+                    _state.value = _state.value.copy(
+                        error = it.userMessage(strings.get(R.string.err_lists)),
+                    )
+                }
         }
     }
 
     fun openCreateListPrompt() {
         _state.value = _state.value.copy(showCreateListPrompt = true, pickListOpen = true)
+    }
+
+    fun backFromCreateListPrompt() {
+        _state.value = _state.value.copy(showCreateListPrompt = false, createListName = "")
+    }
+
+    fun backFromListPicker() {
+        _state.value = _state.value.copy(pickListOpen = false, showCreateListPrompt = false, createListName = "")
     }
 
     fun onCreateListNameChange(value: String) {
@@ -121,10 +140,16 @@ class LearningViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { repository.createCard(word.lemma, word.pos, word.glossL1, null) }
                 .onSuccess {
-                    _state.value = _state.value.copy(message = "Dodano do nauki: ${word.lemma}")
+                    _state.value = _state.value.copy(
+                        message = strings.get(R.string.msg_added_learning, word.lemma),
+                    )
                     load()
                 }
-                .onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd dodawania")) }
+                .onFailure {
+                    _state.value = _state.value.copy(
+                        error = it.userMessage(strings.get(R.string.err_add)),
+                    )
+                }
         }
     }
 
@@ -135,9 +160,15 @@ class LearningViewModel @Inject constructor(
             runCatching {
                 repository.addWordToList(listId, word.lemma, word.pos, word.glossL1, null)
             }.onSuccess {
-                _state.value = _state.value.copy(message = "Dodano: ${word.lemma}")
+                _state.value = _state.value.copy(
+                    message = strings.get(R.string.msg_added, word.lemma),
+                )
                 load()
-            }.onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd dodawania")) }
+            }.onFailure {
+                _state.value = _state.value.copy(
+                    error = it.userMessage(strings.get(R.string.err_add)),
+                )
+            }
         }
     }
 
@@ -145,7 +176,7 @@ class LearningViewModel @Inject constructor(
         val word = _state.value.addTarget ?: return
         val name = _state.value.createListName.trim()
         if (name.isBlank()) return
-        listNameConflictMessage(_state.value.lists, name)?.let {
+        listNameConflictMessage(strings, _state.value.lists, name)?.let {
             _state.value = _state.value.copy(error = it)
             return
         }
@@ -155,9 +186,15 @@ class LearningViewModel @Inject constructor(
                 val list = repository.createWordList(name)
                 repository.addWordToList(list.id, word.lemma, word.pos, word.glossL1, null)
             }.onSuccess {
-                _state.value = _state.value.copy(message = "Dodano: ${word.lemma}")
+                _state.value = _state.value.copy(
+                    message = strings.get(R.string.msg_added, word.lemma),
+                )
                 load()
-            }.onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd tworzenia listy")) }
+            }.onFailure {
+                _state.value = _state.value.copy(
+                    error = it.userMessage(strings.get(R.string.err_create_list)),
+                )
+            }
         }
     }
 

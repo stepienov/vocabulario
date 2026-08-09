@@ -29,11 +29,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vocabulario.app.R
 import com.vocabulario.app.data.CEFR_LEVELS
+import com.vocabulario.app.data.LanguagePacks
 import com.vocabulario.app.data.SUPPORTED_LEARNING_LANGS
-import com.vocabulario.app.data.VERB_TENSES
+import com.vocabulario.app.data.verbTensesFor
+import com.vocabulario.app.ui.TestTags
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,30 +54,35 @@ fun OnboardingScreen(
             .padding(24.dp)
             .verticalScroll(rememberScrollState()),
     ) {
-        Text("Konfiguracja nauki", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.onboarding_title), style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Wybierz parę językową, poziom CEFR i czasy czasowników.",
+            stringResource(R.string.onboarding_subtitle),
             style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.height(24.dp))
 
         LangDropdown(
-            label = "Język ojczysty (L1)",
-            selected = state.nativeLang,
-            onSelect = viewModel::setNativeLang,
+            label = stringResource(R.string.onboarding_native),
+            selected = state.appLang,
+            onSelect = viewModel::setAppLang,
+            testTag = TestTags.ONBOARDING_NATIVE,
         )
         Spacer(Modifier.height(12.dp))
         LangDropdown(
-            label = "Język uczony (L2)",
+            label = stringResource(R.string.onboarding_learning),
             selected = state.learningLang,
             onSelect = viewModel::setLearningLang,
+            testTag = TestTags.ONBOARDING_LEARNING,
         )
 
         Spacer(Modifier.height(20.dp))
-        Text("Poziom CEFR", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.onboarding_cefr), style = MaterialTheme.typography.titleMedium)
         CEFR_LEVELS.forEach { level ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.testTag(TestTags.ONBOARDING_CEFR_PREFIX + level),
+            ) {
                 RadioButton(
                     selected = state.cefrLevel == level,
                     onClick = { viewModel.setCefr(level) },
@@ -81,15 +91,17 @@ fun OnboardingScreen(
             }
         }
 
-        Spacer(Modifier.height(20.dp))
-        Text("Czasy czasowników", style = MaterialTheme.typography.titleMedium)
-        VERB_TENSES.forEach { (key, label) ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = key in state.selectedTenses,
-                    onCheckedChange = { viewModel.toggleTense(key) },
-                )
-                Text(label)
+        if (LanguagePacks.showsTensePicker(state.learningLang)) {
+            Spacer(Modifier.height(20.dp))
+            Text(stringResource(R.string.onboarding_tenses), style = MaterialTheme.typography.titleMedium)
+            verbTensesFor(state.learningLang).forEach { (key, label) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = key in state.selectedTenses,
+                        onCheckedChange = { viewModel.toggleTense(key) },
+                    )
+                    Text(label)
+                }
             }
         }
 
@@ -104,18 +116,27 @@ fun OnboardingScreen(
         } else {
             Button(
                 onClick = { viewModel.complete(onComplete) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Zacznij naukę") }
+                modifier = Modifier.fillMaxWidth().testTag(TestTags.ONBOARDING_START),
+            ) { Text(stringResource(R.string.onboarding_start)) }
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LangDropdown(label: String, selected: String, onSelect: (String) -> Unit) {
+private fun LangDropdown(
+    label: String,
+    selected: String,
+    onSelect: (String) -> Unit,
+    testTag: String? = null,
+) {
     var expanded by remember { mutableStateOf(false) }
     val selectedLabel = SUPPORTED_LEARNING_LANGS.firstOrNull { it.first == selected }?.second ?: selected
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
+    ) {
         OutlinedTextField(
             value = selectedLabel,
             onValueChange = {},

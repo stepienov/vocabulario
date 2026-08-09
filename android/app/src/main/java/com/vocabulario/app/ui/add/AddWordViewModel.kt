@@ -2,10 +2,13 @@ package com.vocabulario.app.ui.add
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vocabulario.app.R
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.LookupCandidate
 import com.vocabulario.app.data.api.LookupResponse
+import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +29,7 @@ data class AddWordUiState(
 @HiltViewModel
 class AddWordViewModel @Inject constructor(
     private val repository: LearningRepository,
+    private val strings: UiStrings,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AddWordUiState())
@@ -51,7 +55,7 @@ class AddWordViewModel @Inject constructor(
                 .onFailure {
                     _state.value = _state.value.copy(
                         loading = false,
-                        error = it.message ?: "Błąd wyszukiwania",
+                        error = it.userMessage(strings.get(R.string.err_search)),
                     )
                 }
         }
@@ -71,25 +75,13 @@ class AddWordViewModel @Inject constructor(
                 _state.value = _state.value.copy(
                     loading = false,
                     createdCard = card,
-                    message = "Dodano do nauki: ${card.lemma_l2}",
+                    message = strings.get(R.string.msg_added_learning, card.lemma_l2),
                 )
             }.onFailure {
                 _state.value = _state.value.copy(
                     loading = false,
-                    error = it.message ?: "Błąd tworzenia karty",
+                    error = it.userMessage(strings.get(R.string.err_create_card)),
                 )
-            }
-        }
-    }
-
-    fun addFavorite(candidate: LookupCandidate) {
-        viewModelScope.launch {
-            runCatching {
-                repository.addFavorite(candidate.lemma, candidate.pos, candidate.gloss)
-            }.onSuccess {
-                _state.value = _state.value.copy(message = "Dodano do ulubionych")
-            }.onFailure {
-                _state.value = _state.value.copy(error = it.message)
             }
         }
     }

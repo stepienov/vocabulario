@@ -1,0 +1,25 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - settings
+  - lang
+---
+# J-11 · App language (L1) switch — open dropdown, pick a language
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/goto-settings.yaml
+- tapOn:
+    id: settings_section_languages
+- tapOn:
+    id: settings_native_lang
+- extendedWaitUntil:
+    visible: "English|Español|Polski|Français|Deutsch"
+    timeout: 10000
+- tapOn: "English|Inglés|Angielski"
+- tapOn:
+    id: btn_back
+- extendedWaitUntil:
+    visible:
+      id: tab_dashboard
+    timeout: 20000

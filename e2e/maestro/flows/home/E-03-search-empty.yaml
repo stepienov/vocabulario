@@ -1,0 +1,24 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - home
+---
+# E-03 · Search empty / whitespace — no crash
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- tapOn:
+    id: tab_add
+- tapOn:
+    id: search_submit
+- assertVisible:
+    id: search_input
+- tapOn:
+    id: search_input
+- inputText: "   "
+- tapOn:
+    id: search_submit
+- assertVisible:
+    id: search_input
+- assertVisible:
+    id: btn_import_paste

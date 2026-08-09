@@ -1,0 +1,703 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <string name="app_name">Vocabulario</string>
+
+    <string name="action_sort">Sırala</string>
+
+    <string name="action_filter">Filtrele</string>
+
+    <string name="action_filter_active">Filtre · %1$d</string>
+
+    <string name="action_clear_filters">Filtreleri temizle</string>
+
+    <string name="action_clear_all">Hepsini temizle</string>
+
+    <string name="action_apply">Uygula</string>
+
+    <string name="list_words_meta">%1$d kelime</string>
+
+    <string name="list_filter_empty">Filtrelere uyan kelime yok</string>
+
+    <string name="sort_title">Sırala</string>
+
+    <string name="sort_lemma_asc">A → Z</string>
+
+    <string name="sort_lemma_desc">Z → A</string>
+
+    <string name="sort_pos">Sözcük türü</string>
+
+    <string name="sort_newest">En yeni önce</string>
+
+    <string name="sort_oldest">En eski önce</string>
+
+    <string name="sort_status">Kart durumu</string>
+
+    <string name="filter_title">Filtre</string>
+
+    <string name="filter_section_pos">Sözcük türü</string>
+
+    <string name="filter_section_state">Kart durumu</string>
+
+    <string name="filter_pos_unknown">Sözcük türü yok</string>
+
+    <string name="status_review">gözden geçir</string>
+
+    <string name="action_undo">Geri al</string>
+
+    <string name="cd_undo">Son notu geri al</string>
+
+    <string name="action_cancel">İptal et</string>
+
+    <string name="action_ok">Tamam</string>
+
+    <string name="action_back">Geri</string>
+
+    <string name="action_delete">Sil</string>
+
+    <string name="action_move">Taşı</string>
+
+    <string name="action_learn">Öğren</string>
+
+    <string name="action_confirm">Onayla</string>
+
+    <string name="action_create">Oluştur</string>
+
+    <string name="action_import">İçe aktar</string>
+
+    <string name="action_close">Kapat</string>
+
+    <string name="action_save">Kaydet</string>
+
+    <string name="action_reveal">Göster</string>
+
+    <string name="action_add">Ekle</string>
+
+    <string name="action_search">Ara</string>
+
+    <string name="action_logout">Çıkış yap</string>
+
+    <string name="action_retry">Tekrar dene</string>
+
+    <string name="action_check">Kontrol et</string>
+
+    <string name="action_return">Geri</string>
+
+    <string name="tab_dashboard">ana sayfa</string>
+
+    <string name="tab_add">ekle</string>
+
+    <string name="tab_lists">listeler</string>
+
+    <string name="auth_login_title">Hoş geldin</string>
+
+    <string name="auth_register_title">Hesap oluştur</string>
+
+    <string name="auth_login">Giriş yap</string>
+
+    <string name="auth_register">Kaydol</string>
+
+    <string name="auth_google">Google ile devam et</string>
+
+    <string name="auth_email">E-posta</string>
+
+    <string name="auth_password">Şifre</string>
+
+    <string name="auth_tagline">Kelimeleri kendi hızında öğren</string>
+
+    <string name="auth_password_hint">En az 8 karakter</string>
+
+    <string name="auth_have_account">Zaten bir hesabım var</string>
+
+    <string name="onboarding_title">Öğrenme ayarı</string>
+
+    <string name="onboarding_subtitle">Bir dil çifti, CEFR seviyesi ve fiil zamanları seçin.</string>
+
+    <string name="onboarding_native">Uygulama dili</string>
+
+    <string name="onboarding_learning">Öğrenme dili</string>
+
+    <string name="onboarding_start">Başla</string>
+
+    <string name="onboarding_cefr">CEFR seviyesi</string>
+
+    <string name="onboarding_tenses">Fiil zamanları</string>
+
+    <string name="settings_title">Ayarlar</string>
+
+
+    <string name="settings_native_lang">Uygulama dili</string>
+    <string name="settings_tense_labels">Zaman etiketleri</string>
+    <string name="settings_tense_labels_app">Uygulama dilinde</string>
+    <string name="settings_tense_labels_learning">Öğrenilen dilde</string>
+
+
+    <string name="settings_learning_lang">Öğrenme dili</string>
+
+    <string name="settings_langs_hint">Uygulama dili arayüz ve kart çevirilerinin dilidir. Öğrenme dili ise çalıştığınız dildir.</string>
+
+    <string name="settings_theme">Tema</string>
+
+    <string name="settings_mode">Çalışma modu</string>
+
+    <string name="settings_group_study">ÇALIŞMA</string>
+
+    <string name="settings_group_general">GENEL</string>
+
+    <string name="settings_mode_choice">Quiz</string>
+
+    <string name="settings_mode_type">Kelimeyi yaz</string>
+
+    <string name="settings_mode_flash">Flash kartlar</string>
+
+    <string name="settings_tolerate_typos">Küçük yazım hatalarına izin ver</string>
+
+    <string name="settings_tolerate_typos_sub">Yazım ve işaretler</string>
+
+    <string name="settings_direction">Çalışma yönü</string>
+
+    <string name="settings_direction_first">%1$s önce</string>
+
+    <string name="settings_direction_random">Rastgele</string>
+
+    <string name="settings_card_layout">Kart düzeni</string>
+
+    <string name="settings_card_layout_sub">Cevaptan sonra gördüğünüz şey</string>
+
+    <string name="settings_examples">Örnek cümleler</string>
+
+    <string name="settings_usages">Kullanım örnekleri</string>
+
+    <string name="settings_periphrases">Kalıplar</string>
+
+    <string name="settings_syn_ant">Eş anlamlılar ve zıt anlamlılar</string>
+
+    <string name="settings_conjugation">Çekim</string>
+
+    <string name="settings_all_tenses">Tüm zamanlar</string>
+
+    <string name="settings_limits">Sınırlar</string>
+
+    <string name="settings_new_limit">Günlük yeni kelime limiti</string>
+
+    <string name="settings_new_per_day">%1$d yeni / gün</string>
+
+    <string name="settings_theme_system">Sistem varsayılanı</string>
+
+    <string name="settings_languages">Diller</string>
+
+    <string name="settings_cefr_known">Öğrenilen dilde seviye</string>
+
+    <string name="settings_label">Ayarlar</string>
+
+    <string name="profile_title">Profil</string>
+
+    <string name="profile_new_pair">Yeni çift</string>
+
+    <string name="profile_pairs">Dil çiftleriniz</string>
+
+    <string name="profile_active">Aktif</string>
+
+    <string name="profile_activate">Aktifleştir</string>
+
+    <string name="profile_level">Seviye: %1$s</string>
+
+    <string name="profile_cefr_active">CEFR (aktif profil)</string>
+
+
+    <string name="profile_tenses">Fiil zamanları</string>
+
+    <string name="practice_title">Pratik</string>
+
+    <string name="practice_show_answer">Cevabı göster</string>
+
+    <string name="practice_error_title">Yanlış</string>
+
+    <string name="practice_bridge_l2">%1$s içinde</string>
+
+    <string name="practice_bridge_means">anlamına gelir</string>
+
+    <string name="practice_empty">Pratik yapılacak kart yok</string>
+
+    <string name="practice_empty_hint">Ana ekrandan kelime ekleyin</string>
+
+    <string name="practice_your_answer">Cevabınız</string>
+
+    <string name="practice_spelling_warn">Yazımınızı kontrol edin!</string>
+
+    <string name="practice_spelling_detail">%1$s yazdınız — doğru yazım: %2$s</string>
+
+    <string name="practice_correct_answer">Doğru cevap: %1$s</string>
+
+    <string name="grade_again">Tekrar</string>
+
+    <string name="grade_hard">Zor</string>
+
+    <string name="grade_good">İyi</string>
+
+    <string name="grade_easy">Kolay</string>
+
+    <string name="creating_card">Kart oluşturuluyor…</string>
+
+    <string name="creating_card_failed">Kart hazırlanamadı</string>
+
+    <string name="list_learning">Öğrenme</string>
+
+    <string name="list_pending">Beklemede</string>
+
+    <string name="offline_banner_title">Çevrimdışı</string>
+
+    <string name="offline_banner_body">Eklenen kelimeler &quot;Beklemede&quot; listesine gider ve çevrimiçi olduğunuzda kontrol edilir.</string>
+
+    <string name="offline_search_hint">Bir kelime girin</string>
+
+    <string name="import_online_only">İthalat yalnızca çevrimiçi olarak mümkündür.</string>
+
+    <string name="offline_lookup_queued">&quot;Beklemede&quot; eklendi — çevrimiçi olduğunuzda kontrol edilecek.</string>
+
+    <string name="offline_lookup_duplicate">Bu kelime zaten &quot;Beklemede&quot; bekliyor.</string>
+
+    <string name="status_awaiting_network">Ağ bekleniyor</string>
+
+    <string name="list_other">Diğer liste</string>
+
+    <string name="list_new">Yeni liste</string>
+
+    <string name="list_rename">Yeniden adlandır</string>
+
+    <string name="list_move_all">Hepsini taşı</string>
+
+    <string name="list_empty">Boş liste</string>
+
+    <string name="list_delete_selected">Sil</string>
+
+    <string name="list_move_to">Listeye taşı</string>
+
+    <string name="list_name_hint">İsim</string>
+
+    <string name="list_name_full_hint">Liste adı</string>
+
+    <string name="list_pick">Bir liste seçin</string>
+
+    <string name="list_pick_target">Hedef listeyi seçin</string>
+
+    <string name="list_create_and_add">Oluştur ve ekle</string>
+
+    <string name="list_delete_confirm_title">Listeyi silmek istiyor musunuz?</string>
+
+    <string name="list_delete_confirm_body">“%1$s” listesi ve içindeki kelimeler silinecek.</string>
+
+    <string name="list_move_word">Kelimeyi listeye taşı</string>
+
+    <string name="list_delete_word_confirm">Bu kelimeyi silmek istiyor musunuz?</string>
+
+    <string name="list_delete_selected_title">Seçilenleri sil?</string>
+
+    <string name="list_delete_selected_body">%1$d kelimeyi listeden sileceksiniz.</string>
+
+    <string name="list_create_move_all">Bir liste oluştur ve tüm kelimeleri ona taşı.</string>
+
+    <string name="list_create_move_sel">Bir liste oluştur ve seçilen kelimeleri ona taşı.</string>
+
+    <string name="list_create_move_one">Başka bir liste yok — bir tane oluşturun ve kelime oraya taşınacak.</string>
+
+    <string name="import_from_file">Dosyadan içe aktar</string>
+
+    <string name="import_paste">Metni yapıştır</string>
+
+    <string name="import_paste_hint">Metni yapıştır…</string>
+
+    <string name="import_progress">kelimeler içe aktarılıyor</string>
+
+    <string name="import_add_file">Dosya ekle</string>
+
+    <string name="import_other_file">Başka bir dosya seçin</string>
+
+    <string name="import_how">Nasıl içe aktarılır?</string>
+
+    <string name="import_vocab_mode">Vocabulario kartları</string>
+
+    <string name="import_preserve_mode">Flashcard içeriğimi koru</string>
+
+    <string name="import_vocab_hint">Vocabulario kartları: tek kelimeler için en iyisi — anlamlar, örnekler, biçimler, kalıplar, eş anlamlılar ve zıt anlamlılarla otomatik olarak oluşturulur.</string>
+
+    <string name="import_invalid_title">Geçersiz kelimeler</string>
+
+    <string name="import_file_errors">Dosyada hatalar var — kontrol et.</string>
+
+    <string name="import_no_cards">Kart yok — iptal et veya kaynağı düzelt.</string>
+
+    <string name="import_no_valid">Geçerli kelime yok — iptal et veya kaynağı düzelt.</string>
+
+    <string name="import_empty_hint">Bir kelime yaz veya bir liste içe aktar (CSV/TXT/apkg)</string>
+
+    <string name="import_file_label">Dosya: \'%1$s\'</string>
+
+    <string name="section_meanings">ANLAMLAR</string>
+
+    <string name="section_synonyms">EŞ ANLAMLI KELİMELER</string>
+
+    <string name="section_syn_ant">EŞ ANLAMLI &amp;amp; ZIT ANLAMLI KELİMELER</string>
+
+    <string name="section_antonyms">ZIT ANLAMLI KELİMELER</string>
+
+    <string name="section_antonyms_title">Zıt Anlamlılar</string>
+
+    <string name="section_conjugation">ŞEKİLLER</string>
+
+    <string name="section_periphrases">YAPILAR</string>
+
+    <string name="section_usages">kullanım örnekleri</string>
+
+    <string name="home_search_hint">Bir kelime ara…</string>
+
+    <string name="home_due_now">Şimdi gözden geçirmeye hazır</string>
+
+    <string name="home_new_today">Bugün öğrenilen yeni kelimeler</string>
+
+    <string name="home_reviewed_today">Bugün gözden geçirilenler</string>
+
+    <string name="home_learning_now">Şu anda öğreniliyor</string>
+
+    <string name="home_new_left">Öğrenilecek hala var</string>
+
+    <string name="home_mastered">Şu ana kadar öğrenildi</string>
+
+    <string name="home_forecast_title">Gelecek günlerdeki gözden geçirmeler</string>
+
+    <string name="home_words_count">%1$d kelime</string>
+
+    <string name="home_new_words_count">%1$d yeni kelime</string>
+
+    <string name="new_list_cd">Yeni liste</string>
+
+    <string name="new_cards_per_day">%1$d / gün</string>
+
+    <string name="new_cards_unlimited">Sınırsız</string>
+
+    <string name="cd_settings">Ayarlar</string>
+
+    <string name="cd_play">Oynat</string>
+
+    <string name="cd_on_list">Zaten bir listede</string>
+
+    <string name="cd_delete">Sil</string>
+
+    <string name="cd_move">Taşı</string>
+
+    <string name="cd_selected">Seçili</string>
+
+    <string name="cd_list_options">Liste seçenekleri</string>
+
+    <string name="status_error">hata</string>
+
+    <string name="status_new">yeni</string>
+
+    <string name="status_learning">öğreniliyor</string>
+
+    <string name="status_mastered">öğrenildi</string>
+
+    <string name="kind_lemma">kelime</string>
+
+    <string name="kind_phrase">ifade</string>
+
+    <string name="kind_construction">yapı</string>
+
+    <string name="kind_sentence">cümle</string>
+
+    <string name="kind_other">diğer</string>
+
+    <string name="no_meanings">Anlam yok</string>
+
+    <string name="add_word_title">Kelime ekle</string>
+
+    <string name="add_word_hint">Bir kelime yaz</string>
+
+    <string name="add_word_source">Kaynak: %1$s</string>
+
+    <string name="add_word_hide">Kartı gizle</string>
+
+    <string name="packs_title">Listeler</string>
+
+    <string name="packs_subtitle">Hazır kelime paketleri</string>
+
+    <string name="learning_back_list">Listeye geri dön</string>
+
+    <string name="card_preparing">Tam kart arka planda hazırlanıyor — bir süre sonra geri gel.</string>
+
+    <string name="card_headword">Ana kelime</string>
+
+    <string name="weekday_mon">Pzt</string>
+
+    <string name="weekday_tue">Sal</string>
+
+    <string name="weekday_wed">Çar</string>
+
+    <string name="weekday_thu">Per</string>
+
+    <string name="weekday_fri">Cum</string>
+
+    <string name="weekday_sat">Cmt</string>
+
+    <string name="weekday_sun">Paz</string>
+
+    <string name="settings_theme_light">Açık</string>
+
+    <string name="settings_theme_dark">Koyu</string>
+
+    <string name="settings_languages_summary">%1$s · öğrenme: %2$s</string>
+
+    <string name="err_load_settings">Ayarlar yüklenemedi</string>
+
+    <string name="err_save">Kaydedilemedi</string>
+
+    <string name="err_save_tenses">Zamanlar kaydedilemedi</string>
+
+
+    <string name="err_learning_lang">Öğrenme dili değiştirilemedi</string>
+
+    <string name="err_cefr">CEFR seviyesi değiştirilemedi</string>
+
+    <string name="err_load_queue">Pratik kuyruğu yüklenemedi</string>
+
+    <string name="err_options_count">8 seçenek bekleniyordu, %1$d alındı. Kelimeyi tekrar ekleyin.</string>
+
+    <string name="err_load_options">Seçenekler yüklenemedi</string>
+
+    <string name="err_check">Cevap kontrol edilemedi</string>
+
+    <string name="err_add">Eklenemedi</string>
+
+    <string name="err_lists">Listeler yüklenemedi</string>
+
+    <string name="err_create_list">Liste oluşturulamadı</string>
+
+    <string name="err_save_grade">Not kaydedilemedi</string>
+
+    <string name="err_load_profile">Profil yüklenemedi</string>
+
+    <string name="err_activate">Profil etkinleştirilemedi</string>
+
+    <string name="err_load_stats">İstatistikler yüklenemedi</string>
+
+    <string name="err_list_words">Liste kelimeleri yüklenemedi</string>
+
+    <string name="err_search">Arama başarısız</string>
+
+    <string name="err_import_empty">İçe aktarılacak kelime yok</string>
+
+    <string name="err_import">İçe aktarma başarısız</string>
+
+    <string name="err_import_file">Dosya içe aktarma başarısız</string>
+
+    <string name="err_import_empty_file">Boş dosya</string>
+
+    <string name="err_import_validate">İçe aktarma doğrulaması başarısız</string>
+
+    <string name="err_add_partial">%1$d kelime eklenemedi (örneğin, zaten listede)</string>
+
+    <string name="msg_import_result">%1$d eklendi, %2$d atlandı (zaten listede)</string>
+
+    <string name="err_save_cards">Kartlar kaydedilemedi</string>
+
+    <string name="err_add_to_list">Listeye eklenemedi</string>
+
+    <string name="err_rename">Yeniden adlandırılamadı</string>
+
+    <string name="err_delete_list">Liste silinemedi</string>
+
+    <string name="err_delete_word">Kelime silinemedi</string>
+
+    <string name="err_move">Taşıma işlemi gerçekleştirilemedi</string>
+
+    <string name="err_delete_partial">%1$d kelime silinemedi</string>
+
+    <string name="err_move_partial">%1$d kelime taşınamadı</string>
+
+    <string name="list_name_reserved">Bu isim ayrılmış</string>
+
+    <string name="list_name_taken">Bu isimde bir liste zaten mevcut</string>
+
+    <string name="list_fallback">Liste</string>
+
+    <string name="msg_added_learning">Öğrenmeye eklendi: %1$s</string>
+
+    <string name="msg_added">Eklendi: %1$s</string>
+
+    <string name="msg_saved_cefr">CEFR seviyesi kaydedildi</string>
+
+    <string name="msg_saved_tenses">Zamanlar kaydedildi</string>
+
+
+    <string name="err_load_cards">Kartlar yüklenemedi</string>
+
+    <string name="err_langs_must_differ">Uygulama dili ve öğrenme dili farklı olmalıdır</string>
+
+    <string name="err_create_profile">Profil oluşturulamadı</string>
+
+    <string name="err_create_card">Kart oluşturulamadı</string>
+
+    <string name="err_password_required">Bir şifre girin</string>
+
+    <string name="err_password_short">Şifre en az 8 karakter olmalıdır</string>
+
+    <string name="err_login">Giriş başarısız</string>
+
+    <string name="err_register">Kayıt başarısız</string>
+
+    <string name="err_google_login">Google ile giriş başarısız</string>
+
+    <string name="learning_title">Öğrenme</string>
+
+    <string name="learning_empty">Henüz öğrenilecek kelime yok</string>
+
+    <string name="learning_empty_hint">Ana ekranda bir kelime arayın</string>
+
+    <string name="packs_body">Başlangıç paketleri (CEFR × kategoriler) ürün yol haritasında yer alıyor. Veritabanı şeması hazır — paketler, AI kart kalitesi onaylandıktan sonra görünecek.</string>
+
+    <string name="profile_active_pair">Aktif çift: %1$s → %2$s</string>
+
+    <string name="section_synonyms_short">Eşanlamlılar</string>
+
+    <string name="section_antonyms_short">Zıt anlamlılar</string>
+
+    <string name="section_conjugation_short">Çekim</string>
+
+    <string name="section_usages_short">Kullanımlar</string>
+
+    <string name="cd_back">Geri</string>
+
+    <string name="err_email_required">Bir e-posta adresi girin</string>
+
+    <string name="err_email_invalid">Geçerli bir e-posta adresi girin</string>
+
+    <string name="err_google_token">Google token alınamadı</string>
+
+    <string name="section_fallback">Bölüm</string>
+
+    <string name="cd_add_to_list">Listeye ekle</string>
+
+    <string name="list_clear_all">Tüm kelimeleri sil</string>
+
+    <string name="list_clear_all_title">Tüm kelimeleri silmek istiyor musunuz?</string>
+
+    <string name="list_clear_all_body">“%1$s” listesinden her kelimeyi kaldıracaksınız. Liste kendisi kalacak.</string>
+
+    <string name="settings_level">Seviye</string>
+
+    <string name="settings_selected_tenses">Seçilen zamanlar</string>
+
+    <string name="action_edit">Düzenle</string>
+
+    <string name="import_cards_count">İçe aktarılan kartlar (%1$d)</string>
+
+    <string name="import_flashcards_count">Flashkartlar: %1$d</string>
+
+    <string name="import_done_count">İçe aktarılan: %1$d</string>
+
+    <string name="list_unnamed">liste</string>
+
+    <string name="periphrase_n">Perifraz %1$d</string>
+
+    <string name="practice_well_done">Güzel!</string>
+
+    <string name="cd_search">Ara</string>
+
+    <string name="correction_fix_card">Kartı düzelt</string>
+
+    <string name="correction_report_title">Bir sorun bildir</string>
+
+    <string name="correction_section_lemma">Lema</string>
+
+    <string name="correction_section_pos">Sözcük türü</string>
+
+    <string name="correction_section_gloss">Ana açıklama</string>
+
+    <string name="correction_section_meanings">Anlamlar</string>
+
+    <string name="correction_section_examples">Örnekler</string>
+
+    <string name="correction_section_conjugation">Çekim</string>
+
+    <string name="correction_section_similar">Benzer kelimeler</string>
+
+    <string name="correction_section_pronunciation">Telaffuz</string>
+
+    <string name="correction_section_other">Diğer</string>
+
+    <string name="correction_note_label">Not</string>
+
+    <string name="correction_note_hint">Ne yanlış olduğunu tanımlayın…</string>
+
+    <string name="correction_validation">En az bir bölüm seçin veya bir not yazın (min. 3 karakter).</string>
+
+    <string name="correction_submit">Raporu gönder</string>
+
+    <string name="correction_requires_online">İnternet bağlantısı gerektirir.</string>
+
+    <string name="correction_result_accepted_title">Rapor kabul edildi — kart güncellendi.</string>
+
+    <string name="correction_result_rejected_title">Rapor kabul edilmedi.</string>
+
+    <string name="correction_result_rejected_body">Kartı kendiniz düzenleyebilirsiniz — kendi riskinizle. Bu, özel bir kopya oluşturur.</string>
+
+    <string name="correction_edit_self">Kendimi düzenle</string>
+
+    <string name="correction_self_edit_title">Kartı düzenle</string>
+
+    <string name="correction_field_lemma">Lema</string>
+
+    <string name="correction_field_pos">Eş anlamlı</string>
+
+    <string name="correction_field_gloss">Ana açıklama</string>
+
+    <string name="correction_field_extra_glosses">Ek açıklamalar (her satıra bir tane)</string>
+
+    <string name="review_status_reported">Düzeltme bildirildi</string>
+
+    <string name="review_status_accepted">Güncellendi</string>
+
+    <string name="review_status_rejected">Rapor reddedildi</string>
+
+    <string name="review_status_user_edited">Manuel olarak düzenlendi</string>
+
+    <string name="cd_voice_search">Sesli arama</string>
+
+    <string name="voice_listening">Dinleniyor…</string>
+
+    <string name="voice_listening_hint">Şimdi konuşun</string>
+
+    <string name="voice_tap_to_start">Konuşmak için Başlat\'a dokunun</string>
+
+    <string name="voice_start">Başlat</string>
+
+    <string name="voice_stop">Durdur</string>
+
+    <string name="voice_permission_denied">Mikrofon izni reddedildi.</string>
+
+    <string name="voice_unavailable">Bu cihazda ses tanıma kullanılamıyor.</string>
+
+    <string name="settings_notifications">Bildirimler</string>
+
+    <string name="settings_notifications_summary">Çalışma hatırlatmaları ve kart hazır durumu</string>
+
+    <string name="settings_notif_study">Çalışma hatırlatmaları</string>
+
+    <string name="settings_notif_cards">Kartlar hazır</string>
+
+    <string name="settings_reminder_hour">Hatırlatma saati (0–23)</string>
+
+    <string name="notif_channel_study">Çalışma</string>
+
+    <string name="notif_channel_cards">Kartlar</string>
+
+    <string name="notif_study_title">Gözden geçirme zamanı</string>
+
+    <string name="notif_study_body">%1$d kart bekliyor</string>
+
+    <string name="notif_cards_ready_title">Kartlar hazır</string>
+
+    <string name="notif_cards_ready_body">%1$d kelime(ler) çalışmaya hazır</string>
+
+</resources>

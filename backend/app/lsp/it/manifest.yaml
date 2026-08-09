@@ -1,0 +1,46 @@
+code: it
+lsp_version: it-1.0.0
+name_en: Italian
+script: Latn
+rtl: false
+inflection_kind: person_tense
+
+default_selected_tenses:
+  - presente
+  - passato_prossimo
+  - imperfetto
+
+verbs:
+  tenses:
+    - { key: presente, label_l2: Presente, person_grid: it_6 }
+    - { key: passato_prossimo, label_l2: Passato prossimo, person_grid: it_6 }
+    - { key: imperfetto, label_l2: Imperfetto, person_grid: it_6 }
+    - { key: futuro_semplice, label_l2: Futuro semplice, person_grid: it_6 }
+    - { key: condizionale, label_l2: Condizionale, person_grid: it_6 }
+    - { key: congiuntivo_presente, label_l2: Congiuntivo presente, person_grid: it_6 }
+    - { key: imperativo, label_l2: Imperativo, person_grid: it_imperative }
+  non_finite:
+    - { key: gerundio, label_l2: Gerundio }
+    - { key: participio, label_l2: Participio }
+  person_grids:
+    it_6:
+      keys: ["io", "tu", "lui", "noi", "voi", "loro"]
+      labels: { io: io, tu: tu, lui: lui/lei, noi: noi, voi: voi, loro: loro }
+    it_imperative:
+      keys: ["tu", "noi", "voi"]
+      labels: { tu: tu, noi: noi, voi: voi }
+  paradigm_rules: |
+    ITALIAN (it) for "{lemma}": real forms only, no placeholders.
+
+nouns:
+  numbers: [sg, pl]
+  genders: [m, f]
+
+adjectives:
+  full_declension: true
+
+ui_labels:
+  pl:
+    presente: Czas teraźniejszy
+    passato_prossimo: Czas przeszły złożony
+    imperfetto: Czas przeszły niedokonany

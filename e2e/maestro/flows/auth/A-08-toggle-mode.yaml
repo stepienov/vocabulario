@@ -1,0 +1,22 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - auth
+---
+# A-08 · Toggle Login ↔ Register
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: auth_toggle_mode
+    timeout: 20000
+- tapOn:
+    id: auth_toggle_mode
+- assertVisible:
+    id: auth_submit
+- tapOn:
+    id: auth_toggle_mode
+- assertVisible:
+    id: auth_submit
+- assertVisible:
+    id: auth_google

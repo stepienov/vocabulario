@@ -1,0 +1,24 @@
+appId: com.vocabulario.app
+tags:
+  - lists
+---
+# H-19 / create list dialog open + cancel
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- tapOn:
+    id: tab_lists
+- extendedWaitUntil:
+    visible:
+      id: btn_new_list
+    timeout: 20000
+- tapOn:
+    id: btn_new_list
+- extendedWaitUntil:
+    visible:
+      id: "dialog_cancel|dialog_confirm"
+    timeout: 10000
+- tapOn:
+    id: dialog_cancel
+- assertVisible:
+    id: btn_new_list

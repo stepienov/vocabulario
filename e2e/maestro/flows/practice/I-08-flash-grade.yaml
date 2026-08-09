@@ -1,0 +1,56 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - practice
+  - settings
+---
+# J-02 + I-08 · Set flash mode → practice show answer → grade
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/goto-settings.yaml
+- tapOn:
+    id: settings_section_mode
+- tapOn:
+    id: settings_mode_flash
+- tapOn:
+    id: btn_back
+- extendedWaitUntil:
+    visible:
+      id: btn_learn
+    timeout: 15000
+- tapOn:
+    id: btn_learn
+- extendedWaitUntil:
+    visible:
+      id: "practice_show_answer|practice_empty_back"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: practice_show_answer
+    commands:
+      - tapOn:
+          id: practice_show_answer
+      - extendedWaitUntil:
+          visible:
+            id: grade_good
+          timeout: 15000
+      - tapOn:
+          id: grade_good
+      - assertVisible:
+          id: "practice_show_answer|practice_empty_back|btn_back"
+- runFlow:
+    when:
+      visible:
+        id: practice_empty_back
+    commands:
+      - tapOn:
+          id: practice_empty_back
+- runFlow:
+    when:
+      visible:
+        id: btn_back
+    commands:
+      - tapOn:
+          id: btn_back

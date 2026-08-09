@@ -1,0 +1,17 @@
+appId: com.vocabulario.app
+tags:
+  - smoke
+  - auth
+---
+# A-01 · Login happy path (logout-first — more reliable than clearState alone)
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/logout.yaml
+- runFlow: ../../helpers/login.yaml
+- assertVisible:
+    id: tab_dashboard
+- assertVisible:
+    id: btn_settings
+- assertVisible:
+    id: btn_learn

@@ -1,40 +1,74 @@
 package com.vocabulario.app.data
 
+import com.vocabulario.app.data.api.CardCorrectionCreate
+import com.vocabulario.app.data.api.CardCorrectionCreateResponse
+import com.vocabulario.app.data.api.CardCorrectionResponse
+import com.vocabulario.app.data.api.CorrectionQuotaResponse
 import com.vocabulario.app.data.api.CardCreateRequest
 import com.vocabulario.app.data.api.CardResponse
+import com.vocabulario.app.data.api.CardHistoryResponse
+import com.vocabulario.app.data.api.CardRestoreRequest
+import com.vocabulario.app.data.api.CardSelfEditRequest
+import com.vocabulario.app.data.api.SelfEditValidateResponse
 import com.vocabulario.app.data.api.CheckAnswerResponse
 import com.vocabulario.app.data.api.ChoiceOption
 import com.vocabulario.app.data.api.DashboardStatsResponse
 import com.vocabulario.app.data.api.DistractorsRequest
 import com.vocabulario.app.data.api.DistractorsResponse
-import com.vocabulario.app.data.api.FavoriteCreate
-import com.vocabulario.app.data.api.FavoriteResponse
+import com.vocabulario.app.data.api.DeviceRegisterRequest
+import com.vocabulario.app.data.api.ImportDisplayCard
+import com.vocabulario.app.data.api.ImportDisplayCommitRequest
+import com.vocabulario.app.data.api.ImportDisplayCommitResponse
+import com.vocabulario.app.data.api.ImportDisplayResponse
+import com.vocabulario.app.data.api.ImportIngestRequest
+import com.vocabulario.app.data.api.ImportValidateRequest
+import com.vocabulario.app.data.api.ImportValidateResponse
 import com.vocabulario.app.data.api.LanguageProfileCreate
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.api.LanguageProfileUpdate
+import com.vocabulario.app.data.api.LookupCandidate
 import com.vocabulario.app.data.api.LookupRequest
 import com.vocabulario.app.data.api.LookupResponse
 import com.vocabulario.app.data.api.SrsQueueItem
 import com.vocabulario.app.data.api.SrsQueueResponse
+import com.vocabulario.app.data.api.SyncMoveItem
 import com.vocabulario.app.data.api.SyncPushRequest
 import com.vocabulario.app.data.api.SyncReviewItem
+import com.vocabulario.app.data.api.SrsUndoRequest
+import com.vocabulario.app.data.api.SyncSrsState
 import com.vocabulario.app.data.api.UserSettingsResponse
 import com.vocabulario.app.data.api.UserSettingsUpdate
-import com.vocabulario.app.data.api.UserUpdate
 import com.vocabulario.app.data.api.VocabularioApi
 import com.vocabulario.app.data.api.WordListAddWordRequest
 import com.vocabulario.app.data.api.WordListCreate
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.api.WordListUpdate
 import com.vocabulario.app.data.api.WordMoveRequest
+import com.vocabulario.app.data.SYSTEM_LIST_NAME
 import com.vocabulario.app.data.local.LocalAnswerCheck
 import com.vocabulario.app.data.local.OfflineStore
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.local.db.PendingReviewEntity
 import com.vocabulario.app.data.sync.SyncScheduler
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeout
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
@@ -46,10 +80,76 @@ class LearningRepository @Inject constructor(
     private val tokenStore: TokenStore,
     private val offlineStore: OfflineStore,
     private val syncScheduler: SyncScheduler,
+    private val networkMonitor: NetworkMonitor,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
-    suspend fun activeProfileId(): String =
-        tokenStore.activeProfileId.first() ?: error("Brak aktywnego profilu językowego")
+    private val outboxMutex = Mutex()
+
+    // Serializuje opróżnianie kolejki Oczekujących. Bez tego równoległe flushe (sync + wejście
+    // na listę + polling) tworzyły wiele kart z jednego stuba i paliły tokeny LLM.
+    private val pendingFlushMutex = Mutex()
+
+    private companion object {
+        const val API_FAST_TIMEOUT_MS = 8_000L
+        const val API_SYNC_TIMEOUT_MS = 12_000L
+        const val FLUSH_LOOKUPS_TIMEOUT_MS = 30_000L
+
+        const val OP_SETTINGS_UPDATE = "settings_update"
+        const val OP_CARD_DELETE = "card_delete"
+        const val OP_LIST_CREATE = "list_create"
+        const val OP_LIST_RENAME = "list_rename"
+        const val OP_LIST_DELETE = "list_delete"
+    }
+
+    private suspend fun <T> apiTry(
+        timeoutMs: Long = API_FAST_TIMEOUT_MS,
+        block: suspend () -> T,
+    ): Result<T> = runCatching { withTimeout(timeoutMs) { block() } }
+
+    private fun defaultSettings(): UserSettingsResponse = UserSettingsResponse(
+        practice_input_pref = "choice",
+        practice_direction = "l2_to_l1",
+        typing_tolerance = "moderate",
+        typo_modal_enabled = true,
+        new_cards_per_day = 20,
+        theme = "system",
+    )
+
+    private suspend fun offlineWordLists(profileId: String): List<WordListResponse> {
+        val cached = offlineStore.localLists(profileId)
+        if (cached.isNotEmpty()) {
+            return offlineStore.withComputedWordCounts(profileId, cached)
+        }
+        val count = offlineStore.learningCards(profileId).size
+        if (count == 0) return emptyList()
+        return listOf(
+            WordListResponse(
+                id = "local-system-learning",
+                name = SYSTEM_LIST_NAME,
+                is_system = true,
+                word_count = count,
+            ),
+        )
+    }
+
+    private fun mergeLocalPendingInbox(
+        local: List<WordListResponse>,
+        remote: List<WordListResponse>,
+    ): List<WordListResponse> {
+        val localInbox = local.find { it.is_pending_inbox } ?: return remote
+        val remoteInbox = remote.find { it.is_pending_inbox }
+        // Serwer ma skrzynkę → jego licznik jest ŚWIEŻYM źródłem prawdy (nie mieszamy starego
+        // lokalnego — to utrwalało nieaktualne „(1)" po usunięciu). Stuby dolicza applyPendingInboxCounts.
+        if (remoteInbox != null) return remote
+        // Serwer nie ma jeszcze skrzynki, a lokalnie są stuby → pokaż lokalną.
+        return remote + localInbox
+    }
+
+    suspend fun activeProfileId(): String {
+        tokenStore.activeProfileId.first()?.takeIf { it.isNotBlank() }?.let { return it }
+        offlineStore.cachedActiveProfile()?.id?.takeIf { it.isNotBlank() }?.let { return it }
+        return getActiveProfile()?.id ?: error("No active language profile")
+    }
 
     suspend fun hasSyncableSession(): Boolean {
         val token = tokenStore.peekAccessToken()
@@ -60,6 +160,54 @@ class LearningRepository @Inject constructor(
     suspend fun lookup(text: String): LookupResponse {
         val profileId = activeProfileId()
         return api.lookup(LookupRequest(text = text, profile_id = profileId))
+    }
+
+    suspend fun validateImport(words: List<String>): ImportValidateResponse {
+        val profileId = activeProfileId()
+        return api.validateImport(ImportValidateRequest(words = words, profile_id = profileId))
+    }
+
+    /** Wklejka: tekst albo URL Quizlet / AnkiWeb. */
+    suspend fun ingestImport(text: String, mode: String = "vocabulario"): ImportValidateResponse {
+        val profileId = activeProfileId()
+        return api.ingestImport(ImportIngestRequest(text = text, profile_id = profileId, mode = mode))
+    }
+
+    suspend fun ingestImportPreserve(text: String): ImportDisplayResponse {
+        val profileId = activeProfileId()
+        return api.ingestImportPreserve(
+            ImportIngestRequest(text = text, profile_id = profileId, mode = "preserve"),
+        )
+    }
+
+    /** Plik: CSV/TSV/TXT albo Anki .apkg / .colpkg. */
+    suspend fun ingestImportFile(
+        bytes: ByteArray,
+        filename: String,
+        mode: String = "vocabulario",
+    ): ImportValidateResponse {
+        val profileId = activeProfileId()
+        val body = bytes.toRequestBody("application/octet-stream".toMediaType())
+        val part = MultipartBody.Part.createFormData("file", filename, body)
+        val profilePart = profileId.toRequestBody("text/plain".toMediaType())
+        val modePart = mode.toRequestBody("text/plain".toMediaType())
+        return api.ingestImportFile(part, profilePart, modePart)
+    }
+
+    suspend fun ingestImportFilePreserve(bytes: ByteArray, filename: String): ImportDisplayResponse {
+        val profileId = activeProfileId()
+        val body = bytes.toRequestBody("application/octet-stream".toMediaType())
+        val part = MultipartBody.Part.createFormData("file", filename, body)
+        val profilePart = profileId.toRequestBody("text/plain".toMediaType())
+        val modePart = "preserve".toRequestBody("text/plain".toMediaType())
+        return api.ingestImportFilePreserve(part, profilePart, modePart)
+    }
+
+    suspend fun commitImportDisplay(listId: String, cards: List<ImportDisplayCard>): ImportDisplayCommitResponse {
+        val profileId = activeProfileId()
+        return api.commitImportDisplay(
+            ImportDisplayCommitRequest(profile_id = profileId, list_id = listId, cards = cards),
+        )
     }
 
     suspend fun createCard(
@@ -78,60 +226,141 @@ class LearningRepository @Inject constructor(
                 lexical_entry_id = lexicalEntryId,
             )
         )
-        runCatching { syncNow(fullReplace = true) }
+        runCatching { syncNow() }
         return created
+    }
+
+    suspend fun learningLemmaSet(): Set<String> {
+        val profileId = activeProfileId()
+        return offlineStore.learningCards(profileId)
+            .map { it.lemmaL2.trim().lowercase() }
+            .filter { it.isNotEmpty() }
+            .toSet()
+    }
+
+    suspend fun isLemmaOnLearningList(lemma: String): Boolean {
+        val key = lemma.trim().lowercase()
+        if (key.isEmpty()) return false
+        return learningLemmaSet().contains(key)
     }
 
     suspend fun listCards(): List<CardResponse> {
         val profileId = activeProfileId()
-        return runCatching { api.listCards(profileId) }
-            .onSuccess { offlineStore.cacheCardsFromList(profileId, it) }
-            .getOrElse {
-                offlineStore.localQueue(profileId, newLimit = Int.MAX_VALUE).map { local ->
-                    CardResponse(
-                        id = local.id,
-                        lemma_l2 = local.lemmaL2,
-                        pos = local.pos,
-                        gloss_primary = local.glossPrimary,
-                        content = offlineStore.parseContent(local.contentJson),
-                        lexical_entry_id = null,
-                        created_at = "",
-                        enrichment_status = "ready",
-                    )
-                }
-            }
-    }
-
-    suspend fun addFavorite(lemma: String, pos: String?, gloss: String?) {
-        val profileId = activeProfileId()
-        api.addFavorite(
-            FavoriteCreate(
-                lemma = lemma,
-                pos = pos,
-                gloss = gloss,
-                profile_id = profileId,
+        val local = offlineStore.localQueue(profileId, newLimit = Int.MAX_VALUE).map { local ->
+            CardResponse(
+                id = local.id,
+                lemma_l2 = local.lemmaL2,
+                pos = local.pos,
+                gloss_primary = local.glossPrimary,
+                content = offlineStore.parseContent(local.contentJson),
+                lexical_entry_id = null,
+                created_at = "",
+                enrichment_status = "ready",
             )
-        )
-    }
-
-    suspend fun listFavorites(): List<FavoriteResponse> {
-        val profileId = activeProfileId()
-        return api.listFavorites(profileId)
+        }
+        if (!networkMonitor.isCurrentlyOnline()) return local
+        return apiTry { api.listCards(profileId) }
+            .onSuccess { offlineStore.cacheCardsFromList(profileId, it) }
+            .getOrElse { local }
     }
 
     suspend fun listWordLists(): List<WordListResponse> {
         val profileId = activeProfileId()
-        return api.listWordLists(profileId)
+        // online = mamy ŚWIEŻE listy z serwera. Przy fallbacku (API padło) traktujemy jak offline,
+        // by nie podwójnie liczyć stubów w skrzynce (offlineWordLists już wlicza je do merge).
+        var servedFresh = false
+        val lists = if (!networkMonitor.isCurrentlyOnline()) {
+            offlineWordLists(profileId)
+        } else {
+            val local = offlineStore.localLists(profileId)
+            apiTry { api.listWordLists(profileId) }
+                .onSuccess { remote ->
+                    servedFresh = true
+                    offlineStore.cacheLists(profileId, remote)
+                }
+                .map { remote ->
+                    val merged = mergeLocalPendingInbox(local, remote)
+                    // Offline-created lists (local:<uuid>) not yet on server stay visible.
+                    val localOnly = local.filter { l ->
+                        l.id.startsWith("local:") && merged.none { it.id == l.id }
+                    }
+                    merged + localOnly
+                }
+                .getOrElse { offlineWordLists(profileId) }
+        }
+        return offlineStore.applyPendingInboxCounts(profileId, lists, online = servedFresh)
     }
 
+    /**
+     * Local-first: tworzy listę w Room (ID `local:<uuid>`) + operację outboxu. Online od razu
+     * drenuje outbox (create na serwerze + remap ID), więc dalsze akcje dostają server ID.
+     */
     suspend fun createWordList(name: String): WordListResponse {
         val profileId = activeProfileId()
-        return api.createWordList(WordListCreate(name = name, profile_id = profileId))
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) error("empty_list_name")
+        if (offlineStore.listNameClashes(profileId, trimmed)) error("list_name_exists")
+        val local = offlineStore.createLocalList(profileId, trimmed)
+        offlineStore.enqueueOp(
+            OP_LIST_CREATE,
+            buildJsonObject {
+                put("localId", local.id)
+                put("profileId", profileId)
+                put("name", trimmed)
+            }.toString(),
+        )
+        if (networkMonitor.isCurrentlyOnline()) {
+            runCatching { drainOutboxOps() }
+            offlineStore.localListByName(profileId, trimmed)?.let { return it }
+        } else {
+            syncScheduler.requestNow()
+        }
+        return offlineStore.localListById(local.id)
+            ?: WordListResponse(id = local.id, name = trimmed, is_system = false)
     }
 
     suspend fun listWords(listId: String): List<CardResponse> {
         val profileId = activeProfileId()
-        return api.listWords(listId, profileId)
+        val lists = if (!networkMonitor.isCurrentlyOnline()) {
+            offlineWordLists(profileId)
+        } else {
+            runCatching { listWordLists() }.getOrElse { offlineWordLists(profileId) }
+        }
+        val meta = lists.find { it.id == listId }
+            ?: lists.find { it.is_pending_inbox && listId.startsWith("local-pending-inbox-") }
+        val isSystem = meta?.is_system == true || listId == "local-system-learning"
+        val isPendingInbox = meta?.is_pending_inbox == true ||
+            listId.startsWith("local-pending-inbox-")
+        if (!networkMonitor.isCurrentlyOnline()) {
+            return offlineStore.localWords(profileId, listId, isSystem = isSystem)
+        }
+        val apiListId = if (isPendingInbox) {
+            resolvePendingInboxApiId(profileId, meta?.id ?: listId)
+        } else {
+            listId
+        }
+        val remote = runCatching { api.listWords(apiListId, profileId) }
+            .onSuccess { words ->
+                offlineStore.cacheCardsFromList(
+                    profileId,
+                    words,
+                    deckId = if (isSystem) null else apiListId,
+                )
+            }
+            .getOrNull()
+        if (remote != null) {
+            if (isPendingInbox) {
+                val stubs = offlineStore.lookupStubsForProfile(profileId)
+                return offlineStore.mergePendingInboxDisplay(stubs, remote)
+            }
+            val stubs = if (isSystem) {
+                emptyList()
+            } else {
+                offlineStore.lookupStubsForList(listId)
+            }
+            return stubs + remote
+        }
+        return offlineStore.localWords(profileId, listId, isSystem = isSystem)
     }
 
     suspend fun addWordToList(
@@ -140,6 +369,9 @@ class LearningRepository @Inject constructor(
         pos: String?,
         gloss: String?,
         lexicalEntryId: String?,
+        entryKind: String = "lemma",
+        baseLemma: String? = null,
+        pattern: String? = null,
     ): CardResponse {
         val profileId = activeProfileId()
         return api.addWordToList(
@@ -150,62 +382,252 @@ class LearningRepository @Inject constructor(
                 gloss = gloss,
                 lexical_entry_id = lexicalEntryId,
                 profile_id = profileId,
+                entry_kind = entryKind,
+                base_lemma = baseLemma,
+                pattern = pattern,
             ),
         )
     }
 
+    /** Local-first rename: Room + operacja outboxu, drenaż online. */
     suspend fun renameWordList(listId: String, name: String): WordListResponse {
         val profileId = activeProfileId()
-        return api.renameWordList(listId, profileId, WordListUpdate(name = name))
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) error("empty_list_name")
+        offlineStore.renameListLocally(listId, trimmed)
+        offlineStore.enqueueOp(
+            OP_LIST_RENAME,
+            buildJsonObject {
+                put("listId", listId)
+                put("profileId", profileId)
+                put("name", trimmed)
+            }.toString(),
+        )
+        if (networkMonitor.isCurrentlyOnline()) runCatching { drainOutboxOps() } else syncScheduler.requestNow()
+        return offlineStore.localListById(listId)
+            ?: WordListResponse(id = listId, name = trimmed, is_system = false)
     }
 
+    /** Local-first delete: Room (karty wracają do „Uczę się”) + operacja outboxu, drenaż online. */
     suspend fun deleteWordList(listId: String) {
         val profileId = activeProfileId()
-        val response = api.deleteWordList(listId, profileId)
-        if (!response.isSuccessful) {
-            throw retrofit2.HttpException(response)
+        val lists = offlineStore.localLists(profileId)
+        if (lists.any { it.id == listId && it.is_pending_inbox }) {
+            error("pending_inbox_not_deletable")
         }
+        if (listId.startsWith("local-pending-inbox-")) {
+            offlineStore.clearPendingLookupsForList(listId)
+            return
+        }
+        // Lista utworzona offline (jeszcze nie na serwerze) → anuluj create, skasuj lokalnie, koniec.
+        if (listId.startsWith("local:")) {
+            offlineStore.removeOpsReferencing(listId)
+            offlineStore.deleteListLocally(listId)
+            return
+        }
+        offlineStore.deleteListLocally(listId)
+        offlineStore.enqueueOp(
+            OP_LIST_DELETE,
+            buildJsonObject {
+                put("listId", listId)
+                put("profileId", profileId)
+            }.toString(),
+        )
+        if (networkMonitor.isCurrentlyOnline()) runCatching { drainOutboxOps() } else syncScheduler.requestNow()
     }
 
-    suspend fun deleteCard(cardId: String) {
+    suspend fun clearPendingInbox(listId: String) = pendingFlushMutex.withLock {
+        // Pod mutexem flushu → żaden równoległy flush nie odtworzy kart podczas czyszczenia.
         val profileId = activeProfileId()
-        val response = api.deleteCard(cardId, profileId)
-        if (!response.isSuccessful) {
-            throw retrofit2.HttpException(response)
+        // 1. Najpierw skasuj stuby — od tej chwili flush nie ma już czego dodać.
+        offlineStore.clearPendingLookupsOnly(profileId)
+
+        val serverInboxId = if (networkMonitor.isCurrentlyOnline()) {
+            runCatching {
+                api.listWordLists(profileId).find { it.is_pending_inbox }?.id
+            }.getOrNull()
+        } else {
+            null
         }
+        val inboxDeckIds = offlineStore.allPendingInboxDeckIds(profileId)
+        val apiDeckIds = (inboxDeckIds + listOfNotNull(serverInboxId))
+            .filter { !it.startsWith("local-pending-inbox-") }
+            .distinct()
+
+        val cardIdsToDelete = linkedSetOf<String>()
+        offlineStore.pendingInboxCards(profileId).forEach { cardIdsToDelete.add(it.id) }
+        if (networkMonitor.isCurrentlyOnline()) {
+            for (deckId in apiDeckIds) {
+                runCatching { api.listWords(deckId, profileId) }
+                    .getOrNull()
+                    .orEmpty()
+                    .forEach { cardIdsToDelete.add(it.id) }
+            }
+        }
+
+        if (networkMonitor.isCurrentlyOnline()) {
+            var failed = 0
+            for (cardId in cardIdsToDelete) {
+                if (cardId.startsWith("pending-lookup-")) continue
+                val resp = runCatching { api.deleteCard(cardId, profileId) }.getOrNull()
+                val ok = resp != null && (resp.isSuccessful || resp.code() == 404)
+                if (!ok) failed++
+            }
+            offlineStore.clearPendingInboxLocally(profileId)
+            for (deckId in apiDeckIds) {
+                offlineStore.cacheCardsFromList(profileId, emptyList(), deckId = deckId)
+            }
+            // Bez syncNow/syncPull — pull przywracał karty, których delete jeszcze nie był w tombstonach.
+            if (failed > 0) error("pending_inbox_clear_incomplete")
+            return@withLock
+        }
+
+        offlineStore.clearPendingInboxLocally(profileId)
+        for (cardId in cardIdsToDelete) {
+            if (cardId.startsWith("pending-lookup-")) continue
+            offlineStore.deleteCardLocally(cardId)
+            offlineStore.enqueueOp(
+                OP_CARD_DELETE,
+                buildJsonObject {
+                    put("cardId", cardId)
+                    put("profileId", profileId)
+                }.toString(),
+            )
+        }
+        syncScheduler.requestNow()
+    }
+
+    suspend fun removePendingLookupStub(cardId: String) {
+        val clientId = cardId.removePrefix("pending-lookup-")
+        if (clientId == cardId) return
+        offlineStore.removePendingLookup(clientId)
+    }
+
+    /** Local-first delete karty: Room + operacja outboxu, drenaż online. Stuby lookupu — lokalnie. */
+    suspend fun deleteCard(cardId: String) {
+        if (cardId.startsWith("pending-lookup-")) {
+            removePendingLookupStub(cardId)
+            return
+        }
+        val profileId = activeProfileId()
+        offlineStore.deleteCardLocally(cardId)
+        offlineStore.enqueueOp(
+            OP_CARD_DELETE,
+            buildJsonObject {
+                put("cardId", cardId)
+                put("profileId", profileId)
+            }.toString(),
+        )
+        if (networkMonitor.isCurrentlyOnline()) runCatching { drainOutboxOps() } else syncScheduler.requestNow()
     }
 
     suspend fun moveCard(cardId: String, targetListId: String): CardResponse {
         val profileId = activeProfileId()
-        return api.moveCard(cardId, WordMoveRequest(target_list_id = targetListId, profile_id = profileId))
+        val lists = runCatching { listWordLists() }.getOrElse { offlineStore.localLists(profileId) }
+        val systemId = lists.find { it.is_system }?.id
+        runCatching {
+            offlineStore.moveCardLocally(
+                cardId = cardId,
+                targetListId = targetListId,
+                systemListId = systemId,
+            )
+        }
+        return runCatching {
+            api.moveCard(cardId, WordMoveRequest(target_list_id = targetListId, profile_id = profileId))
+        }.onSuccess {
+            syncScheduler.requestNow()
+        }.getOrElse {
+            syncScheduler.requestNow()
+            val local = offlineStore.cardById(cardId)
+            CardResponse(
+                id = cardId,
+                lemma_l2 = local?.lemmaL2.orEmpty(),
+                pos = local?.pos,
+                gloss_primary = local?.glossPrimary,
+                content = local?.let { offlineStore.parseContent(it.contentJson) }
+                    ?: kotlinx.serialization.json.buildJsonObject { },
+                created_at = "",
+                enrichment_status = local?.enrichmentStatus ?: "ready",
+                srs_status = local?.status,
+                srs_interval_days = local?.intervalDays,
+            )
+        }
+    }
+
+    /** Offline search: queue lemma on Pending inbox. Returns false if duplicate. */
+    suspend fun enqueueOfflineLookup(lemma: String): Boolean {
+        val profileId = activeProfileId()
+        return offlineStore.enqueueOfflineLookup(profileId, lemma) != null
     }
 
     suspend fun dashboardStats(days: Int = 7): DashboardStatsResponse {
         val profileId = activeProfileId()
-        return api.dashboardStats(profileId, days)
+        apiTry { api.dashboardStats(profileId, days) }.getOrNull()?.let { return it }
+        return buildLocalDashboardStats()
+    }
+
+    private suspend fun buildLocalDashboardStats(): DashboardStatsResponse {
+        val q = getQueue()
+        val settings = getSettings()
+        return DashboardStatsResponse(
+            due_count = q.due.size,
+            new_remaining = (settings.new_cards_per_day - q.newCards.size).coerceAtLeast(0),
+            new_done_today = 0,
+            new_limit = settings.new_cards_per_day,
+            reviews_done_today = 0,
+            done_today = 0,
+            srs_new = q.newCards.size,
+            srs_due = q.due.size,
+            srs_learning = q.due.size,
+            srs_mastered = 0,
+            new_reserve = q.newCards.size,
+            cards_total = q.due.size + q.newCards.size,
+        )
     }
 
     suspend fun getQueue(): SrsQueueResponse {
         val profileId = activeProfileId()
-        // Odśwież mirror gdy jest net; kolejka zawsze z Room (local-first).
-        runCatching { syncNow(fullReplace = true) }
-        val settings = runCatching { getSettings() }.getOrNull()
-        val newLimit = settings?.new_cards_per_day ?: 20
-        val directionPref = settings?.practice_direction ?: "l2_to_l1"
-        val local = offlineStore.localQueue(profileId, newLimit)
+        val settings = getSettings()
+        val newLimit = settings.new_cards_per_day
+        val directionPref = settings.practice_direction
+        var local = offlineStore.localQueue(profileId, newLimit)
+
         if (local.isNotEmpty()) {
-            val due = local.filter { it.status != "new" }.map { it.toQueueItem(directionPref) }
-            val newCards = local.filter { it.status == "new" }.map { it.toQueueItem(directionPref) }
-            return SrsQueueResponse(
-                due = due,
-                newCards = newCards,
-                practice_direction = if (directionPref == "random") "l2_to_l1" else directionPref,
-            )
+            if (networkMonitor.isCurrentlyOnline()) {
+                syncScheduler.requestNow()
+            }
+            return buildSrsQueue(local, directionPref)
         }
-        // Fallback: stare API kolejki (pierwsze uruchomienie / pusty Room)
-        return runCatching { api.srsQueue(profileId) }.getOrElse {
-            SrsQueueResponse(due = emptyList(), newCards = emptyList(), practice_direction = "l2_to_l1")
+
+        if (networkMonitor.isCurrentlyOnline()) {
+            runCatching { withTimeout(API_SYNC_TIMEOUT_MS) { syncNow(fullReplace = true) } }
+            local = offlineStore.localQueue(profileId, newLimit)
+            if (local.isNotEmpty()) {
+                return buildSrsQueue(local, directionPref)
+            }
+            apiTry { api.srsQueue(profileId) }.getOrNull()?.let { remote ->
+                return remote
+            }
         }
+
+        return SrsQueueResponse(
+            due = emptyList(),
+            newCards = emptyList(),
+            practice_direction = if (directionPref == "random") "l2_to_l1" else directionPref,
+        )
+    }
+
+    private fun buildSrsQueue(
+        local: List<com.vocabulario.app.data.local.db.CachedCardEntity>,
+        directionPref: String,
+    ): SrsQueueResponse {
+        val due = local.filter { it.status != "new" }.map { it.toQueueItem(directionPref) }
+        val newCards = local.filter { it.status == "new" }.map { it.toQueueItem(directionPref) }
+        return SrsQueueResponse(
+            due = due,
+            newCards = newCards,
+            practice_direction = if (directionPref == "random") "l2_to_l1" else directionPref,
+        )
     }
 
     private fun com.vocabulario.app.data.local.db.CachedCardEntity.toQueueItem(
@@ -227,7 +649,10 @@ class LearningRepository @Inject constructor(
 
     suspend fun getDistractors(cardId: String, direction: String): DistractorsResponse {
         val profileId = activeProfileId()
-        return runCatching {
+        if (!networkMonitor.isCurrentlyOnline()) {
+            return localDistractors(profileId, cardId, direction)
+        }
+        return apiTry {
             api.srsDistractors(
                 DistractorsRequest(card_id = cardId, profile_id = profileId, direction = direction),
             )
@@ -246,10 +671,33 @@ class LearningRepository @Inject constructor(
         } else {
             card.lemmaL2
         }
-        val others = offlineStore.learningCards(profileId)
+        val wrongTexts = linkedSetOf<String>()
+        fun maybeAddDistractor(text: String?) {
+            val t = text?.trim().orEmpty()
+            if (t.isBlank() || !isValidPracticeDistractor(t)) return
+            if (!t.equals(correctText, ignoreCase = true)) wrongTexts.add(t)
+        }
+        offlineStore.allCards(profileId)
+            .filter { it.id != cardId }
+            .forEach { o ->
+                maybeAddDistractor(
+                    if (direction == "l2_to_l1") {
+                        o.glossPrimary ?: o.lemmaL2
+                    } else {
+                        o.lemmaL2
+                    },
+                )
+            }
+        content["similar_words"].asJsonArray()?.forEach { el ->
+            when (el) {
+                is kotlinx.serialization.json.JsonObject -> maybeAddDistractor(el["lemma"].asJsonString())
+                is kotlinx.serialization.json.JsonPrimitive -> maybeAddDistractor(el.content)
+                else -> Unit
+            }
+        }
+        val others = offlineStore.allCards(profileId)
             .filter { it.id != cardId }
             .shuffled()
-            .take(7)
         val options = buildList {
             add(
                 ChoiceOption(
@@ -262,12 +710,35 @@ class LearningRepository @Inject constructor(
                     is_correct = true,
                 ),
             )
-            others.forEach { o ->
+            val used = mutableSetOf(correctText.lowercase())
+            for (text in wrongTexts) {
+                if (size >= 8) break
+                if (!isValidPracticeDistractor(text)) continue
+                if (!used.add(text.lowercase())) continue
+                val source = others.firstOrNull { o ->
+                    val t = if (direction == "l2_to_l1") o.glossPrimary ?: o.lemmaL2 else o.lemmaL2
+                    t.equals(text, ignoreCase = true)
+                }
+                add(
+                    ChoiceOption(
+                        text = text,
+                        lemma_l2 = source?.lemmaL2 ?: text,
+                        gloss = source?.glossPrimary,
+                        pos = source?.pos,
+                        card_id = source?.id,
+                        in_learning = source != null,
+                        is_correct = false,
+                    ),
+                )
+            }
+            for (o in others) {
+                if (size >= 8) break
                 val text = if (direction == "l2_to_l1") {
                     o.glossPrimary ?: o.lemmaL2
                 } else {
                     o.lemmaL2
                 }
+                if (text.isBlank() || !isValidPracticeDistractor(text) || !used.add(text.lowercase())) continue
                 add(
                     ChoiceOption(
                         text = text,
@@ -284,6 +755,19 @@ class LearningRepository @Inject constructor(
         return DistractorsResponse(options = options, direction = direction)
     }
 
+    suspend fun cardSrsSnapshot(cardId: String): SyncSrsState? =
+        offlineStore.cardSrsSnapshot(cardId)
+
+    suspend fun undoReview(clientId: String, previous: SyncSrsState) {
+        offlineStore.undoReviewLocally(clientId, previous)
+        runCatching {
+            api.srsUndo(SrsUndoRequest(client_id = clientId, previous_srs = previous))
+        }.onFailure {
+            offlineStore.enqueuePendingUndo(clientId, previous)
+        }
+        syncScheduler.requestNow()
+    }
+
     suspend fun submitReview(
         cardId: String,
         grade: String,
@@ -291,7 +775,7 @@ class LearningRepository @Inject constructor(
         direction: String,
         correct: Boolean,
         answer: String? = null,
-    ) {
+    ): String {
         val clientId = UUID.randomUUID().toString()
         val nowMs = System.currentTimeMillis()
         offlineStore.applyReviewLocally(cardId, grade, correct, nowMs)
@@ -308,30 +792,181 @@ class LearningRepository @Inject constructor(
             ),
         )
         runCatching { pushOutbox() }
-        // Jak netu nie ma / push padł — WorkManager dogra w tle po CONNECTED
         syncScheduler.requestNow()
+        return clientId
     }
 
     /**
-     * Push outbox, potem pull.
-     * Jeśli push się nie uda — nie robimy pull (żeby nie nadpisać lokalnego postępu).
+     * Push moves + reviews, flush offline lookups, then pull.
+     * Flush jest osobno i **pierwszy** — zatruty outbox nie może blokować opróżniania Oczekujących.
      */
-    suspend fun syncNow(fullReplace: Boolean = true) {
-        pushOutbox()
-        val profileId = activeProfileId()
-        val pull = api.syncPull(profileId, since = null)
-        offlineStore.applyPull(profileId, pull, fullReplace = fullReplace)
-        tokenStore.saveTheme(pull.settings.theme)
+    suspend fun syncNow(fullReplace: Boolean = false) {
+        if (!networkMonitor.isCurrentlyOnline()) return
+        runCatching { withTimeout(FLUSH_LOOKUPS_TIMEOUT_MS) { flushPendingLookups() } }
+        runCatching { withTimeout(API_SYNC_TIMEOUT_MS) { pushOutbox() } }
+        runCatching {
+            withTimeout(API_SYNC_TIMEOUT_MS) {
+                val profileId = activeProfileId()
+                val lastPulled = offlineStore.lastPulledAt(profileId)
+                val doFull = fullReplace || lastPulled == null
+                val since = if (doFull) null else lastPulled
+                val pull = api.syncPull(profileId, since = since)
+                offlineStore.applyPull(profileId, pull, fullReplace = doFull)
+                tokenStore.saveTheme(pull.settings.theme)
+                runCatching {
+                    val profiles = api.listProfiles()
+                    profiles.firstOrNull { it.is_active } ?: profiles.firstOrNull()
+                }.getOrNull()?.let { profile ->
+                    offlineStore.cacheProfile(profile)
+                }
+            }
+        }
     }
 
+    /** Opróżnia kolejkę offline lookupów (Oczekujące) — można wołać niezależnie od sync/outboxu. */
+    suspend fun flushPendingLookupsIfNeeded() {
+        if (!networkMonitor.isCurrentlyOnline()) return
+        flushPendingLookups()
+    }
+
+    suspend fun hasPendingLookups(): Boolean = offlineStore.pendingLookups().isNotEmpty()
+
+    /** Czy są słowa czekające na flush (bez tych już oznaczonych „wymaga sprawdzenia"). */
+    suspend fun hasQueuedLookups(): Boolean = offlineStore.queuedPendingLookups().isNotEmpty()
+
     suspend fun syncPendingReviews() {
-        runCatching { syncNow(fullReplace = true) }
+        runCatching { syncNow() }
+    }
+
+    // ---- Reaktywne strumienie (Room jako źródło prawdy dla UI) ----
+
+    @OptIn(FlowPreview::class)
+    /** Emituje przy realnej zmianie list (debounce chroni przed lawiną przy sync / toggle sieci). */
+    fun listsChanges(profileId: String): Flow<Unit> =
+        offlineStore.listsSignature(profileId)
+            .debounce(400)
+            .distinctUntilChanged()
+            .map { }
+
+    @OptIn(FlowPreview::class)
+    /** Emituje przy realnej zmianie kart profilu (id+deckId, bez updatedAt). */
+    fun cardsChanges(profileId: String): Flow<Unit> =
+        offlineStore.cardsSignature(profileId)
+            .debounce(400)
+            .distinctUntilChanged()
+            .map { }
+
+    /** Ustawienia jako strumień — odzwierciedla zmiany lokalne i te dociągnięte z sync. */
+    fun observeSettings(): Flow<UserSettingsResponse?> =
+        offlineStore.observeSettings().distinctUntilChanged()
+
+    private suspend fun flushPendingUndos() {
+        for (item in offlineStore.pendingUndos()) {
+            val srs = runCatching {
+                json.decodeFromString(SyncSrsState.serializer(), item.srsJson)
+            }.getOrNull() ?: continue
+            runCatching {
+                api.srsUndo(SrsUndoRequest(client_id = item.clientId, previous_srs = srs))
+            }.onSuccess {
+                offlineStore.removePendingUndo(item.clientId)
+            }
+        }
+    }
+
+    /**
+     * Drenaż ujednoliconego outboxu (mutacje Z3) przez istniejące, idempotentne endpointy REST.
+     * FIFO: zatrzymuje się na pierwszym twardym błędzie, by nie wyprzedzić zależności
+     * (np. rename/delete listy przed jej create). Offline = no-op (bez naliczania prób).
+     */
+    private suspend fun drainOutboxOps() {
+        if (!networkMonitor.isCurrentlyOnline()) return
+        outboxMutex.withLock {
+            for (op in offlineStore.pendingOps()) {
+                try {
+                    applyOutboxOp(op)
+                    offlineStore.removeOp(op)
+                } catch (io: java.io.IOException) {
+                    // Utrata sieci w trakcie — nie naliczaj próby, spróbuj przy następnym syncu.
+                    break
+                } catch (e: Exception) {
+                    offlineStore.markOpFailed(op, e.message)
+                    break
+                }
+            }
+        }
+    }
+
+    private suspend fun applyOutboxOp(op: com.vocabulario.app.data.local.db.OutboxOpEntity) {
+        when (op.type) {
+            OP_SETTINGS_UPDATE -> {
+                val update = json.decodeFromString(UserSettingsUpdate.serializer(), op.payloadJson)
+                val result = api.updateSettings(update)
+                offlineStore.saveSettings(result)
+            }
+            OP_CARD_DELETE -> {
+                val p = json.parseToJsonElement(op.payloadJson).jsonObject
+                val cardId = p["cardId"]?.jsonPrimitive?.content ?: return
+                val profileId = p["profileId"]?.jsonPrimitive?.content ?: activeProfileId()
+                val resp = api.deleteCard(cardId, profileId)
+                if (!resp.isSuccessful && resp.code() != 404) throw retrofit2.HttpException(resp)
+            }
+            OP_LIST_RENAME -> {
+                val p = json.parseToJsonElement(op.payloadJson).jsonObject
+                val listId = p["listId"]?.jsonPrimitive?.content ?: return
+                if (listId.startsWith("local:")) return // create jeszcze nie zremapował — poczekaj
+                val profileId = p["profileId"]?.jsonPrimitive?.content ?: activeProfileId()
+                val name = p["name"]?.jsonPrimitive?.content ?: return
+                try {
+                    api.renameWordList(listId, profileId, WordListUpdate(name = name))
+                } catch (e: retrofit2.HttpException) {
+                    if (e.code() != 404) throw e // 404 = lista już nie istnieje → uznaj za zrobione
+                }
+            }
+            OP_LIST_CREATE -> {
+                val p = json.parseToJsonElement(op.payloadJson).jsonObject
+                val localId = p["localId"]?.jsonPrimitive?.content ?: return
+                if (!localId.startsWith("local:")) return // już zremapowane
+                val profileId = p["profileId"]?.jsonPrimitive?.content ?: activeProfileId()
+                val name = p["name"]?.jsonPrimitive?.content ?: return
+                val created = try {
+                    api.createWordList(WordListCreate(name = name, profile_id = profileId))
+                } catch (e: retrofit2.HttpException) {
+                    if (e.code() == 409) {
+                        api.listWordLists(profileId).firstOrNull { it.name.equals(name, ignoreCase = true) }
+                            ?: throw e
+                    } else {
+                        throw e
+                    }
+                }
+                offlineStore.remapLocalListId(localId, created.id)
+            }
+            OP_LIST_DELETE -> {
+                val p = json.parseToJsonElement(op.payloadJson).jsonObject
+                val listId = p["listId"]?.jsonPrimitive?.content ?: return
+                if (listId.startsWith("local:")) return // nigdy nie było na serwerze
+                val profileId = p["profileId"]?.jsonPrimitive?.content ?: activeProfileId()
+                val resp = api.deleteWordList(listId, profileId)
+                if (!resp.isSuccessful && resp.code() != 404) throw retrofit2.HttpException(resp)
+            }
+            else -> Unit // nieznany typ — porzuć (removeOp w drainOutboxOps)
+        }
     }
 
     private suspend fun pushOutbox() {
+        drainOutboxOps()
+        flushPendingUndos()
+        val moves = offlineStore.pendingMoves()
         val pending = offlineStore.pendingReviews()
-        if (pending.isEmpty()) return
+        if (moves.isEmpty() && pending.isEmpty()) return
         val body = SyncPushRequest(
+            moves = moves.map {
+                SyncMoveItem(
+                    client_id = it.clientId,
+                    card_id = it.cardId,
+                    target_list_id = it.targetListId,
+                    moved_at = Instant.ofEpochMilli(it.movedAt).toString(),
+                )
+            },
             reviews = pending.map {
                 SyncReviewItem(
                     client_id = it.clientId,
@@ -346,8 +981,177 @@ class LearningRepository @Inject constructor(
             },
         )
         val result = api.syncPush(body)
-        offlineStore.removePendingReviews(pending.map { it.clientId })
-        offlineStore.applyServerSrs(result.srs)
+        if (moves.isNotEmpty()) {
+            offlineStore.removePendingMoves(moves.map { it.clientId })
+        }
+        if (pending.isNotEmpty()) {
+            offlineStore.removePendingReviews(pending.map { it.clientId })
+            offlineStore.applyServerSrs(result.srs)
+        }
+    }
+
+    /**
+     * Opróżnia kolejkę offline-lookupów. SERIALIZOWANE mutexem — nigdy dwa flushe naraz,
+     * bo to tworzyło duplikaty kart (różne kandydaty z tego samego stuba) i paliło tokeny.
+     * Każdy stub kasowany JEDNORAZOWO tuż po udanym dodaniu; jeśli w międzyczasie ktoś
+     * wyczyścił skrzynkę (stub zniknął), pomijamy go — brak zmartwychwstania kart.
+     */
+    private suspend fun flushPendingLookups() {
+        pendingFlushMutex.withLock {
+            if (!networkMonitor.isCurrentlyOnline()) return
+            // Tylko stuby czekające — te z „wymaga sprawdzenia" pomijamy (zero kolejnych lookupów).
+            val pending = offlineStore.queuedPendingLookups()
+            if (pending.isEmpty()) return
+            val profileId = activeProfileId()
+            val inbox = runCatching {
+                api.listWordLists(profileId).find { it.is_pending_inbox }
+                    ?: api.ensurePendingInbox(profileId)
+            }.getOrNull() ?: return
+            val inboxId = inbox.id
+            offlineStore.cacheLists(profileId, listOf(inbox))
+            var anyDone = false
+            for (item in pending) {
+                // Stub mógł zostać usunięty (np. „Usuń listę”) między snapshotem a teraz — pomiń.
+                if (!offlineStore.pendingLookupExists(item.clientId)) continue
+                val rawLemma = item.lemma.trim()
+                var resp = runCatching {
+                    api.lookup(LookupRequest(text = rawLemma, profile_id = profileId))
+                }.getOrNull()
+                // Powtórka na lowercase gdy pierwszy strzał nie był pewny (np. „FIRANKA”).
+                if (resp?.confident != true && rawLemma != rawLemma.lowercase()) {
+                    val lower = runCatching {
+                        api.lookup(LookupRequest(text = rawLemma.lowercase(), profile_id = profileId))
+                    }.getOrNull()
+                    if (lower != null && (lower.confident || resp == null)) resp = lower
+                }
+                // Ponowne sprawdzenie po (wolnym) lookupie — czyszczenie mogło wejść w tym czasie.
+                if (!offlineStore.pendingLookupExists(item.clientId)) continue
+
+                // Brak odpowiedzi z API (błąd sieci) → zostaw w kolejce, spróbujemy później.
+                if (resp == null) continue
+
+                // Poważne wątpliwości: nie tworzymy karty, nie palimy enrichmentu.
+                if (!resp.confident) {
+                    val suggestionsJson = runCatching {
+                        json.encodeToString(
+                            ListSerializer(LookupCandidate.serializer()),
+                            resp.candidates,
+                        )
+                    }.getOrNull()
+                    offlineStore.markLookupNeedsReview(item.clientId, suggestionsJson)
+                    continue
+                }
+
+                val resolved = resp.candidates.firstOrNull()
+                val lemma = resolved?.lemma?.takeIf { it.isNotBlank() } ?: rawLemma
+                var added = runCatching {
+                    api.addWordToList(
+                        inboxId,
+                        WordListAddWordRequest(
+                            lemma = lemma,
+                            pos = resolved?.pos,
+                            gloss = resolved?.gloss?.takeIf { it.isNotBlank() },
+                            lexical_entry_id = resolved?.lexical_entry_id,
+                            profile_id = profileId,
+                        ),
+                    )
+                }
+                if (added.isFailure && (added.exceptionOrNull() as? retrofit2.HttpException)?.code() != 409) {
+                    added = runCatching {
+                        api.addWordToList(
+                            inboxId,
+                            WordListAddWordRequest(lemma = rawLemma, profile_id = profileId),
+                        )
+                    }
+                }
+                val ok = added.isSuccess ||
+                    (added.exceptionOrNull() as? retrofit2.HttpException)?.code() == 409
+                if (ok) {
+                    // Kasuj stub NATYCHMIAST — żaden kolejny flush nie doda go ponownie.
+                    offlineStore.removePendingLookup(item.clientId)
+                    added.getOrNull()?.let { card ->
+                        offlineStore.cacheCardsFromList(profileId, listOf(card), deckId = inboxId)
+                    }
+                    anyDone = true
+                }
+            }
+            if (anyDone) {
+                runCatching {
+                    val words = api.listWords(inboxId, profileId)
+                    offlineStore.cacheCardsFromList(profileId, words, deckId = inboxId)
+                }
+            }
+        }
+    }
+
+    /** Propozycje zapisane przy stubie „wymaga sprawdzenia". */
+    suspend fun pendingReviewSuggestions(cardId: String): List<LookupCandidate> {
+        val clientId = cardId.removePrefix("pending-lookup-")
+        val stub = offlineStore.pendingLookupById(clientId) ?: return emptyList()
+        val raw = stub.suggestionsJson ?: return emptyList()
+        return runCatching {
+            json.decodeFromString(ListSerializer(LookupCandidate.serializer()), raw)
+        }.getOrDefault(emptyList())
+    }
+
+    /** Oryginalne słowo wpisane offline (do prefillu „Szukaj ponownie"). */
+    suspend fun pendingReviewWord(cardId: String): String? {
+        val clientId = cardId.removePrefix("pending-lookup-")
+        return offlineStore.pendingLookupById(clientId)?.lemma
+    }
+
+    /** Odrzuca słowo „wymaga sprawdzenia" — kasuje stub całkowicie. */
+    suspend fun rejectPendingReview(cardId: String) {
+        removePendingLookupStub(cardId)
+    }
+
+    /**
+     * Zatwierdza wybraną propozycję: dodaje ją do skrzynki Oczekujące (karta → enrichment),
+     * kasuje stub „wymaga sprawdzenia". Wymaga trybu online. Zwraca utworzoną kartę.
+     */
+    suspend fun approvePendingReview(cardId: String, candidate: LookupCandidate): CardResponse? {
+        // BEZ pendingFlushMutex — słowo jest „needs_review", więc flush i tak je pomija (brak wyścigu).
+        // Trzymanie muteksu blokowało zatwierdzenie na czas trwającego flushu (użytkownik widział ~10 s).
+        if (!networkMonitor.isCurrentlyOnline()) error("offline")
+        val clientId = cardId.removePrefix("pending-lookup-")
+        val profileId = activeProfileId()
+        val inbox = runCatching {
+            api.listWordLists(profileId).find { it.is_pending_inbox }
+                ?: api.ensurePendingInbox(profileId)
+        }.getOrNull() ?: error("no_inbox")
+        offlineStore.cacheLists(profileId, listOf(inbox))
+        val added = runCatching {
+            api.addWordToList(
+                inbox.id,
+                WordListAddWordRequest(
+                    lemma = candidate.lemma,
+                    pos = candidate.pos,
+                    gloss = candidate.gloss.takeIf { it.isNotBlank() },
+                    lexical_entry_id = candidate.lexical_entry_id,
+                    profile_id = profileId,
+                ),
+            )
+        }
+        val ok = added.isSuccess ||
+            (added.exceptionOrNull() as? retrofit2.HttpException)?.code() == 409
+        if (!ok) (added.exceptionOrNull() ?: error("add_failed")).let { throw it }
+        // Kasuj stub „needs_review" i od razu zcache'uj nową kartę (spinner „Tworzę kartę").
+        offlineStore.removePendingLookup(clientId)
+        val card = added.getOrNull()
+        card?.let { offlineStore.cacheCardsFromList(profileId, listOf(it), deckId = inbox.id) }
+        return card
+    }
+
+    /** Serwerowy UUID skrzynki Oczekujące (nie lokalny local-pending-inbox-*). */
+    private suspend fun resolvePendingInboxApiId(profileId: String, listId: String): String {
+        if (!listId.startsWith("local-pending-inbox-")) return listId
+        return runCatching {
+            api.listWordLists(profileId).find { it.is_pending_inbox }?.id
+        }.getOrNull()
+            ?: offlineStore.localLists(profileId)
+                .firstOrNull { it.is_pending_inbox && !it.id.startsWith("local-pending-inbox-") }
+                ?.id
+            ?: listId
     }
 
     suspend fun checkAnswer(cardId: String, answer: String, direction: String): CheckAnswerResponse =
@@ -362,64 +1166,133 @@ class LearningRepository @Inject constructor(
             CheckAnswerResponse(correct = ok, expected = expected, accepted_as_typo = typo)
         }
 
-    suspend fun getSettings(): UserSettingsResponse =
-        runCatching {
-            api.getSettings().also { offlineStore.saveSettings(it) }
-        }.getOrElse {
-            offlineStore.localUserSettings() ?: error("Brak ustawień offline")
+    suspend fun getSettings(): UserSettingsResponse {
+        val cached = offlineStore.localUserSettings() ?: defaultSettings()
+        if (!networkMonitor.isCurrentlyOnline()) {
+            return cached
         }
-
-    suspend fun updateSettings(update: UserSettingsUpdate): UserSettingsResponse {
-        val result = api.updateSettings(update)
-        offlineStore.saveSettings(result)
-        update.theme?.let { tokenStore.saveTheme(it) }
-        return result
+        return apiTry { api.getSettings().also { offlineStore.saveSettings(it) } }
+            .getOrElse { cached }
     }
 
-    suspend fun listProfiles(): List<LanguageProfileResponse> = api.listProfiles()
+    /** Local-first: zapisuje ustawienia w Room + operacja outboxu; online drenuje od razu. */
+    suspend fun updateSettings(update: UserSettingsUpdate): UserSettingsResponse {
+        val current = offlineStore.localUserSettings() ?: defaultSettings()
+        val merged = current.mergedWith(update)
+        offlineStore.saveSettings(merged)
+        update.theme?.let { tokenStore.saveTheme(it) }
+        offlineStore.enqueueOp(
+            OP_SETTINGS_UPDATE,
+            json.encodeToString(UserSettingsUpdate.serializer(), update),
+        )
+        if (networkMonitor.isCurrentlyOnline()) runCatching { drainOutboxOps() } else syncScheduler.requestNow()
+        return offlineStore.localUserSettings() ?: merged
+    }
+
+    private fun UserSettingsResponse.mergedWith(u: UserSettingsUpdate): UserSettingsResponse = copy(
+        practice_input_pref = u.practice_input_pref ?: practice_input_pref,
+        practice_direction = u.practice_direction ?: practice_direction,
+        typing_tolerance = u.typing_tolerance ?: typing_tolerance,
+        typo_modal_enabled = u.typo_modal_enabled ?: typo_modal_enabled,
+        new_cards_per_day = u.new_cards_per_day ?: new_cards_per_day,
+        theme = u.theme ?: theme,
+        show_usages = u.show_usages ?: show_usages,
+        show_synonyms_antonyms = u.show_synonyms_antonyms ?: show_synonyms_antonyms,
+        show_synonyms = u.show_synonyms ?: show_synonyms,
+        show_antonyms = u.show_antonyms ?: show_antonyms,
+        show_periphrases = u.show_periphrases ?: show_periphrases,
+        show_conjugation = u.show_conjugation ?: show_conjugation,
+        conjugation_expanded_default = u.conjugation_expanded_default ?: conjugation_expanded_default,
+        show_example_sentences = u.show_example_sentences ?: show_example_sentences,
+        related_words_expanded_default = u.related_words_expanded_default ?: related_words_expanded_default,
+        study_reminder_enabled = u.study_reminder_enabled ?: study_reminder_enabled,
+        cards_ready_push_enabled = u.cards_ready_push_enabled ?: cards_ready_push_enabled,
+        reminder_hour = u.reminder_hour ?: reminder_hour,
+    )
+
+    suspend fun listProfiles(): List<LanguageProfileResponse> {
+        if (!networkMonitor.isCurrentlyOnline()) {
+            return offlineStore.cachedActiveProfile()?.let { listOf(it) } ?: emptyList()
+        }
+        return apiTry { api.listProfiles() }
+            .onSuccess { profiles ->
+                profiles.filter { it.is_active }.forEach { offlineStore.cacheProfile(it) }
+            }
+            .getOrElse {
+                offlineStore.cachedActiveProfile()?.let { listOf(it) } ?: emptyList()
+            }
+    }
 
     suspend fun getActiveProfile(): LanguageProfileResponse? {
-        val profiles = listProfiles()
-        return profiles.firstOrNull { it.is_active } ?: profiles.firstOrNull()
+        val cached = offlineStore.cachedActiveProfile()
+        if (!networkMonitor.isCurrentlyOnline()) {
+            return cached?.also { syncActiveProfileToLocal(it) }
+        }
+        val remote = apiTry { listProfiles() }.getOrNull()
+        if (remote != null) {
+            val active = remote.firstOrNull { it.is_active } ?: remote.firstOrNull()
+            return active?.also { syncActiveProfileToLocal(it) }
+        }
+        return cached?.also { syncActiveProfileToLocal(it) }
+    }
+
+    private suspend fun syncActiveProfileToLocal(profile: LanguageProfileResponse) {
+        tokenStore.saveActiveProfile(profile.id)
+        tokenStore.saveAppLang(profile.app_lang)
+        offlineStore.cacheProfile(profile)
+    }
+
+    /** Apply UI locale from the active server profile before rendering authenticated screens. */
+    suspend fun applyAppLocaleFromActiveProfile(): String {
+        val active = getActiveProfile()
+        val appLang = active?.app_lang?.trim()?.lowercase().orEmpty().ifBlank { "en" }
+        com.vocabulario.app.i18n.AppLocale.apply(appLang)
+        return appLang
     }
 
     suspend fun createProfile(
-        native: String,
+        appLang: String,
         learning: String,
         cefr: String,
         tenses: List<String>,
+        tenseLabelLang: String = "app_lang",
     ): LanguageProfileResponse {
         val profile = api.createProfile(
             LanguageProfileCreate(
-                native_lang = native,
+                app_lang = appLang,
                 learning_lang = learning,
                 cefr_level = cefr,
                 selected_tenses = tenses,
+                tense_label_lang = tenseLabelLang,
             )
         )
         tokenStore.saveActiveProfile(profile.id)
+        offlineStore.cacheProfile(profile)
         return profile
     }
 
     suspend fun activateProfile(profileId: String): LanguageProfileResponse {
         val profile = api.activateProfile(profileId)
-        tokenStore.saveActiveProfile(profile.id)
+        syncActiveProfileToLocal(profile)
         return profile
     }
 
     suspend fun updateProfile(
         cefr: String? = null,
         tenses: List<String>? = null,
+        tenseLabelLang: String? = null,
     ): LanguageProfileResponse {
         val profileId = activeProfileId()
-        return api.updateProfile(
+        val profile = api.updateProfile(
             profileId,
-            LanguageProfileUpdate(cefr_level = cefr, selected_tenses = tenses),
+            LanguageProfileUpdate(
+                cefr_level = cefr,
+                selected_tenses = tenses,
+                tense_label_lang = tenseLabelLang,
+            ),
         )
-    }
-
-    suspend fun updateUiLang(lang: String) {
-        api.updateMe(UserUpdate(ui_lang = lang))
+        syncActiveProfileToLocal(profile)
+        return profile
     }
 
     suspend fun getMe() = api.me()
@@ -429,5 +1302,64 @@ class LearningRepository @Inject constructor(
     suspend fun syncThemeFromSettings() {
         val settings = getSettings()
         tokenStore.saveTheme(settings.theme)
+    }
+
+    suspend fun correctionQuota(): CorrectionQuotaResponse = api.correctionQuota()
+
+    suspend fun submitCardCorrection(cardId: String, sections: List<String>, note: String): CardCorrectionCreateResponse {
+        val profileId = activeProfileId()
+        return api.createCardCorrection(
+            cardId,
+            profileId,
+            CardCorrectionCreate(sections = sections, note = note.ifBlank { null }),
+        )
+    }
+
+    suspend fun latestCardCorrection(cardId: String): CardCorrectionResponse? {
+        return api.latestCardCorrection(cardId, activeProfileId())
+    }
+
+    suspend fun validateSelfEdit(
+        cardId: String,
+        content: kotlinx.serialization.json.JsonObject,
+    ): SelfEditValidateResponse {
+        return api.validateSelfEdit(
+            cardId,
+            activeProfileId(),
+            CardSelfEditRequest(content = content),
+        )
+    }
+
+    suspend fun selfEditCard(cardId: String, content: kotlinx.serialization.json.JsonObject): CardResponse {
+        val updated = api.selfEditCard(
+            cardId,
+            activeProfileId(),
+            CardSelfEditRequest(content = content),
+        )
+        syncNow(fullReplace = false)
+        return updated
+    }
+
+    suspend fun getCardHistory(cardId: String): CardHistoryResponse {
+        return api.getCardHistory(cardId, activeProfileId())
+    }
+
+    suspend fun restoreCard(cardId: String, historyEventId: String): CardResponse {
+        val updated = api.restoreCard(
+            cardId,
+            activeProfileId(),
+            CardRestoreRequest(history_event_id = historyEventId),
+        )
+        syncNow(fullReplace = false)
+        return updated
+    }
+
+    suspend fun registerDeviceToken(token: String) {
+        if (!hasSyncableSession()) return
+        runCatching { api.registerDevice(DeviceRegisterRequest(token = token)) }
+    }
+
+    suspend fun unregisterDeviceToken(token: String) {
+        runCatching { api.unregisterDevice(token) }
     }
 }

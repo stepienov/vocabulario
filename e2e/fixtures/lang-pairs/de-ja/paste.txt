@@ -1,0 +1,10 @@
+水	Wasser
+猫	Katze
+食べる	essen
+お願いします	bitte
+〜なければならない	müssen
+こんにちは。	Guten Tag.
+行く	gehen
+本	Buch
+学校	Schule
+友達	Freund

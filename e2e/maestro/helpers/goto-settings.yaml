@@ -1,0 +1,8 @@
+appId: com.vocabulario.app
+---
+- tapOn:
+    id: btn_settings
+- extendedWaitUntil:
+    visible:
+      id: settings_logout
+    timeout: 15000

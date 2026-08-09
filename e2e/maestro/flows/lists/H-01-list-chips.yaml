@@ -1,0 +1,21 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - lists
+---
+# H-01 · Lists tab chips + new list button visible
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- tapOn:
+    id: tab_lists
+- extendedWaitUntil:
+    visible:
+      id: list_chip
+    timeout: 20000
+- assertVisible:
+    id: btn_new_list
+- tapOn:
+    id: list_chip
+- assertVisible:
+    id: list_chip

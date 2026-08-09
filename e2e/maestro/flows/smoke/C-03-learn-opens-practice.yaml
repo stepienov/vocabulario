@@ -1,0 +1,23 @@
+appId: com.vocabulario.app
+tags:
+  - smoke
+  - practice
+---
+# C-03 · Learn CTA → Practice → Back (empty queue OK)
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- tapOn:
+    id: btn_learn
+- extendedWaitUntil:
+    visible:
+      id: btn_back
+    timeout: 20000
+- tapOn:
+    id: btn_back
+- extendedWaitUntil:
+    visible:
+      id: tab_dashboard
+    timeout: 15000
+- assertVisible:
+    id: btn_learn

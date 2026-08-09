@@ -1,0 +1,47 @@
+code: pt-br
+lsp_version: pt-br-1.0.0
+name_en: Portuguese (Brazil)
+script: Latn
+rtl: false
+inflection_kind: person_tense
+
+default_selected_tenses:
+  - presente
+  - preterito_perfeito
+  - preterito_imperfeito
+
+verbs:
+  tenses:
+    - { key: presente, label_l2: Presente, person_grid: pt_6 }
+    - { key: preterito_perfeito, label_l2: Pretérito perfeito, person_grid: pt_6 }
+    - { key: preterito_imperfeito, label_l2: Pretérito imperfeito, person_grid: pt_6 }
+    - { key: futuro, label_l2: Futuro, person_grid: pt_6 }
+    - { key: condicional, label_l2: Condicional, person_grid: pt_6 }
+    - { key: subjuntivo_presente, label_l2: Subjuntivo presente, person_grid: pt_6 }
+    - { key: imperativo, label_l2: Imperativo, person_grid: pt_imperative }
+  non_finite:
+    - { key: gerundio, label_l2: Gerúndio }
+    - { key: participio, label_l2: Particípio }
+  person_grids:
+    pt_6:
+      keys: ["eu", "tu", "ele", "nós", "vós", "eles"]
+      labels: { eu: eu, tu: tu/você, ele: ele/ela, "nós": nós, "vós": vós, eles: eles/elas }
+    pt_imperative:
+      keys: ["tu", "você", "nós", "vós", "vocês"]
+      labels: { tu: tu, você: você, "nós": nós, "vós": vós, vocês: vocês }
+  paradigm_rules: |
+    PORTUGUESE BRAZIL (pt-br) for "{lemma}":
+    - Brazilian usage (você, gente). Real forms only.
+
+nouns:
+  numbers: [sg, pl]
+  genders: [m, f]
+
+adjectives:
+  full_declension: true
+
+ui_labels:
+  pl:
+    presente: Czas teraźniejszy
+    preterito_perfeito: Czas przeszły dokonany
+    preterito_imperfeito: Czas przeszły niedokonany

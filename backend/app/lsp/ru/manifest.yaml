@@ -1,0 +1,47 @@
+code: ru
+lsp_version: ru-1.0.0
+name_en: Russian
+script: Cyrl
+rtl: false
+inflection_kind: person_tense
+
+default_selected_tenses:
+  - nastoyashchee
+  - proshedshee
+
+verbs:
+  tenses:
+    - { key: nastoyashchee, label_l2: Настоящее, person_grid: ru_6 }
+    - { key: proshedshee, label_l2: Прошедшее, person_grid: ru_past }
+    - { key: budushchee, label_l2: Будущее, person_grid: ru_6 }
+    - { key: povelitelnoe, label_l2: Повелительное, person_grid: ru_imperative }
+  non_finite:
+    - { key: infinitiv, label_l2: Инфинитив }
+    - { key: deeprichastie, label_l2: Деепричастие }
+  person_grids:
+    ru_6:
+      keys: ["ya", "ty", "on", "my", "vy", "oni"]
+      labels: { ya: я, ty: ты, "on": он/она, my: мы, vy: вы, oni: они }
+    ru_past:
+      keys: ["m", "f", "n", "pl"]
+      labels: { m: м, f: ж, n: ср, pl: мн }
+    ru_imperative:
+      keys: ["ty", "my", "vy"]
+      labels: { ty: ты, my: мы, vy: вы }
+  paradigm_rules: |
+    RUSSIAN (ru) for "{lemma}":
+    - Determine aspect. Perfective: NO present tense (omit nastoyashchee).
+    - Never use placeholders.
+
+nouns:
+  cases: [imenitelny, roditelny, datelny, vinitelny, tvoritelny, predlozhny]
+  numbers: [sg, pl]
+  genders: [m, f, n]
+
+adjectives:
+  full_declension: true
+
+ui_labels:
+  pl:
+    nastoyashchee: Czas teraźniejszy
+    proshedshee: Czas przeszły

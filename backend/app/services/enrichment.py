@@ -2,22 +2,18 @@
 
 from __future__ import annotations
 
-import asyncio
 import re
 
+from app.lsp.lang_utils import articles_for, lemma_preps_for
+from app.services.pos_normalize import normalize_pos_bucket
 from app.models import LanguageProfile
 from app.services.llm import LLMService
-from app.ai.schemas.similar_words import MIN_SIMILAR_WORDS
-from app.services.similar_words import fetch_similar_words
 
 # Jedno zdanie na pasmo poziomów: A2 widzi A1–A2, B2 widzi B1–B2, C2 widzi C1–C2.
 EXAMPLE_CEFR_LEVELS = ["A2", "B2", "C2"]
 
 # Jedno znaczenie główne i do dwóch pobocznych — sensy bliskoznaczne grupuje prompt.
 MAX_MEANINGS = 3
-
-# Stałe przyimki po lemacie → sens należy do peryfrazy, nie do gołego lematu.
-_LEMMA_PREPS = ("con", "a", "de", "en", "por", "para", "sobre", "sin", "hacia")
 
 
 def _count_examples_by_cefr(examples: list[dict]) -> dict[str, int]:
@@ -65,8 +61,8 @@ def _merge_examples_into_meanings(core: dict, examples_payload: dict) -> None:
 def _resolve_pos(value: object) -> str | None:
     if not isinstance(value, str):
         return None
-    cleaned = value.strip()
-    return cleaned or None if cleaned.lower() != "unknown" else None
+    bucket = normalize_pos_bucket(value)
+    return None if bucket == "unknown" else bucket
 
 
 def _normalize_related_words(
@@ -122,46 +118,47 @@ def _normalize_usages(meanings: list[dict]) -> None:
         meaning["usages"] = normalized
 
 
-def _bare_lemma(lemma: str) -> str:
+def _bare_lemma(lemma: str, learning_lang: str = "es") -> str:
     words = lemma.strip().lower().split()
-    if len(words) == 2 and words[0] in {"el", "la", "los", "las"}:
+    articles = articles_for(learning_lang)
+    if len(words) == 2 and words[0].rstrip("'") in articles:
         return words[1]
     return " ".join(words)
 
 
-def _usage_is_fixed_prep_construction(lemma: str, usage_l2: str) -> bool:
+def _usage_is_fixed_prep_construction(
+    lemma: str, usage_l2: str, learning_lang: str = "es"
+) -> bool:
     """True gdy usage to stałe „lemat (+odmiana) + przyimek …”, np. contar con."""
-    bare = _bare_lemma(lemma)
-    if not bare or not usage_l2:
+    bare = _bare_lemma(lemma, learning_lang)
+    preps = lemma_preps_for(learning_lang)
+    if not bare or not usage_l2 or not preps:
         return False
     text = usage_l2.strip().lower()
-    # Bezokolicznik: "contar con ayuda"
-    for prep in _LEMMA_PREPS:
-        if re.match(rf"^{re.escape(bare)}\s+{prep}(?:\s|$)", text):
+    for prep in preps:
+        if re.match(rf"^{re.escape(bare)}\s+{re.escape(prep)}(?:\s|$)", text):
             return True
-    # Odmiana hiszpańska kończąca się na rdzeniu + " con/a/…" — tylko gdy
-    # usage zaczyna się od formy zawierającej rdzeń lematu i zaraz jest przyimek.
-    # Np. "cuento contigo" / "contábamos con llegar" — wykrywamy przyimek
-    # bezpośrednio po pierwszym tokenie albo scalone "contigo".
     first, *rest = text.split()
     if not first:
         return False
-    # contigo / consigo traktuj jak "con"
-    if first.endswith("migo") or first.endswith("tigo") or first.endswith("sigo"):
-        # "cuento contigo" — drugi token to fused prep; first is conjugated verb
+    if learning_lang == "es" and (
+        first.endswith("migo") or first.endswith("tigo") or first.endswith("sigo")
+    ):
         stem = bare.rstrip("ar") if bare.endswith("ar") else bare[:4]
         if stem and stem in first:
             return True
     if rest:
         prep = rest[0]
-        if prep in _LEMMA_PREPS:
+        if prep in preps:
             stem = bare[: max(3, len(bare) - 2)]
             if stem and stem in first:
                 return True
     return False
 
 
-def _meaning_is_prep_construction(lemma: str, meaning: dict) -> bool:
+def _meaning_is_prep_construction(
+    lemma: str, meaning: dict, learning_lang: str = "es"
+) -> bool:
     """Sens peryfrazy: większość usages to stałe lemat+przyimek."""
     usages = meaning.get("usages") or []
     if not isinstance(usages, list) or not usages:
@@ -173,13 +170,23 @@ def _meaning_is_prep_construction(lemma: str, meaning: dict) -> bool:
     ]
     if len(l2_list) < 2:
         return False
-    hits = sum(1 for l2 in l2_list if _usage_is_fixed_prep_construction(lemma, l2))
+    hits = sum(
+        1
+        for l2 in l2_list
+        if _usage_is_fixed_prep_construction(lemma, l2, learning_lang)
+    )
     return hits >= 2 and hits >= (len(l2_list) + 1) // 2
 
 
-def strip_prepositional_construction_meanings(lemma: str, meanings: list[dict]) -> list[dict]:
+def strip_prepositional_construction_meanings(
+    lemma: str, meanings: list[dict], learning_lang: str = "es"
+) -> list[dict]:
     """Usuwa znaczenia, które w praktyce opisują peryfrazę (np. contar con)."""
-    kept = [m for m in meanings if not _meaning_is_prep_construction(lemma, m)]
+    kept = [
+        m
+        for m in meanings
+        if not _meaning_is_prep_construction(lemma, m, learning_lang)
+    ]
     return kept if kept else meanings[:1]
 
 
@@ -188,81 +195,108 @@ async def enrich_card_content(
     lemma: str,
     pos: str | None,
 ) -> dict:
-    """Buduje pełną kartę: core → równolegle examples + similar_words + conjugation."""
+    """Buduje pełną kartę w formacie vocabulario.card.v1 (LSP)."""
+    from app.lsp.enrichment import enrich_card_content_lsp
+    from app.lsp.registry import require_manifest
+
+    require_manifest(profile.learning_lang)
+    return await enrich_card_content_lsp(profile, lemma, pos)
+
+
+# Legacy pipeline removed — all 16 L2 langs have LSP manifests.
+ADAPTIVE_KINDS = frozenset({"phrase", "construction", "sentence", "other"})
+
+
+async def enrich_adaptive_card_content(
+    profile: LanguageProfile,
+    *,
+    headword: str,
+    entry_kind: str,
+    gloss: str | None = None,
+    pos: str | None = None,
+    base_lemma: str | None = None,
+    pattern: str | None = None,
+) -> dict:
+    """Bogata karta dla zwrotu/konstrukcji/zdania — bez full conjugation / similar_words."""
     llm = LLMService()
-    pos_val = pos or "unknown"
+    kind = (entry_kind or "other").strip().lower()
+    if kind == "lemma":
+        return await enrich_card_content(profile, headword, pos)
 
-    core = await llm.enrich_core(
-        lemma=lemma,
-        pos=pos_val,
-        native=profile.native_lang,
-        learning=profile.learning_lang,
-        cefr=profile.cefr_level,
-    )
-    lemma_final = core.get("lemma") or lemma
-    # POS z core ma pierwszeństwo — gdy wywołanie nie podało części mowy,
-    # dopiero tutaj jest znana i musi trafić do dystraktorów oraz koniugacji.
-    pos_final = _resolve_pos(core.get("pos")) or _resolve_pos(pos) or "unknown"
-
-    # Przycięcie przed krokiem z przykładami, żeby indeksy znaczeń się zgadzały
-    # i żeby nie płacić za zdania do sensów, które i tak nie wejdą na kartę.
-    meanings = [m for m in (core.get("meanings") or []) if isinstance(m, dict)]
-    _normalize_usages(meanings)
-    meanings = strip_prepositional_construction_meanings(lemma_final, meanings)
-    core["meanings"] = meanings[:MAX_MEANINGS]
-    pos_for_related = pos_final if pos_final != "unknown" else None
-    core["synonyms_l2"] = _normalize_related_words(
-        core.get("synonyms_l2"), fallback_pos=pos_for_related
-    )
-    core["antonyms_l2"] = _normalize_related_words(
-        core.get("antonyms_l2"), fallback_pos=pos_for_related
-    )
-    glosses = [m["gloss_l1"] for m in core["meanings"] if m.get("gloss_l1")]
-
-    async def fetch_examples() -> dict:
-        if not glosses:
-            return {"meanings": []}
-        data = await llm.generate_examples(
-            lemma=lemma_final,
-            pos=pos_final,
-            glosses=glosses,
-            native=profile.native_lang,
+    if llm.mock:
+        g = (gloss or "").strip() or "?"
+        data = {
+            "lemma": headword,
+            "pos": pos or kind,
+            "pattern": pattern,
+            "related_lemma": base_lemma,
+            "ipa": None,
+            "meanings": [
+                {
+                    "gloss_l1": g,
+                    "synonyms_l1": [],
+                    "usages": ["Użycie z kontekstu importu (mock)."],
+                    "examples": [
+                        {
+                            "l2": f"Ejemplo con {headword}.",
+                            "l1": f"Przykład z „{headword}”.",
+                            "cefr": "A2",
+                        },
+                        {
+                            "l2": f"Usamos {headword} en este contexto.",
+                            "l1": f"Używamy „{headword}” w tym kontekście.",
+                            "cefr": "B2",
+                        },
+                        {
+                            "l2": f"Resulta evidente que {headword} cambia el sentido.",
+                            "l1": f"Widać, że „{headword}” zmienia sens.",
+                            "cefr": "C2",
+                        },
+                    ],
+                }
+            ],
+            "notes": "mock adaptive",
+        }
+    else:
+        data = await llm.enrich_adaptive_entry(
+            native=profile.app_lang,
             learning=profile.learning_lang,
+            cefr=profile.cefr_level,
+            entry_kind=kind,
+            headword=headword,
+            gloss=gloss,
+            base_lemma=base_lemma,
+            pattern=pattern,
         )
-        first = (data.get("meanings") or [{}])[0] if data.get("meanings") else {}
-        first_examples = first.get("examples") if isinstance(first, dict) else []
-        if isinstance(first_examples, list) and not examples_complete(first_examples):
-            data = await llm.generate_examples(
-                lemma=lemma_final,
-                pos=pos_final,
-                glosses=glosses,
-                native=profile.native_lang,
-                learning=profile.learning_lang,
-                retry=True,
-            )
-        return data
 
-    async def fetch_similar() -> list[dict]:
-        return await fetch_similar_words(llm, profile, lemma_final, pos_final)
+    meanings = [m for m in (data.get("meanings") or []) if isinstance(m, dict)]
+    _normalize_usages(meanings)
+    for m in meanings:
+        if not isinstance(m.get("examples"), list):
+            m["examples"] = []
+        if not isinstance(m.get("synonyms_l1"), list):
+            m["synonyms_l1"] = []
+        if not isinstance(m.get("usages"), list):
+            m["usages"] = []
 
-    async def fetch_conjugation() -> dict | None:
-        if pos_final != "verb":
-            return None
-        return await llm.generate_conjugation(lemma=lemma_final)
-
-    examples_data, similar, conjugation = await asyncio.gather(
-        fetch_examples(),
-        fetch_similar(),
-        fetch_conjugation(),
-    )
-
-    _merge_examples_into_meanings(core, examples_data)
-
-    if len(similar) < MIN_SIMILAR_WORDS:
-        raise ValueError(
-            f"AI zwróciło za mało dystraktorów dla „{lemma_final}” "
-            f"({len(similar)}/{MIN_SIMILAR_WORDS})."
-        )
-    core["similar_words"] = similar
-    core["conjugation"] = conjugation
-    return core
+    return {
+        "schema_version": "vocabulario.adaptive.v1",
+        "entry_kind": kind,
+        "lemma": data.get("lemma") or headword,
+        "language": profile.learning_lang,
+        "pos": _resolve_pos(data.get("pos")) or _resolve_pos(pos) or kind,
+        "ipa": data.get("ipa"),
+        "pattern": data.get("pattern") or pattern,
+        "related_lemma": data.get("related_lemma") or base_lemma,
+        "meanings": meanings[:MAX_MEANINGS],
+        "synonyms_l2": [],
+        "antonyms_l2": [],
+        "similar_words": [],
+        "conjugation": None,
+        "notes": data.get("notes"),
+        "source_import": {
+            "gloss_hint": gloss,
+            "base_lemma": base_lemma,
+            "pattern": pattern,
+        },
+    }

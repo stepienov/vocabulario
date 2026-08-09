@@ -1,0 +1,22 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - settings
+---
+# J-10 · Theme light / dark / system
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/goto-settings.yaml
+- tapOn:
+    id: settings_section_theme
+- tapOn:
+    id: settings_theme_dark
+- tapOn:
+    id: settings_theme_light
+- tapOn:
+    id: settings_theme_system
+- tapOn:
+    id: btn_back
+- assertVisible:
+    id: tab_dashboard

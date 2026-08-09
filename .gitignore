@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.e2e.example
 *.pem
 *.p12
 *.jks
@@ -60,3 +61,13 @@ compile-out.txt
 *.tmp
 *.bak
 .DS_Store
+
+# Local scratch / probe scripts & outputs (do not commit)
+backend/_tmp_*
+backend/_import_probe.txt
+backend/_import_resolve_report.txt
+
+# Generated local test artefacts (keep on disk, not in git)
+e2e/fixtures/lang-pairs/LAST_REPORT.txt
+e2e/fixtures/lang-pairs/**/_upload.csv
+docs/inflection-shot-test-results.json

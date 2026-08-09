@@ -1,0 +1,10 @@
+maison	house
+le chat	the cat
+parler	to speak
+s'il vous plaît	please
+avoir besoin de	to need
+Bonjour.	Hello.
+aller à	to go to
+la table	the table
+eau	water
+livre	book

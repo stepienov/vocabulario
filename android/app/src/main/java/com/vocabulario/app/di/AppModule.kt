@@ -26,6 +26,10 @@ object AppModule {
     ignoreUnknownKeys = true
     isLenient = true
     coerceInputValues = true
+    encodeDefaults = true
+    // Partial updates (e.g. theme only) must not send null for unset fields —
+    // otherwise the API writes NULL into NOT NULL columns and the save fails.
+    explicitNulls = false
   }
 
   @Provides
@@ -52,10 +56,10 @@ object AppModule {
       .addInterceptor(authInterceptor)
       .addInterceptor(logging)
       .authenticator(authenticator)
-      .connectTimeout(8, TimeUnit.SECONDS)
-      .readTimeout(30, TimeUnit.SECONDS)
-      .writeTimeout(30, TimeUnit.SECONDS)
-      .callTimeout(40, TimeUnit.SECONDS)
+      .connectTimeout(15, TimeUnit.SECONDS)
+      .readTimeout(180, TimeUnit.SECONDS)
+      .writeTimeout(180, TimeUnit.SECONDS)
+      .callTimeout(200, TimeUnit.SECONDS)
       .build()
   }
 

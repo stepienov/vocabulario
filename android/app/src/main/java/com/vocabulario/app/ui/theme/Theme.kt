@@ -8,6 +8,8 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -17,11 +19,44 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vocabulario.app.R
 
-val GradeAgain = Color(0xFF8B3A3A)
+/** Brand palette from design swatches. */
+val BrandBlueLight = Color(0xFF407DC0)
+val BrandBlueDark = Color(0xFF8EC5FE)
+val BrandTeal = Color(0xFF72AEAA)
+val BrandCream = Color(0xFFFFF5DC)
+val BrandInk = Color(0xFF000000)
+
+/** Shared action colors (cancel / confirm) — both themes. */
+val ActionCancel = Color(0xFFBF557F)
+val ActionConfirm = Color(0xFF6DCF65)
+
+val GradeAgain = ActionCancel
 val GradeHard = Color(0xFFB85C5C)
 val GradeLearning = Color(0xFFC4894A)
-val GradeKnown = Color(0xFF5A9E6F)
+val GradeKnown = ActionConfirm
 val ProgressMuted = Color(0xFF6B7280)
+
+/** List tile chip palette (POS ≠ status). */
+val ChipPosLight = Color(0xFFFFF5DC)
+val ChipStatusLight = Color(0xFFCAD3BB)
+val ChipPosDark = Color(0xFF163A5C)
+val ChipStatusDark = Color(0xFF575D9A)
+
+data class VocabExtraColors(
+    val chipPosContainer: Color,
+    val chipPosOnContainer: Color,
+    val chipStatusContainer: Color,
+    val chipStatusOnContainer: Color,
+)
+
+val LocalVocabExtraColors = staticCompositionLocalOf {
+    VocabExtraColors(
+        chipPosContainer = ChipPosLight,
+        chipPosOnContainer = BrandInk,
+        chipStatusContainer = ChipStatusLight,
+        chipStatusOnContainer = BrandInk,
+    )
+}
 
 val DmSans = FontFamily(
     Font(R.font.dmsans_regular, FontWeight.Normal),
@@ -30,64 +65,71 @@ val DmSans = FontFamily(
     Font(R.font.dmsans_bold, FontWeight.Bold),
 )
 
-/** Light: Coinbase-like cool blue + soft gray canvas */
-private val Blue = Color(0xFF0052FF)
-private val BlueSoft = Color(0xFFE8F0FF)
-private val LightBg = Color(0xFFF4F5F7)
-private val LightInk = Color(0xFF0A0B0D)
-private val LightMuted = Color(0xFF6B7280)
-private val LightBorder = Color(0xFFE5E7EB)
+private val LightBg = Color(0xFFF7F8FA)
+private val LightSurface = Color(0xFFFFFFFF)
+private val LightMuted = Color(0xFF5C6670)
+private val LightBorder = Color(0xFFE2E6EA)
+private val LightPrimaryContainer = Color(0xFFD9E8F7)
 
-/** Dark: true-black layers + teal accent */
-private val Teal = Color(0xFF2DD4BF)
-private val TealContainer = Color(0xFF163A36)
 private val DarkBg = Color(0xFF000000)
-private val DarkSurface = Color(0xFF17171A)
-private val DarkSurface2 = Color(0xFF222228)
-private val DarkInk = Color(0xFFF4F4F5)
-private val DarkMuted = Color(0xFFA1A1AA)
-private val DarkBorder = Color(0xFF2E2E36)
+private val DarkSurface = Color(0xFF141618)
+private val DarkSurface2 = Color(0xFF1E2226)
+private val DarkMuted = Color(0xFFB8BFC7)
+private val DarkBorder = Color(0xFF2A3036)
+private val DarkPrimaryContainer = Color(0xFF1A3350)
 
 private val LightColors = lightColorScheme(
-    primary = Blue,
+    primary = BrandBlueLight,
     onPrimary = Color.White,
-    primaryContainer = BlueSoft,
-    onPrimaryContainer = Color(0xFF0033A0),
-    secondary = Color(0xFF2563EB),
+    primaryContainer = LightPrimaryContainer,
+    onPrimaryContainer = Color(0xFF163A5C),
+    secondary = BrandTeal,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFEFF4FF),
-    onSecondaryContainer = Color(0xFF1E3A8A),
+    secondaryContainer = Color(0xFFD8ECEB),
+    onSecondaryContainer = Color(0xFF1F3F3D),
+    tertiary = ActionConfirm,
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFD8F5D5),
+    onTertiaryContainer = Color(0xFF1B4D18),
     background = LightBg,
-    onBackground = LightInk,
-    surface = Color.White,
-    onSurface = LightInk,
-    surfaceVariant = Color(0xFFEEF0F3),
+    onBackground = BrandInk,
+    surface = LightSurface,
+    onSurface = BrandInk,
+    surfaceVariant = Color(0xFFEEF1F4),
     onSurfaceVariant = LightMuted,
     outline = LightBorder,
-    outlineVariant = Color(0xFFF0F1F3),
-    error = GradeHard,
+    outlineVariant = Color(0xFFF0F2F4),
+    error = ActionCancel,
     onError = Color.White,
+    errorContainer = Color(0xFFF6D7E3),
+    onErrorContainer = Color(0xFF5A1833),
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Teal,
-    onPrimary = Color(0xFF042F2E),
-    primaryContainer = TealContainer,
-    onPrimaryContainer = Color(0xFFCCFBF1),
-    secondary = Color(0xFF5EEAD4),
-    onSecondary = Color(0xFF042F2E),
-    secondaryContainer = Color(0xFF1F2A2A),
-    onSecondaryContainer = Color(0xFFCCFBF1),
+    primary = BrandBlueDark,
+    onPrimary = Color(0xFF0A1E33),
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = BrandCream,
+    secondary = BrandTeal,
+    onSecondary = Color(0xFF0C2423),
+    secondaryContainer = Color(0xFF1C3332),
+    onSecondaryContainer = Color(0xFFD8ECEB),
+    tertiary = ActionConfirm,
+    onTertiary = Color(0xFF0C2A0A),
+    tertiaryContainer = Color(0xFF1E4A1B),
+    onTertiaryContainer = Color(0xFFD8F5D5),
     background = DarkBg,
-    onBackground = DarkInk,
+    onBackground = BrandCream,
     surface = DarkSurface,
-    onSurface = DarkInk,
+    onSurface = BrandCream,
     surfaceVariant = DarkSurface2,
     onSurfaceVariant = DarkMuted,
     outline = DarkBorder,
-    outlineVariant = Color(0xFF1F1F24),
-    error = GradeHard,
-    onError = DarkInk,
+    outlineVariant = Color(0xFF1A1E22),
+    error = ActionCancel,
+    onError = Color.White,
+    errorContainer = Color(0xFF4A2033),
+    onErrorContainer = Color(0xFFF6D7E3),
 )
 
 private fun type(
@@ -136,10 +178,27 @@ fun VocabularioTheme(
         "light" -> false
         else -> isSystemInDarkTheme()
     }
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = AppTypography,
-        shapes = AppShapes,
-        content = content,
-    )
+    val extras = if (darkTheme) {
+        VocabExtraColors(
+            chipPosContainer = ChipPosDark,
+            chipPosOnContainer = BrandCream,
+            chipStatusContainer = ChipStatusDark,
+            chipStatusOnContainer = BrandCream,
+        )
+    } else {
+        VocabExtraColors(
+            chipPosContainer = ChipPosLight,
+            chipPosOnContainer = BrandInk,
+            chipStatusContainer = ChipStatusLight,
+            chipStatusOnContainer = BrandInk,
+        )
+    }
+    CompositionLocalProvider(LocalVocabExtraColors provides extras) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkColors else LightColors,
+            typography = AppTypography,
+            shapes = AppShapes,
+            content = content,
+        )
+    }
 }

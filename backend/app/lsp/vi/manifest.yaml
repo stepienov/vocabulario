@@ -1,0 +1,43 @@
+code: vi
+lsp_version: vi-1.0.0
+name_en: Vietnamese
+script: Latn
+rtl: false
+inflection_kind: analytic
+
+default_selected_tenses:
+  - present
+  - past
+  - future
+
+verbs:
+  tenses:
+    - { key: present, label_l2: Hiện tại, person_grid: vi_6 }
+    - { key: past, label_l2: Quá khứ, person_grid: vi_6 }
+    - { key: future, label_l2: Tương lai, person_grid: vi_6 }
+    - { key: imperative, label_l2: Mệnh lệnh, person_grid: vi_imperative }
+  non_finite:
+    - { key: infinitive, label_l2: Nguyên mẫu }
+  person_grids:
+    vi_6:
+      keys: ["toi", "ban", "no", "chung_toi", "cac_ban", "ho"]
+      labels: {}
+    vi_imperative:
+      keys: ["ban", "cac_ban"]
+      labels: {}
+  paradigm_rules: |
+    VIETNAMESE (vi) for "{lemma}":
+    - Northern standard. Tone marks required. language_specific.tones for tone info.
+
+nouns:
+  numbers: [sg, pl]
+  genders: []
+
+adjectives:
+  full_declension: false
+
+ui_labels:
+  pl:
+    present: Czas teraźniejszy
+    past: Czas przeszły
+    future: Czas przyszły

@@ -1,0 +1,61 @@
+code: es
+lsp_version: es-1.0.0
+name_en: Spanish
+script: Latn
+rtl: false
+inflection_kind: person_tense
+
+default_selected_tenses:
+  - presente
+  - preterito_indefinido
+  - preterito_imperfecto
+
+verbs:
+  tenses:
+    - { key: presente, label_l2: Presente, person_grid: latn_6 }
+    - { key: preterito_perfecto, label_l2: Pretérito perfecto, person_grid: latn_6 }
+    - { key: preterito_indefinido, label_l2: Pretérito indefinido, person_grid: latn_6 }
+    - { key: preterito_imperfecto, label_l2: Pretérito imperfecto, person_grid: latn_6 }
+    - { key: futuro_simple, label_l2: Futuro simple, person_grid: latn_6 }
+    - { key: condicional_simple, label_l2: Condicional, person_grid: latn_6 }
+    - { key: presente_subjuntivo, label_l2: Presente de subjuntivo, person_grid: latn_6 }
+    - { key: imperfecto_subjuntivo, label_l2: Imperfecto de subjuntivo, person_grid: latn_6 }
+    - { key: futuro_subjuntivo, label_l2: Futuro de subjuntivo, person_grid: latn_6 }
+    - { key: preterito_pluscuamperfecto, label_l2: Pretérito pluscuamperfecto, person_grid: latn_6 }
+    - { key: condicional_compuesto, label_l2: Condicional compuesto, person_grid: latn_6 }
+    - { key: futuro_perfecto, label_l2: Futuro perfecto, person_grid: latn_6 }
+    - { key: imperativo_afirmativo, label_l2: Imperativo afirmativo, person_grid: imperative_es }
+    - { key: imperativo_negativo, label_l2: Imperativo negativo, person_grid: imperative_es }
+  non_finite:
+    - { key: gerundio, label_l2: Gerundio }
+    - { key: participio, label_l2: Participio }
+  person_grids:
+    latn_6:
+      keys: ["yo", "tú", "él", "nosotros", "vosotros", "ellos"]
+      labels: { yo: yo, "tú": tú, "él": él, nosotros: nosotros, vosotros: vosotros, ellos: ellos }
+    imperative_es:
+      keys: ["tú", "usted", "nosotros", "vosotros", "ustedes"]
+      labels: { "tú": tú, usted: usted, nosotros: nosotros, vosotros: vosotros, ustedes: ustedes }
+  paradigm_rules: |
+    SPANISH (es) for "{lemma}":
+    - Fill all applicable tenses with real forms. Omit tenses that do not apply.
+    - Use vosotros forms for Spain Spanish; include usted/ustedes in imperative.
+    - Never use placeholders.
+
+nouns:
+  cases: []
+  numbers: [sg, pl]
+  genders: [m, f]
+
+adjectives:
+  full_declension: true
+
+ui_labels:
+  pl:
+    presente: Czas teraźniejszy
+    preterito_indefinido: Czas przeszły prosty
+    preterito_imperfecto: Czas przeszły niedokonany
+  en:
+    presente: Present
+    preterito_indefinido: Preterite
+    preterito_imperfecto: Imperfect

@@ -1,0 +1,54 @@
+# Szablon Language Spec Package (LSP) — skopiuj do backend/app/lsp/{code}/manifest.yaml
+#
+# Wersjonowanie: lsp_version = "{code}-MAJOR.MINOR.PATCH"
+
+code: xx
+lsp_version: xx-1.0.0
+name_en: Language name
+script: Latn          # Latn | Hans | Hant | Jpan | Kore | Arab | Deva | Cyrl
+rtl: false
+inflection_kind: person_tense   # person_tense | agglutinative | root_pattern | particles | analytic | none
+
+# Domyślnie zaznaczone czasy w ustawieniach użytkownika (klucze z verbs.tenses)
+default_selected_tenses:
+  - tense_key_1
+  - tense_key_2
+
+verbs:
+  tenses:
+    - key: tense_key_1
+      label_l2: "Etykieta w języku nauki"
+      person_grid: grid_name          # opcjonalnie — brak dla form bez osób
+  non_finite:
+    - key: bezokolicznik
+      label_l2: "Infinitive"
+  person_grids:
+    grid_name:
+      keys: [ja, ty, on]
+      labels:
+        ja: "ja"
+        ty: "ty"
+  paradigm_rules: |
+    Wieloliniowe reguły gramatyczne wstrzykiwane do promptu inflection.
+    Użyj {lemma} jako placeholder lematu.
+
+nouns:
+  cases: [nominative]
+  numbers: [sg, pl]
+  genders: [m, f, n]
+
+adjectives:
+  full_declension: true
+
+# Etykiety czasów w języku aplikacji (dla tense_label_lang=app_lang)
+ui_labels:
+  pl:
+    tense_key_1: "Czas przykładowy"
+  en:
+    tense_key_1: "Example tense"
+
+# Sekcje karty dla języków bez tabel czasów (zh, vi)
+card_sections:
+  - key: pinyin
+    label_l2: "Pinyin"
+    default_visible: true

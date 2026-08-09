@@ -1,0 +1,5 @@
+appId: com.vocabulario.app
+---
+# Placeholder — expand when Settings defaults need hard reset for practice suites.
+- assertVisible:
+    id: settings_logout

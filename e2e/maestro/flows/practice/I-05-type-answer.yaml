@@ -1,0 +1,58 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - practice
+  - settings
+---
+# I-05 · Type mode — input + check
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/goto-settings.yaml
+- tapOn:
+    id: settings_section_mode
+- tapOn:
+    id: settings_mode_type
+- tapOn:
+    id: btn_back
+- tapOn:
+    id: btn_learn
+- extendedWaitUntil:
+    visible:
+      id: "practice_answer_input|practice_empty_back"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: practice_answer_input
+    commands:
+      - tapOn:
+          id: practice_answer_input
+      - inputText: "house"
+      - tapOn:
+          id: practice_check
+      - extendedWaitUntil:
+          visible:
+            id: "grade_good|practice_wrong_dismiss|grade_again"
+          timeout: 20000
+      - runFlow:
+          when:
+            visible:
+              id: practice_wrong_dismiss
+          commands:
+            - tapOn:
+                id: practice_wrong_dismiss
+      - runFlow:
+          when:
+            visible:
+              id: grade_good
+          commands:
+            - tapOn:
+                id: grade_good
+- runFlow:
+    when:
+      visible:
+        id: btn_back
+    commands:
+      - tapOn:
+          id: btn_back

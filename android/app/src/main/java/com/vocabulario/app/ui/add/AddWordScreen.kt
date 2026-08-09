@@ -29,8 +29,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vocabulario.app.R
 import com.vocabulario.app.data.api.LookupCandidate
 import com.vocabulario.app.ui.card.CardDetailContent
 
@@ -45,10 +47,13 @@ fun AddWordScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Dodaj słowo") },
+                title = { Text(stringResource(R.string.add_word_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wstecz")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_back),
+                        )
                     }
                 },
             )
@@ -64,18 +69,21 @@ fun AddWordScreen(
                 OutlinedTextField(
                     value = state.query,
                     onValueChange = viewModel::onQueryChange,
-                    label = { Text("Wpisz słowo") },
+                    label = { Text(stringResource(R.string.add_word_hint)) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                 )
                 TextButton(onClick = viewModel::lookup) {
-                    Text("OK")
+                    Text(stringResource(R.string.action_ok))
                 }
             }
 
             state.source?.let {
                 Spacer(Modifier.height(8.dp))
-                Text("Źródło: $it", style = MaterialTheme.typography.labelMedium)
+                Text(
+                    stringResource(R.string.add_word_source, it),
+                    style = MaterialTheme.typography.labelMedium,
+                )
             }
 
             if (state.loading) {
@@ -101,7 +109,9 @@ fun AddWordScreen(
                     enrichmentStatus = card.enrichment_status,
                     enrichmentError = card.enrichment_error,
                 )
-                TextButton(onClick = viewModel::clearCard) { Text("Schowaj kartę") }
+                TextButton(onClick = viewModel::clearCard) {
+                    Text(stringResource(R.string.add_word_hide))
+                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -136,7 +146,10 @@ private fun CandidateRow(
                 candidate.pos?.let { Text(it, style = MaterialTheme.typography.labelSmall) }
             }
             IconButton(onClick = onAdd) {
-                Icon(Icons.Default.Add, contentDescription = "Dodaj")
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = stringResource(R.string.action_add),
+                )
             }
         }
     }

@@ -1,0 +1,22 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - settings
+---
+# J-02 · Mode radios choice / type / flash persist UI
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/goto-settings.yaml
+- tapOn:
+    id: settings_section_mode
+- tapOn:
+    id: settings_mode_type
+- assertVisible:
+    id: settings_tolerate_typos
+- tapOn:
+    id: settings_mode_flash
+- tapOn:
+    id: settings_mode_choice
+- tapOn:
+    id: btn_back

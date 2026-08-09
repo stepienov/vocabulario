@@ -1,0 +1,21 @@
+appId: com.vocabulario.app
+tags:
+  - home
+  - ai-mock
+---
+# E-01 · Search happy — needs LLM_MOCK=true (or live API).
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- tapOn:
+    id: tab_add
+- tapOn:
+    id: search_input
+- eraseText
+- inputText: "casa"
+- tapOn:
+    id: search_submit
+- extendedWaitUntil:
+    visible:
+      id: "search_result|candidate_add"
+    timeout: 60000

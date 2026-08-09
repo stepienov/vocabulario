@@ -1,0 +1,48 @@
+code: ja
+lsp_version: ja-1.0.0
+name_en: Japanese
+script: Jpan
+rtl: false
+inflection_kind: conjugation_class
+
+default_selected_tenses:
+  - jisho
+  - masu
+  - te
+
+verbs:
+  tenses:
+    - { key: jisho, label_l2: 辞書形, person_grid: ja_non_finite }
+    - { key: masu, label_l2: ます形, person_grid: ja_6 }
+    - { key: te, label_l2: て形, person_grid: ja_non_finite }
+    - { key: ta, label_l2: た形, person_grid: ja_non_finite }
+    - { key: nai, label_l2: ない形, person_grid: ja_non_finite }
+    - { key: potential, label_l2: 可能形, person_grid: ja_non_finite }
+    - { key: imperative, label_l2: 命令形, person_grid: ja_non_finite }
+  non_finite:
+    - { key: te, label_l2: て形 }
+    - { key: ta, label_l2: た形 }
+  person_grids:
+    ja_6:
+      keys: ["watashi", "anata", "kare", "watashitachi", "anatatachi", "karera"]
+      labels: {}
+    ja_non_finite:
+      keys: ["form"]
+      labels: { form: 形 }
+  paradigm_rules: |
+    JAPANESE (ja) for "{lemma}":
+    - Include kana readings. Optional romaji in language_specific.romaji.
+    - Godan/Ichidan/irregular. Never use placeholders.
+
+nouns:
+  numbers: [sg, pl]
+  genders: []
+
+adjectives:
+  full_declension: true
+
+ui_labels:
+  pl:
+    jisho: Forma słownikowa
+    masu: Forma grzecznościowa
+    te: Forma て

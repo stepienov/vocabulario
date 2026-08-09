@@ -25,7 +25,6 @@ from app.schemas import (
     UserResponse,
     UserSettingsResponse,
     UserSettingsUpdate,
-    UserUpdate,
 )
 from app.services.llm import verify_google_id_token
 
@@ -124,19 +123,6 @@ async def get_me(user: User = Depends(get_current_user)):
     return user
 
 
-@me_router.put("", response_model=UserResponse)
-async def update_me(
-    body: UserUpdate,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(user, field, value)
-    await db.commit()
-    await db.refresh(user)
-    return user
-
-
 @me_router.get("/settings", response_model=UserSettingsResponse)
 async def get_settings(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     settings = await _ensure_settings(db, user.id)
@@ -151,7 +137,7 @@ async def update_settings(
     db: AsyncSession = Depends(get_db),
 ):
     settings = await _ensure_settings(db, user.id)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    for field, value in body.model_dump(exclude_unset=True, exclude_none=True).items():
         setattr(settings, field, value)
     await db.commit()
     await db.refresh(settings)
@@ -184,10 +170,11 @@ async def create_profile(
 
     profile = LanguageProfile(
         user_id=user.id,
-        native_lang=body.native_lang.lower(),
-        learning_lang=body.learning_lang.lower(),
+        app_lang=body.app_lang,
+        learning_lang=body.learning_lang,
         cefr_level=body.cefr_level,
         selected_tenses=body.selected_tenses,
+        tense_label_lang=body.tense_label_lang,
         is_active=True,
     )
     db.add(profile)

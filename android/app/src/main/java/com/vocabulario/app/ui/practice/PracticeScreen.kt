@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +22,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,10 +41,24 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vocabulario.app.R
+import com.vocabulario.app.ui.card.CardActivitySpinner
+import com.vocabulario.app.ui.card.CardCorrectionReportSheet
+import com.vocabulario.app.ui.card.CardCorrectionResultDialog
+import com.vocabulario.app.ui.card.CardHistorySheet
+import com.vocabulario.app.ui.card.CardSelfEditSheet
+import com.vocabulario.app.ui.card.CardSelfEditWarningDialog
+import com.vocabulario.app.ui.card.CorrectionActivityColor
+import com.vocabulario.app.ui.card.cardActivityStatusLabel
+import com.vocabulario.app.ui.TestTags
+import com.vocabulario.app.data.langDisplayName
 import com.vocabulario.app.ui.card.FlashcardBackContent
 import com.vocabulario.app.ui.components.AddToListSheet
 import com.vocabulario.app.ui.components.AppButtonShape
@@ -51,6 +70,7 @@ import com.vocabulario.app.ui.components.GradeRow
 import com.vocabulario.app.ui.components.PracticeProgressBar
 import com.vocabulario.app.ui.components.PromptCard
 import com.vocabulario.app.ui.home.listNameConflictMessage
+import com.vocabulario.app.ui.theme.GradeAgain
 import com.vocabulario.app.ui.theme.GradeKnown
 import kotlinx.coroutines.delay
 
@@ -70,6 +90,13 @@ fun PracticeScreen(
         }
     }
 
+    LaunchedEffect(state.showWrongToast) {
+        if (state.showWrongToast) {
+            delay(1100)
+            viewModel.dismissWrongToast()
+        }
+    }
+
     val item = state.queue.getOrNull(state.currentIndex)
     val direction = item?.direction ?: "l2_to_l1"
     val prompt = item?.let {
@@ -83,13 +110,13 @@ fun PracticeScreen(
         val (head, bridge, tail) = if (direction == "l2_to_l1") {
             Triple(
                 wrong.text.ifBlank { wrong.gloss ?: "?" },
-                "to po hiszpańsku",
+                stringResource(R.string.practice_bridge_l2, langDisplayName(state.learningLang)),
                 wrong.lemma_l2 ?: "?",
             )
         } else {
             Triple(
                 wrong.lemma_l2 ?: wrong.text,
-                "oznacza",
+                stringResource(R.string.practice_bridge_means),
                 wrong.gloss ?: "?",
             )
         }
@@ -99,9 +126,9 @@ fun PracticeScreen(
             containerColor = scheme.surface,
             title = {
                 Text(
-                    "Błąd",
+                    stringResource(R.string.practice_error_title),
                     fontWeight = FontWeight.Bold,
-                    color = scheme.onSurface,
+                    color = GradeAgain,
                 )
             },
             text = {
@@ -135,14 +162,30 @@ fun PracticeScreen(
                 Button(
                     onClick = viewModel::dismissWrongModal,
                     shape = AppButtonShape,
-                ) { Text("Powrót") }
+                    modifier = Modifier.testTag(TestTags.PRACTICE_WRONG_DISMISS),
+                ) { Text(stringResource(R.string.action_return)) }
             },
             dismissButton = {},
         )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        AppScreenScaffold(title = "Ćwicz", onBack = onBack) { paddingModifier ->
+        AppScreenScaffold(
+            title = stringResource(R.string.practice_title),
+            onBack = onBack,
+            actions = {
+                IconButton(
+                    onClick = viewModel::undo,
+                    enabled = state.canUndo,
+                    modifier = Modifier.testTag(TestTags.BTN_PRACTICE_UNDO),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Undo,
+                        contentDescription = stringResource(R.string.cd_undo),
+                    )
+                }
+            },
+        ) { paddingModifier ->
             Column(modifier = paddingModifier.fillMaxSize()) {
                 if (!state.loading && !state.emptyQueue && item != null) {
                     PracticeProgressBar(progress)
@@ -155,13 +198,21 @@ fun PracticeScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(state.error!!, color = MaterialTheme.colorScheme.error)
                             Spacer(Modifier.height(16.dp))
-                            Button(onClick = { viewModel.loadQueue() }, shape = AppButtonShape) { Text("Spróbuj ponownie") }
+                            Button(
+                                onClick = { viewModel.loadQueue() },
+                                shape = AppButtonShape,
+                                modifier = Modifier.testTag(TestTags.PRACTICE_RETRY),
+                            ) { Text(stringResource(R.string.action_retry)) }
                         }
                     }
                     state.emptyQueue -> {
-                        EmptyState("Brak kart do ćwiczenia", "Dodaj słówka z ekranu głównego")
+                        EmptyState(stringResource(R.string.practice_empty), stringResource(R.string.practice_empty_hint))
                         Spacer(Modifier.height(16.dp))
-                        Button(onClick = onBack, modifier = Modifier.fillMaxWidth(), shape = AppButtonShape) { Text("Wróć") }
+                        Button(
+                            onClick = onBack,
+                            modifier = Modifier.fillMaxWidth().testTag(TestTags.PRACTICE_EMPTY_BACK),
+                            shape = AppButtonShape,
+                        ) { Text(stringResource(R.string.action_back)) }
                     }
                     item == null -> BoxCentered { CircularProgressIndicator() }
                     state.answerMode == AnswerMode.CHOICE && state.loadingChoices -> BoxCentered { CircularProgressIndicator() }
@@ -182,10 +233,10 @@ fun PracticeScreen(
                                             Spacer(Modifier.height(24.dp))
                                             Button(
                                                 onClick = viewModel::revealFlashcard,
-                                                modifier = Modifier.fillMaxWidth().height(52.dp),
+                                                modifier = Modifier.fillMaxWidth().height(52.dp).testTag(TestTags.PRACTICE_SHOW_ANSWER),
                                                 shape = AppButtonShape,
                                             ) {
-                                                Text("Pokaż odpowiedź", style = MaterialTheme.typography.titleMedium)
+                                                Text(stringResource(R.string.practice_show_answer), style = MaterialTheme.typography.titleMedium)
                                             }
                                         }
                                     }
@@ -198,21 +249,27 @@ fun PracticeScreen(
                                         ) {
                                             items(state.choices) { choice ->
                                                 val disabled = choice.text in state.disabledChoiceTexts
-                                                val subtitle = when {
-                                                    !disabled -> null
-                                                    direction == "l2_to_l1" -> choice.lemma_l2
-                                                    else -> choice.gloss
-                                                }
+                                                val tileLemma = choice.lemma_l2 ?: choice.text
+                                                val tileGloss = choice.gloss
+                                                    ?: if (direction == "l2_to_l1") choice.text else null
+                                                val displayText = if (disabled) tileLemma else choice.text
+                                                val displayGloss = if (disabled) tileGloss else null
+                                                val showAdd = disabled &&
+                                                    !choice.in_learning &&
+                                                    !state.learningLemmas.contains(tileLemma.trim().lowercase())
                                                 ChoiceTile(
-                                                    text = choice.text,
+                                                    text = displayText,
                                                     selected = false,
                                                     isCorrect = null,
                                                     enabled = !disabled && state.phase == PracticePhase.ANSWERING,
                                                     dimmed = disabled,
-                                                    gloss = subtitle,
+                                                    gloss = displayGloss,
                                                     showActions = disabled,
-                                                    canAddLearning = !choice.in_learning,
-                                                    onAddLearning = { viewModel.addWrongToLearning(choice) },
+                                                    onAddLearning = if (showAdd) {
+                                                        { viewModel.openAddWrongChoice(choice) }
+                                                    } else {
+                                                        null
+                                                    },
                                                     onClick = { viewModel.submitChoice(choice) },
                                                 )
                                             }
@@ -225,8 +282,8 @@ fun PracticeScreen(
                                             OutlinedTextField(
                                                 value = state.typedAnswer,
                                                 onValueChange = viewModel::onTypedAnswerChange,
-                                                placeholder = { Text("Twoja odpowiedź") },
-                                                modifier = Modifier.fillMaxWidth(),
+                                                placeholder = { Text(stringResource(R.string.practice_your_answer)) },
+                                                modifier = Modifier.fillMaxWidth().testTag(TestTags.PRACTICE_ANSWER_INPUT),
                                                 singleLine = true,
                                                 shape = AppButtonShape,
                                                 colors = OutlinedTextFieldDefaults.colors(
@@ -239,10 +296,10 @@ fun PracticeScreen(
                                             Spacer(Modifier.height(16.dp))
                                             Button(
                                                 onClick = viewModel::submitTyped,
-                                                modifier = Modifier.fillMaxWidth().height(52.dp),
+                                                modifier = Modifier.fillMaxWidth().height(52.dp).testTag(TestTags.PRACTICE_CHECK),
                                                 enabled = state.typedAnswer.isNotBlank(),
                                                 shape = AppButtonShape,
-                                            ) { Text("Sprawdź", style = MaterialTheme.typography.titleMedium) }
+                                            ) { Text(stringResource(R.string.action_check), style = MaterialTheme.typography.titleMedium) }
                                         }
                                     }
                                 }
@@ -263,20 +320,20 @@ fun PracticeScreen(
                                         when {
                                             state.typoWarning -> {
                                                 Text(
-                                                    "Uważaj na pisownię!",
+                                                    stringResource(R.string.practice_spelling_warn),
                                                     style = MaterialTheme.typography.titleMedium,
                                                     fontWeight = FontWeight.SemiBold,
                                                     color = com.vocabulario.app.ui.theme.GradeLearning,
                                                 )
                                                 Text(
-                                                    "Wpisałeś ${state.typedAnswer} — prawidłowa pisownia: ${state.expectedAnswer ?: "?"}",
+                                                    stringResource(R.string.practice_spelling_detail, state.typedAnswer, state.expectedAnswer ?: "?"),
                                                     style = MaterialTheme.typography.bodyMedium,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
                                             state.lastCorrect == false && state.answerMode == AnswerMode.TYPE -> {
                                                 Text(
-                                                    "Poprawna odpowiedź: ${state.expectedAnswer ?: "?"}",
+                                                    stringResource(R.string.practice_correct_answer, state.expectedAnswer ?: "?"),
                                                     style = MaterialTheme.typography.titleMedium,
                                                     fontWeight = FontWeight.SemiBold,
                                                 )
@@ -295,9 +352,52 @@ fun PracticeScreen(
                                             showConjugation = state.showConjugation,
                                             conjugationExpandedDefault = state.conjugationExpandedDefault,
                                             relatedWordsExpandedDefault = state.relatedWordsExpandedDefault,
+                                            profile = state.activeProfile,
                                             onAddRelated = viewModel::openAddRelated,
+                                            learningLemmas = state.learningLemmas,
                                         )
                                         Spacer(Modifier.height(8.dp))
+                                    }
+                                    val activityLabel = cardActivityStatusLabel(item.card_activity_status)
+                                    if (activityLabel != null) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            CardActivitySpinner(color = CorrectionActivityColor)
+                                            Spacer(Modifier.padding(horizontal = 8.dp))
+                                            Text(
+                                                activityLabel,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = CorrectionActivityColor,
+                                            )
+                                        }
+                                        Spacer(Modifier.height(8.dp))
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        TextButton(
+                                            onClick = viewModel::openCorrection,
+                                            enabled = item.card_activity_status.isNullOrBlank(),
+                                            modifier = Modifier.testTag(TestTags.BTN_FIX_CARD),
+                                        ) {
+                                            Text(stringResource(R.string.correction_fix_card))
+                                        }
+                                        if (item.has_content_changes) {
+                                            TextButton(
+                                                onClick = viewModel::openCardHistory,
+                                                modifier = Modifier.testTag(TestTags.BTN_CARD_HISTORY),
+                                            ) {
+                                                Text(
+                                                    stringResource(R.string.card_history_title),
+                                                    color = CorrectionActivityColor,
+                                                )
+                                            }
+                                        }
                                     }
                                     Column(
                                         modifier = Modifier
@@ -328,7 +428,11 @@ fun PracticeScreen(
                 pickListOpen = state.pickListOpen,
                 showCreateListPrompt = state.showCreateListPrompt,
                 createListName = state.createListName,
-                createNameError = listNameConflictMessage(state.lists, state.createListName),
+                createNameError = listNameConflictMessage(
+                    LocalContext.current,
+                    state.lists,
+                    state.createListName,
+                ),
                 onDismiss = viewModel::dismissAddSheet,
                 onLearning = viewModel::addRelatedToLearning,
                 onOther = viewModel::openOtherLists,
@@ -336,6 +440,8 @@ fun PracticeScreen(
                 onCreateNameChange = viewModel::onCreateListNameChange,
                 onCreateAndAdd = viewModel::createListAndAddRelated,
                 onShowCreatePrompt = viewModel::openCreateListPrompt,
+                onBackFromCreatePrompt = viewModel::backFromCreateListPrompt,
+                onBackFromListPicker = viewModel::backFromListPicker,
             )
         }
 
@@ -352,7 +458,7 @@ fun PracticeScreen(
                 tonalElevation = 2.dp,
             ) {
                 Text(
-                    "Dobrze!",
+                    stringResource(R.string.practice_well_done),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
                     color = GradeKnown,
@@ -361,6 +467,64 @@ fun PracticeScreen(
                 )
             }
         }
+
+        AnimatedVisibility(
+            visible = state.showWrongToast,
+            enter = fadeIn(tween(280)) + scaleIn(initialScale = 0.92f, animationSpec = tween(320)),
+            exit = fadeOut(tween(450)),
+            modifier = Modifier.align(Alignment.Center),
+        ) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                shadowElevation = 8.dp,
+                tonalElevation = 2.dp,
+            ) {
+                Text(
+                    stringResource(R.string.practice_error_title),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = GradeAgain,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 20.dp),
+                )
+            }
+        }
+
+        CardCorrectionReportSheet(
+            visible = state.correctionOpen,
+            submitting = state.correctionSubmitting,
+            quotaRemaining = state.correctionQuotaRemaining,
+            onDismiss = viewModel::dismissCorrectionReport,
+            onSubmit = viewModel::submitCorrection,
+            onSelfEdit = viewModel::openSelfEditFromReport,
+        )
+        CardCorrectionResultDialog(
+            correction = state.correctionResults.active?.correction,
+            cardLemma = state.correctionResults.active?.cardLemma ?: "—",
+            onDismiss = viewModel::dismissCorrectionResult,
+            onEditSelf = viewModel::openSelfEditFromResult,
+        )
+        CardSelfEditSheet(
+            card = if (state.selfEditWarningOpen) null else state.selfEditCard,
+            onDismiss = viewModel::dismissSelfEdit,
+            onSave = viewModel::saveSelfEdit,
+        )
+        CardSelfEditWarningDialog(
+            visible = state.selfEditWarningOpen,
+            lemma = state.selfEditCard?.lemma_l2 ?: "—",
+            issues = state.selfEditValidationIssues,
+            onConfirm = viewModel::confirmSelfEditWarning,
+            onRevert = viewModel::revertSelfEditWarning,
+        )
+        CardHistorySheet(
+            visible = state.historyOpen,
+            loading = state.historyLoading,
+            restoring = state.historyRestoring,
+            events = state.historyEvents,
+            onDismiss = viewModel::dismissCardHistory,
+            onRestore = viewModel::restoreFromHistory,
+        )
     }
 }
 

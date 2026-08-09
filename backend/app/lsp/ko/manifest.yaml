@@ -1,0 +1,43 @@
+code: ko
+lsp_version: ko-1.0.0
+name_en: Korean
+script: Hang
+rtl: false
+inflection_kind: agglutinative
+
+default_selected_tenses:
+  - present
+  - past
+  - future
+
+verbs:
+  tenses:
+    - { key: present, label_l2: 현재, person_grid: ko_6 }
+    - { key: past, label_l2: 과거, person_grid: ko_6 }
+    - { key: future, label_l2: 미래, person_grid: ko_6 }
+    - { key: imperative, label_l2: 명령, person_grid: ko_imperative }
+  non_finite:
+    - { key: base, label_l2: 어간 }
+  person_grids:
+    ko_6:
+      keys: ["jeo", "neo", "geu", "uri", "neohui", "geudeul"]
+      labels: {}
+    ko_imperative:
+      keys: ["neo", "uri"]
+      labels: {}
+  paradigm_rules: |
+    KOREAN (ko) for "{lemma}":
+    - Honorific levels in language_specific if relevant. No placeholders.
+
+nouns:
+  numbers: [sg, pl]
+  genders: []
+
+adjectives:
+  full_declension: false
+
+ui_labels:
+  pl:
+    present: Czas teraźniejszy
+    past: Czas przeszły
+    future: Czas przyszły

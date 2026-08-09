@@ -1,0 +1,703 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <string name="app_name">Vocabulario</string>
+
+    <string name="action_sort">Sắp xếp</string>
+
+    <string name="action_filter">Lọc</string>
+
+    <string name="action_filter_active">Lọc · %1$d</string>
+
+    <string name="action_clear_filters">Xóa bộ lọc</string>
+
+    <string name="action_clear_all">Xóa tất cả</string>
+
+    <string name="action_apply">Áp dụng</string>
+
+    <string name="list_words_meta">%1$d từ</string>
+
+    <string name="list_filter_empty">Không có từ nào phù hợp với bộ lọc</string>
+
+    <string name="sort_title">Sắp xếp</string>
+
+    <string name="sort_lemma_asc">A → Z</string>
+
+    <string name="sort_lemma_desc">Z → A</string>
+
+    <string name="sort_pos">Thành phần ngữ pháp</string>
+
+    <string name="sort_newest">Mới nhất trước</string>
+
+    <string name="sort_oldest">Cũ nhất trước</string>
+
+    <string name="sort_status">Trạng thái thẻ</string>
+
+    <string name="filter_title">Bộ lọc</string>
+
+    <string name="filter_section_pos">Thành phần ngữ pháp</string>
+
+    <string name="filter_section_state">Trạng thái thẻ</string>
+
+    <string name="filter_pos_unknown">Không có thành phần ngữ pháp</string>
+
+    <string name="status_review">xem lại</string>
+
+    <string name="action_undo">Hoàn tác</string>
+
+    <string name="cd_undo">Hoàn tác điểm số cuối</string>
+
+    <string name="action_cancel">Hủy</string>
+
+    <string name="action_ok">Đồng ý</string>
+
+    <string name="action_back">Quay lại</string>
+
+    <string name="action_delete">Xóa</string>
+
+    <string name="action_move">Di chuyển</string>
+
+    <string name="action_learn">Học</string>
+
+    <string name="action_confirm">Xác nhận</string>
+
+    <string name="action_create">Tạo</string>
+
+    <string name="action_import">Nhập</string>
+
+    <string name="action_close">Đóng</string>
+
+    <string name="action_save">Lưu</string>
+
+    <string name="action_reveal">Hiện</string>
+
+    <string name="action_add">Thêm</string>
+
+    <string name="action_search">Tìm kiếm</string>
+
+    <string name="action_logout">Đăng xuất</string>
+
+    <string name="action_retry">Thử lại</string>
+
+    <string name="action_check">Kiểm tra</string>
+
+    <string name="action_return">Quay lại</string>
+
+    <string name="tab_dashboard">trang chủ</string>
+
+    <string name="tab_add">thêm</string>
+
+    <string name="tab_lists">danh sách</string>
+
+    <string name="auth_login_title">Chào mừng trở lại</string>
+
+    <string name="auth_register_title">Tạo tài khoản</string>
+
+    <string name="auth_login">Đăng nhập</string>
+
+    <string name="auth_register">Đăng ký</string>
+
+    <string name="auth_google">Tiếp tục với Google</string>
+
+    <string name="auth_email">Email</string>
+
+    <string name="auth_password">Mật khẩu</string>
+
+    <string name="auth_tagline">Học từ vựng theo tốc độ của bạn</string>
+
+    <string name="auth_password_hint">Tối thiểu 8 ký tự</string>
+
+    <string name="auth_have_account">Tôi đã có tài khoản</string>
+
+    <string name="onboarding_title">Cài đặt học tập</string>
+
+    <string name="onboarding_subtitle">Chọn cặp ngôn ngữ, cấp độ CEFR và thì động từ.</string>
+
+    <string name="onboarding_native">Ngôn ngữ ứng dụng</string>
+
+    <string name="onboarding_learning">Ngôn ngữ học tập</string>
+
+    <string name="onboarding_start">Bắt đầu</string>
+
+    <string name="onboarding_cefr">Cấp độ CEFR</string>
+
+    <string name="onboarding_tenses">Thì động từ</string>
+
+    <string name="settings_title">Cài đặt</string>
+
+
+    <string name="settings_native_lang">Ngôn ngữ ứng dụng</string>
+    <string name="settings_tense_labels">Nhãn thì</string>
+    <string name="settings_tense_labels_app">Theo ngôn ngữ ứng dụng</string>
+    <string name="settings_tense_labels_learning">Theo ngôn ngữ học</string>
+
+
+    <string name="settings_learning_lang">Ngôn ngữ học tập</string>
+
+    <string name="settings_langs_hint">Ngôn ngữ ứng dụng là ngôn ngữ của giao diện và bản dịch thẻ. Ngôn ngữ học tập là ngôn ngữ bạn học.</string>
+
+    <string name="settings_theme">Chủ đề</string>
+
+    <string name="settings_mode">Chế độ học</string>
+
+    <string name="settings_group_study">HỌC TẬP</string>
+
+    <string name="settings_group_general">CHUNG</string>
+
+    <string name="settings_mode_choice">Quiz</string>
+
+    <string name="settings_mode_type">Gõ từ</string>
+
+    <string name="settings_mode_flash">Thẻ flash</string>
+
+    <string name="settings_tolerate_typos">Cho phép lỗi chính tả nhỏ</string>
+
+    <string name="settings_tolerate_typos_sub">Chính tả và dấu</string>
+
+    <string name="settings_direction">Hướng học</string>
+
+    <string name="settings_direction_first">%1$s trước</string>
+
+    <string name="settings_direction_random">Ngẫu nhiên</string>
+
+    <string name="settings_card_layout">Bố cục thẻ</string>
+
+    <string name="settings_card_layout_sub">Những gì bạn thấy sau câu trả lời</string>
+
+    <string name="settings_examples">Câu ví dụ</string>
+
+    <string name="settings_usages">Cách sử dụng</string>
+
+    <string name="settings_periphrases">Cách diễn đạt</string>
+
+    <string name="settings_syn_ant">Từ đồng nghĩa và trái nghĩa</string>
+
+    <string name="settings_conjugation">Chia động từ</string>
+
+    <string name="settings_all_tenses">Tất cả các thì</string>
+
+    <string name="settings_limits">Giới hạn</string>
+
+    <string name="settings_new_limit">Giới hạn từ mới hàng ngày</string>
+
+    <string name="settings_new_per_day">%1$d từ mới / ngày</string>
+
+    <string name="settings_theme_system">Mặc định hệ thống</string>
+
+    <string name="settings_languages">Ngôn ngữ</string>
+
+    <string name="settings_cefr_known">Cấp độ trong việc học ngôn ngữ</string>
+
+    <string name="settings_label">Cài đặt</string>
+
+    <string name="profile_title">Hồ sơ</string>
+
+    <string name="profile_new_pair">Cặp mới</string>
+
+    <string name="profile_pairs">Cặp ngôn ngữ của bạn</string>
+
+    <string name="profile_active">Đang hoạt động</string>
+
+    <string name="profile_activate">Kích hoạt</string>
+
+    <string name="profile_level">Cấp độ: %1$s</string>
+
+    <string name="profile_cefr_active">CEFR (hồ sơ đang hoạt động)</string>
+
+
+    <string name="profile_tenses">Thì động từ</string>
+
+    <string name="practice_title">Thực hành</string>
+
+    <string name="practice_show_answer">Hiện câu trả lời</string>
+
+    <string name="practice_error_title">Sai</string>
+
+    <string name="practice_bridge_l2">trong %1$s là</string>
+
+    <string name="practice_bridge_means">có nghĩa là</string>
+
+    <string name="practice_empty">Không có thẻ để thực hành</string>
+
+    <string name="practice_empty_hint">Thêm từ từ màn hình chính</string>
+
+    <string name="practice_your_answer">Câu trả lời của bạn</string>
+
+    <string name="practice_spelling_warn">Kiểm tra chính tả của bạn!</string>
+
+    <string name="practice_spelling_detail">Bạn đã gõ %1$s — chính tả đúng: %2$s</string>
+
+    <string name="practice_correct_answer">Câu trả lời đúng: %1$s</string>
+
+    <string name="grade_again">Làm lại</string>
+
+    <string name="grade_hard">Khó</string>
+
+    <string name="grade_good">Tốt</string>
+
+    <string name="grade_easy">Dễ</string>
+
+    <string name="creating_card">Đang tạo thẻ…</string>
+
+    <string name="creating_card_failed">Không thể chuẩn bị thẻ</string>
+
+    <string name="list_learning">Đang học</string>
+
+    <string name="list_pending">Đang chờ</string>
+
+    <string name="offline_banner_title">Bạn đang ngoại tuyến</string>
+
+    <string name="offline_banner_body">Các từ đã thêm sẽ vào danh sách &quot;Đang chờ&quot; và sẽ được tra cứu khi bạn trực tuyến trở lại.</string>
+
+    <string name="offline_search_hint">Nhập một từ</string>
+
+    <string name="import_online_only">Nhập chỉ khả dụng khi trực tuyến.</string>
+
+    <string name="offline_lookup_queued">Đã thêm vào &quot;Đang chờ&quot; — tra cứu khi bạn trực tuyến trở lại.</string>
+
+    <string name="offline_lookup_duplicate">Từ đó đã đang chờ trong &quot;Đang chờ&quot;.</string>
+
+    <string name="status_awaiting_network">Đang chờ mạng</string>
+
+    <string name="list_other">Danh sách khác</string>
+
+    <string name="list_new">Danh sách mới</string>
+
+    <string name="list_rename">Đổi tên</string>
+
+    <string name="list_move_all">Di chuyển tất cả</string>
+
+    <string name="list_empty">Danh sách trống</string>
+
+    <string name="list_delete_selected">Xóa</string>
+
+    <string name="list_move_to">Di chuyển đến danh sách</string>
+
+    <string name="list_name_hint">Tên</string>
+
+    <string name="list_name_full_hint">Tên danh sách</string>
+
+    <string name="list_pick">Chọn một danh sách</string>
+
+    <string name="list_pick_target">Chọn danh sách đích</string>
+
+    <string name="list_create_and_add">Tạo và thêm</string>
+
+    <string name="list_delete_confirm_title">Xóa danh sách?</string>
+
+    <string name="list_delete_confirm_body">Danh sách “%1$s” và các từ của nó sẽ bị xóa.</string>
+
+    <string name="list_move_word">Di chuyển từ vào danh sách</string>
+
+    <string name="list_delete_word_confirm">Xóa từ này?</string>
+
+    <string name="list_delete_selected_title">Xóa đã chọn?</string>
+
+    <string name="list_delete_selected_body">Bạn sẽ xóa %1$d từ khỏi danh sách.</string>
+
+    <string name="list_create_move_all">Tạo một danh sách và di chuyển tất cả các từ vào đó.</string>
+
+    <string name="list_create_move_sel">Tạo một danh sách và di chuyển các từ đã chọn vào đó.</string>
+
+    <string name="list_create_move_one">Không có danh sách khác — tạo một cái và từ sẽ được di chuyển vào đó.</string>
+
+    <string name="import_from_file">Nhập từ tệp</string>
+
+    <string name="import_paste">Dán văn bản</string>
+
+    <string name="import_paste_hint">Dán văn bản…</string>
+
+    <string name="import_progress">đang nhập từ</string>
+
+    <string name="import_add_file">Thêm tệp</string>
+
+    <string name="import_other_file">Chọn tệp khác</string>
+
+    <string name="import_how">Cách nhập?</string>
+
+    <string name="import_vocab_mode">Thẻ Vocabulario</string>
+
+    <string name="import_preserve_mode">Giữ nội dung thẻ flashcard của tôi</string>
+
+    <string name="import_vocab_hint">Thẻ Vocabulario: tốt nhất cho các từ đơn — tự động tạo với nghĩa, ví dụ, hình thức, cách diễn đạt, từ đồng nghĩa và trái nghĩa.</string>
+
+    <string name="import_invalid_title">Từ không hợp lệ</string>
+
+    <string name="import_file_errors">Tệp có lỗi — kiểm tra lại.</string>
+
+    <string name="import_no_cards">Không có thẻ — hủy hoặc sửa nguồn</string>
+
+    <string name="import_no_valid">Không có từ hợp lệ — hủy hoặc sửa nguồn</string>
+
+    <string name="import_empty_hint">Nhập một từ hoặc nhập danh sách (CSV/TXT/apkg)</string>
+
+    <string name="import_file_label">Tệp: \'%1$s\'</string>
+
+    <string name="section_meanings">NGHĨA</string>
+
+    <string name="section_synonyms">ĐỒNG NGHĨA</string>
+
+    <string name="section_syn_ant">ĐỒNG NGHĨA &amp;amp; TRÁI NGHĨA</string>
+
+    <string name="section_antonyms">TRÁI NGHĨA</string>
+
+    <string name="section_antonyms_title">Trái nghĩa</string>
+
+    <string name="section_conjugation">HÌNH THỨC</string>
+
+    <string name="section_periphrases">CÁCH DIỄN ĐẠT</string>
+
+    <string name="section_usages">ví dụ sử dụng</string>
+
+    <string name="home_search_hint">Tìm một từ…</string>
+
+    <string name="home_due_now">Sẵn sàng ôn tập ngay</string>
+
+    <string name="home_new_today">Từ mới học hôm nay</string>
+
+    <string name="home_reviewed_today">Đã ôn tập hôm nay</string>
+
+    <string name="home_learning_now">Đang học</string>
+
+    <string name="home_new_left">Còn lại để học</string>
+
+    <string name="home_mastered">Đã học đến nay</string>
+
+    <string name="home_forecast_title">Ôn tập trong những ngày tới</string>
+
+    <string name="home_words_count">%1$d từ</string>
+
+    <string name="home_new_words_count">%1$d từ mới</string>
+
+    <string name="new_list_cd">Danh sách mới</string>
+
+    <string name="new_cards_per_day">%1$d / ngày</string>
+
+    <string name="new_cards_unlimited">Không giới hạn</string>
+
+    <string name="cd_settings">Cài đặt</string>
+
+    <string name="cd_play">Chơi</string>
+
+    <string name="cd_on_list">Đã có trong danh sách</string>
+
+    <string name="cd_delete">Xóa</string>
+
+    <string name="cd_move">Di chuyển</string>
+
+    <string name="cd_selected">Đã chọn</string>
+
+    <string name="cd_list_options">Tùy chọn danh sách</string>
+
+    <string name="status_error">lỗi</string>
+
+    <string name="status_new">mới</string>
+
+    <string name="status_learning">đang học</string>
+
+    <string name="status_mastered">đã học</string>
+
+    <string name="kind_lemma">từ</string>
+
+    <string name="kind_phrase">cụm từ</string>
+
+    <string name="kind_construction">cấu trúc</string>
+
+    <string name="kind_sentence">câu</string>
+
+    <string name="kind_other">khác</string>
+
+    <string name="no_meanings">Không có nghĩa</string>
+
+    <string name="add_word_title">Thêm từ</string>
+
+    <string name="add_word_hint">Nhập một từ</string>
+
+    <string name="add_word_source">Nguồn: %1$s</string>
+
+    <string name="add_word_hide">Ẩn thẻ</string>
+
+    <string name="packs_title">Danh sách</string>
+
+    <string name="packs_subtitle">Gói từ đã chuẩn bị sẵn</string>
+
+    <string name="learning_back_list">Quay lại danh sách</string>
+
+    <string name="card_preparing">Đang chuẩn bị thẻ đầy đủ trong nền — quay lại sau.</string>
+
+    <string name="card_headword">Từ chính</string>
+
+    <string name="weekday_mon">T2</string>
+
+    <string name="weekday_tue">T3</string>
+
+    <string name="weekday_wed">T4</string>
+
+    <string name="weekday_thu">T5</string>
+
+    <string name="weekday_fri">T6</string>
+
+    <string name="weekday_sat">T7</string>
+
+    <string name="weekday_sun">CN</string>
+
+    <string name="settings_theme_light">Sáng</string>
+
+    <string name="settings_theme_dark">Tối</string>
+
+    <string name="settings_languages_summary">%1$s · đang học: %2$s</string>
+
+    <string name="err_load_settings">Không thể tải cài đặt</string>
+
+    <string name="err_save">Không thể lưu</string>
+
+    <string name="err_save_tenses">Không thể lưu thì</string>
+
+
+    <string name="err_learning_lang">Không thể thay đổi ngôn ngữ học</string>
+
+    <string name="err_cefr">Không thể thay đổi cấp độ CEFR</string>
+
+    <string name="err_load_queue">Không thể tải hàng đợi thực hành</string>
+
+    <string name="err_options_count">Mong đợi 8 tùy chọn, nhận được %1$d. Thêm từ lại.</string>
+
+    <string name="err_load_options">Không thể tải tùy chọn</string>
+
+    <string name="err_check">Không thể kiểm tra câu trả lời</string>
+
+    <string name="err_add">Không thể thêm</string>
+
+    <string name="err_lists">Không thể tải danh sách</string>
+
+    <string name="err_create_list">Không thể tạo danh sách</string>
+
+    <string name="err_save_grade">Không thể lưu điểm</string>
+
+    <string name="err_load_profile">Không thể tải hồ sơ</string>
+
+    <string name="err_activate">Không thể kích hoạt hồ sơ</string>
+
+    <string name="err_load_stats">Không thể tải thống kê</string>
+
+    <string name="err_list_words">Không thể tải từ trong danh sách</string>
+
+    <string name="err_search">Tìm kiếm không thành công</string>
+
+    <string name="err_import_empty">Không có từ nào để nhập</string>
+
+    <string name="err_import">Nhập không thành công</string>
+
+    <string name="err_import_file">Nhập tệp không thành công</string>
+
+    <string name="err_import_empty_file">Tệp trống</string>
+
+    <string name="err_import_validate">Xác thực nhập không thành công</string>
+
+    <string name="err_add_partial">Không thể thêm %1$d từ (ví dụ: đã có trong danh sách)</string>
+
+    <string name="msg_import_result">Đã thêm %1$d, bỏ qua %2$d (đã có trong danh sách)</string>
+
+    <string name="err_save_cards">Không thể lưu thẻ</string>
+
+    <string name="err_add_to_list">Không thể thêm vào danh sách</string>
+
+    <string name="err_rename">Không thể đổi tên</string>
+
+    <string name="err_delete_list">Không thể xóa danh sách</string>
+
+    <string name="err_delete_word">Không thể xóa từ</string>
+
+    <string name="err_move">Không thể di chuyển</string>
+
+    <string name="err_delete_partial">Không thể xóa %1$d từ</string>
+
+    <string name="err_move_partial">Không thể di chuyển %1$d từ</string>
+
+    <string name="list_name_reserved">Tên này đã được đặt</string>
+
+    <string name="list_name_taken">Danh sách với tên này đã tồn tại</string>
+
+    <string name="list_fallback">Danh sách</string>
+
+    <string name="msg_added_learning">Đã thêm vào học: %1$s</string>
+
+    <string name="msg_added">Đã thêm: %1$s</string>
+
+    <string name="msg_saved_cefr">Cấp độ CEFR đã được lưu</string>
+
+    <string name="msg_saved_tenses">Thì đã được lưu</string>
+
+
+    <string name="err_load_cards">Không thể tải thẻ</string>
+
+    <string name="err_langs_must_differ">Ngôn ngữ ứng dụng và ngôn ngữ học phải khác nhau</string>
+
+    <string name="err_create_profile">Không thể tạo hồ sơ</string>
+
+    <string name="err_create_card">Không thể tạo thẻ</string>
+
+    <string name="err_password_required">Nhập mật khẩu</string>
+
+    <string name="err_password_short">Mật khẩu phải có ít nhất 8 ký tự</string>
+
+    <string name="err_login">Đăng nhập không thành công</string>
+
+    <string name="err_register">Đăng ký không thành công</string>
+
+    <string name="err_google_login">Đăng nhập Google không thành công</string>
+
+    <string name="learning_title">Học</string>
+
+    <string name="learning_empty">Chưa có từ nào trong học</string>
+
+    <string name="learning_empty_hint">Tìm kiếm một từ trên màn hình chính</string>
+
+    <string name="packs_body">Các gói khởi đầu (CEFR × danh mục) đang trong lộ trình sản phẩm. Sơ đồ cơ sở dữ liệu đã sẵn sàng — các gói sẽ xuất hiện sau khi chất lượng thẻ AI được phê duyệt.</string>
+
+    <string name="profile_active_pair">Cặp hoạt động: %1$s → %2$s</string>
+
+    <string name="section_synonyms_short">Từ đồng nghĩa</string>
+
+    <string name="section_antonyms_short">Từ trái nghĩa</string>
+
+    <string name="section_conjugation_short">Chia động từ</string>
+
+    <string name="section_usages_short">Cách sử dụng</string>
+
+    <string name="cd_back">Quay lại</string>
+
+    <string name="err_email_required">Nhập địa chỉ email</string>
+
+    <string name="err_email_invalid">Nhập địa chỉ email hợp lệ</string>
+
+    <string name="err_google_token">Không thể lấy mã Google</string>
+
+    <string name="section_fallback">Phần</string>
+
+    <string name="cd_add_to_list">Thêm vào danh sách</string>
+
+    <string name="list_clear_all">Xóa tất cả từ</string>
+
+    <string name="list_clear_all_title">Xóa tất cả từ?</string>
+
+    <string name="list_clear_all_body">Bạn sẽ xóa mọi từ trong “%1$s”. Danh sách vẫn giữ nguyên.</string>
+
+    <string name="settings_level">Cấp độ</string>
+
+    <string name="settings_selected_tenses">Thì đã chọn</string>
+
+    <string name="action_edit">Chỉnh sửa</string>
+
+    <string name="import_cards_count">Thẻ đã nhập (%1$d)</string>
+
+    <string name="import_flashcards_count">Thẻ flash: %1$d</string>
+
+    <string name="import_done_count">Đã nhập: %1$d</string>
+
+    <string name="list_unnamed">danh sách</string>
+
+    <string name="periphrase_n">Cách diễn đạt %1$d</string>
+
+    <string name="practice_well_done">Tuyệt vời!</string>
+
+    <string name="cd_search">Tìm kiếm</string>
+
+    <string name="correction_fix_card">Sửa thẻ</string>
+
+    <string name="correction_report_title">Báo cáo vấn đề</string>
+
+    <string name="correction_section_lemma">Chủ đề</string>
+
+    <string name="correction_section_pos">Phần của bài phát biểu</string>
+
+    <string name="correction_section_gloss">Giải thích chính</string>
+
+    <string name="correction_section_meanings">Ý nghĩa</string>
+
+    <string name="correction_section_examples">Ví dụ</string>
+
+    <string name="correction_section_conjugation">Chia động từ</string>
+
+    <string name="correction_section_similar">Từ tương tự</string>
+
+    <string name="correction_section_pronunciation">Phát âm</string>
+
+    <string name="correction_section_other">Khác</string>
+
+    <string name="correction_note_label">Ghi chú</string>
+
+    <string name="correction_note_hint">Mô tả điều gì sai…</string>
+
+    <string name="correction_validation">Chọn ít nhất một phần hoặc viết một ghi chú (tối thiểu 3 ký tự).</string>
+
+    <string name="correction_submit">Gửi báo cáo</string>
+
+    <string name="correction_requires_online">Cần kết nối internet.</string>
+
+    <string name="correction_result_accepted_title">Báo cáo đã được chấp nhận — thẻ đã được cập nhật.</string>
+
+    <string name="correction_result_rejected_title">Báo cáo không được chấp nhận.</string>
+
+    <string name="correction_result_rejected_body">Bạn có thể tự chỉnh sửa thẻ — với rủi ro của riêng bạn. Điều này tạo ra bản sao riêng của bạn.</string>
+
+    <string name="correction_edit_self">Chỉnh sửa bản thân</string>
+
+    <string name="correction_self_edit_title">Chỉnh sửa thẻ</string>
+
+    <string name="correction_field_lemma">Lemma</string>
+
+    <string name="correction_field_pos">Thành phần từ loại</string>
+
+    <string name="correction_field_gloss">Giải thích chính</string>
+
+    <string name="correction_field_extra_glosses">Giải thích bổ sung (mỗi dòng một)</string>
+
+    <string name="review_status_reported">Đã báo cáo chỉnh sửa</string>
+
+    <string name="review_status_accepted">Đã cập nhật</string>
+
+    <string name="review_status_rejected">Báo cáo bị từ chối</string>
+
+    <string name="review_status_user_edited">Đã chỉnh sửa thủ công</string>
+
+    <string name="cd_voice_search">Tìm kiếm bằng giọng nói</string>
+
+    <string name="voice_listening">Đang lắng nghe…</string>
+
+    <string name="voice_listening_hint">Nói ngay bây giờ</string>
+
+    <string name="voice_tap_to_start">Chạm Bắt đầu để nói</string>
+
+    <string name="voice_start">Bắt đầu</string>
+
+    <string name="voice_stop">Dừng</string>
+
+    <string name="voice_permission_denied">Không được cấp quyền sử dụng microphone.</string>
+
+    <string name="voice_unavailable">Nhận diện giọng nói không khả dụng trên thiết bị này.</string>
+
+    <string name="settings_notifications">Thông báo</string>
+
+    <string name="settings_notifications_summary">Nhắc nhở học tập và trạng thái thẻ</string>
+
+    <string name="settings_notif_study">Nhắc nhở học tập</string>
+
+    <string name="settings_notif_cards">Thẻ đã sẵn sàng</string>
+
+    <string name="settings_reminder_hour">Giờ nhắc nhở (0–23)</string>
+
+    <string name="notif_channel_study">Học tập</string>
+
+    <string name="notif_channel_cards">Thẻ</string>
+
+    <string name="notif_study_title">Đến giờ ôn tập</string>
+
+    <string name="notif_study_body">%1$d thẻ đến hạn</string>
+
+    <string name="notif_cards_ready_title">Thẻ đã sẵn sàng</string>
+
+    <string name="notif_cards_ready_body">%1$d từ(s) đã sẵn sàng để học</string>
+
+</resources>

@@ -1,0 +1,628 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <string name="app_name">Vocabulario</string>
+
+    <string name="action_sort">Sort</string>
+    <string name="action_filter">Filter</string>
+    <string name="action_filter_active">Filter · %1$d</string>
+    <string name="action_clear_filters">Clear filters</string>
+    <string name="action_clear_all">Clear all</string>
+    <string name="action_apply">Apply</string>
+    <string name="list_words_meta">%1$d words</string>
+    <string name="list_filter_empty">No words match filters</string>
+    <string name="sort_title">Sort</string>
+    <string name="sort_lemma_asc">A → Z</string>
+    <string name="sort_lemma_desc">Z → A</string>
+    <string name="sort_pos">Part of speech</string>
+    <string name="sort_newest">Newest first</string>
+    <string name="sort_oldest">Oldest first</string>
+    <string name="sort_status">Card state</string>
+    <string name="filter_title">Filter</string>
+    <string name="filter_section_pos">Part of speech</string>
+    <string name="filter_section_state">Card state</string>
+    <string name="filter_pos_unknown">No POS</string>
+    <string name="status_review">review</string>
+    <string name="action_undo">Undo</string>
+    <string name="cd_undo">Undo last grade</string>
+    <string name="action_cancel">Отмена</string>
+
+    <string name="action_ok">OK</string>
+
+    <string name="action_back">Назад</string>
+
+    <string name="action_delete">Удалить</string>
+
+    <string name="action_move">Переместить</string>
+
+    <string name="action_learn">Учить</string>
+
+    <string name="action_confirm">Подтвердить</string>
+
+    <string name="action_create">Создать</string>
+
+    <string name="action_import">Импорт</string>
+
+    <string name="action_close">Закрыть</string>
+
+    <string name="action_save">Сохранить</string>
+
+    <string name="action_reveal">Показать</string>
+
+    <string name="action_add">Добавить</string>
+
+    <string name="action_search">Поиск</string>
+
+    <string name="action_logout">Выйти</string>
+
+    <string name="action_retry">Повторить</string>
+
+    <string name="action_check">Проверить</string>
+
+    <string name="action_return">Назад</string>
+
+    <string name="tab_dashboard">главная</string>
+
+    <string name="tab_add">добавить</string>
+
+    <string name="tab_lists">списки</string>
+
+    <string name="auth_login_title">С возвращением</string>
+
+    <string name="auth_register_title">Создать аккаунт</string>
+
+    <string name="auth_login">Войти</string>
+
+    <string name="auth_register">Регистрация</string>
+
+    <string name="auth_google">Продолжить с Google</string>
+
+    <string name="auth_email">Эл. почта</string>
+
+    <string name="auth_password">Пароль</string>
+
+    <string name="auth_tagline">Учите слова в своём темпе</string>
+
+    <string name="auth_password_hint">Не менее 8 символов</string>
+
+    <string name="auth_have_account">У меня уже есть аккаунт</string>
+
+    <string name="onboarding_title">Настройка обучения</string>
+
+    <string name="onboarding_subtitle">Выберите языковую пару, уровень CEFR и времена глаголов.</string>
+
+    <string name="onboarding_native">Родной язык</string>
+
+    <string name="onboarding_learning">Изучаемый язык</string>
+
+    <string name="onboarding_start">Начать</string>
+
+    <string name="onboarding_cefr">Уровень CEFR</string>
+
+    <string name="onboarding_tenses">Времена глаголов</string>
+
+    <string name="settings_title">Настройки</string>
+
+
+    <string name="settings_native_lang">App language</string>
+    <string name="settings_tense_labels">Названия времён</string>
+    <string name="settings_tense_labels_app">На языке приложения</string>
+    <string name="settings_tense_labels_learning">На языке изучения</string>
+
+
+    <string name="settings_learning_lang">Изучаемый язык</string>
+
+    <string name="settings_langs_hint">App language is the language of the interface and card translations. Learning language is what you study.</string>
+
+    <string name="settings_theme">Тема</string>
+
+    <string name="settings_mode">Режим учёбы</string>
+
+    <string name="settings_group_study">УЧЁБА</string>
+
+    <string name="settings_group_general">ОБЩИЕ</string>
+
+    <string name="settings_mode_choice">Quiz</string>
+
+    <string name="settings_mode_type">Ввести слово</string>
+
+    <string name="settings_mode_flash">Карточки</string>
+
+    <string name="settings_tolerate_typos">Допускать мелкие опечатки</string>
+
+    <string name="settings_tolerate_typos_sub">Орфография и диакритика</string>
+
+    <string name="settings_direction">Направление учёбы</string>
+
+    <string name="settings_direction_first">Сначала %1$s</string>
+
+    <string name="settings_direction_random">Случайно</string>
+
+    <string name="settings_card_layout">Макет карточки</string>
+
+    <string name="settings_card_layout_sub">Что видно после ответа</string>
+
+    <string name="settings_examples">Примеры предложений</string>
+
+    <string name="settings_usages">Примеры употребления</string>
+
+    <string name="settings_periphrases">Конструкции</string>
+
+    <string name="settings_syn_ant">Синонимы и антонимы</string>
+
+    <string name="settings_conjugation">Спряжение</string>
+
+    <string name="settings_all_tenses">Все времена</string>
+
+    <string name="settings_limits">Лимиты</string>
+
+    <string name="settings_new_limit">Дневной лимит новых слов</string>
+
+    <string name="settings_new_per_day">%1$d новых / день</string>
+
+    <string name="settings_theme_system">Как в системе</string>
+
+    <string name="settings_languages">Языки</string>
+
+    <string name="settings_cefr_known">Уровень изучаемого языка</string>
+
+    <string name="settings_label">Настройки</string>
+
+    <string name="profile_title">Профиль</string>
+
+    <string name="profile_new_pair">Новая пара</string>
+
+    <string name="profile_pairs">Ваши языковые пары</string>
+
+    <string name="profile_active">Активна</string>
+
+    <string name="profile_activate">Активировать</string>
+
+    <string name="profile_level">Уровень: %1$s</string>
+
+    <string name="profile_cefr_active">CEFR (активный профиль)</string>
+
+
+    <string name="profile_tenses">Времена глаголов</string>
+
+    <string name="practice_title">Практика</string>
+
+    <string name="practice_show_answer">Показать ответ</string>
+
+    <string name="practice_error_title">Неверно</string>
+
+    <string name="practice_bridge_l2">на %1$s —</string>
+
+    <string name="practice_bridge_means">означает</string>
+
+    <string name="practice_empty">Нет карточек для практики</string>
+
+    <string name="practice_empty_hint">Добавьте слова с главного экрана</string>
+
+    <string name="practice_your_answer">Ваш ответ</string>
+
+    <string name="practice_spelling_warn">Проверьте написание!</string>
+
+    <string name="practice_spelling_detail">Вы ввели %1$s — правильное написание: %2$s</string>
+
+    <string name="practice_correct_answer">Правильный ответ: %1$s</string>
+
+    <string name="grade_again">Снова</string>
+
+    <string name="grade_hard">Сложно</string>
+
+    <string name="grade_good">Хорошо</string>
+
+    <string name="grade_easy">Легко</string>
+
+    <string name="creating_card">Создание карточки…</string>
+
+    <string name="creating_card_failed">Не удалось подготовить карточку</string>
+
+    <string name="list_learning">Изучаю</string>
+    <string name="list_pending">Pending</string>
+    <string name="offline_banner_title">You’re offline</string>
+    <string name="offline_banner_body">Added words go to the "Pending" list and will be looked up when you’re back online.</string>
+    <string name="offline_search_hint">Enter a word</string>
+    <string name="import_online_only">Import is only available online.</string>
+    <string name="offline_lookup_queued">Added to "Pending" — lookup when you’re back online.</string>
+    <string name="offline_lookup_duplicate">That word is already waiting on "Pending".</string>
+    <string name="status_awaiting_network">Waiting for network</string>
+
+    <string name="list_other">Другой список</string>
+
+    <string name="list_new">Новый список</string>
+
+    <string name="list_rename">Переименовать</string>
+
+    <string name="list_move_all">Переместить все</string>
+
+    <string name="list_empty">Пустой список</string>
+
+    <string name="list_delete_selected">Удалить</string>
+
+    <string name="list_move_to">Переместить в список</string>
+
+    <string name="list_name_hint">Название</string>
+
+    <string name="list_name_full_hint">Название списка</string>
+
+    <string name="list_pick">Выберите список</string>
+
+    <string name="list_pick_target">Выберите список назначения</string>
+
+    <string name="list_create_and_add">Создать и добавить</string>
+
+    <string name="list_delete_confirm_title">Удалить список?</string>
+
+    <string name="list_delete_confirm_body">Список «%1$s» и его слова будут удалены.</string>
+
+    <string name="list_move_word">Переместить слово в список</string>
+
+    <string name="list_delete_word_confirm">Удалить это слово?</string>
+
+    <string name="list_delete_selected_title">Удалить выбранные?</string>
+
+    <string name="list_delete_selected_body">Вы удалите %1$d слов из списка.</string>
+
+    <string name="list_create_move_all">Создайте список и переместите в него все слова.</string>
+
+    <string name="list_create_move_sel">Создайте список и переместите в него выбранные слова.</string>
+
+    <string name="list_create_move_one">Нет другого списка — создайте его, и слово будет перемещено туда.</string>
+
+    <string name="import_from_file">Импорт файла</string>
+
+    <string name="import_paste">Вставить текст</string>
+
+    <string name="import_paste_hint">Вставьте текст…</string>
+
+    <string name="import_progress">импорт слов</string>
+
+    <string name="import_add_file">Добавить файл</string>
+
+    <string name="import_other_file">Выбрать другой файл</string>
+
+    <string name="import_how">Как импортировать?</string>
+
+    <string name="import_vocab_mode">Карточки Vocabulario</string>
+
+    <string name="import_preserve_mode">Сохранить содержимое моей карточки</string>
+
+    <string name="import_vocab_hint">Карточки Vocabulario: лучше всего для отдельных слов — автоматически со значениями, примерами, формами, конструкциями, синонимами и антонимами.</string>
+
+    <string name="import_invalid_title">Некорректные слова</string>
+
+    <string name="import_file_errors">В файле есть ошибки — проверьте.</string>
+
+    <string name="import_no_cards">Нет карточек — отмените или исправьте источник</string>
+
+    <string name="import_no_valid">Нет корректных слов — отмените или исправьте источник</string>
+
+    <string name="import_empty_hint">Введите слово или импортируйте список (CSV/TXT/apkg)</string>
+
+    <string name="import_file_label">Файл: \'%1$s\'</string>
+
+    <string name="section_meanings">ЗНАЧЕНИЯ</string>
+
+    <string name="section_synonyms">СИНОНИМЫ</string>
+
+    <string name="section_syn_ant">СИНОНИМЫ И АНТОНИМЫ</string>
+
+    <string name="section_antonyms">АНТОНИМЫ</string>
+
+    <string name="section_antonyms_title">Антонимы</string>
+
+    <string name="section_conjugation">ФОРМЫ</string>
+
+    <string name="section_periphrases">КОНСТРУКЦИИ</string>
+
+    <string name="section_usages">примеры употребления</string>
+
+    <string name="home_search_hint">Искать слово…</string>
+
+    <string name="home_due_now">Готово к повторению</string>
+
+    <string name="home_new_today">Новые слова сегодня</string>
+
+    <string name="home_reviewed_today">Повторено сегодня</string>
+
+    <string name="home_learning_now">Сейчас изучаете</string>
+
+    <string name="home_new_left">Ещё осталось выучить</string>
+
+    <string name="home_mastered">Выучено на данный момент</string>
+
+    <string name="home_forecast_title">Повторения в ближайшие дни</string>
+
+    <string name="home_words_count">%1$d слов</string>
+
+    <string name="home_new_words_count">%1$d новых слов</string>
+
+    <string name="new_list_cd">Новый список</string>
+
+    <string name="new_cards_per_day">%1$d / день</string>
+
+    <string name="new_cards_unlimited">Без лимита</string>
+
+    <string name="cd_settings">Настройки</string>
+
+    <string name="cd_play">Воспроизвести</string>
+
+    <string name="cd_on_list">Уже в списке</string>
+
+    <string name="cd_delete">Удалить</string>
+
+    <string name="cd_move">Переместить</string>
+
+    <string name="cd_selected">Выбрано</string>
+
+    <string name="cd_list_options">Параметры списка</string>
+
+    <string name="status_error">ошибка</string>
+
+    <string name="status_new">новое</string>
+
+    <string name="status_learning">изучается</string>
+
+    <string name="status_mastered">выучено</string>
+
+    <string name="kind_lemma">слово</string>
+
+    <string name="kind_phrase">выражение</string>
+
+    <string name="kind_construction">конструкция</string>
+
+    <string name="kind_sentence">предложение</string>
+
+    <string name="kind_other">другое</string>
+
+    <string name="no_meanings">Нет значений</string>
+
+    <string name="add_word_title">Добавить слово</string>
+
+    <string name="add_word_hint">Введите слово</string>
+
+    <string name="add_word_source">Источник: %1$s</string>
+
+    <string name="add_word_hide">Скрыть карточку</string>
+
+    <string name="packs_title">Списки</string>
+
+    <string name="packs_subtitle">Готовые наборы слов</string>
+
+    <string name="learning_back_list">К списку</string>
+
+    <string name="card_preparing">Полная карточка готовится в фоне — вернитесь чуть позже.</string>
+
+    <string name="card_headword">Заголовок</string>
+
+    <string name="weekday_mon">пн</string>
+
+    <string name="weekday_tue">вт</string>
+
+    <string name="weekday_wed">ср</string>
+
+    <string name="weekday_thu">чт</string>
+
+    <string name="weekday_fri">пт</string>
+
+    <string name="weekday_sat">сб</string>
+
+    <string name="weekday_sun">вс</string>
+
+    <string name="settings_theme_light">Светлая</string>
+
+    <string name="settings_theme_dark">Тёмная</string>
+
+    <string name="settings_languages_summary">%1$s · изучение: %2$s</string>
+
+    <string name="err_load_settings">Не удалось загрузить настройки</string>
+
+    <string name="err_save">Не удалось сохранить</string>
+
+    <string name="err_save_tenses">Не удалось сохранить времена</string>
+
+
+    <string name="err_learning_lang">Не удалось сменить изучаемый язык</string>
+
+    <string name="err_cefr">Не удалось сменить уровень CEFR</string>
+
+    <string name="err_load_queue">Не удалось загрузить очередь практики</string>
+
+    <string name="err_options_count">Ожидалось 8 вариантов, получено %1$d. Добавьте слово снова.</string>
+
+    <string name="err_load_options">Не удалось загрузить варианты</string>
+
+    <string name="err_check">Не удалось проверить ответ</string>
+
+    <string name="err_add">Не удалось добавить</string>
+
+    <string name="err_lists">Не удалось загрузить списки</string>
+
+    <string name="err_create_list">Не удалось создать список</string>
+
+    <string name="err_save_grade">Не удалось сохранить оценку</string>
+
+    <string name="err_load_profile">Не удалось загрузить профиль</string>
+
+    <string name="err_activate">Не удалось активировать профиль</string>
+
+    <string name="err_load_stats">Не удалось загрузить статистику</string>
+
+    <string name="err_list_words">Не удалось загрузить слова списка</string>
+
+    <string name="err_search">Ошибка поиска</string>
+
+    <string name="err_import_empty">Нет слов для импорта</string>
+
+    <string name="err_import">Ошибка импорта</string>
+
+    <string name="err_import_file">Ошибка импорта файла</string>
+
+    <string name="err_import_empty_file">Пустой файл</string>
+
+    <string name="err_import_validate">Ошибка проверки импорта</string>
+
+    <string name="err_add_partial">Не удалось добавить %1$d слов (например, уже в списке)</string>
+
+    <string name="msg_import_result">Добавлено %1$d, пропущено %2$d (уже в списке)</string>
+
+    <string name="err_save_cards">Не удалось сохранить карточки</string>
+
+    <string name="err_add_to_list">Не удалось добавить в список</string>
+
+    <string name="err_rename">Не удалось переименовать</string>
+
+    <string name="err_delete_list">Не удалось удалить список</string>
+
+    <string name="err_delete_word">Не удалось удалить слово</string>
+
+    <string name="err_move">Не удалось переместить</string>
+
+    <string name="err_delete_partial">Не удалось удалить %1$d слов</string>
+
+    <string name="err_move_partial">Не удалось переместить %1$d слов</string>
+
+    <string name="list_name_reserved">Это название зарезервировано</string>
+
+    <string name="list_name_taken">Список с таким названием уже есть</string>
+
+    <string name="list_fallback">Список</string>
+
+    <string name="msg_added_learning">Добавлено к изучению: %1$s</string>
+
+    <string name="msg_added">Добавлено: %1$s</string>
+
+    <string name="msg_saved_cefr">Уровень CEFR сохранён</string>
+
+    <string name="msg_saved_tenses">Времена сохранены</string>
+
+
+    <string name="err_load_cards">Не удалось загрузить карточки</string>
+
+    <string name="err_langs_must_differ">Родной и изучаемый языки должны отличаться</string>
+
+    <string name="err_create_profile">Не удалось создать профиль</string>
+
+    <string name="err_create_card">Не удалось создать карточку</string>
+
+    <string name="err_password_required">Введите пароль</string>
+
+    <string name="err_password_short">Пароль должен быть не короче 8 символов</string>
+
+    <string name="err_login">Ошибка входа</string>
+
+    <string name="err_register">Ошибка регистрации</string>
+
+    <string name="err_google_login">Ошибка входа через Google</string>
+
+    <string name="learning_title">Изучение</string>
+
+    <string name="learning_empty">Пока нет слов в изучении</string>
+
+    <string name="learning_empty_hint">Найдите слово на главном экране</string>
+
+    <string name="packs_body">Стартовые наборы (CEFR × категории) в плане продукта. Схема базы готова — наборы появятся после одобрения качества ИИ-карточек.</string>
+
+    <string name="profile_active_pair">Активная пара: %1$s → %2$s</string>
+
+    <string name="section_synonyms_short">Синонимы</string>
+
+    <string name="section_antonyms_short">Антонимы</string>
+
+    <string name="section_conjugation_short">Спряжение</string>
+
+    <string name="section_usages_short">Употребление</string>
+
+    <string name="cd_back">Назад</string>
+
+    <string name="err_email_required">Введите адрес эл. почты</string>
+
+    <string name="err_email_invalid">Введите корректный адрес эл. почты</string>
+
+    <string name="err_google_token">Не удалось получить токен Google</string>
+
+    <string name="section_fallback">Раздел</string>
+
+    <string name="cd_add_to_list">Добавить в список</string>
+
+    <string name="list_clear_all">Delete all words</string>
+
+    <string name="list_clear_all_title">Delete all words?</string>
+
+    <string name="list_clear_all_body">You’ll remove every word from “%1$s”. The list itself stays.</string>
+
+    <string name="settings_level">Level</string>
+
+    <string name="settings_selected_tenses">Selected tenses</string>
+
+    <string name="action_edit">Edit</string>
+
+    <string name="import_cards_count">Imported cards (%1$d)</string>
+
+    <string name="import_flashcards_count">Flashcards: %1$d</string>
+
+    <string name="import_done_count">Imported: %1$d</string>
+
+    <string name="list_unnamed">list</string>
+
+    <string name="periphrase_n">Periphrase %1$d</string>
+
+    <string name="practice_well_done">Nice!</string>
+
+    <string name="cd_search">Search</string>
+
+
+    <string name="correction_fix_card">Fix card</string>
+    <string name="correction_report_title">Report a problem</string>
+    <string name="correction_section_lemma">Lemma</string>
+    <string name="correction_section_pos">Part of speech</string>
+    <string name="correction_section_gloss">Primary gloss</string>
+    <string name="correction_section_meanings">Meanings</string>
+    <string name="correction_section_examples">Examples</string>
+    <string name="correction_section_conjugation">Conjugation</string>
+    <string name="correction_section_similar">Similar words</string>
+    <string name="correction_section_pronunciation">Pronunciation</string>
+    <string name="correction_section_other">Other</string>
+    <string name="correction_note_label">Note</string>
+    <string name="correction_note_hint">Describe what is wrong…</string>
+    <string name="correction_validation">Select at least one section or write a note (min. 3 characters).</string>
+    <string name="correction_submit">Submit report</string>
+    <string name="correction_requires_online">Requires internet connection.</string>
+    <string name="correction_result_accepted_title">Report accepted — card updated.</string>
+    <string name="correction_result_rejected_title">Report not accepted.</string>
+    <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
+    <string name="correction_edit_self">Edit myself</string>
+    <string name="correction_self_edit_title">Edit card</string>
+    <string name="correction_field_lemma">Lemma</string>
+    <string name="correction_field_pos">Part of speech</string>
+    <string name="correction_field_gloss">Primary gloss</string>
+    <string name="correction_field_extra_glosses">Extra glosses (one per line)</string>
+    <string name="review_status_reported">Correction reported</string>
+    <string name="review_status_accepted">Updated</string>
+    <string name="review_status_rejected">Report rejected</string>
+    <string name="review_status_user_edited">Edited manually</string>
+    <string name="cd_voice_search">Voice search</string>
+    <string name="voice_listening">Listening…</string>
+    <string name="voice_listening_hint">Speak now</string>
+    <string name="voice_tap_to_start">Tap Start to speak</string>
+    <string name="voice_start">Start</string>
+    <string name="voice_stop">Stop</string>
+    <string name="voice_permission_denied">Microphone permission denied.</string>
+    <string name="voice_unavailable">Speech recognition unavailable on this device.</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_summary">Study reminders and card readiness</string>
+    <string name="settings_notif_study">Study reminders</string>
+    <string name="settings_notif_cards">Cards ready</string>
+    <string name="settings_reminder_hour">Reminder hour (0–23)</string>
+    <string name="notif_channel_study">Study</string>
+    <string name="notif_channel_cards">Cards</string>
+    <string name="notif_study_title">Time to review</string>
+    <string name="notif_study_body">%1$d cards due</string>
+    <string name="notif_cards_ready_title">Cards ready</string>
+    <string name="notif_cards_ready_body">%1$d word(s) ready to study</string>
+
+</resources>
+

@@ -1,0 +1,42 @@
+code: zh
+lsp_version: zh-1.0.0
+name_en: Chinese
+script: Hans
+rtl: false
+inflection_kind: aspect_particle
+
+default_selected_tenses:
+  - present
+  - past
+  - future
+
+verbs:
+  tenses:
+    - { key: present, label_l2: 现在, person_grid: zh_aspect }
+    - { key: past, label_l2: 过去, person_grid: zh_aspect }
+    - { key: future, label_l2: 将来, person_grid: zh_aspect }
+    - { key: progressive, label_l2: 进行, person_grid: zh_aspect }
+    - { key: perfect, label_l2: 完成, person_grid: zh_aspect }
+  non_finite:
+    - { key: base, label_l2: 原形 }
+  person_grids:
+    zh_aspect:
+      keys: ["form"]
+      labels: { form: 形式 }
+  paradigm_rules: |
+    CHINESE (zh) for "{lemma}":
+    - Simplified + Traditional in language_specific.traditional.
+    - Aspect particles (了/着/过). Pinyin in language_specific.pinyin. No placeholders.
+
+nouns:
+  numbers: [sg, pl]
+  genders: []
+
+adjectives:
+  full_declension: false
+
+ui_labels:
+  pl:
+    present: Czas teraźniejszy
+    past: Czas przeszły
+    future: Czas przyszły

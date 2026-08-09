@@ -1,0 +1,30 @@
+appId: com.vocabulario.app
+tags:
+  - lists
+---
+# H · Seeded word tiles visible on Learning list
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- tapOn:
+    id: tab_lists
+- extendedWaitUntil:
+    visible:
+      id: list_chip
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: list_word_tile
+    commands:
+      - tapOn:
+          id: list_word_tile
+      - assertVisible:
+          id: list_word_tile
+- runFlow:
+    when:
+      notVisible:
+        id: list_word_tile
+    commands:
+      - assertVisible:
+          id: list_chip

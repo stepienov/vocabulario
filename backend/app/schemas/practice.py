@@ -22,7 +22,6 @@ class ChoiceOption(BaseModel):
     pos: str | None = None
     card_id: UUID | None = None
     in_learning: bool = False
-    is_favorite: bool = False
     is_correct: bool = False
 
 

@@ -4,7 +4,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.auth import me_router, profiles_router, router as auth_router
+from app.api.v1.devices import router as devices_router
 from app.api.v1.learning import router as learning_router
+from app.api.v1.meta import router as meta_router
 from app.api.v1.sync import router as sync_router
 from app.core.config import get_settings
 from app.db.base import Base
@@ -38,7 +40,9 @@ def create_app() -> FastAPI:
     app.include_router(me_router, prefix=prefix)
     app.include_router(profiles_router, prefix=prefix)
     app.include_router(learning_router, prefix=prefix)
+    app.include_router(meta_router, prefix=prefix)
     app.include_router(sync_router, prefix=prefix)
+    app.include_router(devices_router, prefix=prefix)
 
     if settings.environment == "development":
         from app.api.v1.dev_tools import router as dev_router

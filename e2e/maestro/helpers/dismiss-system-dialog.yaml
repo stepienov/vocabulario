@@ -1,0 +1,13 @@
+appId: com.vocabulario.app
+---
+# Dismiss system ANR / crash dialogs that block Maestro.
+- runFlow:
+    when:
+      visible: "isn't responding|nie odpowiada|Close app|Zamknij"
+    commands:
+      - tapOn: "Close app|Zamknij aplikację|Close|OK"
+- runFlow:
+    when:
+      visible: "Wait|Czekaj"
+    commands:
+      - tapOn: "Close app|Zamknij aplikację|Close"

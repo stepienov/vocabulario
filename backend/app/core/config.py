@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:3000,http://10.0.2.2:8000"
 
     database_url: str = (
-        "postgresql+asyncpg://vocabulario:vocabulario_dev@localhost:5433/vocabulario"
+        "postgresql+asyncpg://vocabulario:vocabulario_dev@localhost:5432/vocabulario"
     )
     redis_url: str = "redis://localhost:6379/0"
 
@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     google_oauth_client_id: str = ""
     google_oauth_client_id_android: str = ""
     google_oauth_client_secret: str = ""
+
+    # FCM legacy server key (optional; push helpers no-op when empty)
+    fcm_server_key: str = ""
 
     @property
     def cors_origins(self) -> list[str]:

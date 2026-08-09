@@ -1,0 +1,43 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - onboarding
+---
+# B-01 · Onboarding happy path (scroll past tense list to Start)
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: auth_toggle_mode
+    timeout: 20000
+- tapOn:
+    id: auth_toggle_mode
+- tapOn:
+    id: auth_email
+- eraseText
+- inputRandomEmail
+- tapOn:
+    id: auth_password
+- eraseText
+- inputText: "e2e-test-pass-123"
+- tapOn:
+    id: auth_submit
+- extendedWaitUntil:
+    visible:
+      id: onboarding_native_lang
+    timeout: 45000
+- tapOn:
+    id: onboarding_cefr_A2
+- scrollUntilVisible:
+    element:
+      id: onboarding_start
+    direction: DOWN
+    timeout: 40000
+- tapOn:
+    id: onboarding_start
+- extendedWaitUntil:
+    visible:
+      id: tab_dashboard
+    timeout: 45000
+- assertVisible:
+    id: btn_learn

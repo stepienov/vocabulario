@@ -6,12 +6,22 @@ Aplikacja Android do nauki słówek (PL ↔ ES i inne pary) z AI i SRS.
 
 ### 1. Baza danych
 
+Domyślnie używamy **lokalnego PostgreSQL** (`localhost:5432`).
+
+```sql
+-- jednorazowo (psql -U postgres)
+CREATE USER vocabulario WITH PASSWORD 'vocabulario_dev';
+CREATE DATABASE vocabulario OWNER vocabulario;
+```
+
+Opcjonalnie Docker (Postgres + Redis):
+
 ```powershell
 cd infra
 docker compose up -d
 ```
 
-Postgres nasłuchuje na **`localhost:5433`** (port 5432 często zajęty przez lokalny PostgreSQL na Windows).
+Wtedy w `.env` ustaw port **`5433`** w `DATABASE_URL`.
 
 ### 2. Backend API
 

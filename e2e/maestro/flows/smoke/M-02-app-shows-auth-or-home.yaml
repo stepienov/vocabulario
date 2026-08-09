@@ -1,0 +1,17 @@
+appId: com.vocabulario.app
+tags:
+  - smoke
+  - auth
+---
+# M-02 · Cold start without token → Auth
+# Use testTags (not localized chrome text) — PL UI is "panel/dodaj", not "home/add".
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: auth_email
+    timeout: 30000
+- assertVisible:
+    id: auth_password
+- assertVisible:
+    id: auth_submit

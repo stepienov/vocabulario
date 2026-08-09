@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.deps import lang_pair_key
 from app.db.session import get_db
-from app.models import FavoriteWord, LanguageProfile, LearningCard, LexicalEntry, ReviewLog, SrsState, User
+from app.models import LanguageProfile, LearningCard, LexicalEntry, ReviewLog, SrsState, User
 from app.services.card_jobs import STATUS_PENDING, build_pending_content, enrich_card
 from app.services.distractors import generate_choice_options
 from app.services.lexical import LexicalService
@@ -281,28 +281,258 @@ async def dev_add(
     }
 
 
+@router.post("/e2e-seed")
+async def e2e_seed(
+    email: str = Query(..., description="E2E user email"),
+    profile_id: UUID | None = Query(None),
+    count: int = Query(12, ge=1, le=40),
+    db: AsyncSession = Depends(get_db),
+):
+    """Seed ready learning cards with similar_words (no LLM) for Maestro practice/lists."""
+    _require_dev()
+    user, profile = await _resolve_user_profile(db, email, profile_id)
+
+    bank = [
+        ("casa", "noun", "house"),
+        ("perro", "noun", "dog"),
+        ("gato", "noun", "cat"),
+        ("libro", "noun", "book"),
+        ("agua", "noun", "water"),
+        ("comida", "noun", "food"),
+        ("ciudad", "noun", "city"),
+        ("amigo", "noun", "friend"),
+        ("escuela", "noun", "school"),
+        ("trabajo", "noun", "work"),
+        ("tiempo", "noun", "time"),
+        ("mundo", "noun", "world"),
+        ("hablar", "verb", "to speak"),
+        ("comer", "verb", "to eat"),
+        ("vivir", "verb", "to live"),
+        ("correr", "verb", "to run"),
+    ]
+    created: list[str] = []
+    reused: list[str] = []
+
+    for lemma, pos, gloss in bank[:count]:
+        existing = await db.execute(
+            select(LearningCard).where(
+                LearningCard.user_id == user.id,
+                LearningCard.profile_id == profile.id,
+                LearningCard.lemma_l2 == lemma,
+                LearningCard.deck_id.is_(None),
+            )
+        )
+        card = existing.scalar_one_or_none()
+        if card is not None:
+            if card.enrichment_status != "ready":
+                card.enrichment_status = "ready"
+                card.enrichment_error = None
+            reused.append(lemma)
+            continue
+
+        similar = [
+            {"lemma": other, "pos": other_pos, "gloss_l1": other_gloss}
+            for other, other_pos, other_gloss in bank
+            if other != lemma
+        ][:12]
+        content = {
+            "schema_version": "vocabulario.card.v1",
+            "lemma": lemma,
+            "language": profile.learning_lang,
+            "pos": pos,
+            "ipa": "",
+            "meanings": [
+                {
+                    "gloss_l1": gloss,
+                    "synonyms_l1": [],
+                    "examples": [{"l2": f"Ejemplo {lemma}.", "l1": f"Example {gloss}.", "cefr": "A2"}],
+                    "usages": [],
+                }
+            ],
+            "synonyms_l2": [],
+            "antonyms_l2": [],
+            "similar_words": similar,
+            "inflection": None,
+            "conjugation": None,
+            "notes": None,
+            "confidence": 1.0,
+        }
+        card = LearningCard(
+            user_id=user.id,
+            profile_id=profile.id,
+            lemma_l2=lemma,
+            pos=pos,
+            gloss_primary=gloss,
+            content=content,
+            enrichment_status="ready",
+        )
+        db.add(card)
+        await db.flush()
+        db.add(SrsState(card_id=card.id, scope="main", status="new"))
+        created.append(lemma)
+
+    await db.commit()
+    return {
+        "seeded": True,
+        "email": user.email,
+        "profile_id": str(profile.id),
+        "created": created,
+        "reused": reused,
+        "count": len(created) + len(reused),
+    }
+
+
+def _bad_card_content(lemma: str, pos: str, gloss: str, profile: LanguageProfile, *, flaw: str) -> dict:
+    """Ready card content with one obvious flaw for manual correction QA."""
+    base = {
+        "schema_version": "vocabulario.card.v1",
+        "lemma": lemma,
+        "language": profile.learning_lang,
+        "pos": pos,
+        "ipa": "/ˈka.sa/" if flaw == "ipa" else "",
+        "meanings": [
+            {
+                "gloss_l1": gloss,
+                "synonyms_l1": [],
+                "examples": [
+                    {
+                        "l2": f"Uso de {lemma} en una frase.",
+                        "l1": f"Use of {gloss} in a sentence.",
+                        "cefr": "A2",
+                    }
+                ],
+                "usages": [],
+            }
+        ],
+        "synonyms_l2": [],
+        "antonyms_l2": [],
+        "similar_words": [],
+        "inflection": None,
+        "conjugation": None,
+        "notes": "QA seed — intentional error",
+        "confidence": 1.0,
+    }
+    if flaw == "gloss":
+        base["meanings"][0]["gloss_l1"] = gloss  # caller passes wrong gloss
+    elif flaw == "lemma":
+        pass  # caller passes wrong lemma on card row
+    elif flaw == "pos":
+        base["pos"] = pos  # caller passes wrong pos
+    elif flaw == "example":
+        base["meanings"][0]["examples"] = [
+            {
+                "l2": "Yo como una biblioteca cada mañana.",
+                "l1": "I eat a library every morning.",
+                "cefr": "A2",
+            }
+        ]
+    elif flaw == "conjugation":
+        base["conjugation"] = {
+            "presente": {
+                "yo": "—",
+                "tú": "—",
+                "él/ella/usted": "—",
+                "nosotros": "—",
+                "vosotros": "—",
+                "ellos/ellas/ustedes": "—",
+            }
+        }
+    elif flaw == "ipa":
+        base["ipa"] = "/ˈperro/"  # dog IPA on unrelated word
+    return base
+
+
+@router.post("/e2e-bad-cards")
+async def e2e_bad_cards(
+    email: str = Query(..., description="E2E user email"),
+    profile_id: UUID | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Seed ~5 learning cards with intentional errors for correction/history QA."""
+    _require_dev()
+    user, profile = await _resolve_user_profile(db, email, profile_id)
+
+    # (lemma, pos, gloss, flaw_key, note for QA)
+    flawed = [
+        ("hablar", "verb", "to eat", "gloss", "gloss should be 'to speak'"),
+        ("comer", "verb", "to eat", "conjugation", "present tense is placeholder dashes"),
+        ("vivir", "noun", "to live", "pos", "pos should be verb"),
+        ("correr", "verb", "to run", "example", "example sentence is nonsense"),
+        ("escribir", "verb", "to run", "gloss", "gloss should be 'to write'"),
+    ]
+    created: list[dict] = []
+    updated: list[dict] = []
+
+    for lemma, pos, gloss, flaw, qa_note in flawed:
+        existing = await db.execute(
+            select(LearningCard).where(
+                LearningCard.user_id == user.id,
+                LearningCard.profile_id == profile.id,
+                LearningCard.lemma_l2 == lemma,
+                LearningCard.deck_id.is_(None),
+            )
+        )
+        card = existing.scalar_one_or_none()
+        content = _bad_card_content(lemma, pos, gloss, profile, flaw=flaw)
+        if card is None:
+            card = LearningCard(
+                user_id=user.id,
+                profile_id=profile.id,
+                lemma_l2=lemma,
+                pos=pos,
+                gloss_primary=gloss,
+                content=content,
+                enrichment_status="ready",
+                has_content_changes=False,
+                card_activity_status=None,
+            )
+            db.add(card)
+            await db.flush()
+            db.add(SrsState(card_id=card.id, scope="main", status="new"))
+            created.append({"lemma": lemma, "flaw": flaw, "note": qa_note, "card_id": str(card.id)})
+        else:
+            card.pos = pos
+            card.gloss_primary = gloss
+            card.content = content
+            card.enrichment_status = "ready"
+            card.enrichment_error = None
+            card.has_content_changes = False
+            card.card_activity_status = None
+            card.content_review_status = None
+            updated.append({"lemma": lemma, "flaw": flaw, "note": qa_note, "card_id": str(card.id)})
+
+    await db.commit()
+    return {
+        "seeded": True,
+        "email": user.email,
+        "profile_id": str(profile.id),
+        "learning_lang": profile.learning_lang,
+        "app_lang": profile.app_lang,
+        "created": created,
+        "updated": updated,
+        "total": len(created) + len(updated),
+    }
+
+
 @router.post("/clear-words")
 async def dev_clear_words(db: AsyncSession = Depends(get_db)):
-    """Usuwa wszystkie słówka z bazy (lexical + nauka + ulubione + SRS). Zostawia userów i profile."""
+    """Usuwa wszystkie słówka z bazy (lexical + nauka + SRS). Zostawia userów i profile."""
     _require_dev()
     review_result = await db.execute(select(ReviewLog))
     srs_result = await db.execute(select(SrsState))
     cards_result = await db.execute(select(LearningCard))
-    fav_result = await db.execute(select(FavoriteWord))
     lex_result = await db.execute(select(LexicalEntry))
 
     counts = {
         "review_logs": len(list(review_result.scalars().all())),
         "srs_state": len(list(srs_result.scalars().all())),
         "learning_cards": len(list(cards_result.scalars().all())),
-        "favorite_words": len(list(fav_result.scalars().all())),
         "lexical_entries": len(list(lex_result.scalars().all())),
     }
 
     await db.execute(delete(ReviewLog))
     await db.execute(delete(SrsState))
     await db.execute(delete(LearningCard))
-    await db.execute(delete(FavoriteWord))
     await db.execute(delete(LexicalEntry))
     await db.commit()
 

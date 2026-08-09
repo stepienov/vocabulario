@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import LearningCard, WordList
 
 LEARNING_LIST_NAME = "Uczę się"
+PENDING_INBOX_NAME = "Pending"
+RESERVED_LIST_NAMES = frozenset({LEARNING_LIST_NAME.lower(), PENDING_INBOX_NAME.lower(), "oczekujące"})
 
 
 async def ensure_system_list(
@@ -21,6 +23,7 @@ async def ensure_system_list(
         select(WordList).where(
             WordList.profile_id == profile_id,
             WordList.is_system.is_(True),
+            WordList.deleted_at.is_(None),
         )
     )
     existing = result.scalar_one_or_none()
@@ -31,6 +34,48 @@ async def ensure_system_list(
         profile_id=profile_id,
         name=LEARNING_LIST_NAME,
         is_system=True,
+        is_pending_inbox=False,
+    )
+    db.add(wl)
+    await db.flush()
+    return wl
+
+
+async def ensure_pending_inbox_list(
+    db: AsyncSession,
+    user_id: UUID,
+    profile_id: UUID,
+) -> WordList:
+    """Offline-search inbox — stable slug via is_pending_inbox (UI localizes the label)."""
+    result = await db.execute(
+        select(WordList).where(
+            WordList.profile_id == profile_id,
+            WordList.user_id == user_id,
+            WordList.is_pending_inbox.is_(True),
+            WordList.deleted_at.is_(None),
+        )
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        return existing
+    # Avoid UniqueConstraint(profile_id, name) clash if user already named a list "Pending".
+    name = PENDING_INBOX_NAME
+    clash = await db.execute(
+        select(WordList).where(
+            WordList.profile_id == profile_id,
+            WordList.user_id == user_id,
+            WordList.name == name,
+            WordList.deleted_at.is_(None),
+        )
+    )
+    if clash.scalar_one_or_none() is not None:
+        name = f"{PENDING_INBOX_NAME} · inbox"
+    wl = WordList(
+        user_id=user_id,
+        profile_id=profile_id,
+        name=name,
+        is_system=False,
+        is_pending_inbox=True,
     )
     db.add(wl)
     await db.flush()
@@ -45,7 +90,11 @@ async def list_word_lists(
     system = await ensure_system_list(db, user_id, profile_id)
     result = await db.execute(
         select(WordList)
-        .where(WordList.profile_id == profile_id, WordList.user_id == user_id)
+        .where(
+            WordList.profile_id == profile_id,
+            WordList.user_id == user_id,
+            WordList.deleted_at.is_(None),
+        )
         .order_by(WordList.is_system.desc(), WordList.created_at.asc())
     )
     lists = list(result.scalars().all())
@@ -62,6 +111,7 @@ async def list_word_lists(
                     LearningCard.user_id == user_id,
                     LearningCard.profile_id == profile_id,
                     LearningCard.deck_id.is_(None),
+                    LearningCard.deleted_at.is_(None),
                 )
             )
         else:
@@ -72,6 +122,7 @@ async def list_word_lists(
                     LearningCard.user_id == user_id,
                     LearningCard.profile_id == profile_id,
                     LearningCard.deck_id == wl.id,
+                    LearningCard.deleted_at.is_(None),
                 )
             )
         out.append((wl, int(count_q.scalar_one())))
@@ -89,6 +140,7 @@ async def find_card_anywhere(
         LearningCard.user_id == user_id,
         LearningCard.profile_id == profile_id,
         LearningCard.lemma_l2 == lemma,
+        LearningCard.deleted_at.is_(None),
     )
     if pos:
         q = q.where(LearningCard.pos == pos)

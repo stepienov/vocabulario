@@ -1,0 +1,35 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - auth
+---
+# A-04 · Auth field validation (locale-independent: error text appears after submit)
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: auth_submit
+    timeout: 20000
+- tapOn:
+    id: auth_submit
+- extendedWaitUntil:
+    visible: "Email|Correo|E-mail|邮箱|البريد"
+    timeout: 10000
+- tapOn:
+    id: auth_email
+- inputText: "not-an-email"
+- tapOn:
+    id: auth_submit
+- assertVisible:
+    id: auth_submit
+- tapOn:
+    id: auth_email
+- eraseText
+- inputText: "ok@example.com"
+- tapOn:
+    id: auth_password
+- eraseText
+- tapOn:
+    id: auth_submit
+- assertVisible:
+    id: auth_password

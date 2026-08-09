@@ -1,0 +1,42 @@
+code: hi
+lsp_version: hi-1.0.0
+name_en: Hindi
+script: Deva
+rtl: false
+inflection_kind: person_tense
+
+default_selected_tenses:
+  - present
+  - past
+
+verbs:
+  tenses:
+    - { key: present, label_l2: वर्तमान, person_grid: hi_6 }
+    - { key: past, label_l2: भूत, person_grid: hi_6 }
+    - { key: future, label_l2: भविष्य, person_grid: hi_6 }
+    - { key: imperative, label_l2: आज्ञार्थ, person_grid: hi_imperative }
+  non_finite:
+    - { key: infinitive, label_l2: मूलधातु }
+  person_grids:
+    hi_6:
+      keys: ["main", "tu", "yeh", "hum", "aap", "ve"]
+      labels: {}
+    hi_imperative:
+      keys: ["tu", "aap"]
+      labels: {}
+  paradigm_rules: |
+    HINDI (hi) for "{lemma}":
+    - Devanagari forms + IAST romanization in language_specific.romanization.
+    - Never use placeholders.
+
+nouns:
+  numbers: [sg, pl]
+  genders: [m, f]
+
+adjectives:
+  full_declension: true
+
+ui_labels:
+  pl:
+    present: Czas teraźniejszy
+    past: Czas przeszły

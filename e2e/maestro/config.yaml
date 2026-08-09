@@ -1,0 +1,4 @@
+# Maestro workspace — include nested flow folders
+appId: com.vocabulario.app
+flows:
+  - "flows/**"

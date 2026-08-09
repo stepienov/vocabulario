@@ -1,0 +1,39 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - lang
+---
+# K-07 · App language (L1) switch does not crash; home still reachable
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/goto-settings.yaml
+- tapOn:
+    id: settings_section_languages
+- tapOn:
+    id: settings_native_lang
+- runFlow:
+    when:
+      visible: "Español|Spanish|Hiszpański"
+    commands:
+      - tapOn: "Español|Spanish|Hiszpański"
+- tapOn:
+    id: btn_back
+- extendedWaitUntil:
+    visible:
+      id: tab_dashboard
+    timeout: 20000
+- assertVisible:
+    id: btn_learn
+- runFlow: ../../helpers/goto-settings.yaml
+- tapOn:
+    id: settings_section_languages
+- tapOn:
+    id: settings_native_lang
+- runFlow:
+    when:
+      visible: "English|Inglés|Angielski"
+    commands:
+      - tapOn: "English|Inglés|Angielski"
+- tapOn:
+    id: btn_back

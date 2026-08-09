@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import FavoriteWord, LanguageProfile, LearningCard
+from app.models import LanguageProfile, LearningCard
 
 
 def similar_words_from_content(content: dict) -> list[dict]:
@@ -45,14 +45,6 @@ async def generate_choice_options(
     others = list(result.scalars().all())
     same_pos = [c for c in others if c.pos == card.pos] if card.pos else list(others)
 
-    fav_result = await db.execute(
-        select(FavoriteWord).where(
-            FavoriteWord.user_id == user_id,
-            FavoriteWord.profile_id == profile_id,
-        )
-    )
-    fav_lemmas = {f.lemma.lower() for f in fav_result.scalars().all() if f.lemma}
-
     if direction == "l2_to_l1":
         correct_text = card.gloss_primary or ""
 
@@ -64,7 +56,6 @@ async def generate_choice_options(
                 "pos": c.pos,
                 "card_id": str(c.id),
                 "in_learning": True,
-                "is_favorite": c.lemma_l2.lower() in fav_lemmas,
             }
 
         def from_similar(s: dict) -> dict:
@@ -77,7 +68,6 @@ async def generate_choice_options(
                 "pos": s.get("pos") or card.pos,
                 "card_id": None,
                 "in_learning": False,
-                "is_favorite": lemma.lower() in fav_lemmas,
             }
     else:
         correct_text = card.lemma_l2
@@ -90,7 +80,6 @@ async def generate_choice_options(
                 "pos": c.pos,
                 "card_id": str(c.id),
                 "in_learning": True,
-                "is_favorite": c.lemma_l2.lower() in fav_lemmas,
             }
 
         def from_similar(s: dict) -> dict:
@@ -102,7 +91,6 @@ async def generate_choice_options(
                 "pos": s.get("pos") or card.pos,
                 "card_id": None,
                 "in_learning": False,
-                "is_favorite": lemma.lower() in fav_lemmas,
             }
 
     distractors: list[dict] = []
@@ -153,7 +141,6 @@ async def generate_choice_options(
         "pos": card.pos,
         "card_id": str(card.id),
         "in_learning": True,
-        "is_favorite": card.lemma_l2.lower() in fav_lemmas,
         "is_correct": True,
     }
     options = distractors[:7] + [correct_option]

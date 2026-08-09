@@ -1,6 +1,7 @@
 package com.vocabulario.app.ui.auth
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,14 +25,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vocabulario.app.R
+import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.AppCard
+import com.vocabulario.app.ui.components.BrandLogo
 
 @Composable
 fun AuthScreen(
@@ -50,15 +56,17 @@ fun AuthScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        BrandLogo(height = 36.dp, maxWidth = 260.dp)
+        Spacer(Modifier.height(28.dp))
         Text(
-            if (isRegister) "Załóż konto" else "Witaj z powrotem",
+            if (isRegister) stringResource(R.string.auth_register_title) else stringResource(R.string.auth_login_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "Ucz się słówek w swoim tempie",
+            stringResource(R.string.auth_tagline),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -67,34 +75,38 @@ fun AuthScreen(
 
         AppCard {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it; viewModel.clearError() },
-                    placeholder = { Text("Email") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = AppButtonShape,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    ),
-                )
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it; viewModel.clearError() },
-                    placeholder = { Text("Hasło") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = AppButtonShape,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    ),
-                )
+                Box(modifier = Modifier.fillMaxWidth().testTag(TestTags.AUTH_EMAIL)) {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it; viewModel.clearError() },
+                        placeholder = { Text(stringResource(R.string.auth_email)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = AppButtonShape,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        ),
+                    )
+                }
+                Box(modifier = Modifier.fillMaxWidth().testTag(TestTags.AUTH_PASSWORD)) {
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it; viewModel.clearError() },
+                        placeholder = { Text(stringResource(R.string.auth_password)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = AppButtonShape,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        ),
+                    )
+                }
                 if (isRegister) {
-                    Text("Minimum 8 znaków", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.auth_password_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -106,20 +118,24 @@ fun AuthScreen(
                 if (isRegister) viewModel.register(email, password, onRegisterComplete)
                 else viewModel.login(email, password, onAuthenticated)
             },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp).testTag(TestTags.AUTH_SUBMIT),
             shape = AppButtonShape,
-        ) { Text(if (isRegister) "Zarejestruj" else "Zaloguj", style = MaterialTheme.typography.titleMedium) }
+        ) { Text(if (isRegister) stringResource(R.string.auth_register) else stringResource(R.string.auth_login), style = MaterialTheme.typography.titleMedium) }
 
         Spacer(Modifier.height(10.dp))
         OutlinedButton(
             onClick = { viewModel.googleSignIn(context, onAuthenticated) },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp).testTag(TestTags.AUTH_GOOGLE),
             shape = AppButtonShape,
-        ) { Text("Kontynuuj z Google") }
+        ) { Text(stringResource(R.string.auth_google)) }
 
         Spacer(Modifier.height(10.dp))
-        OutlinedButton(onClick = { isRegister = !isRegister }, shape = AppButtonShape) {
-            Text(if (isRegister) "Mam już konto" else "Załóż konto")
+        OutlinedButton(
+            onClick = { isRegister = !isRegister },
+            shape = AppButtonShape,
+            modifier = Modifier.testTag(TestTags.AUTH_TOGGLE_MODE),
+        ) {
+            Text(if (isRegister) stringResource(R.string.auth_login) else stringResource(R.string.auth_register_title))
         }
 
         errorMessage?.let {

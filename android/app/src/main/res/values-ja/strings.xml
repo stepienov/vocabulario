@@ -1,0 +1,703 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <string name="app_name">Vocabulario</string>
+
+    <string name="action_sort">並べ替え</string>
+
+    <string name="action_filter">フィルター</string>
+
+    <string name="action_filter_active">フィルター · %1$d</string>
+
+    <string name="action_clear_filters">フィルターをクリア</string>
+
+    <string name="action_clear_all">すべてクリア</string>
+
+    <string name="action_apply">適用</string>
+
+    <string name="list_words_meta">%1$d 語</string>
+
+    <string name="list_filter_empty">フィルターに一致する語はありません</string>
+
+    <string name="sort_title">並べ替え</string>
+
+    <string name="sort_lemma_asc">A → Z</string>
+
+    <string name="sort_lemma_desc">Z → A</string>
+
+    <string name="sort_pos">品詞</string>
+
+    <string name="sort_newest">最新のものから</string>
+
+    <string name="sort_oldest">古いものから</string>
+
+    <string name="sort_status">カードの状態</string>
+
+    <string name="filter_title">フィルター</string>
+
+    <string name="filter_section_pos">品詞</string>
+
+    <string name="filter_section_state">カードの状態</string>
+
+    <string name="filter_pos_unknown">品詞不明</string>
+
+    <string name="status_review">レビュー</string>
+
+    <string name="action_undo">元に戻す</string>
+
+    <string name="cd_undo">最後の評価を元に戻す</string>
+
+    <string name="action_cancel">キャンセル</string>
+
+    <string name="action_ok">OK</string>
+
+    <string name="action_back">戻る</string>
+
+    <string name="action_delete">削除</string>
+
+    <string name="action_move">移動</string>
+
+    <string name="action_learn">学ぶ</string>
+
+    <string name="action_confirm">確認</string>
+
+    <string name="action_create">作成</string>
+
+    <string name="action_import">インポート</string>
+
+    <string name="action_close">閉じる</string>
+
+    <string name="action_save">保存</string>
+
+    <string name="action_reveal">表示</string>
+
+    <string name="action_add">追加</string>
+
+    <string name="action_search">検索</string>
+
+    <string name="action_logout">ログアウト</string>
+
+    <string name="action_retry">再試行</string>
+
+    <string name="action_check">確認</string>
+
+    <string name="action_return">戻る</string>
+
+    <string name="tab_dashboard">ホーム</string>
+
+    <string name="tab_add">追加</string>
+
+    <string name="tab_lists">リスト</string>
+
+    <string name="auth_login_title">お帰りなさい</string>
+
+    <string name="auth_register_title">アカウントを作成</string>
+
+    <string name="auth_login">ログイン</string>
+
+    <string name="auth_register">サインアップ</string>
+
+    <string name="auth_google">Googleで続行</string>
+
+    <string name="auth_email">メール</string>
+
+    <string name="auth_password">パスワード</string>
+
+    <string name="auth_tagline">自分のペースで語彙を学ぶ</string>
+
+    <string name="auth_password_hint">8文字以上</string>
+
+    <string name="auth_have_account">すでにアカウントを持っています</string>
+
+    <string name="onboarding_title">学習設定</string>
+
+    <string name="onboarding_subtitle">言語ペア、CEFRレベル、動詞の時制を選択してください。</string>
+
+    <string name="onboarding_native">アプリ言語</string>
+
+    <string name="onboarding_learning">学習言語</string>
+
+    <string name="onboarding_start">開始</string>
+
+    <string name="onboarding_cefr">CEFRレベル</string>
+
+    <string name="onboarding_tenses">動詞の時制</string>
+
+    <string name="settings_title">設定</string>
+
+
+    <string name="settings_native_lang">アプリ言語</string>
+    <string name="settings_tense_labels">時制のラベル</string>
+    <string name="settings_tense_labels_app">アプリの言語</string>
+    <string name="settings_tense_labels_learning">学習言語</string>
+
+
+    <string name="settings_learning_lang">学習言語</string>
+
+    <string name="settings_langs_hint">アプリ言語はインターフェースとカード翻訳の言語です。学習言語は学ぶ言語です。</string>
+
+    <string name="settings_theme">テーマ</string>
+
+    <string name="settings_mode">学習モード</string>
+
+    <string name="settings_group_study">学習</string>
+
+    <string name="settings_group_general">一般</string>
+
+    <string name="settings_mode_choice">Quiz</string>
+
+    <string name="settings_mode_type">単語を入力</string>
+
+    <string name="settings_mode_flash">フラッシュカード</string>
+
+    <string name="settings_tolerate_typos">軽微な誤字を許可</string>
+
+    <string name="settings_tolerate_typos_sub">スペルとダイアクリティクス</string>
+
+    <string name="settings_direction">学習方向</string>
+
+    <string name="settings_direction_first">%1$s 先</string>
+
+    <string name="settings_direction_random">ランダム</string>
+
+    <string name="settings_card_layout">カードレイアウト</string>
+
+    <string name="settings_card_layout_sub">回答後に表示される内容</string>
+
+    <string name="settings_examples">例文</string>
+
+    <string name="settings_usages">使用例</string>
+
+    <string name="settings_periphrases">言い回し</string>
+
+    <string name="settings_syn_ant">同義語と反義語</string>
+
+    <string name="settings_conjugation">活用</string>
+
+    <string name="settings_all_tenses">すべての時制</string>
+
+    <string name="settings_limits">制限</string>
+
+    <string name="settings_new_limit">毎日の新単語制限</string>
+
+    <string name="settings_new_per_day">%1$d 新 / 日</string>
+
+    <string name="settings_theme_system">システムデフォルト</string>
+
+    <string name="settings_languages">言語</string>
+
+    <string name="settings_cefr_known">学習言語のレベル</string>
+
+    <string name="settings_label">設定</string>
+
+    <string name="profile_title">プロフィール</string>
+
+    <string name="profile_new_pair">新しいペア</string>
+
+    <string name="profile_pairs">あなたの言語ペア</string>
+
+    <string name="profile_active">アクティブ</string>
+
+    <string name="profile_activate">アクティブ化</string>
+
+    <string name="profile_level">レベル: %1$s</string>
+
+    <string name="profile_cefr_active">CEFR（アクティブプロフィール）</string>
+
+
+    <string name="profile_tenses">動詞の時制</string>
+
+    <string name="practice_title">練習</string>
+
+    <string name="practice_show_answer">答えを表示</string>
+
+    <string name="practice_error_title">間違い</string>
+
+    <string name="practice_bridge_l2">%1$s での意味</string>
+
+    <string name="practice_bridge_means">意味</string>
+
+    <string name="practice_empty">練習するカードがありません</string>
+
+    <string name="practice_empty_hint">ホーム画面から単語を追加</string>
+
+    <string name="practice_your_answer">あなたの答え</string>
+
+    <string name="practice_spelling_warn">スペルを確認してください！</string>
+
+    <string name="practice_spelling_detail">あなたが入力したのは %1$s — 正しいスペル: %2$s</string>
+
+    <string name="practice_correct_answer">正しい答え: %1$s</string>
+
+    <string name="grade_again">もう一度</string>
+
+    <string name="grade_hard">難しい</string>
+
+    <string name="grade_good">良い</string>
+
+    <string name="grade_easy">簡単</string>
+
+    <string name="creating_card">カードを作成中…</string>
+
+    <string name="creating_card_failed">カードの準備に失敗しました</string>
+
+    <string name="list_learning">学習中</string>
+
+    <string name="list_pending">保留中</string>
+
+    <string name="offline_banner_title">オフラインです</string>
+
+    <string name="offline_banner_body">追加した単語は「保留中」リストに入り、オンラインに戻ったときに検索されます。</string>
+
+    <string name="offline_search_hint">単語を入力</string>
+
+    <string name="import_online_only">インポートはオンラインでのみ利用可能です。</string>
+
+    <string name="offline_lookup_queued">「保留中」に追加されました — オンラインに戻ったときに検索します。</string>
+
+    <string name="offline_lookup_duplicate">その単語はすでに「保留中」で待機しています。</string>
+
+    <string name="status_awaiting_network">ネットワークを待機中</string>
+
+    <string name="list_other">その他のリスト</string>
+
+    <string name="list_new">新しいリスト</string>
+
+    <string name="list_rename">名前を変更</string>
+
+    <string name="list_move_all">すべて移動</string>
+
+    <string name="list_empty">空のリスト</string>
+
+    <string name="list_delete_selected">削除</string>
+
+    <string name="list_move_to">リストに移動</string>
+
+    <string name="list_name_hint">名前</string>
+
+    <string name="list_name_full_hint">リスト名</string>
+
+    <string name="list_pick">リストを選択</string>
+
+    <string name="list_pick_target">宛先リストを選択</string>
+
+    <string name="list_create_and_add">作成して追加</string>
+
+    <string name="list_delete_confirm_title">リストを削除しますか？</string>
+
+    <string name="list_delete_confirm_body">リスト「%1$s」とその単語が削除されます。</string>
+
+    <string name="list_move_word">単語をリストに移動</string>
+
+    <string name="list_delete_word_confirm">この単語を削除しますか？</string>
+
+    <string name="list_delete_selected_title">選択したものを削除しますか？</string>
+
+    <string name="list_delete_selected_body">リストから %1$d 単語を削除します。</string>
+
+    <string name="list_create_move_all">リストを作成し、すべての単語を移動します。</string>
+
+    <string name="list_create_move_sel">リストを作成し、選択した単語を移動します。</string>
+
+    <string name="list_create_move_one">他のリストがありません — 作成するとその単語が移動します。</string>
+
+    <string name="import_from_file">ファイルをインポート</string>
+
+    <string name="import_paste">テキストを貼り付け</string>
+
+    <string name="import_paste_hint">テキストを貼り付け…</string>
+
+    <string name="import_progress">単語をインポート中</string>
+
+    <string name="import_add_file">ファイルを追加</string>
+
+    <string name="import_other_file">別のファイルを選択</string>
+
+    <string name="import_how">インポート方法は？</string>
+
+    <string name="import_vocab_mode">Vocabularioカード</string>
+
+    <string name="import_preserve_mode">フラッシュカードの内容を保持</string>
+
+    <string name="import_vocab_hint">Vocabularioカード: 単語に最適 — 意味、例、形、パターン、同義語、反義語が自動生成されます。</string>
+
+    <string name="import_invalid_title">無効な単語</string>
+
+    <string name="import_file_errors">ファイルにエラーがあります — 確認してください。</string>
+
+    <string name="import_no_cards">カードがありません — キャンセルするか、ソースを修正してください。</string>
+
+    <string name="import_no_valid">有効な単語がありません — キャンセルするか、ソースを修正してください。</string>
+
+    <string name="import_empty_hint">単語を入力するか、リストをインポートしてください (CSV/TXT/apkg)</string>
+
+    <string name="import_file_label">ファイル: \'%1$s\'</string>
+
+    <string name="section_meanings">意味</string>
+
+    <string name="section_synonyms">同義語</string>
+
+    <string name="section_syn_ant">同義語 &amp;amp; 反意語</string>
+
+    <string name="section_antonyms">反意語</string>
+
+    <string name="section_antonyms_title">反意語</string>
+
+    <string name="section_conjugation">形</string>
+
+    <string name="section_periphrases">パターン</string>
+
+    <string name="section_usages">使用例</string>
+
+    <string name="home_search_hint">単語を検索…</string>
+
+    <string name="home_due_now">今すぐレビューの準備ができました</string>
+
+    <string name="home_new_today">今日学んだ新しい単語</string>
+
+    <string name="home_reviewed_today">今日レビューした</string>
+
+    <string name="home_learning_now">現在学習中</string>
+
+    <string name="home_new_left">まだ学ぶべき単語</string>
+
+    <string name="home_mastered">これまでに学んだ</string>
+
+    <string name="home_forecast_title">今後のレビュー</string>
+
+    <string name="home_words_count">%1$d 単語</string>
+
+    <string name="home_new_words_count">%1$d 新しい単語</string>
+
+    <string name="new_list_cd">新しいリスト</string>
+
+    <string name="new_cards_per_day">%1$d / 日</string>
+
+    <string name="new_cards_unlimited">無制限</string>
+
+    <string name="cd_settings">設定</string>
+
+    <string name="cd_play">再生</string>
+
+    <string name="cd_on_list">すでにリストにあります</string>
+
+    <string name="cd_delete">削除</string>
+
+    <string name="cd_move">移動</string>
+
+    <string name="cd_selected">選択済み</string>
+
+    <string name="cd_list_options">リストオプション</string>
+
+    <string name="status_error">エラー</string>
+
+    <string name="status_new">新しい</string>
+
+    <string name="status_learning">学習中</string>
+
+    <string name="status_mastered">習得済み</string>
+
+    <string name="kind_lemma">単語</string>
+
+    <string name="kind_phrase">フレーズ</string>
+
+    <string name="kind_construction">構文</string>
+
+    <string name="kind_sentence">文</string>
+
+    <string name="kind_other">その他</string>
+
+    <string name="no_meanings">意味がありません</string>
+
+    <string name="add_word_title">単語を追加</string>
+
+    <string name="add_word_hint">単語を入力</string>
+
+    <string name="add_word_source">ソース: %1$s</string>
+
+    <string name="add_word_hide">カードを隠す</string>
+
+    <string name="packs_title">リスト</string>
+
+    <string name="packs_subtitle">既製の単語パック</string>
+
+    <string name="learning_back_list">リストに戻る</string>
+
+    <string name="card_preparing">バックグラウンドでカードを準備中 — しばらくお待ちください。</string>
+
+    <string name="card_headword">見出し語</string>
+
+    <string name="weekday_mon">月</string>
+
+    <string name="weekday_tue">火</string>
+
+    <string name="weekday_wed">水</string>
+
+    <string name="weekday_thu">木</string>
+
+    <string name="weekday_fri">金</string>
+
+    <string name="weekday_sat">土</string>
+
+    <string name="weekday_sun">日</string>
+
+    <string name="settings_theme_light">ライト</string>
+
+    <string name="settings_theme_dark">ダーク</string>
+
+    <string name="settings_languages_summary">%1$s · 学習中: %2$s</string>
+
+    <string name="err_load_settings">設定を読み込めませんでした</string>
+
+    <string name="err_save">保存できませんでした</string>
+
+    <string name="err_save_tenses">時制を保存できませんでした</string>
+
+
+    <string name="err_learning_lang">学習言語を変更できませんでした</string>
+
+    <string name="err_cefr">CEFRレベルを変更できませんでした</string>
+
+    <string name="err_load_queue">練習キューを読み込めませんでした</string>
+
+    <string name="err_options_count">8つのオプションが必要ですが、%1$dが得られました。単語を再度追加してください。</string>
+
+    <string name="err_load_options">オプションを読み込めませんでした</string>
+
+    <string name="err_check">回答を確認できませんでした</string>
+
+    <string name="err_add">追加できませんでした</string>
+
+    <string name="err_lists">リストを読み込めませんでした</string>
+
+    <string name="err_create_list">リストを作成できませんでした</string>
+
+    <string name="err_save_grade">成績を保存できませんでした</string>
+
+    <string name="err_load_profile">プロフィールを読み込めませんでした</string>
+
+    <string name="err_activate">プロフィールをアクティブにできませんでした</string>
+
+    <string name="err_load_stats">統計を読み込めませんでした</string>
+
+    <string name="err_list_words">リストの単語を読み込めませんでした</string>
+
+    <string name="err_search">検索に失敗しました</string>
+
+    <string name="err_import_empty">インポートする単語がありません</string>
+
+    <string name="err_import">インポートに失敗しました</string>
+
+    <string name="err_import_file">ファイルのインポートに失敗しました</string>
+
+    <string name="err_import_empty_file">空のファイル</string>
+
+    <string name="err_import_validate">インポートの検証に失敗しました</string>
+
+    <string name="err_add_partial">%1$d 単語を追加できませんでした（例：リストに既に存在）</string>
+
+    <string name="msg_import_result">%1$d を追加し、%2$d をスキップしました（リストに既に存在）</string>
+
+    <string name="err_save_cards">カードを保存できませんでした</string>
+
+    <string name="err_add_to_list">リストに追加できませんでした</string>
+
+    <string name="err_rename">名前を変更できませんでした</string>
+
+    <string name="err_delete_list">リストを削除できませんでした</string>
+
+    <string name="err_delete_word">単語を削除できませんでした</string>
+
+    <string name="err_move">移動できませんでした</string>
+
+    <string name="err_delete_partial">%1$d 単語を削除できませんでした</string>
+
+    <string name="err_move_partial">%1$d 単語を移動できませんでした</string>
+
+    <string name="list_name_reserved">この名前は予約されています</string>
+
+    <string name="list_name_taken">この名前のリストは既に存在します</string>
+
+    <string name="list_fallback">リスト</string>
+
+    <string name="msg_added_learning">学習に追加されました: %1$s</string>
+
+    <string name="msg_added">追加されました: %1$s</string>
+
+    <string name="msg_saved_cefr">CEFRレベルが保存されました</string>
+
+    <string name="msg_saved_tenses">時制が保存されました</string>
+
+
+    <string name="err_load_cards">カードを読み込めませんでした</string>
+
+    <string name="err_langs_must_differ">アプリ言語と学習言語は異なる必要があります</string>
+
+    <string name="err_create_profile">プロファイルを作成できませんでした</string>
+
+    <string name="err_create_card">カードを作成できませんでした</string>
+
+    <string name="err_password_required">パスワードを入力してください</string>
+
+    <string name="err_password_short">パスワードは8文字以上でなければなりません</string>
+
+    <string name="err_login">ログインに失敗しました</string>
+
+    <string name="err_register">登録に失敗しました</string>
+
+    <string name="err_google_login">Googleサインインに失敗しました</string>
+
+    <string name="learning_title">学習</string>
+
+    <string name="learning_empty">まだ学習する単語がありません</string>
+
+    <string name="learning_empty_hint">ホーム画面で単語を検索してください</string>
+
+    <string name="packs_body">スターターパック（CEFR × カテゴリ）は製品ロードマップにあります。データベーススキーマは準備完了 — AIカードの品質が承認されるとパックが表示されます。</string>
+
+    <string name="profile_active_pair">アクティブペア: %1$s → %2$s</string>
+
+    <string name="section_synonyms_short">同義語</string>
+
+    <string name="section_antonyms_short">反義語</string>
+
+    <string name="section_conjugation_short">活用</string>
+
+    <string name="section_usages_short">用法</string>
+
+    <string name="cd_back">戻る</string>
+
+    <string name="err_email_required">メールアドレスを入力してください</string>
+
+    <string name="err_email_invalid">有効なメールアドレスを入力してください</string>
+
+    <string name="err_google_token">Googleトークンを取得できませんでした</string>
+
+    <string name="section_fallback">セクション</string>
+
+    <string name="cd_add_to_list">リストに追加</string>
+
+    <string name="list_clear_all">すべての単語を削除</string>
+
+    <string name="list_clear_all_title">すべての単語を削除しますか？</string>
+
+    <string name="list_clear_all_body">「%1$s」からすべての単語を削除します。リスト自体は残ります。</string>
+
+    <string name="settings_level">レベル</string>
+
+    <string name="settings_selected_tenses">選択した時制</string>
+
+    <string name="action_edit">編集</string>
+
+    <string name="import_cards_count">インポートしたカード (%1$d)</string>
+
+    <string name="import_flashcards_count">フラッシュカード: %1$d</string>
+
+    <string name="import_done_count">インポート完了: %1$d</string>
+
+    <string name="list_unnamed">リスト</string>
+
+    <string name="periphrase_n">言い換え %1$d</string>
+
+    <string name="practice_well_done">素晴らしい！</string>
+
+    <string name="cd_search">検索</string>
+
+    <string name="correction_fix_card">カードを修正</string>
+
+    <string name="correction_report_title">問題を報告</string>
+
+    <string name="correction_section_lemma">レマ</string>
+
+    <string name="correction_section_pos">品詞</string>
+
+    <string name="correction_section_gloss">主な意味</string>
+
+    <string name="correction_section_meanings">意味</string>
+
+    <string name="correction_section_examples">例</string>
+
+    <string name="correction_section_conjugation">活用</string>
+
+    <string name="correction_section_similar">類似の単語</string>
+
+    <string name="correction_section_pronunciation">発音</string>
+
+    <string name="correction_section_other">その他</string>
+
+    <string name="correction_note_label">ノート</string>
+
+    <string name="correction_note_hint">何が間違っているかを説明してください…</string>
+
+    <string name="correction_validation">少なくとも1つのセクションを選択するか、ノートを記入してください（最小3文字）。</string>
+
+    <string name="correction_submit">報告を送信</string>
+
+    <string name="correction_requires_online">インターネット接続が必要です。</string>
+
+    <string name="correction_result_accepted_title">報告が受理されました — カードが更新されました。</string>
+
+    <string name="correction_result_rejected_title">報告は受理されませんでした。</string>
+
+    <string name="correction_result_rejected_body">カードを自分で編集できます — 自己責任で。これにより、あなたのプライベートコピーが作成されます。</string>
+
+    <string name="correction_edit_self">自分を編集</string>
+
+    <string name="correction_self_edit_title">カードを編集</string>
+
+    <string name="correction_field_lemma">レマ</string>
+
+    <string name="correction_field_pos">品詞</string>
+
+    <string name="correction_field_gloss">主な意味</string>
+
+    <string name="correction_field_extra_glosses">追加の意味（1行ごと）</string>
+
+    <string name="review_status_reported">修正が報告されました</string>
+
+    <string name="review_status_accepted">更新されました</string>
+
+    <string name="review_status_rejected">報告が却下されました</string>
+
+    <string name="review_status_user_edited">手動で編集されました</string>
+
+    <string name="cd_voice_search">音声検索</string>
+
+    <string name="voice_listening">リスニング中…</string>
+
+    <string name="voice_listening_hint">今話してください</string>
+
+    <string name="voice_tap_to_start">話すにはスタートをタップ</string>
+
+    <string name="voice_start">スタート</string>
+
+    <string name="voice_stop">ストップ</string>
+
+    <string name="voice_permission_denied">マイクの権限が拒否されました。</string>
+
+    <string name="voice_unavailable">このデバイスでは音声認識が利用できません。</string>
+
+    <string name="settings_notifications">通知</string>
+
+    <string name="settings_notifications_summary">学習リマインダーとカードの準備状況</string>
+
+    <string name="settings_notif_study">学習リマインダー</string>
+
+    <string name="settings_notif_cards">カードの準備完了</string>
+
+    <string name="settings_reminder_hour">リマインダー時間（0～23）</string>
+
+    <string name="notif_channel_study">学習</string>
+
+    <string name="notif_channel_cards">カード</string>
+
+    <string name="notif_study_title">復習の時間</string>
+
+    <string name="notif_study_body">%1$d 枚のカードが期限です</string>
+
+    <string name="notif_cards_ready_title">カードの準備完了</string>
+
+    <string name="notif_cards_ready_body">%1$d 語が学習の準備ができました</string>
+
+</resources>

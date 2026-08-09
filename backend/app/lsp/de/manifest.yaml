@@ -1,0 +1,48 @@
+code: de
+lsp_version: de-1.0.0
+name_en: German
+script: Latn
+rtl: false
+inflection_kind: person_tense
+
+default_selected_tenses:
+  - prasens
+  - perfekt
+  - prateritum
+
+verbs:
+  tenses:
+    - { key: prasens, label_l2: Präsens, person_grid: de_6 }
+    - { key: perfekt, label_l2: Perfekt, person_grid: de_6 }
+    - { key: prateritum, label_l2: Präteritum, person_grid: de_6 }
+    - { key: futur_i, label_l2: Futur I, person_grid: de_6 }
+    - { key: plusquamperfekt, label_l2: Plusquamperfekt, person_grid: de_6 }
+    - { key: konjunktiv_ii, label_l2: Konjunktiv II, person_grid: de_6 }
+    - { key: imperativ, label_l2: Imperativ, person_grid: de_imperative }
+  non_finite:
+    - { key: infinitiv, label_l2: Infinitiv }
+    - { key: partizip_ii, label_l2: Partizip II }
+  person_grids:
+    de_6:
+      keys: ["ich", "du", "er", "wir", "ihr", "sie"]
+      labels: { ich: ich, du: du, er: er/sie/es, wir: wir, ihr: ihr, sie: sie/Sie }
+    de_imperative:
+      keys: ["du", "ihr", "Sie"]
+      labels: { du: du, ihr: ihr, Sie: Sie }
+  paradigm_rules: |
+    GERMAN (de) for "{lemma}":
+    - Note separable prefix if applicable. Never use placeholders.
+
+nouns:
+  cases: [nominativ, akkusativ, dativ, genitiv]
+  numbers: [sg, pl]
+  genders: [m, f, n]
+
+adjectives:
+  full_declension: true
+
+ui_labels:
+  pl:
+    prasens: Czas teraźniejszy
+    perfekt: Czas przeszły złożony
+    prateritum: Czas przeszły prosty

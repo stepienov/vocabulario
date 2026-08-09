@@ -1,0 +1,21 @@
+appId: com.vocabulario.app
+tags:
+  - smoke
+  - home
+---
+# C-01 · Tabs Dashboard / Add / Lists
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- tapOn:
+    id: tab_add
+- assertVisible:
+    id: search_input
+- tapOn:
+    id: tab_lists
+- assertVisible:
+    id: tab_lists
+- tapOn:
+    id: tab_dashboard
+- assertVisible:
+    id: btn_learn

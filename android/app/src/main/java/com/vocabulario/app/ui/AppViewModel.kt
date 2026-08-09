@@ -42,7 +42,6 @@ class AppViewModel @Inject constructor(
 
     fun bootstrap() {
         viewModelScope.launch {
-            // DataStore — krótko; UI nie może wisieć na sieci.
             withTimeoutOrNull(1_500) { tokenStore.awaitReady() }
 
             val token = tokenStore.peekAccessToken()
@@ -51,15 +50,20 @@ class AppViewModel @Inject constructor(
                 return@launch
             }
 
-            // Od razu pokaż Home — profil doprecyzujemy w tle.
-            _startRoute.value = AppStartRoute.HOME
-
-            val result = withTimeoutOrNull(5_000) {
-                runCatching { authRepository.hasProfile() }
+            val result = withTimeoutOrNull(8_000) {
+                runCatching {
+                    authRepository.ensureActiveProfile()
+                    learningRepository.applyAppLocaleFromActiveProfile()
+                    learningRepository.syncThemeFromSettings()
+                    authRepository.hasProfile()
+                }
             }
 
             when {
-                result == null -> syncInBackground()
+                result == null -> {
+                    _startRoute.value = AppStartRoute.HOME
+                    syncInBackground()
+                }
                 result.isFailure -> {
                     val err = result.exceptionOrNull()
                     val unauthorized = err is HttpException && err.code() == 401
@@ -67,11 +71,15 @@ class AppViewModel @Inject constructor(
                         runCatching { authRepository.logout() }
                         _startRoute.value = AppStartRoute.AUTH
                     } else {
+                        _startRoute.value = AppStartRoute.HOME
                         syncInBackground()
                     }
                 }
-                result.getOrNull() == true -> syncInBackground()
-                else -> _startRoute.value = AppStartRoute.ONBOARDING
+                result.getOrNull() == false -> _startRoute.value = AppStartRoute.ONBOARDING
+                else -> {
+                    _startRoute.value = AppStartRoute.HOME
+                    syncInBackground()
+                }
             }
         }
     }
@@ -79,6 +87,7 @@ class AppViewModel @Inject constructor(
     private fun syncInBackground() {
         viewModelScope.launch {
             runCatching { authRepository.ensureActiveProfile() }
+            runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
             runCatching { learningRepository.syncPendingReviews() }
             runCatching { learningRepository.syncThemeFromSettings() }
             syncScheduler.schedulePeriodic()
@@ -87,12 +96,25 @@ class AppViewModel @Inject constructor(
     }
 
     fun onAuthenticated(needsOnboarding: Boolean) {
-        _startRoute.value = if (needsOnboarding) AppStartRoute.ONBOARDING else AppStartRoute.HOME
-        if (!needsOnboarding) syncInBackground()
+        viewModelScope.launch {
+            if (!needsOnboarding) {
+                runCatching {
+                    authRepository.ensureActiveProfile()
+                    learningRepository.applyAppLocaleFromActiveProfile()
+                    learningRepository.syncThemeFromSettings()
+                }
+            }
+            _startRoute.value = if (needsOnboarding) AppStartRoute.ONBOARDING else AppStartRoute.HOME
+            if (!needsOnboarding) syncInBackground()
+        }
     }
 
     fun onOnboardingComplete() {
-        _startRoute.value = AppStartRoute.HOME
+        viewModelScope.launch {
+            runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
+            _startRoute.value = AppStartRoute.HOME
+            syncInBackground()
+        }
     }
 
     fun onLogout() {

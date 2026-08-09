@@ -26,6 +26,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,20 +48,51 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vocabulario.app.R
+import com.vocabulario.app.ui.TestTags
+import com.vocabulario.app.ui.theme.GradeAgain
+import com.vocabulario.app.ui.theme.GradeHard
+import com.vocabulario.app.ui.theme.GradeKnown
+import com.vocabulario.app.ui.theme.GradeLearning
 
 val AppCardShape = RoundedCornerShape(18.dp)
 val AppButtonShape = RoundedCornerShape(28.dp)
 val AppChipShape = RoundedCornerShape(999.dp)
 val AppDialogShape = RoundedCornerShape(24.dp)
+
+/**
+ * Label for compact buttons / equal-weight rows.
+ * Always one line — no mid-word wrap or clipped second line in any language.
+ */
+@Composable
+fun ButtonLabel(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelLarge,
+) {
+    Text(
+        text = text,
+        modifier = modifier.fillMaxWidth(),
+        color = color,
+        style = style,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +100,7 @@ fun AppScreenScaffold(
     title: String,
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    actions: @Composable RowScope.() -> Unit = {},
     content: @Composable (Modifier) -> Unit,
 ) {
     Scaffold(
@@ -80,11 +113,15 @@ fun AppScreenScaffold(
                 },
                 navigationIcon = {
                     if (onBack != null) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wstecz")
+                        IconButton(onClick = onBack, modifier = Modifier.testTag(TestTags.BTN_BACK)) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.cd_back),
+                            )
                         }
                     }
                 },
+                actions = actions,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                 ),
@@ -157,13 +194,15 @@ fun SettingsRadioRow(
     selected: Boolean,
     onSelect: () -> Unit,
     showDivider: Boolean = true,
+    testTag: String? = null,
 ) {
     Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
                 .clickable(onClick = onSelect)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -199,11 +238,13 @@ fun SettingsCheckRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     showDivider: Boolean = true,
+    testTag: String? = null,
 ) {
     Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
                 .clickable { onCheckedChange(!checked) }
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -287,7 +328,7 @@ fun SpeakIconButton(
     ) {
         Icon(
             Icons.AutoMirrored.Filled.VolumeUp,
-            contentDescription = "Odtwórz",
+            contentDescription = stringResource(R.string.cd_play),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(iconSize),
         )
@@ -355,10 +396,60 @@ fun ChoiceTile(
     dimmed: Boolean = false,
     gloss: String? = null,
     showActions: Boolean = false,
-    canAddLearning: Boolean = true,
     onAddLearning: (() -> Unit)? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (showActions) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().testTag(TestTags.PRACTICE_CHOICE),
+            shape = RoundedCornerShape(20.dp),
+            color = scheme.surfaceVariant,
+            contentColor = scheme.onSurface,
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    gloss?.takeIf { it.isNotBlank() }?.let {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.onSurfaceVariant,
+                            maxLines = 3,
+                        )
+                    }
+                }
+                if (onAddLearning != null) {
+                    Surface(
+                        onClick = onAddLearning,
+                        shape = CircleShape,
+                        color = scheme.primary,
+                        contentColor = scheme.onPrimary,
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = stringResource(R.string.cd_add_to_list),
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        return
+    }
+
     val borderColor = when {
         selected && isCorrect == true -> com.vocabulario.app.ui.theme.GradeKnown
         dimmed -> scheme.outline.copy(alpha = 0.5f)
@@ -372,7 +463,7 @@ fun ChoiceTile(
     Surface(
         onClick = onClick,
         enabled = enabled && !dimmed,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag(TestTags.PRACTICE_CHOICE),
         shape = AppButtonShape,
         color = bgColor,
         contentColor = scheme.onSurface,
@@ -385,41 +476,13 @@ fun ChoiceTile(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = scheme.onSurface.copy(alpha = if (dimmed) 0.7f else 1f),
-                )
-                if (showActions && !gloss.isNullOrBlank()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        gloss,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = scheme.onSurfaceVariant,
-                    )
-                }
-            }
-            if (showActions) {
-                if (canAddLearning && onAddLearning != null) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = "Dodaj do listy",
-                        tint = scheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .size(26.dp)
-                            .clickable(onClick = onAddLearning),
-                    )
-                } else {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = "Już na liście",
-                        tint = com.vocabulario.app.ui.theme.GradeKnown,
-                        modifier = Modifier.size(26.dp),
-                    )
-                }
-            }
+            Text(
+                text,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = scheme.onSurface.copy(alpha = if (dimmed) 0.7f else 1f),
+            )
         }
     }
 }
@@ -435,10 +498,10 @@ fun GradeRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        GradeSquare("Powtórz", com.vocabulario.app.ui.theme.GradeAgain, Modifier.weight(1f), onAgain)
-        GradeSquare("Trudne", com.vocabulario.app.ui.theme.GradeHard, Modifier.weight(1f), onHard)
-        GradeSquare("Dobrze", com.vocabulario.app.ui.theme.GradeLearning, Modifier.weight(1f), onGood)
-        GradeSquare("Łatwe", com.vocabulario.app.ui.theme.GradeKnown, Modifier.weight(1f), onEasy)
+        GradeSquare(stringResource(R.string.grade_again), GradeAgain, Modifier.weight(1f).testTag(TestTags.GRADE_AGAIN), onAgain)
+        GradeSquare(stringResource(R.string.grade_hard), GradeHard, Modifier.weight(1f).testTag(TestTags.GRADE_HARD), onHard)
+        GradeSquare(stringResource(R.string.grade_good), GradeLearning, Modifier.weight(1f).testTag(TestTags.GRADE_GOOD), onGood)
+        GradeSquare(stringResource(R.string.grade_easy), GradeKnown, Modifier.weight(1f).testTag(TestTags.GRADE_EASY), onEasy)
     }
 }
 
@@ -548,7 +611,7 @@ fun WordListItem(
                     "pending" -> {
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "Tworzę kartę",
+                            stringResource(R.string.creating_card),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -556,7 +619,7 @@ fun WordListItem(
                     "failed" -> {
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "Nie udało się przygotować karty",
+                            stringResource(R.string.creating_card_failed),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.error,
                         )

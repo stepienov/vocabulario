@@ -1,0 +1,39 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - settings
+  - lang
+---
+# J-12 / J-13 · Open L1/L2 dropdowns
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/goto-settings.yaml
+- tapOn:
+    id: settings_section_languages
+- scrollUntilVisible:
+    element:
+      id: settings_native_lang
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    id: settings_native_lang
+- scrollUntilVisible:
+    element:
+      id: settings_learning_lang
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: settings_native_lang
+- extendedWaitUntil:
+    visible: "English|Spanish|Polish|Español|Polski"
+    timeout: 10000
+- pressKey: Back
+- tapOn:
+    id: settings_learning_lang
+- extendedWaitUntil:
+    visible: "English|Spanish|Polish|Español|Polski"
+    timeout: 10000
+- pressKey: Back
+- tapOn:
+    id: btn_back

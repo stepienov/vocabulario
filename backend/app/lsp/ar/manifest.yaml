@@ -1,0 +1,42 @@
+code: ar
+lsp_version: ar-1.0.0
+name_en: Arabic
+script: Arab
+rtl: true
+inflection_kind: root_pattern
+
+default_selected_tenses:
+  - perfect
+  - imperfect
+
+verbs:
+  tenses:
+    - { key: perfect, label_l2: الماضي, person_grid: ar_13 }
+    - { key: imperfect, label_l2: المضارع, person_grid: ar_13 }
+    - { key: imperative, label_l2: الأمر, person_grid: ar_imperative }
+  non_finite:
+    - { key: masdar, label_l2: المصدر }
+  person_grids:
+    ar_13:
+      keys: ["1sg", "2sg_m", "2sg_f", "3sg_m", "3sg_f", "2du", "3du", "1pl", "2pl_m", "2pl_f", "3pl_m", "3pl_f"]
+      labels: {}
+    ar_imperative:
+      keys: ["2sg_m", "2sg_f", "2pl_m", "2pl_f"]
+      labels: {}
+  paradigm_rules: |
+    ARABIC MSA (ar) for "{lemma}":
+    - Modern Standard Arabic only. Include vocalized forms where helpful.
+    - Root pattern in language_specific. Never use placeholders.
+
+nouns:
+  cases: [nominative, genitive, accusative]
+  numbers: [sg, pl, dual]
+  genders: [m, f]
+
+adjectives:
+  full_declension: true
+
+ui_labels:
+  pl:
+    perfect: Czas przeszły
+    imperfect: Czas teraźniejszy

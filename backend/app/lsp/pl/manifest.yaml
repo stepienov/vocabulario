@@ -1,0 +1,145 @@
+code: pl
+lsp_version: pl-1.0.0
+name_en: Polish
+script: Latn
+rtl: false
+inflection_kind: person_tense
+
+default_selected_tenses:
+  - czas_terazniejszy
+  - czas_przeszly
+
+verbs:
+  tenses:
+    - key: czas_terazniejszy
+      label_l2: Czas teraźniejszy
+      person_grid: present
+    - key: czas_przeszly
+      label_l2: Czas przeszły
+      person_grid: past
+    - key: czas_przyszly
+      label_l2: Czas przyszły
+      person_grid: future
+    - key: tryb_rozkazujacy
+      label_l2: Tryb rozkazujący
+      person_grid: imperative
+    - key: tryb_przypuszczajacy
+      label_l2: Tryb przypuszczający
+      person_grid: conditional
+  non_finite:
+    - key: bezokolicznik
+      label_l2: Bezokolicznik
+    - key: imieslow_przeszly
+      label_l2: Imiesłów przeszły
+    - key: imieslow_przyszly
+      label_l2: Imiesłów przyszły
+  person_grids:
+    present:
+      keys: ["ja", "ty", "on", "ona", "ono", "my", "wy", "oni", "one"]
+      labels:
+        ja: ja
+        ty: ty
+        "on": "on"
+        ona: ona
+        ono: ono
+        my: my
+        wy: wy
+        oni: oni
+        one: one
+    past:
+      keys: ["ja_m", "ja_f", "ty_m", "ty_f", "on", "ona", "ono", "my_mv", "my_fv", "wy_mv", "wy_fv", "oni", "one"]
+      labels:
+        ja_m: ja (m)
+        ja_f: ja (ż)
+        ty_m: ty (m)
+        ty_f: ty (ż)
+        "on": "on"
+        ona: ona
+        ono: ono
+        my_mv: my (m)
+        my_fv: my (ż)
+        wy_mv: wy (m)
+        wy_fv: wy (ż)
+        oni: oni
+        one: one
+    future:
+      keys: ["ja", "ty", "on", "ona", "ono", "my", "wy", "oni", "one"]
+      labels:
+        ja: ja
+        ty: ty
+        "on": "on"
+        ona: ona
+        ono: ono
+        my: my
+        wy: wy
+        oni: oni
+        one: one
+    imperative:
+      keys: [ty, my, wy]
+      labels:
+        ty: ty
+        my: my
+        wy: wy
+    conditional:
+      keys: ["ja_m", "ja_f", "ty_m", "ty_f", "on", "ona", "ono", "my_mv", "my_fv", "wy_mv", "wy_fv", "oni", "one"]
+      labels:
+        ja_m: ja (m)
+        ja_f: ja (ż)
+        ty_m: ty (m)
+        ty_f: ty (ż)
+        "on": "on"
+        ona: ona
+        ono: ono
+        my_mv: my (m)
+        my_fv: my (ż)
+        wy_mv: wy (m)
+        wy_fv: wy (ż)
+        oni: oni
+        one: one
+  paradigm_rules: |
+    POLISH (pl) — MANDATORY:
+    1. Determine aspect of "{lemma}" (perfective vs imperfective).
+    2. czas_terazniejszy — ONLY for IMPERFECTIVE verbs.
+       - person_grid: present (ja, ty, on, ona, ono, my, wy, oni, one)
+       - NO gender split in present. For PERFECTIVE: OMIT czas_terazniejszy entirely.
+    3. czas_przeszly — both aspects; use person_grid: past (gendered).
+    4. czas_przyszly — imperfective: compound (będę + l-participle); perfective: simple future.
+    5. tryb_rozkazujacy — ty, my, wy.
+    6. tryb_przypuszczajacy — gendered like past.
+    7. non_finite: bezokolicznik, imieslow_przeszly, imieslow_przyszly when attested.
+    8. NEVER use placeholders (—, -, n/a). Omit entire tense if grammatically impossible.
+
+nouns:
+  cases:
+    - mianownik
+    - dopełniacz
+    - celownik
+    - biernik
+    - narzędnik
+    - miejscownik
+    - wołacz
+  numbers: [sg, pl]
+  genders: [m_personal, m_animate, m_inanimate, f, n]
+
+adjectives:
+  full_declension: true
+
+ui_labels:
+  pl:
+    czas_terazniejszy: Czas teraźniejszy
+    czas_przeszly: Czas przeszły
+    czas_przyszly: Czas przyszły
+    tryb_rozkazujacy: Tryb rozkazujący
+    tryb_przypuszczajacy: Tryb przypuszczający
+    bezokolicznik: Bezokolicznik
+    imieslow_przeszly: Imiesłów przeszły
+    imieslow_przyszly: Imiesłów przyszły
+  en:
+    czas_terazniejszy: Present tense
+    czas_przeszly: Past tense
+    czas_przyszly: Future tense
+    tryb_rozkazujacy: Imperative
+    tryb_przypuszczajacy: Conditional
+    bezokolicznik: Infinitive
+    imieslow_przeszly: Past participle
+    imieslow_przyszly: Future participle

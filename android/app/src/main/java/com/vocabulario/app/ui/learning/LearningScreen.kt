@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -20,8 +19,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vocabulario.app.R
 import com.vocabulario.app.ui.card.CardDetailContent
 import com.vocabulario.app.ui.components.AddToListSheet
 import com.vocabulario.app.ui.components.AppScreenScaffold
@@ -37,6 +39,7 @@ fun LearningScreen(
     viewModel: LearningViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
     LaunchedEffect(Unit) { viewModel.load() }
 
     state.addTarget?.let { target ->
@@ -47,7 +50,7 @@ fun LearningScreen(
             pickListOpen = state.pickListOpen,
             showCreateListPrompt = state.showCreateListPrompt,
             createListName = state.createListName,
-            createNameError = listNameConflictMessage(state.lists, state.createListName),
+            createNameError = listNameConflictMessage(context, state.lists, state.createListName),
             onDismiss = viewModel::dismissAddSheet,
             onLearning = viewModel::addRelatedToLearning,
             onOther = viewModel::openOtherLists,
@@ -55,10 +58,12 @@ fun LearningScreen(
             onCreateNameChange = viewModel::onCreateListNameChange,
             onCreateAndAdd = viewModel::createListAndAddRelated,
             onShowCreatePrompt = viewModel::openCreateListPrompt,
+            onBackFromCreatePrompt = viewModel::backFromCreateListPrompt,
+            onBackFromListPicker = viewModel::backFromListPicker,
         )
     }
 
-    AppScreenScaffold(title = "Nauka", onBack = onBack) { paddingModifier ->
+    AppScreenScaffold(title = stringResource(R.string.learning_title), onBack = onBack) { paddingModifier ->
         Column(modifier = paddingModifier.fillMaxSize()) {
             if (state.loading) {
                 CircularProgressIndicator()
@@ -72,21 +77,28 @@ fun LearningScreen(
                     CardDetailContent(
                         card.content,
                         card.lemma_l2,
-                        card.content["language"]?.jsonPrimitive?.content,
+                        languageCode = card.content["language"]?.jsonPrimitive?.content
+                            ?: state.learningLang,
                         userTenses = state.userTenses,
                         userCefr = state.userCefr,
                         enrichmentStatus = card.enrichment_status,
                         enrichmentError = card.enrichment_error,
+                        profile = state.activeProfile,
                         onAddRelated = viewModel::openAddRelated,
                     )
                     Spacer(Modifier.height(8.dp))
-                    TextButton(onClick = viewModel::clearSelection) { Text("Wróć do listy") }
+                    TextButton(onClick = viewModel::clearSelection) {
+                        Text(stringResource(R.string.learning_back_list))
+                    }
                 }
                 return@Column
             }
 
             if (state.cards.isEmpty() && state.error == null) {
-                EmptyState("Nie masz jeszcze słówek w nauce", "Wyszukaj słowo na ekranie głównym")
+                EmptyState(
+                    stringResource(R.string.learning_empty),
+                    stringResource(R.string.learning_empty_hint),
+                )
             }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(state.cards) { card ->

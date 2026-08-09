@@ -1,0 +1,13 @@
+appId: com.vocabulario.app
+---
+# Soft helper: if Onboarding title is visible, tap Start after defaults.
+# Prefer seeding a profile via scripts/e2e-prepare-backend.ps1 for smoke.
+- runFlow:
+    when:
+      visible: "Learning setup|Configuración del aprendizaje|Konfiguracja nauki"
+    commands:
+      - tapOn: "Start|Empezar|Zacznij naukę|Commencer"
+      - extendedWaitUntil:
+          visible:
+            id: tab_dashboard
+          timeout: 30000

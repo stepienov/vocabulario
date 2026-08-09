@@ -1,0 +1,50 @@
+code: fr
+lsp_version: fr-1.0.0
+name_en: French
+script: Latn
+rtl: false
+inflection_kind: person_tense
+
+default_selected_tenses:
+  - present
+  - passe_compose
+  - imparfait
+
+verbs:
+  tenses:
+    - { key: present, label_l2: Présent, person_grid: fr_6 }
+    - { key: passe_compose, label_l2: Passé composé, person_grid: fr_6 }
+    - { key: imparfait, label_l2: Imparfait, person_grid: fr_6 }
+    - { key: futur_simple, label_l2: Futur simple, person_grid: fr_6 }
+    - { key: conditionnel, label_l2: Conditionnel, person_grid: fr_6 }
+    - { key: subjonctif_present, label_l2: Subjonctif présent, person_grid: fr_6 }
+    - { key: plus_que_parfait, label_l2: Plus-que-parfait, person_grid: fr_6 }
+    - { key: imperatif, label_l2: Impératif, person_grid: fr_imperative }
+  non_finite:
+    - { key: infinitif, label_l2: Infinitif }
+    - { key: participe_passe, label_l2: Participe passé }
+    - { key: gerondif, label_l2: Gérondif }
+  person_grids:
+    fr_6:
+      keys: ["je", "tu", "il", "nous", "vous", "ils"]
+      labels: { je: je, tu: tu, il: il/elle, nous: nous, vous: vous, ils: ils/elles }
+    fr_imperative:
+      keys: ["tu", "nous", "vous"]
+      labels: { tu: tu, nous: nous, vous: vous }
+  paradigm_rules: |
+    FRENCH (fr) for "{lemma}":
+    - Include être/avoir auxiliary correctly in compound tenses.
+    - Never use placeholders.
+
+nouns:
+  numbers: [sg, pl]
+  genders: [m, f]
+
+adjectives:
+  full_declension: true
+
+ui_labels:
+  pl:
+    present: Czas teraźniejszy
+    passe_compose: Czas przeszły złożony
+    imparfait: Czas przeszły niedokonany

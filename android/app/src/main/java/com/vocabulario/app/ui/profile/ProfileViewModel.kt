@@ -2,11 +2,17 @@ package com.vocabulario.app.ui.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vocabulario.app.R
 import com.vocabulario.app.data.LearningRepository
+import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.api.LanguageProfileResponse
+import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.normalizeTenseKey
 import com.vocabulario.app.data.normalizeTenseKeys
+import com.vocabulario.app.i18n.AppLocale
+import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +23,6 @@ import javax.inject.Inject
 data class ProfileUiState(
     val profiles: List<LanguageProfileResponse> = emptyList(),
     val activeProfile: LanguageProfileResponse? = null,
-    val uiLang: String = "pl",
     val selectedTenses: Set<String> = emptySet(),
     val cefrLevel: String = "A2",
     val loading: Boolean = false,
@@ -28,6 +33,9 @@ data class ProfileUiState(
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val repository: LearningRepository,
+    private val tokenStore: TokenStore,
+    private val pairSession: PairSession,
+    private val strings: UiStrings,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProfileUiState())
@@ -37,23 +45,29 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(loading = true, error = null)
             runCatching {
-                val profiles = repository.listProfiles()
-                val active = profiles.firstOrNull { it.is_active } ?: profiles.firstOrNull()
-                val user = repository.getMe()
-                Triple(profiles, active, user.ui_lang)
-            }.onSuccess { (profiles, active, uiLang) ->
+                val active = repository.getActiveProfile()
+                val profiles = runCatching { repository.listProfiles() }.getOrElse {
+                    active?.let { listOf(it) } ?: emptyList()
+                }
+                val resolvedActive = active
+                    ?: profiles.firstOrNull { it.is_active }
+                    ?: profiles.firstOrNull()
+                profiles to resolvedActive
+            }.onSuccess { (profiles, active) ->
+                val appLang = active?.appLang ?: "en"
+                tokenStore.saveAppLang(appLang)
+                AppLocale.apply(appLang)
                 _state.value = ProfileUiState(
                     loading = false,
                     profiles = profiles,
                     activeProfile = active,
-                    uiLang = uiLang,
                     selectedTenses = normalizeTenseKeys(active?.selected_tenses.orEmpty()).toSet(),
                     cefrLevel = active?.cefr_level ?: "A2",
                 )
             }.onFailure {
                 _state.value = _state.value.copy(
                     loading = false,
-                    error = it.userMessage("Błąd ładowania profilu"),
+                    error = it.userMessage(strings.get(R.string.err_load_profile)),
                 )
             }
         }
@@ -61,9 +75,23 @@ class ProfileViewModel @Inject constructor(
 
     fun activateProfile(profileId: String) {
         viewModelScope.launch {
-            runCatching { repository.activateProfile(profileId) }
-                .onSuccess { load() }
-                .onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd aktywacji")) }
+            runCatching {
+                pairSession.withSwitch(awaitDataReload = true) {
+                    val profile = repository.activateProfile(profileId)
+                    tokenStore.saveAppLang(profile.appLang)
+                    AppLocale.apply(profile.appLang)
+                    runCatching { repository.syncNow(fullReplace = true) }
+                    profile
+                }
+            }.onSuccess {
+                load()
+                pairSession.markDataReady()
+            }
+                .onFailure {
+                    _state.value = _state.value.copy(
+                        error = it.userMessage(strings.get(R.string.err_activate)),
+                    )
+                }
         }
     }
 
@@ -71,10 +99,17 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { repository.updateProfile(cefr = level) }
                 .onSuccess {
-                    _state.value = _state.value.copy(cefrLevel = level, message = "Zapisano poziom CEFR")
+                    _state.value = _state.value.copy(
+                        cefrLevel = level,
+                        message = strings.get(R.string.msg_saved_cefr),
+                    )
                     load()
                 }
-                .onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd zapisu")) }
+                .onFailure {
+                    _state.value = _state.value.copy(
+                        error = it.userMessage(strings.get(R.string.err_save)),
+                    )
+                }
         }
     }
 
@@ -92,18 +127,14 @@ class ProfileViewModel @Inject constructor(
                 .onSuccess {
                     _state.value = _state.value.copy(
                         selectedTenses = canonical.toSet(),
-                        message = "Zapisano czasy",
+                        message = strings.get(R.string.msg_saved_tenses),
                     )
                 }
-                .onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd zapisu")) }
-        }
-    }
-
-    fun setUiLang(lang: String) {
-        viewModelScope.launch {
-            runCatching { repository.updateUiLang(lang) }
-                .onSuccess { _state.value = _state.value.copy(uiLang = lang, message = "Zapisano język UI") }
-                .onFailure { _state.value = _state.value.copy(error = it.userMessage("Błąd zapisu")) }
+                .onFailure {
+                    _state.value = _state.value.copy(
+                        error = it.userMessage(strings.get(R.string.err_save)),
+                    )
+                }
         }
     }
 }

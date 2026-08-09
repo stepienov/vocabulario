@@ -9,15 +9,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.ui.auth.AuthScreen
 import com.vocabulario.app.ui.auth.AuthViewModel
-import com.vocabulario.app.ui.favorites.FavoritesScreen
+import com.vocabulario.app.ui.components.PairSwitchHost
 import com.vocabulario.app.ui.home.HomeScreen
 import com.vocabulario.app.ui.learning.LearningScreen
 import com.vocabulario.app.ui.onboarding.OnboardingScreen
@@ -25,6 +28,10 @@ import com.vocabulario.app.ui.packs.PacksScreen
 import com.vocabulario.app.ui.practice.PracticeScreen
 import com.vocabulario.app.ui.profile.ProfileScreen
 import com.vocabulario.app.ui.settings.SettingsScreen
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 
 object Routes {
     const val AUTH = "auth"
@@ -33,9 +40,14 @@ object Routes {
     const val PRACTICE = "practice"
     const val SETTINGS = "settings"
     const val PROFILE = "profile"
-    const val FAVORITES = "favorites"
     const val LEARNING = "learning"
     const val PACKS = "packs"
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface PairSessionEntryPoint {
+    fun pairSession(): PairSession
 }
 
 @Composable
@@ -44,6 +56,8 @@ fun VocabularioAppRoot(
     authViewModel: AuthViewModel = hiltViewModel(),
 ) {
     val startRoute by appViewModel.startRoute.collectAsState()
+    val pairSession = rememberPairSession()
+    val pairBusy by pairSession.busy.collectAsState()
 
     LaunchedEffect(Unit) { appViewModel.bootstrap() }
 
@@ -54,67 +68,74 @@ fun VocabularioAppRoot(
         return
     }
 
-    // Przebuduj graf przy zmianie trasy startowej (HOME ↔ AUTH ↔ ONBOARDING).
-    key(startRoute) {
-        val navController = rememberNavController()
-        val graphStart = when (startRoute) {
-            AppStartRoute.AUTH -> Routes.AUTH
-            AppStartRoute.ONBOARDING -> Routes.ONBOARDING
-            AppStartRoute.HOME -> Routes.HOME
-            AppStartRoute.LOADING -> Routes.AUTH
-        }
+    PairSwitchHost(busy = pairBusy) {
+        // Przebuduj graf przy zmianie trasy startowej (HOME ↔ AUTH ↔ ONBOARDING).
+        key(startRoute) {
+            val navController = rememberNavController()
+            val graphStart = when (startRoute) {
+                AppStartRoute.AUTH -> Routes.AUTH
+                AppStartRoute.ONBOARDING -> Routes.ONBOARDING
+                AppStartRoute.HOME -> Routes.HOME
+                AppStartRoute.LOADING -> Routes.AUTH
+            }
 
-        NavHost(navController = navController, startDestination = graphStart) {
-            composable(Routes.AUTH) {
-                AuthScreen(
-                    onAuthenticated = { needsOnboarding ->
-                        appViewModel.onAuthenticated(needsOnboarding)
-                    },
-                    onRegisterComplete = {
-                        appViewModel.onAuthenticated(needsOnboarding = true)
-                    },
-                )
-            }
-            composable(Routes.ONBOARDING) {
-                OnboardingScreen(
-                    onComplete = { appViewModel.onOnboardingComplete() },
-                )
-            }
-            composable(Routes.HOME) {
-                HomeScreen(
-                    onPractice = { navController.navigate(Routes.PRACTICE) },
-                    onSettings = { navController.navigate(Routes.SETTINGS) },
-                    onOpenCard = { navController.navigate(Routes.LEARNING) },
-                )
-            }
-            composable(Routes.PRACTICE) {
-                PracticeScreen(onBack = { navController.popBackStack() })
-            }
-            composable(Routes.SETTINGS) {
-                SettingsScreen(
-                    onBack = { navController.popBackStack() },
-                    onLogout = {
-                        authViewModel.logout {
-                            appViewModel.onLogout()
-                        }
-                    },
-                )
-            }
-            composable(Routes.PROFILE) {
-                ProfileScreen(
-                    onBack = { navController.popBackStack() },
-                    onAddProfile = { navController.navigate(Routes.ONBOARDING) },
-                )
-            }
-            composable(Routes.FAVORITES) {
-                FavoritesScreen(onBack = { navController.popBackStack() })
-            }
-            composable(Routes.LEARNING) {
-                LearningScreen(onBack = { navController.popBackStack() })
-            }
-            composable(Routes.PACKS) {
-                PacksScreen(onBack = { navController.popBackStack() })
+            NavHost(navController = navController, startDestination = graphStart) {
+                composable(Routes.AUTH) {
+                    AuthScreen(
+                        onAuthenticated = { needsOnboarding ->
+                            appViewModel.onAuthenticated(needsOnboarding)
+                        },
+                        onRegisterComplete = {
+                            appViewModel.onAuthenticated(needsOnboarding = true)
+                        },
+                    )
+                }
+                composable(Routes.ONBOARDING) {
+                    OnboardingScreen(
+                        onComplete = { appViewModel.onOnboardingComplete() },
+                    )
+                }
+                composable(Routes.HOME) {
+                    HomeScreen(
+                        onPractice = { navController.navigate(Routes.PRACTICE) },
+                        onSettings = { navController.navigate(Routes.SETTINGS) },
+                        onOpenCard = { navController.navigate(Routes.LEARNING) },
+                    )
+                }
+                composable(Routes.PRACTICE) {
+                    PracticeScreen(onBack = { navController.popBackStack() })
+                }
+                composable(Routes.SETTINGS) {
+                    SettingsScreen(
+                        onBack = { navController.popBackStack() },
+                        onLogout = {
+                            authViewModel.logout {
+                                appViewModel.onLogout()
+                            }
+                        },
+                    )
+                }
+                composable(Routes.PROFILE) {
+                    ProfileScreen(
+                        onBack = { navController.popBackStack() },
+                        onAddProfile = { navController.navigate(Routes.ONBOARDING) },
+                    )
+                }
+                composable(Routes.LEARNING) {
+                    LearningScreen(onBack = { navController.popBackStack() })
+                }
+                composable(Routes.PACKS) {
+                    PacksScreen(onBack = { navController.popBackStack() })
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun rememberPairSession(): PairSession {
+    val context = LocalContext.current.applicationContext
+    return remember {
+        EntryPointAccessors.fromApplication(context, PairSessionEntryPoint::class.java).pairSession()
     }
 }

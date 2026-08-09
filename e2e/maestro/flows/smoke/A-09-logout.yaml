@@ -1,0 +1,15 @@
+appId: com.vocabulario.app
+tags:
+  - smoke
+  - auth
+  - settings
+---
+# A-09 · Logout
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/logout.yaml
+- assertVisible:
+    id: auth_email
+- assertVisible:
+    id: auth_submit

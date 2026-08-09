@@ -1,0 +1,33 @@
+appId: com.vocabulario.app
+tags:
+  - home
+  - ai-mock
+---
+# E-07 · Add candidate → sheet Learning (depends on search / LLM)
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- tapOn:
+    id: tab_add
+- tapOn:
+    id: search_input
+- eraseText
+- inputText: "amigo"
+- tapOn:
+    id: search_submit
+- extendedWaitUntil:
+    visible:
+      id: candidate_add
+    timeout: 60000
+- tapOn:
+    id: candidate_add
+- extendedWaitUntil:
+    visible:
+      id: sheet_add_learning
+    timeout: 15000
+- tapOn:
+    id: sheet_add_learning
+- extendedWaitUntil:
+    notVisible:
+      id: sheet_add_learning
+    timeout: 30000

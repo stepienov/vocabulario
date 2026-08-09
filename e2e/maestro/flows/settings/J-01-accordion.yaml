@@ -1,0 +1,20 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - settings
+---
+# J-01 · Accordion exclusive expand (open two sections)
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/goto-settings.yaml
+- tapOn:
+    id: settings_section_mode
+- assertVisible:
+    id: settings_mode_choice
+- tapOn:
+    id: settings_section_theme
+- assertVisible:
+    id: settings_theme_system
+- tapOn:
+    id: btn_back

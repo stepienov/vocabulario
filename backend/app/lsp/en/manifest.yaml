@@ -1,0 +1,51 @@
+code: en
+lsp_version: en-1.0.0
+name_en: English
+script: Latn
+rtl: false
+inflection_kind: person_tense
+
+default_selected_tenses:
+  - present_simple
+  - past_simple
+  - present_continuous
+
+verbs:
+  tenses:
+    - { key: present_simple, label_l2: Present simple, person_grid: en_3sg }
+    - { key: present_continuous, label_l2: Present continuous, person_grid: en_3sg }
+    - { key: present_perfect, label_l2: Present perfect, person_grid: en_3sg }
+    - { key: past_simple, label_l2: Past simple, person_grid: en_3sg }
+    - { key: past_continuous, label_l2: Past continuous, person_grid: en_3sg }
+    - { key: past_perfect, label_l2: Past perfect, person_grid: en_3sg }
+    - { key: future_will, label_l2: Future (will), person_grid: en_3sg }
+    - { key: going_to, label_l2: Going to, person_grid: en_3sg }
+    - { key: conditionals, label_l2: Conditionals, person_grid: en_3sg }
+  non_finite:
+    - { key: ing_form, label_l2: "-ing form" }
+    - { key: past_participle, label_l2: Past participle }
+  person_grids:
+    en_3sg:
+      keys: ["I", "you", "he_she_it", "we", "you_pl", "they"]
+      labels: { I: I, you: you, he_she_it: he/she/it, we: we, you_pl: you, they: they }
+  paradigm_rules: |
+    ENGLISH (en) for "{lemma}":
+    - Include irregular forms where applicable. Omit inapplicable tenses.
+    - Never use placeholders.
+
+nouns:
+  numbers: [sg, pl]
+  genders: []
+
+adjectives:
+  full_declension: true
+
+ui_labels:
+  pl:
+    present_simple: Czas teraźniejszy prosty
+    past_simple: Czas przeszły prosty
+    present_continuous: Czas teraźniejszy ciągły
+  en:
+    present_simple: Present simple
+    past_simple: Past simple
+    present_continuous: Present continuous

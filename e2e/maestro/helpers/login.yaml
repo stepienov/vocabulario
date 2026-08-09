@@ -1,0 +1,21 @@
+appId: com.vocabulario.app
+---
+# Login — Tab from email into password (avoids Compose password testTag quirks).
+- runFlow: dismiss-system-dialog.yaml
+- extendedWaitUntil:
+    visible:
+      id: auth_email
+    timeout: 25000
+- tapOn:
+    id: auth_email
+- eraseText
+- inputText: ${E2E_EMAIL}
+- pressKey: Tab
+- inputText: ${E2E_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: auth_submit
+- extendedWaitUntil:
+    visible:
+      id: tab_dashboard
+    timeout: 45000

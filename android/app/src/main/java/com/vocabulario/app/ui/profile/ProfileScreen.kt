@@ -29,11 +29,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vocabulario.app.R
 import com.vocabulario.app.data.CEFR_LEVELS
-import com.vocabulario.app.data.SUPPORTED_UI_LANGS
-import com.vocabulario.app.data.VERB_TENSES
+import com.vocabulario.app.data.LanguagePacks
+import com.vocabulario.app.data.api.appLang
+import com.vocabulario.app.data.verbTensesFor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,14 +51,19 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profil") },
+                title = { Text(stringResource(R.string.profile_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wstecz")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_back),
+                        )
                     }
                 },
                 actions = {
-                    TextButton(onClick = onAddProfile) { Text("Nowa para") }
+                    TextButton(onClick = onAddProfile) {
+                        Text(stringResource(R.string.profile_new_pair))
+                    }
                 },
             )
         },
@@ -73,14 +81,21 @@ fun ProfileScreen(
         ) {
             state.activeProfile?.let { profile ->
                 Text(
-                    "Aktywna para: ${profile.native_lang.uppercase()} -> ${profile.learning_lang.uppercase()}",
+                    stringResource(
+                        R.string.profile_active_pair,
+                        profile.appLang.uppercase(),
+                        profile.learning_lang.uppercase(),
+                    ),
                     style = MaterialTheme.typography.titleLarge,
                 )
-                Text("Poziom: ${profile.cefr_level}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    stringResource(R.string.profile_level, profile.cefr_level),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
 
             Spacer(Modifier.height(16.dp))
-            Text("Twoje pary językowe", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.profile_pairs), style = MaterialTheme.typography.titleMedium)
             state.profiles.forEach { profile ->
                 Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                     Row(
@@ -88,15 +103,18 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("${profile.native_lang.uppercase()} -> ${profile.learning_lang.uppercase()}")
+                            Text("${profile.appLang.uppercase()} -> ${profile.learning_lang.uppercase()}")
                             Text("CEFR ${profile.cefr_level}", style = MaterialTheme.typography.bodySmall)
                             if (profile.is_active) {
-                                Text("Aktywna", color = MaterialTheme.colorScheme.primary)
+                                Text(
+                                    stringResource(R.string.profile_active),
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
                             }
                         }
                         if (!profile.is_active) {
                             TextButton(onClick = { viewModel.activateProfile(profile.id) }) {
-                                Text("Aktywuj")
+                                Text(stringResource(R.string.profile_activate))
                             }
                         }
                     }
@@ -104,7 +122,7 @@ fun ProfileScreen(
             }
 
             Spacer(Modifier.height(20.dp))
-            Text("Poziom CEFR (aktywny profil)", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.profile_cefr_active), style = MaterialTheme.typography.titleMedium)
             CEFR_LEVELS.forEach { level ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(
@@ -115,27 +133,18 @@ fun ProfileScreen(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
-            Text("Czasy czasowników", style = MaterialTheme.typography.titleMedium)
-            VERB_TENSES.forEach { (key, label) ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = key in state.selectedTenses,
-                        onCheckedChange = { viewModel.toggleTense(key) },
-                    )
-                    Text(label)
-                }
-            }
-
-            Spacer(Modifier.height(20.dp))
-            Text("Język interfejsu", style = MaterialTheme.typography.titleMedium)
-            SUPPORTED_UI_LANGS.forEach { (code, label) ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = state.uiLang == code,
-                        onClick = { viewModel.setUiLang(code) },
-                    )
-                    Text(label)
+            val learningLang = state.activeProfile?.learning_lang
+            if (LanguagePacks.showsTensePicker(learningLang)) {
+                Spacer(Modifier.height(20.dp))
+                Text(stringResource(R.string.profile_tenses), style = MaterialTheme.typography.titleMedium)
+                verbTensesFor(learningLang).forEach { (key, label) ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = key in state.selectedTenses,
+                            onCheckedChange = { viewModel.toggleTense(key) },
+                        )
+                        Text(label)
+                    }
                 }
             }
 

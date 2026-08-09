@@ -1,0 +1,12 @@
+{
+  "note": "Real passwords live in .env.e2e (gitignored). Example defaults match .env.e2e.example.",
+  "users": [
+    {
+      "id": "e2e_primary",
+      "email": "e2e.vocabulario@example.com",
+      "native_lang": "en",
+      "learning_lang": "es",
+      "cefr": "A2"
+    }
+  ]
+}

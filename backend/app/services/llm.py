@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from typing import Any
 
@@ -6,18 +7,50 @@ import httpx
 from openai import AsyncOpenAI
 
 from app.ai.prompts.v1 import (
+    IMPORT_ADAPTIVE_PROMPT_V1,
+    IMPORT_ADAPTIVE_SYSTEM_V1,
+    IMPORT_ANSWER_STRUCTURE_PROMPT_V1,
+    IMPORT_ANSWER_STRUCTURE_SYSTEM_V1,
+    IMPORT_CLASSIFY_PROMPT_V1,
+    IMPORT_CLASSIFY_SYSTEM_V1,
+    IMPORT_DISPLAY_PROMPT_V1,
+    IMPORT_DISPLAY_SYSTEM_V1,
+    IMPORT_FORMAT_PROMPT_V1,
+    IMPORT_FORMAT_SYSTEM_V1,
+    IMPORT_STRUCTURE_SYSTEM_V1,
+    LOOKUP_L1_TYPO_PROMPT_V1,
     LOOKUP_PROMPT_V1,
     LOOKUP_SYSTEM_V1,
+    lookup_output_form_rules_text,
     SIMILAR_WORDS_SYSTEM_V1,
-    build_conjugation_prompt,
     build_enrichment_core_prompt,
     build_examples_prompt,
     build_similar_words_fill_prompt,
     build_similar_words_prompt,
-    lang_name_pl,
 )
+from app.ai.language_typology import lang_name_en, language_pair_guidance
+from app.ai.schemas.import_classify import (
+    import_adaptive_enrich_schema,
+    import_classify_schema,
+)
+from app.ai.schemas.import_display import (
+    import_answer_structure_schema,
+    import_display_schema,
+)
+from app.ai.schemas.import_format import import_format_schema
+from app.ai.schemas.import_structure import import_structure_schema
 from app.ai.schemas.similar_words import similar_words_response_schema
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
+
+
+def _log_import_llm(title: str, body: str) -> None:
+    """Widoczne w terminalu uvicorn — pełny prompt / response importu."""
+    sep = "=" * 72
+    block = f"\n{sep}\n{title}\n{sep}\n{body}\n{sep}\n"
+    logger.info(block)
+    print(block, flush=True)
 
 
 class LLMService:
@@ -139,6 +172,64 @@ class LLMService:
         return [{"lemma": l, "pos": p, "gloss_l1": g} for l, p, g in variants]
 
     def _mock_response(self, prompt: str) -> dict[str, Any]:
+        if "full card audit" in prompt.lower() or "flashcard correction" in prompt.lower():
+            note_match = re.search(r"User note \(pay extra attention\):\s*(.+)", prompt, re.I)
+            if not note_match:
+                note_match = re.search(r"User note:\s*(.+)", prompt, re.I)
+            note = (note_match.group(1).strip().split("\n")[0] if note_match else "").lower()
+            if "accept" in note:
+                gloss_match = re.search(r'"gloss_primary":\s*"([^"]+)"', prompt)
+                gloss = gloss_match.group(1) if gloss_match else "poprawione znaczenie"
+                return {
+                    "status": "accepted",
+                    "code": "correction_accepted",
+                    "reason": "Mock: correction accepted for testing.",
+                    "patch": {"gloss_primary": gloss},
+                }
+            if '"—"' in prompt or '": "—"' in prompt:
+                return {
+                    "status": "accepted",
+                    "code": "correction_accepted",
+                    "reason": "Mock: fixed placeholder conjugation.",
+                    "patch": {
+                        "conjugation": {
+                            "presente": {
+                                "yo": "como",
+                                "tú": "comes",
+                                "él/ella/usted": "come",
+                                "nosotros": "comemos",
+                                "vosotros": "coméis",
+                                "ellos/ellas/ustedes": "comen",
+                            }
+                        }
+                    },
+                }
+            if '"lemma": "hablar"' in prompt and "to eat" in prompt:
+                return {
+                    "status": "accepted",
+                    "code": "correction_accepted",
+                    "reason": "Mock: fixed gloss.",
+                    "patch": {"gloss_primary": "to speak"},
+                }
+            if '"lemma": "escribir"' in prompt and "to run" in prompt:
+                return {
+                    "status": "accepted",
+                    "code": "correction_accepted",
+                    "reason": "Mock: fixed gloss.",
+                    "patch": {"gloss_primary": "to write"},
+                }
+            if '"lemma": "vivir"' in prompt and '"pos": "noun"' in prompt:
+                return {
+                    "status": "accepted",
+                    "code": "correction_accepted",
+                    "reason": "Mock: fixed POS.",
+                    "patch": {"pos": "verb"},
+                }
+            return {
+                "status": "rejected",
+                "code": "correction_unfounded",
+                "reason": "Mock: no factual errors found on full card audit.",
+            }
         if "Żadne nie może być na tej liście:" in prompt:
             count_match = re.search(r"Podaj (\d+) słów", prompt)
             count = int(count_match.group(1)) if count_match else 12
@@ -157,17 +248,26 @@ class LLMService:
             match = re.search(r"Słowo na fiszce:\s*(\S+)", prompt)
             lemma = match.group(1).rstrip(".”„") if match else "palabra"
             return {"similar_words": self._mock_similar_words(lemma)}
-        if "candidates" in prompt or "kandydat" in prompt.lower():
+        if "candidates" in prompt or "kandydat" in prompt.lower() or "Candidate list" in prompt:
+            q = re.search(r'User query string:\s*"([^"]+)"', prompt)
+            if not q:
+                q = re.search(r'Wpisane zapytanie:\s*"([^"]+)"', prompt)
+            if not q:
+                q = re.search(r'Typed string:\s*"([^"]+)"', prompt)
+            if not q:
+                q = re.search(r"(?:Query|Text|User input|Word)\s*:\s*(.+)", prompt, re.I)
+            lemma = (q.group(1).strip().split()[0] if q else None) or "casa"
+            lemma = lemma.strip(".,;\"'")
             return {
                 "candidates": [
-                    {"lemma": "vacío", "pos": "adj", "gloss": "pusty"},
-                    {"lemma": "vaciar", "pos": "verb", "gloss": "opróżniać"},
+                    {"lemma": lemma, "pos": "noun", "gloss": f"mock gloss for {lemma}"},
+                    {"lemma": f"{lemma}2", "pos": "verb", "gloss": f"mock gloss 2 for {lemma}"},
                 ]
             }
         match = re.search(r"Lemat \(L2\):\s*(\S+)", prompt)
         lemma = match.group(1) if match else "palabra"
         return {
-            "schema_version": "1.0",
+            "schema_version": "vocabulario.card.v1",
             "lemma": lemma,
             "language": "es",
             "pos": "verb",
@@ -186,6 +286,7 @@ class LLMService:
             "synonyms_l2": [],
             "antonyms_l2": [],
             "similar_words": self._mock_similar_words(lemma),
+            "inflection": None,
             "conjugation": None,
             "notes": None,
             "confidence": 0.95,
@@ -195,15 +296,41 @@ class LLMService:
         self, text: str, native: str, learning: str, cefr: str
     ) -> list[dict[str, Any]]:
         prompt = LOOKUP_PROMPT_V1.format(
-            native_name=lang_name_pl(native),
-            learning_name=lang_name_pl(learning),
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
             text=text,
             cefr=cefr,
+            pair_guidance=language_pair_guidance(native=native, learning=learning),
+            lookup_output_form_rules=lookup_output_form_rules_text(native, learning),
         )
         data = await self._chat_json(
             self.lookup_model,
             prompt,
             system=LOOKUP_SYSTEM_V1,
+        )
+        return data.get("candidates", [])
+
+    async def lookup_l1_typo(
+        self, text: str, native: str, learning: str, cefr: str
+    ) -> list[dict[str, Any]]:
+        """Second-pass lookup: force interpretation as native-language typo."""
+        prompt = LOOKUP_L1_TYPO_PROMPT_V1.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            text=text,
+            pair_guidance=language_pair_guidance(native=native, learning=learning),
+            lookup_output_form_rules=lookup_output_form_rules_text(native, learning),
+        )
+        data = await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=(
+                "Correct an L1 typo and return L2 dictionary headwords as JSON. "
+                "Interpret the query generously (typos, diacritics, inflection). "
+                "Output always dictionary citation forms: lemma = L2 headword, "
+                "gloss = L1 headword (singular noun / infinitive verb). "
+                "If the typed string is also a valid L2 headword, include that reading too."
+            ),
         )
         return data.get("candidates", [])
 
@@ -226,13 +353,12 @@ class LLMService:
             self.lookup_model,
             prompt,
             system=(
-                "Pracujesz jak słownik dwujęzyczny. Znaczenia podajesz w kolejności "
-                "od najczęstszego i każde jest odrębnym sensem — warianty stylistyczne "
-                "tego samego sensu idą do synonimów, nie na listę znaczeń. "
-                "Peryfrazy gramatyczne (acabar de, ir a, volver a, dejar de) NIE są "
-                "znaczeniami lematu — pomijasz je w meanings. "
-                "Synonimy mają tę samą część mowy co gloss_l1 (L1) lub lemat (L2). "
-                "Bez przykładów i koniugacji. Tylko JSON."
+                "You work like a bilingual dictionary. Meanings in frequency order; "
+                "stylistic variants of the same sense go to synonyms, not meanings. "
+                "Periphrases belong to THIS L2 only (never invent Spanish acabar de / ir a "
+                "for other L2) and are NOT lemma meanings — omit them from meanings. "
+                "Synonyms must match POS of gloss_l1 (L1) or lemma (L2). "
+                "No examples, no conjugation. JSON only."
             ),
         )
 
@@ -263,18 +389,28 @@ class LLMService:
             ),
         )
 
-    async def generate_conjugation(self, lemma: str) -> dict[str, Any] | None:
-        prompt = build_conjugation_prompt(lemma=lemma)
+    async def generate_lsp_inflection(self, prompt: str) -> dict[str, Any]:
+        """Jeden krok inflection wg manifestu LSP."""
+        if self.mock:
+            return {
+                "verbs": {
+                    "tenses": {"czas_przeszly": {"ja_m": "mock"}},
+                    "non_finite": {},
+                    "ui_meta": {"inflection_kind": "person_tense"},
+                },
+                "periphrases": [],
+            }
         data = await self._chat_json(
             self.enrichment_model,
             prompt,
             system=(
-                "Generujesz pełną koniugację czasownika. Periphrases tylko idiomatyczne dla tego lematu "
-                "(bez estar/ir + gerundio). Tylko poprawny JSON."
+                "You are a rigorous morphologist. Return only attested inflected forms. "
+                "Never use placeholder dashes — omit inapplicable categories instead. JSON only."
             ),
         )
-        conjugation = data.get("conjugation")
-        return conjugation if isinstance(conjugation, dict) else None
+        if isinstance(data.get("inflection"), dict):
+            return data["inflection"]
+        return data if isinstance(data, dict) else {}
 
     async def enrich(
         self,
@@ -364,6 +500,440 @@ class LLMService:
             max_tokens=4000,
         )
         return self._parse_similar_words(data)
+
+    async def analyze_import_format(
+        self,
+        *,
+        native: str,
+        learning: str,
+        kind_hint: str,
+        field_names: list[str] | None,
+        raw_sample: str,
+    ) -> dict:
+        """Surowy tekst → instrukcja segmentacji na notatki/pola."""
+        prompt = IMPORT_FORMAT_PROMPT_V1.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            kind_hint=kind_hint,
+            field_names=json.dumps(field_names, ensure_ascii=False)
+            if field_names
+            else "nieznane",
+            raw_sample=raw_sample,
+        )
+        _log_import_llm(
+            f"IMPORT FORMAT → PROMPT (model={self.lookup_model}, kind={kind_hint})",
+            f"--- SYSTEM ---\n{IMPORT_FORMAT_SYSTEM_V1}\n\n--- USER ---\n{prompt}",
+        )
+        result = await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=IMPORT_FORMAT_SYSTEM_V1,
+            json_schema=import_format_schema(),
+            max_tokens=3500,
+            temperature=0.1,
+        )
+        _log_import_llm(
+            "IMPORT FORMAT ← RESPONSE",
+            json.dumps(result, ensure_ascii=False, indent=2),
+        )
+        return result
+
+    async def analyze_import_classify(
+        self,
+        *,
+        native: str,
+        learning: str,
+        notes: list[list[str]],
+    ) -> dict:
+        compact = []
+        for note in notes:
+            row = []
+            for cell in note:
+                row.append(cell[:300] if len(cell) > 300 else cell)
+            compact.append(row)
+        prompt = IMPORT_CLASSIFY_PROMPT_V1.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            notes_json=json.dumps(compact, ensure_ascii=False, indent=2),
+        )
+        _log_import_llm(
+            f"IMPORT CLASSIFY → PROMPT (model={self.lookup_model}, n={len(notes)})",
+            f"--- SYSTEM ---\n{IMPORT_CLASSIFY_SYSTEM_V1}\n\n--- USER ---\n{prompt}",
+        )
+        result = await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=IMPORT_CLASSIFY_SYSTEM_V1,
+            json_schema=import_classify_schema(),
+            max_tokens=6000,
+            temperature=0.1,
+        )
+        _log_import_llm(
+            "IMPORT CLASSIFY ← RESPONSE",
+            json.dumps(result, ensure_ascii=False, indent=2),
+        )
+        return result
+
+    async def enrich_adaptive_entry(
+        self,
+        *,
+        native: str,
+        learning: str,
+        cefr: str,
+        entry_kind: str,
+        headword: str,
+        gloss: str | None,
+        base_lemma: str | None,
+        pattern: str | None,
+    ) -> dict:
+        prompt = IMPORT_ADAPTIVE_PROMPT_V1.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            cefr=cefr,
+            entry_kind=entry_kind,
+            headword=headword,
+            gloss=gloss or "",
+            base_lemma=base_lemma or "",
+            pattern=pattern or "",
+        )
+        return await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=IMPORT_ADAPTIVE_SYSTEM_V1,
+            json_schema=import_adaptive_enrich_schema(),
+            max_tokens=3500,
+            temperature=0.2,
+        )
+
+    async def analyze_import_structure(
+        self,
+        *,
+        native: str,
+        learning: str,
+        kind: str,
+        field_names: list[str] | None,
+        sample_notes: list[list[str]],
+        total_notes: int,
+    ) -> dict:
+        """Ustal jak wyciągnąć hasła L2 z dowolnej talii Anki/CSV."""
+        from app.services.import_ai import build_import_structure_prompt
+
+        prompt = build_import_structure_prompt(
+            native=native,
+            learning=learning,
+            kind=kind,
+            field_names=field_names,
+            sample_notes=sample_notes,
+            total_notes=total_notes,
+        )
+        _log_import_llm(
+            f"IMPORT LLM → PROMPT (model={self.lookup_model}, mock={self.mock}, "
+            f"kind={kind}, notes={total_notes})",
+            f"--- SYSTEM ---\n{IMPORT_STRUCTURE_SYSTEM_V1}\n\n--- USER ---\n{prompt}",
+        )
+        if self.mock:
+            # mock: prefer Spanish / index 1
+            idx = 0
+            if field_names:
+                for i, name in enumerate(field_names):
+                    if "spanish" in name.lower() or "lemma" in name.lower():
+                        idx = i
+                        break
+                else:
+                    idx = 1 if len(field_names) > 1 else 0
+            else:
+                idx = 1
+            result = {
+                "strategy": "field_index" if (field_names and len(field_names) > 1) or (
+                    sample_notes and sample_notes[0] and len(sample_notes[0]) > 1
+                ) else "plain_list",
+                "field_index": idx if (field_names and len(field_names) > 1) or (
+                    sample_notes and sample_notes[0] and len(sample_notes[0]) > 1
+                ) else None,
+                "html_class": None,
+                "l2_field_label": "mock",
+                "sample_headwords": [],
+                "unique_estimate": total_notes,
+                "rationale": "mock — bez wywołania OpenAI",
+            }
+            _log_import_llm(
+                "IMPORT LLM ← RESPONSE (mock)",
+                json.dumps(result, ensure_ascii=False, indent=2),
+            )
+            return result
+        result = await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=IMPORT_STRUCTURE_SYSTEM_V1,
+            json_schema=import_structure_schema(),
+            max_tokens=2000,
+            temperature=0.1,
+        )
+        _log_import_llm(
+            "IMPORT LLM ← RESPONSE",
+            json.dumps(result, ensure_ascii=False, indent=2),
+        )
+        return result
+
+    async def analyze_import_display(
+        self,
+        *,
+        native: str,
+        learning: str,
+        kind: str,
+        field_names: list[str] | None,
+        sample_notes: list[list[str]],
+        total_notes: int,
+    ) -> dict:
+        """Mapa ról pól + szablon bloków UI (front/back) dla trybu preserve."""
+        compact = []
+        for note in sample_notes:
+            row = []
+            for cell in note:
+                row.append(cell[:400] if "<" in cell else cell)
+            compact.append(row)
+        prompt = IMPORT_DISPLAY_PROMPT_V1.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            kind=kind,
+            total_notes=total_notes,
+            field_names=json.dumps(field_names, ensure_ascii=False)
+            if field_names
+            else "nieznane",
+            sample_json=json.dumps(compact, ensure_ascii=False, indent=2),
+        )
+        _log_import_llm(
+            f"IMPORT DISPLAY → PROMPT (model={self.lookup_model}, kind={kind})",
+            f"--- SYSTEM ---\n{IMPORT_DISPLAY_SYSTEM_V1}\n\n--- USER ---\n{prompt}",
+        )
+        result = await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=IMPORT_DISPLAY_SYSTEM_V1,
+            json_schema=import_display_schema(),
+            max_tokens=3500,
+            temperature=0.1,
+        )
+        _log_import_llm(
+            "IMPORT DISPLAY ← RESPONSE",
+            json.dumps(result, ensure_ascii=False, indent=2),
+        )
+        return result
+
+    async def analyze_import_answer_structure(
+        self,
+        *,
+        native: str,
+        learning: str,
+        samples: list[str],
+    ) -> dict:
+        """Jak podzielić grubą prawą stronę na sekcje/bloki."""
+        prompt = IMPORT_ANSWER_STRUCTURE_PROMPT_V1.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            samples_json=json.dumps(samples, ensure_ascii=False, indent=2),
+        )
+        _log_import_llm(
+            "IMPORT ANSWER STRUCTURE → PROMPT",
+            f"--- SYSTEM ---\n{IMPORT_ANSWER_STRUCTURE_SYSTEM_V1}\n\n--- USER ---\n{prompt}",
+        )
+        result = await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=IMPORT_ANSWER_STRUCTURE_SYSTEM_V1,
+            json_schema=import_answer_structure_schema(),
+            max_tokens=3000,
+            temperature=0.1,
+        )
+        _log_import_llm(
+            "IMPORT ANSWER STRUCTURE ← RESPONSE",
+            json.dumps(result, ensure_ascii=False, indent=2),
+        )
+        return result
+
+
+    async def verify_card_correction(
+        self,
+        content: dict[str, Any],
+        sections: list[str],
+        note: str,
+        app_lang: str,
+        learning_lang: str,
+    ) -> dict[str, Any]:
+        from app.ai.conjugation import conjugation_paradigm_rules
+
+        lemma = str(content.get("lemma") or "")
+        pos = str(content.get("pos") or "")
+        conj_guidance = ""
+        if pos == "verb" or content.get("conjugation"):
+            conj_guidance = (
+                "\n\nCONJUGATION VERIFICATION RULES:\n"
+                f"{conjugation_paradigm_rules(learning_lang, lemma)}\n"
+                "- Reject placeholder dashes, wrong person grids, or missing real forms.\n"
+                "- When accepting, patch.conjugation must contain only real inflected forms.\n"
+            )
+        user_hints = ""
+        if sections:
+            user_hints += f"User highlighted sections (hints only): {', '.join(sections)}\n"
+        if note and note.strip():
+            user_hints += f"User note (pay extra attention): {note.strip()}\n"
+        if not user_hints:
+            user_hints = "User provided no section hints or note.\n"
+
+        prompt = (
+            "Flashcard correction — FULL CARD AUDIT.\n"
+            f"App language: {app_lang}\n"
+            f"Learning language: {learning_lang}\n"
+            f"{user_hints}"
+            "IMPORTANT: Review the ENTIRE card below — lemma, pos, glosses, meanings, "
+            "examples, conjugation, similar words, pronunciation. "
+            "User selections/note are optional hints only; never reject solely because "
+            "the note is vague, empty, or off-topic.\n"
+            "STRICT ACCEPTANCE RULES:\n"
+            "- Accept ONLY when there is a factual error, clear omission, wrong translation, "
+            "wrong part of speech, placeholder/missing data, or objectively incorrect grammar.\n"
+            "- NEVER accept to replace one valid translation/gloss with another equally valid "
+            "alternative (e.g. 'mebel' vs 'obiekt meblowy', 'to speak' vs 'to talk').\n"
+            "- NEVER accept if the card is already correct — return rejected.\n"
+            "- patch must contain ONLY fields that need fixing; omit unchanged fields.\n"
+            "- If no factual fix is needed, status must be rejected with code correction_unfounded.\n"
+            f"Current card content JSON:\n{json.dumps(content, ensure_ascii=False)}\n"
+            f"{conj_guidance}\n"
+            "Return JSON only:\n"
+            '{"status":"accepted"|"rejected","code":"correction_accepted"|'
+            '"correction_unfounded"|"correction_not_applicable",'
+            '"reason":"short user-facing summary","reason_detail":"optional admin detail",'
+            '"patch":{include every field you correct: '
+            '"lemma","pos","gloss_primary","meanings","examples","conjugation","similar_words","ipa"}}\n'
+            "Do not use correction_insufficient_info."
+        )
+        data = await self._chat_json(
+            self.enrichment_model,
+            prompt,
+            system=(
+                "You audit flashcards for factual and linguistic errors only. "
+                "Never apply stylistic or synonymous rewordings. "
+                "Reject when the card is correct or changes would be equivalent in meaning. "
+                "Return strict JSON."
+            ),
+            temperature=0.2,
+        )
+        status = str(data.get("status", "rejected")).lower()
+        if status not in {"accepted", "rejected"}:
+            status = "rejected"
+        code = str(data.get("code") or "")
+        if status == "accepted":
+            code = "correction_accepted"
+        elif code not in {
+            "correction_unfounded",
+            "correction_insufficient_info",
+            "correction_not_applicable",
+        }:
+            code = "correction_unfounded"
+        return {
+            "status": status,
+            "code": code,
+            "reason": data.get("reason"),
+            "reason_detail": data.get("reason_detail") or data.get("reason"),
+            "patch": data.get("patch") if isinstance(data.get("patch"), dict) else None,
+        }
+
+    async def validate_self_edit_changes(
+        self,
+        *,
+        lemma: str,
+        learning_lang: str,
+        app_lang: str,
+        changes: dict[str, Any],
+    ) -> dict[str, Any]:
+        prompt = (
+            "Validate a user's manual flashcard edits before saving.\n"
+            f"Lemma (L2): {lemma}\n"
+            f"Learning language: {learning_lang}\n"
+            f"App/UI language: {app_lang}\n"
+            f"User changes JSON:\n{json.dumps(changes, ensure_ascii=False)}\n"
+            "Review ONLY the user's changes (the 'to' values). "
+            "Flag factual or linguistic errors, wrong POS, mistranslations, or nonsense. "
+            "Do NOT flag stylistic preferences or minor wording differences.\n"
+            "Return JSON only:\n"
+            '{"ok":true|false,"issues":[{"field":"pos|notes|meanings[0].gloss_l1|...","label":"short label in app language","message":"why it is wrong in app language"}]}\n'
+            "If all changes are reasonable, return ok:true with empty issues. "
+            "List ONLY changes that are actually incorrect."
+        )
+        if self.mock:
+            issues: list[dict[str, str]] = []
+            changes_json = json.dumps(changes, ensure_ascii=False).lower()
+            if "invalid" in changes_json or "dupa" in changes_json:
+                issues.append(
+                    {
+                        "field": "meanings[0].gloss_l1",
+                        "label": "Główne tłumaczenie" if app_lang.startswith("pl") else "Primary gloss",
+                        "message": (
+                            "To tłumaczenie wygląda na nieprawidłowe."
+                            if app_lang.startswith("pl")
+                            else "This gloss looks incorrect."
+                        ),
+                    }
+                )
+            return {"ok": not issues, "issues": issues}
+
+        data = await self._chat_json(
+            self.enrichment_model,
+            prompt,
+            system=(
+                "You validate user flashcard edits. Be strict on factual errors, lenient on style. "
+                "Return strict JSON."
+            ),
+            temperature=0.2,
+        )
+        ok = bool(data.get("ok", True))
+        raw_issues = data.get("issues") if isinstance(data.get("issues"), list) else []
+        issues = []
+        for item in raw_issues:
+            if not isinstance(item, dict):
+                continue
+            field = str(item.get("field") or "").strip()
+            label = str(item.get("label") or field).strip()
+            message = str(item.get("message") or "").strip()
+            if field and message:
+                issues.append({"field": field, "label": label, "message": message})
+        if issues:
+            ok = False
+        return {"ok": ok, "issues": issues}
+
+    async def review_self_edit(
+        self,
+        *,
+        before_content: dict[str, Any],
+        after_content: dict[str, Any],
+        before_lemma: str,
+        after_lemma: str,
+        app_lang: str,
+        learning_lang: str,
+    ) -> dict[str, Any]:
+        prompt = (
+            "Review a user's manual flashcard edit.\n"
+            f"App language: {app_lang}\n"
+            f"Learning language: {learning_lang}\n"
+            f"Before lemma: {before_lemma}\n"
+            f"After lemma: {after_lemma}\n"
+            f"Before content JSON:\n{json.dumps(before_content, ensure_ascii=False)}\n"
+            f"After content JSON:\n{json.dumps(after_content, ensure_ascii=False)}\n"
+            "Return JSON only:\n"
+            '{"verdict":"self_edit_ok"|"self_edit_questionable"|"self_edit_invalid",'
+            '"reason":"short explanation for admin"}\n'
+            "Do not block the user — this is for admin review only."
+        )
+        data = await self._chat_json(
+            self.enrichment_model,
+            prompt,
+            system="You review whether a user's flashcard edit is linguistically reasonable. Return strict JSON.",
+            temperature=0.2,
+        )
+        verdict = str(data.get("verdict", "self_edit_questionable"))
+        if verdict not in {"self_edit_ok", "self_edit_questionable", "self_edit_invalid"}:
+            verdict = "self_edit_questionable"
+        return {"verdict": verdict, "reason": data.get("reason")}
 
 
 async def verify_google_id_token(id_token: str) -> dict[str, Any]:

@@ -1,15 +1,19 @@
 package com.vocabulario.app.ui.card
 
 import android.speech.tts.TextToSpeech
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -33,7 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -41,25 +45,30 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vocabulario.app.data.NON_FINITE_FORMS
-import com.vocabulario.app.data.VERB_TENSES
+import com.vocabulario.app.R
+import com.vocabulario.app.data.LanguagePacks
+import com.vocabulario.app.data.conjugationFromContent
 import com.vocabulario.app.data.asJsonArray
 import com.vocabulario.app.data.asJsonObject
 import com.vocabulario.app.data.asJsonString
 import com.vocabulario.app.data.examplesForUserLevel
-import com.vocabulario.app.data.normalizeTenseKey
+import com.vocabulario.app.data.api.LanguageProfileResponse
+import com.vocabulario.app.data.tenseLabelForProfile
+import com.vocabulario.app.data.resolveVisibleTenseKeys
+import com.vocabulario.app.i18n.localizedPosLabel
 import com.vocabulario.app.ui.components.AppCard
 import com.vocabulario.app.ui.components.SpeakIconButton
 import com.vocabulario.app.ui.components.TagChip
+import kotlinx.coroutines.delay
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import java.util.Locale
+import kotlinx.serialization.json.contentOrNull
 
 data class RelatedWord(
     val lemma: String,
@@ -89,71 +98,107 @@ private fun parseRelatedWords(raw: JsonArray?): List<RelatedWord> {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun CardDetailContent(
     content: JsonObject,
     lemmaFallback: String,
     languageCode: String? = null,
     compact: Boolean = false,
+    /** Pełna karta z listy — wszystkie sekcje, bez ustawień układu trybu nauki. */
+    fullDetail: Boolean = false,
     userTenses: List<String>? = null,
     userCefr: String = "A2",
     enrichmentStatus: String = "ready",
     enrichmentError: String? = null,
+    profile: LanguageProfileResponse? = null,
     onAddRelated: ((RelatedWord) -> Unit)? = null,
+    /** Gdy false — przewijanie obsługuje rodzic (np. pełny widok z listy). */
+    scrollable: Boolean = true,
 ) {
-    val context = LocalContext.current
-    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
-    val lang = languageCode ?: content["language"].asJsonString() ?: "es"
-
-    DisposableEffect(context) {
-        var engine: TextToSpeech? = null
-        engine = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                engine?.language = Locale.forLanguageTag(lang)
-            }
-        }
-        tts = engine
-        onDispose {
-            engine?.stop()
-            engine?.shutdown()
-        }
-    }
+    val lang = languageCode ?: content["language"].asJsonString() ?: "en"
+    val tts = rememberL2Tts(lang)
 
     val lemma = content["lemma"].asJsonString() ?: lemmaFallback
     val pos = content["pos"].asJsonString()
     val ipa = content["ipa"].asJsonString()
+    val pattern = content["pattern"].asJsonString()
+    val entryKind = content["entry_kind"].asJsonString()
     val meanings = content["meanings"].asJsonArray() ?: JsonArray(emptyList())
+    val hasMeaningContent = meanings.any { el ->
+        val m = el.asJsonObject() ?: return@any false
+        !m["gloss_l1"].asJsonString().isNullOrBlank() ||
+            !(m["examples"].asJsonArray()?.isEmpty() ?: true)
+    }
     val synonymsL2 = parseRelatedWords(content["synonyms_l2"].asJsonArray())
     val antonymsL2 = parseRelatedWords(content["antonyms_l2"].asJsonArray())
-    val conjugation = content["conjugation"].asJsonObject()
+    val conjugation = conjugationFromContent(content)
     val tenseMap = conjugation?.get("tenses").asJsonObject()
     val nonFinite = conjugation?.get("non_finite").asJsonObject()
     val periphrases = conjugation?.get("periphrases").asJsonArray()
-    val profileTenses = userTenses.orEmpty().map { normalizeTenseKey(it) }
-    // Pusta lista w profilu = wszystkie czasy (jak w ustawieniach).
-    val visibleFinite = (
-        if (profileTenses.isNotEmpty()) profileTenses
-        else VERB_TENSES.map { it.first }
-        ).filter { tenseMap?.containsKey(it) == true }
-    val visibleNonFinite = listOf("gerundio", "participio").filter { nonFinite?.containsKey(it) == true }
+    val uiMeta = conjugation?.get("ui_meta").asJsonObject()
+    val uiHints = content["ui_hints"].asJsonObject() ?: uiMeta
+    val showConjHint = if (fullDetail) {
+        conjugation != null
+    } else when (val raw = uiHints?.get("show_conjugation")) {
+        null -> conjugation != null
+        is JsonPrimitive -> raw.contentOrNull?.equals("false", ignoreCase = true) != true &&
+            raw.toString() != "false"
+        else -> true
+    }
+    val profileTenses = userTenses.orEmpty()
+    val catalogKeys = LanguagePacks.tenseCatalog(lang).map { it.key }
+    val visibleFinite = resolveVisibleTenseKeys(
+        profileTenses = profileTenses,
+        tenseMapKeys = tenseMap?.keys.orEmpty(),
+        catalogKeys = catalogKeys,
+    )
+    val visibleNonFinite = (nonFinite?.keys?.toList().orEmpty())
+        .ifEmpty { LanguagePacks.get(lang).nonFinite.map { it.key } }
+        .filter { nonFinite?.containsKey(it) == true }
     val conjugationTabs = visibleFinite + visibleNonFinite
     fun tenseLabel(key: String): String =
-        VERB_TENSES.firstOrNull { it.first == key }?.second
-            ?: NON_FINITE_FORMS.firstOrNull { it.first == key }?.second
-            ?: key.replace("_", " ")
+        tenseLabelForProfile(profile, key, conjugation)
+    fun personOrder(): List<String> {
+        val order = uiMeta?.get("person_order").asJsonArray()
+            ?.mapNotNull { it.asJsonString()?.takeIf { s -> s.isNotBlank() } }
+            .orEmpty()
+        if (order.isNotEmpty()) return order
+        return if (lang.equals("es", ignoreCase = true)) {
+            listOf("yo", "tú", "él", "nosotros", "vosotros", "ellos")
+        } else {
+            emptyList()
+        }
+    }
+    fun personLabel(key: String): String =
+        uiMeta?.get("person_labels").asJsonObject()?.get(key).asJsonString()
+            ?.takeIf { it.isNotBlank() } ?: key
     var conjugationExpanded by remember { mutableStateOf(!compact) }
     var selectedTenseIndex by remember { mutableIntStateOf(0) }
+    val conjugationBringIntoView = remember { BringIntoViewRequester() }
+    val conjugationBottomBringIntoView = remember { BringIntoViewRequester() }
+
+    LaunchedEffect(selectedTenseIndex, conjugationExpanded) {
+        if ((!compact || conjugationExpanded) && conjugationTabs.isNotEmpty()) {
+            delay(80)
+            conjugationBringIntoView.bringIntoView()
+            delay(50)
+            conjugationBottomBringIntoView.bringIntoView()
+        }
+    }
 
     Column(
-        modifier = if (compact) Modifier.fillMaxWidth() else Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+        modifier = when {
+            compact || !scrollable -> Modifier.fillMaxWidth()
+            else -> Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+        },
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         when (enrichmentStatus) {
             "pending" -> {
                 AppCard {
                     Text(
-                        "Przygotowuję pełną kartę w tle — możesz wrócić za chwilę.",
+                        stringResource(R.string.card_preparing),
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
@@ -163,11 +208,48 @@ fun CardDetailContent(
             "failed" -> {
                 AppCard {
                     Text(
-                        enrichmentError ?: "Nie udało się przygotować karty.",
+                        enrichmentError ?: stringResource(R.string.creating_card_failed),
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                     )
+                }
+            }
+            "ready" -> if (!hasMeaningContent) {
+                AppCard {
+                    Text(
+                        stringResource(R.string.card_preparing),
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        }
+        if (!pattern.isNullOrBlank() || (!entryKind.isNullOrBlank() && entryKind != "lemma")) {
+            AppCard {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        when (entryKind) {
+                            "construction" -> stringResource(R.string.kind_construction)
+                            "phrase" -> stringResource(R.string.kind_phrase)
+                            "sentence" -> stringResource(R.string.kind_sentence)
+                            else -> stringResource(R.string.card_headword)
+                        },
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (!pattern.isNullOrBlank()) {
+                        Text(
+                            pattern,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
                 }
             }
         }
@@ -183,7 +265,7 @@ fun CardDetailContent(
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             )
-            ipa?.let {
+            ipa?.takeIf { it.isNotBlank() }?.let {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "[$it]",
@@ -194,7 +276,7 @@ fun CardDetailContent(
             }
             if (pos != null) {
                 Spacer(modifier = Modifier.height(10.dp))
-                TagChip(pos)
+                TagChip(localizedPosLabel(pos))
             }
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(
@@ -202,12 +284,12 @@ fun CardDetailContent(
                 color = MaterialTheme.colorScheme.outlineVariant,
             )
             Spacer(Modifier.height(14.dp))
-            SpeakIconButton(onClick = { tts.speakL2(lemma, "lemma") })
+            SpeakIconButton(onClick = { tts.speak(lemma, "lemma") })
         }
 
-        if (!compact && synonymsL2.isNotEmpty()) {
+        if ((!compact || fullDetail) && synonymsL2.isNotEmpty() && !fullDetail) {
             RelatedWordsSection(
-                title = "Synonimy",
+                title = stringResource(R.string.section_synonyms_short),
                 words = synonymsL2,
                 onAdd = onAddRelated,
             )
@@ -215,119 +297,39 @@ fun CardDetailContent(
 
         meanings.forEach { meaningEl ->
             val meaning = meaningEl.asJsonObject() ?: return@forEach
-            AppCard {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    val detailExampleL2 = examplesForUserLevel(
-                        meaning["examples"].asJsonArray(),
-                        userCefr,
-                        maxCount = 1,
-                    ).firstOrNull()?.get("l2").asJsonString().orEmpty()
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.Top,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            meaning["gloss_l1"].asJsonString() ?: "",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f),
-                        )
-                        if (detailExampleL2.isNotBlank()) {
-                            SpeakIconButton(
-                                onClick = { tts.speakL2(detailExampleL2, "example-gloss") },
-                                compact = true,
-                            )
-                        }
-                    }
-                    val syns = meaning["synonyms_l1"].asJsonArray()?.mapNotNull { it.asJsonString() }.orEmpty()
-                    if (syns.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            syns.joinToString(" · "),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    val usages = meaning["usages"].asJsonArray().orEmpty()
-                    if (usages.isNotEmpty() && !compact) {
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            "Użycia",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        usages.forEachIndexed { index, usageEl ->
-                            val (l2, l1) = when (usageEl) {
-                                is JsonObject ->
-                                    (usageEl["l2"].asJsonString() ?: "") to
-                                        (usageEl["l1"].asJsonString() ?: "")
-                                else ->
-                                    (usageEl.asJsonString() ?: "") to ""
-                            }
-                            if (l2.isBlank()) return@forEachIndexed
-                            Spacer(Modifier.height(6.dp))
-                            Row(
-                                verticalAlignment = Alignment.Top,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Text(
-                                    l2,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                SpeakIconButton(
-                                    onClick = { tts.speakL2(l2, "usage-$index") },
-                                    compact = true,
-                                )
-                            }
-                            if (l1.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    l1,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                    val visibleExamples = examplesForUserLevel(
-                        meaning["examples"].asJsonArray(),
-                        userCefr,
-                        maxCount = if (compact) 1 else 2,
-                    )
-                    visibleExamples.forEach { exObj ->
-                        val exampleL2 = exObj["l2"].asJsonString().orEmpty()
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text(exampleL2, fontWeight = FontWeight.Medium)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    exObj["l1"].asJsonString() ?: "",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
+            if (fullDetail) {
+                MeaningFullDetailCard(
+                    meaning = meaning,
+                    userCefr = userCefr,
+                    tts = tts,
+                )
+            } else {
+                MeaningCompactCard(
+                    meaning = meaning,
+                    compact = compact,
+                    userCefr = userCefr,
+                    tts = tts,
+                )
             }
         }
 
-        if (!compact && antonymsL2.isNotEmpty()) {
+        if ((!compact || fullDetail) && synonymsL2.isNotEmpty() && fullDetail) {
             RelatedWordsSection(
-                title = "Antonimy",
+                title = stringResource(R.string.section_synonyms_short),
+                words = synonymsL2,
+                onAdd = onAddRelated,
+            )
+        }
+
+        if ((!compact || fullDetail) && antonymsL2.isNotEmpty()) {
+            RelatedWordsSection(
+                title = stringResource(R.string.section_antonyms_short),
                 words = antonymsL2,
                 onAdd = onAddRelated,
             )
         }
 
-        if (conjugationTabs.isNotEmpty() || periphrases != null) {
+        if (showConjHint && (conjugationTabs.isNotEmpty() || periphrases != null)) {
             AppCard {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -335,7 +337,7 @@ fun CardDetailContent(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Odmiana", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.section_conjugation_short), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         if (compact) {
                             IconButton(onClick = { conjugationExpanded = !conjugationExpanded }) {
                                 Icon(
@@ -346,6 +348,11 @@ fun CardDetailContent(
                         }
                     }
                     if (!compact || conjugationExpanded) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewRequester(conjugationBringIntoView),
+                        ) {
                         if (conjugationTabs.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
                             Row(
@@ -368,19 +375,28 @@ fun CardDetailContent(
                             }
                             Spacer(Modifier.height(12.dp))
                             val selectedKey = conjugationTabs.getOrNull(selectedTenseIndex)
-                            if (selectedKey == "gerundio" || selectedKey == "participio") {
-                                val form = nonFinite?.get(selectedKey).asJsonString()
-                                if (form != null) {
-                                    Surface(
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant,
-                                    ) {
-                                        Text(form, modifier = Modifier.padding(12.dp), fontWeight = FontWeight.Medium)
-                                    }
+                            val nonFiniteForm = selectedKey?.let { nonFinite?.get(it).asJsonString() }
+                            if (nonFiniteForm != null && tenseMap?.containsKey(selectedKey) != true) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                ) {
+                                    Text(nonFiniteForm, modifier = Modifier.padding(12.dp), fontWeight = FontWeight.Medium)
                                 }
                             } else {
                                 val forms = selectedKey?.let { tenseMap?.get(it).asJsonObject() }
-                                forms?.entries?.chunked(2)?.forEach { row ->
+                                val ordered = run {
+                                    val order = personOrder()
+                                    val known = order.mapNotNull { person ->
+                                        forms?.get(person)?.let { person to it }
+                                    }
+                                    val rest = forms?.entries
+                                        ?.filter { it.key !in order }
+                                        ?.map { it.key to it.value }
+                                        .orEmpty()
+                                    known + rest
+                                }
+                                ordered.chunked(2).forEach { row ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -393,11 +409,15 @@ fun CardDetailContent(
                                             ) {
                                                 Column(modifier = Modifier.padding(10.dp)) {
                                                     Text(
-                                                        person,
+                                                        personLabel(person),
                                                         style = MaterialTheme.typography.labelSmall,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     )
-                                                    Text(form.asJsonString().orEmpty(), fontWeight = FontWeight.Medium)
+                                                    Text(
+                                                        form.asJsonString().orEmpty(),
+                                                        fontWeight = FontWeight.Medium,
+                                                        softWrap = true,
+                                                    )
                                                 }
                                             }
                                         }
@@ -438,7 +458,7 @@ fun CardDetailContent(
                                             )
                                             if (periL2.isNotBlank()) {
                                                 SpeakIconButton(
-                                                    onClick = { tts.speakL2(periL2, "peri-$exIndex") },
+                                                    onClick = { tts.speak(periL2, "peri-$exIndex") },
                                                     compact = true,
                                                 )
                                             }
@@ -452,6 +472,248 @@ fun CardDetailContent(
                                 }
                             }
                         }
+                        Spacer(
+                            Modifier
+                                .height(1.dp)
+                                .bringIntoViewRequester(conjugationBottomBringIntoView),
+                        )
+                        }
+                    }
+                }
+            }
+        }
+        if (fullDetail) {
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun CardSubsectionDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(vertical = 12.dp),
+        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+    )
+}
+
+@Composable
+private fun CardSubsectionTitle(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(12.dp))
+}
+
+@Composable
+private fun L2L1PairRow(
+    l2: String,
+    l1: String,
+    onSpeak: (() -> Unit)?,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                l2,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (l1.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    l1,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (onSpeak != null) {
+            SpeakIconButton(onClick = onSpeak, compact = true)
+        }
+    }
+}
+
+@Composable
+private fun MeaningFullDetailCard(
+    meaning: JsonObject,
+    userCefr: String,
+    tts: L2TtsSpeaker,
+) {
+    val gloss = meaning["gloss_l1"].asJsonString().orEmpty()
+    val extraGlosses = meaning["synonyms_l1"].asJsonArray()?.mapNotNull { it.asJsonString() }.orEmpty()
+    val usages = meaning["usages"].asJsonArray().orEmpty()
+        .mapNotNull { usageEl ->
+            when (usageEl) {
+                is JsonObject ->
+                    (usageEl["l2"].asJsonString() ?: "") to (usageEl["l1"].asJsonString() ?: "")
+                else -> (usageEl.asJsonString() ?: "") to ""
+            }
+        }
+        .filter { it.first.isNotBlank() }
+    val examples = meaning["examples"].asJsonArray()
+        ?.mapNotNull { it.asJsonObject() }
+        .orEmpty()
+
+    AppCard {
+        Column(modifier = Modifier.padding(16.dp)) {
+            if (gloss.isNotBlank()) {
+                Text(
+                    gloss,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            extraGlosses.forEach { extra ->
+                if (extra.isBlank()) return@forEach
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    extra,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            if (usages.isNotEmpty()) {
+                CardSubsectionDivider()
+                CardSubsectionTitle(stringResource(R.string.section_usages_short))
+                usages.forEachIndexed { index, (l2, l1) ->
+                    if (index > 0) CardSubsectionDivider()
+                    L2L1PairRow(
+                        l2 = l2,
+                        l1 = l1,
+                        onSpeak = { tts.speak(l2, "usage-$index") },
+                    )
+                }
+            }
+
+            if (examples.isNotEmpty()) {
+                CardSubsectionDivider()
+                CardSubsectionTitle(stringResource(R.string.correction_section_examples))
+                examples.forEachIndexed { index, exObj ->
+                    val exampleL2 = exObj["l2"].asJsonString().orEmpty()
+                    if (exampleL2.isBlank()) return@forEachIndexed
+                    if (index > 0) CardSubsectionDivider()
+                    L2L1PairRow(
+                        l2 = exampleL2,
+                        l1 = exObj["l1"].asJsonString().orEmpty(),
+                        onSpeak = { tts.speak(exampleL2, "example-$index") },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MeaningCompactCard(
+    meaning: JsonObject,
+    compact: Boolean,
+    userCefr: String,
+    tts: L2TtsSpeaker,
+) {
+    AppCard {
+        Column(modifier = Modifier.padding(16.dp)) {
+            val detailExampleL2 = examplesForUserLevel(
+                meaning["examples"].asJsonArray(),
+                userCefr,
+                maxCount = 1,
+            ).firstOrNull()?.get("l2").asJsonString().orEmpty()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    meaning["gloss_l1"].asJsonString() ?: "",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                if (detailExampleL2.isNotBlank()) {
+                    SpeakIconButton(
+                        onClick = { tts.speak(detailExampleL2, "example-gloss") },
+                        compact = true,
+                    )
+                }
+            }
+            val syns = meaning["synonyms_l1"].asJsonArray()?.mapNotNull { it.asJsonString() }.orEmpty()
+            if (syns.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    syns.joinToString(" · "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            val usages = meaning["usages"].asJsonArray().orEmpty()
+            if (usages.isNotEmpty() && !compact) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    stringResource(R.string.section_usages_short),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                usages.forEachIndexed { index, usageEl ->
+                    val (l2, l1) = when (usageEl) {
+                        is JsonObject ->
+                            (usageEl["l2"].asJsonString() ?: "") to
+                                (usageEl["l1"].asJsonString() ?: "")
+                        else ->
+                            (usageEl.asJsonString() ?: "") to ""
+                    }
+                    if (l2.isBlank()) return@forEachIndexed
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            l2,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        SpeakIconButton(
+                            onClick = { tts.speak(l2, "usage-$index") },
+                            compact = true,
+                        )
+                    }
+                    if (l1.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            l1,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            val visibleExamples = examplesForUserLevel(
+                meaning["examples"].asJsonArray(),
+                userCefr,
+                maxCount = if (compact) 1 else 2,
+            )
+            visibleExamples.forEach { exObj ->
+                val exampleL2 = exObj["l2"].asJsonString().orEmpty()
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(exampleL2, fontWeight = FontWeight.Medium)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            exObj["l1"].asJsonString() ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -479,7 +741,7 @@ private fun RelatedWordsSection(
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Top,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(word.lemma, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -493,21 +755,23 @@ private fun RelatedWordsSection(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        word.pos?.let {
-                            Spacer(Modifier.height(8.dp))
-                            TagChip(it)
-                        }
                     }
                     if (onAdd != null) {
-                        IconButton(
+                        val scheme = MaterialTheme.colorScheme
+                        Surface(
                             onClick = { onAdd(word) },
+                            shape = CircleShape,
+                            color = scheme.primary,
+                            contentColor = scheme.onPrimary,
                             modifier = Modifier.size(40.dp),
                         ) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = "Dodaj",
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = stringResource(R.string.action_add),
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
                         }
                     }
                 }

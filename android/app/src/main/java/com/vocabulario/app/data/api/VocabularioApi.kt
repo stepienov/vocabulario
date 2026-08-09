@@ -1,9 +1,13 @@
 package com.vocabulario.app.data.api
 
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.PATCH
+import retrofit2.http.Part
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -24,9 +28,6 @@ interface VocabularioApi {
 
     @GET("me")
     suspend fun me(): UserResponse
-
-    @PUT("me")
-    suspend fun updateMe(@Body body: UserUpdate): UserResponse
 
     @GET("me/settings")
     suspend fun getSettings(): UserSettingsResponse
@@ -52,6 +53,34 @@ interface VocabularioApi {
     @POST("lookup")
     suspend fun lookup(@Body body: LookupRequest): LookupResponse
 
+    @POST("imports/validate")
+    suspend fun validateImport(@Body body: ImportValidateRequest): ImportValidateResponse
+
+    @POST("imports/ingest")
+    suspend fun ingestImport(@Body body: ImportIngestRequest): ImportValidateResponse
+
+    @POST("imports/ingest")
+    suspend fun ingestImportPreserve(@Body body: ImportIngestRequest): ImportDisplayResponse
+
+    @Multipart
+    @POST("imports/file")
+    suspend fun ingestImportFile(
+        @Part file: MultipartBody.Part,
+        @Part("profile_id") profileId: RequestBody,
+        @Part("mode") mode: RequestBody,
+    ): ImportValidateResponse
+
+    @Multipart
+    @POST("imports/file")
+    suspend fun ingestImportFilePreserve(
+        @Part file: MultipartBody.Part,
+        @Part("profile_id") profileId: RequestBody,
+        @Part("mode") mode: RequestBody,
+    ): ImportDisplayResponse
+
+    @POST("imports/commit-display")
+    suspend fun commitImportDisplay(@Body body: ImportDisplayCommitRequest): ImportDisplayCommitResponse
+
     @POST("cards")
     suspend fun createCard(@Body body: CardCreateRequest): CardResponse
 
@@ -63,6 +92,9 @@ interface VocabularioApi {
 
     @POST("lists")
     suspend fun createWordList(@Body body: WordListCreate): WordListResponse
+
+    @POST("lists/pending-inbox/ensure")
+    suspend fun ensurePendingInbox(@Query("profile_id") profileId: String): WordListResponse
 
     @GET("lists/{list_id}/words")
     suspend fun listWords(
@@ -107,17 +139,14 @@ interface VocabularioApi {
         @Query("days") days: Int = 7,
     ): DashboardStatsResponse
 
-    @POST("favorites")
-    suspend fun addFavorite(@Body body: FavoriteCreate): FavoriteResponse
-
-    @GET("favorites")
-    suspend fun listFavorites(@Query("profile_id") profileId: String): List<FavoriteResponse>
-
     @GET("srs/queue")
     suspend fun srsQueue(@Query("profile_id") profileId: String): SrsQueueResponse
 
     @POST("srs/review")
     suspend fun srsReview(@Body body: ReviewRequest): ReviewResponse
+
+    @POST("srs/undo")
+    suspend fun srsUndo(@Body body: SrsUndoRequest): SrsUndoResponse
 
     @POST("srs/check-answer")
     suspend fun checkAnswer(@Body body: CheckAnswerRequest): CheckAnswerResponse
@@ -133,4 +162,53 @@ interface VocabularioApi {
 
     @POST("sync/push")
     suspend fun syncPush(@Body body: SyncPushRequest): SyncPushResponse
+
+    @GET("corrections/quota")
+    suspend fun correctionQuota(): CorrectionQuotaResponse
+
+    @POST("cards/{card_id}/corrections")
+    suspend fun createCardCorrection(
+        @Path("card_id") cardId: String,
+        @Query("profile_id") profileId: String,
+        @Body body: CardCorrectionCreate,
+    ): CardCorrectionCreateResponse
+
+    @GET("cards/{card_id}/corrections/latest")
+    suspend fun latestCardCorrection(
+        @Path("card_id") cardId: String,
+        @Query("profile_id") profileId: String,
+    ): CardCorrectionResponse?
+
+    @POST("cards/{card_id}/self-edit/validate")
+    suspend fun validateSelfEdit(
+        @Path("card_id") cardId: String,
+        @Query("profile_id") profileId: String,
+        @Body body: CardSelfEditRequest,
+    ): SelfEditValidateResponse
+
+    @POST("cards/{card_id}/self-edit")
+    suspend fun selfEditCard(
+        @Path("card_id") cardId: String,
+        @Query("profile_id") profileId: String,
+        @Body body: CardSelfEditRequest,
+    ): CardResponse
+
+    @GET("cards/{card_id}/history")
+    suspend fun getCardHistory(
+        @Path("card_id") cardId: String,
+        @Query("profile_id") profileId: String,
+    ): CardHistoryResponse
+
+    @POST("cards/{card_id}/restore")
+    suspend fun restoreCard(
+        @Path("card_id") cardId: String,
+        @Query("profile_id") profileId: String,
+        @Body body: CardRestoreRequest,
+    ): CardResponse
+
+    @POST("devices/register")
+    suspend fun registerDevice(@Body body: DeviceRegisterRequest): retrofit2.Response<Unit>
+
+    @DELETE("devices/{token}")
+    suspend fun unregisterDevice(@Path("token") token: String): retrofit2.Response<Unit>
 }

@@ -87,7 +87,7 @@ async def fetch_similar_words(
     similar = await llm.generate_similar_words(
         lemma=lemma,
         pos=pos_val,
-        native=profile.native_lang,
+        native=profile.app_lang,
         learning=profile.learning_lang,
         count=MIN_SIMILAR_WORDS,
     )
@@ -97,7 +97,7 @@ async def fetch_similar_words(
 
     pool = await llm.generate_filler_words(
         pos=pos_val,
-        native=profile.native_lang,
+        native=profile.app_lang,
         learning=profile.learning_lang,
         exclude=[lemma, *(item["lemma"] for item in collected)],
         count=FILL_POOL_SIZE,

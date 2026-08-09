@@ -1,0 +1,23 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - import
+---
+# F-04 · Import cancel at paste dialog
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- tapOn:
+    id: tab_add
+- tapOn:
+    id: btn_import_paste
+- extendedWaitUntil:
+    visible:
+      id: "dialog_cancel|import_paste_input|dialog_confirm"
+    timeout: 15000
+- tapOn:
+    id: dialog_cancel
+- assertVisible:
+    id: search_input
+- assertVisible:
+    id: btn_import_paste

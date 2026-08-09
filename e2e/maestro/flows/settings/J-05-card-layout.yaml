@@ -1,0 +1,20 @@
+appId: com.vocabulario.app
+tags:
+  - regression
+  - settings
+---
+# J-05 · Card layout toggles
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/goto-settings.yaml
+- tapOn:
+    id: settings_section_card_layout
+- tapOn:
+    id: settings_check_examples
+- tapOn:
+    id: settings_check_usages
+- tapOn:
+    id: settings_check_examples
+- tapOn:
+    id: btn_back

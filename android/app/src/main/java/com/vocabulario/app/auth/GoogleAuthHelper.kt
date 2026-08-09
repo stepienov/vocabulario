@@ -8,6 +8,7 @@ import androidx.credentials.GetCredentialResponse
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.vocabulario.app.BuildConfig
+import com.vocabulario.app.R
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,6 +39,6 @@ class GoogleAuthHelper @Inject constructor() {
             val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
             return googleIdTokenCredential.idToken
         }
-        error("Nie udało się pobrać tokenu Google")
+        error(activityContext.getString(R.string.err_google_token))
     }
 }

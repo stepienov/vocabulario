@@ -1,0 +1,20 @@
+appId: com.vocabulario.app
+tags:
+  - smoke
+  - settings
+---
+# C-02 · Settings from Home and back
+- launchApp:
+    clearState: false
+- runFlow: ../../helpers/ensure-logged-in.yaml
+- runFlow: ../../helpers/goto-settings.yaml
+- assertVisible:
+    id: settings_section_languages
+- tapOn:
+    id: btn_back
+- extendedWaitUntil:
+    visible:
+      id: tab_dashboard
+    timeout: 15000
+- assertVisible:
+    id: btn_learn
