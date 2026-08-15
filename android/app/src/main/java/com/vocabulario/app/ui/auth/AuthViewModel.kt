@@ -66,7 +66,7 @@ class AuthViewModel @Inject constructor(
                 learningRepository.syncThemeFromSettings()
                 onSuccess(needsOnboarding)
             }.onFailure {
-                _errorMessage.value = it.userMessage(strings.get(R.string.err_login))
+                _errorMessage.value = it.userMessage(strings, R.string.err_login)
             }
         }
     }
@@ -82,7 +82,7 @@ class AuthViewModel @Inject constructor(
                 authRepository.register(email.trim(), password)
             }.onSuccess { onSuccess() }
                 .onFailure {
-                    _errorMessage.value = it.userMessage(strings.get(R.string.err_register))
+                    _errorMessage.value = it.userMessage(strings, R.string.err_register)
                 }
         }
     }
@@ -102,7 +102,7 @@ class AuthViewModel @Inject constructor(
                 learningRepository.syncThemeFromSettings()
                 onSuccess(needsOnboarding)
             }.onFailure {
-                _errorMessage.value = it.userMessage(strings.get(R.string.err_google_login))
+                _errorMessage.value = it.userMessage(strings, R.string.err_google_login)
             }
         }
     }

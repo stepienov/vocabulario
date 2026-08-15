@@ -3,7 +3,7 @@ tags:
   - regression
   - onboarding
 ---
-# B-01 · Onboarding happy path (scroll past tense list to Start)
+# B-01 · Onboarding happy path
 - launchApp:
     clearState: true
 - extendedWaitUntil:
@@ -26,18 +26,6 @@ tags:
     visible:
       id: onboarding_native_lang
     timeout: 45000
-- tapOn:
-    id: onboarding_cefr_A2
-- scrollUntilVisible:
-    element:
-      id: onboarding_start
-    direction: DOWN
-    timeout: 40000
-- tapOn:
-    id: onboarding_start
-- extendedWaitUntil:
-    visible:
-      id: tab_dashboard
-    timeout: 45000
+- runFlow: ../../helpers/complete-onboarding.yaml
 - assertVisible:
     id: btn_learn

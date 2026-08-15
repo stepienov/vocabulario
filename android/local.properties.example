@@ -1,0 +1,10 @@
+## Skopiuj do local.properties (plik lokalny, nie w gicie).
+## sdk.dir doda Android Studio samo.
+
+# IP tego komputera w LAN — potrzebne tylko do testów na fizycznym telefonie.
+# Sprawdź: ipconfig (Windows) / ifconfig (macOS/Linux)
+api.device.host=192.168.1.54
+api.port=8000
+
+# Opcjonalnie (domyślnie 10.0.2.2):
+# api.emulator.host=10.0.2.2

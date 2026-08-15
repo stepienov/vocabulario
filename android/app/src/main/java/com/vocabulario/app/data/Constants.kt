@@ -44,18 +44,34 @@ val SUPPORTED_UI_LANGS = listOf(
 /** Języki nauki — ta sama lista co UI (16 LSP). */
 val SUPPORTED_LEARNING_LANGS = SUPPORTED_UI_LANGS
 
+private val SUPPORTED_UI_LANG_CODES = SUPPORTED_UI_LANGS.map { it.first }.toSet()
+
+/** Map a device locale onto a supported UI/learning code, or null if unsupported. */
+fun matchSupportedUiLang(language: String, country: String = ""): String? {
+    val lang = language.trim().lowercase()
+    if (lang.isBlank()) return null
+    val region = country.trim().lowercase()
+    val tag = if (region.isBlank()) lang else "$lang-$region"
+    if (tag in SUPPORTED_UI_LANG_CODES) return tag
+    when {
+        lang == "pt" && region == "pt" -> return "pt-pt"
+        lang == "pt" -> return "pt-br"
+        lang == "zh" -> return "zh"
+    }
+    return lang.takeIf { it in SUPPORTED_UI_LANG_CODES }
+}
+
+/** Phone language if we support it, otherwise English. */
+fun deviceUiLang(): String {
+    val locale = android.content.res.Resources.getSystem().configuration.locales[0]
+        ?: java.util.Locale.getDefault()
+    return matchSupportedUiLang(locale.language, locale.country) ?: "en"
+}
+
 fun langDisplayName(code: String): String =
     SUPPORTED_LEARNING_LANGS.firstOrNull { it.first == code.lowercase() }?.second
         ?: SUPPORTED_UI_LANGS.firstOrNull { it.first == code.lowercase() }?.second
         ?: code.uppercase()
-
-/** Część mowy — etykieta zależna od języka UI (krótka). */
-fun posLabel(pos: String?, uiLang: String = "en"): String {
-    val key = normalizePosKey(pos)
-    if (key == "unknown" && pos.isNullOrBlank()) return ""
-    val map = POS_LABELS[uiLang.lowercase()] ?: POS_LABELS["en"]!!
-    return map[key] ?: if (key == "unknown") "" else pos.orEmpty()
-}
 
 /** Canonical POS bucket for filters/sort (`unknown` when missing / unrecognized). */
 fun normalizePosKey(pos: String?): String {
@@ -108,97 +124,6 @@ private val POS_SHORT_ALIASES = mapOf(
 
 private val CANONICAL_POS_KEYS = setOf(
     "noun", "verb", "adj", "adv", "prep", "conj", "pron", "det", "interj",
-)
-
-/** @deprecated użyj [posLabel] */
-fun posLabelPl(pos: String?): String = posLabel(pos, "pl")
-
-private val POS_LABELS: Map<String, Map<String, String>> = mapOf(
-    "pl" to mapOf(
-        "verb" to "czasownik", "noun" to "rzeczownik", "adj" to "przymiotnik",
-        "adv" to "przysłówek", "prep" to "przyimek", "conj" to "spójnik",
-        "pron" to "zaimek", "interj" to "wykrzyknik", "det" to "przedimek",
-    ),
-    "en" to mapOf(
-        "verb" to "verb", "noun" to "noun", "adj" to "adj.",
-        "adv" to "adv.", "prep" to "prep.", "conj" to "conj.",
-        "pron" to "pron.", "interj" to "interj.", "det" to "det.",
-    ),
-    "es" to mapOf(
-        "verb" to "verbo", "noun" to "sustantivo", "adj" to "adj.",
-        "adv" to "adv.", "prep" to "prep.", "conj" to "conj.",
-        "pron" to "pron.", "interj" to "interj.", "det" to "det.",
-    ),
-    "de" to mapOf(
-        "verb" to "Verb", "noun" to "Nomen", "adj" to "Adj.",
-        "adv" to "Adv.", "prep" to "Präp.", "conj" to "Konj.",
-        "pron" to "Pron.", "interj" to "Interj.", "det" to "Art.",
-    ),
-    "fr" to mapOf(
-        "verb" to "verbe", "noun" to "nom", "adj" to "adj.",
-        "adv" to "adv.", "prep" to "prép.", "conj" to "conj.",
-        "pron" to "pron.", "interj" to "interj.", "det" to "dét.",
-    ),
-    "pt" to mapOf(
-        "verb" to "verbo", "noun" to "substantivo", "adj" to "adj.",
-        "adv" to "adv.", "prep" to "prep.", "conj" to "conj.",
-        "pron" to "pron.", "interj" to "interj.", "det" to "det.",
-    ),
-    "ru" to mapOf(
-        "verb" to "глагол", "noun" to "существ.", "adj" to "прил.",
-        "adv" to "нареч.", "prep" to "предл.", "conj" to "союз",
-        "pron" to "мест.", "interj" to "межд.", "det" to "арт.",
-    ),
-    "zh" to mapOf(
-        "verb" to "动词", "noun" to "名词", "adj" to "形容词",
-        "adv" to "副词", "prep" to "介词", "conj" to "连词",
-        "pron" to "代词", "interj" to "感叹词", "det" to "限定词",
-    ),
-    "hi" to mapOf(
-        "verb" to "क्रिया", "noun" to "संज्ञा", "adj" to "विशेषण",
-        "adv" to "क्रियाविशेषण", "prep" to "संबंध", "conj" to "समुच्चय",
-        "pron" to "सर्वनाम", "interj" to "विस्मयादिबोधक", "det" to "निर्धारक",
-    ),
-    "ar" to mapOf(
-        "verb" to "فعل", "noun" to "اسم", "adj" to "صفة",
-        "adv" to "ظرف", "prep" to "حرف جر", "conj" to "رابط",
-        "pron" to "ضمير", "interj" to "تعجب", "det" to "أداة",
-    ),
-    "it" to mapOf(
-        "verb" to "verbo", "noun" to "sostantivo", "adj" to "agg.",
-        "adv" to "avv.", "prep" to "prep.", "conj" to "cong.",
-        "pron" to "pron.", "interj" to "inter.", "det" to "det.",
-    ),
-    "ja" to mapOf(
-        "verb" to "動詞", "noun" to "名詞", "adj" to "形容詞",
-        "adv" to "副詞", "prep" to "前置詞", "conj" to "接続詞",
-        "pron" to "代名詞", "interj" to "感動詞", "det" to "限定詞",
-    ),
-    "ko" to mapOf(
-        "verb" to "동사", "noun" to "명사", "adj" to "형용사",
-        "adv" to "부사", "prep" to "전치사", "conj" to "접속사",
-        "pron" to "대명사", "interj" to "감탄사", "det" to "한정사",
-    ),
-    "tr" to mapOf(
-        "verb" to "fiil", "noun" to "isim", "adj" to "sıfat",
-        "adv" to "zarf", "prep" to "edat", "conj" to "bağlaç",
-        "pron" to "zamir", "interj" to "ünlem", "det" to "belirteç",
-    ),
-    "vi" to mapOf(
-        "verb" to "động từ", "noun" to "danh từ", "adj" to "tính từ",
-        "adv" to "trạng từ", "prep" to "giới từ", "conj" to "liên từ",
-        "pron" to "đại từ", "interj" to "thán từ", "det" to "mạo từ",
-    ),
-    "pt-br" to mapOf(
-        "verb" to "verbo", "noun" to "substantivo", "adj" to "adj.",
-        "adv" to "adv.", "prep" to "prep.", "conj" to "conj.",
-        "pron" to "pron.", "interj" to "interj.", "det" to "det.",
-    ),
-    "pt-pt" to mapOf(
-        "verb" to "verbo", "noun" to "substantivo", "adj" to "adj.",
-        "adv" to "adv.", "prep" to "prep.", "conj" to "conj.",
-        "pron" to "pron.", "interj" to "interj.", "det" to "det.",
-    ),
 )
 
 val CEFR_LEVELS = listOf("A1", "A2", "B1", "B2", "C1", "C2")

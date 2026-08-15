@@ -4,19 +4,17 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
-import com.vocabulario.app.data.ImportTextParser
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.SYSTEM_LIST_NAME
 import com.vocabulario.app.data.isReservedListName
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.DashboardStatsResponse
-import com.vocabulario.app.data.api.ImportDisplayCard
-import com.vocabulario.app.data.api.ImportValidWord
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.api.LookupCandidate
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.imports.ImportController
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.i18n.UiStrings
 import com.vocabulario.app.ui.card.CorrectionResultItem
@@ -51,18 +49,6 @@ data class HomeUiState(
     val pickListOpen: Boolean = false,
     val createListName: String = "",
     val showCreateListPrompt: Boolean = false,
-    /** Tryb przeglądu importu (zamiast wyszukiwania). */
-    val importActive: Boolean = false,
-    val importMode: String = "vocabulario", // vocabulario | preserve
-    val importValid: List<ImportValidWord> = emptyList(),
-    val importDisplayCards: List<ImportDisplayCard> = emptyList(),
-    val importInvalid: List<String> = emptyList(),
-    val importCommitting: Boolean = false,
-    val importDestinationOpen: Boolean = false,
-    /** Import w tle (po wyjściu na dashboard). */
-    val importJobActive: Boolean = false,
-    val importProgress: Float = 0f,
-    val importTargetListId: String? = null,
     /** Multi-select na liście słów. */
     val selectedWordIds: Set<String> = emptySet(),
     val listSortOrder: ListSortOrder = ListSortOrder.LemmaAsc,
@@ -97,6 +83,9 @@ data class HomeUiState(
     val selectionMode: Boolean get() = selectedWordIds.isNotEmpty()
     val visibleListWords: List<CardResponse>
         get() = applyListFilterSort(listWords, listFilter, listSortOrder)
+    val hasMovableListWords: Boolean get() = listWords.any { it.isReadyToMove() }
+    val hasMovableSelectedWords: Boolean
+        get() = listWords.any { it.id in selectedWordIds && it.isReadyToMove() }
 }
 
 @HiltViewModel
@@ -106,10 +95,13 @@ class HomeViewModel @Inject constructor(
     private val strings: UiStrings,
     private val networkMonitor: com.vocabulario.app.data.NetworkMonitor,
     private val pairSession: PairSession,
+    private val importController: ImportController,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState(isOnline = networkMonitor.isCurrentlyOnline()))
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
+
+    val importState = importController.state
 
     /** Źródło prawdy o sieci — UI (zakładka „dodaj”) subskrybuje bezpośrednio, bez opóźnienia przez HomeUiState. */
     val connectivity: StateFlow<Boolean> = networkMonitor.isOnline
@@ -123,6 +115,23 @@ class HomeViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { refreshAll() }
+        viewModelScope.launch {
+            importController.navigateToList.collect { listId ->
+                openListTab(listId)
+            }
+        }
+        viewModelScope.launch {
+            var prev: com.vocabulario.app.data.imports.ImportStatus? = null
+            importController.state.collect { job ->
+                if (job.status == com.vocabulario.app.data.imports.ImportStatus.Done &&
+                    prev != com.vocabulario.app.data.imports.ImportStatus.Done
+                ) {
+                    job.targetListId?.let { loadLists(it) }
+                    loadStats()
+                }
+                prev = job.status
+            }
+        }
         viewModelScope.launch {
             networkMonitor.isOnline.collect { online ->
                 val wasOffline = !_state.value.isOnline
@@ -247,7 +256,7 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { _state.value = _state.value.copy(stats = it, error = null) }
                 .onFailure { e ->
                     _state.value = _state.value.copy(
-                        error = e.userMessage(strings.get(R.string.err_load_stats)),
+                        error = e.userMessage(strings, R.string.err_load_stats),
                     )
                 }
         }
@@ -289,7 +298,7 @@ class HomeViewModel @Inject constructor(
                     selected?.let { loadListWords(it, background = backgroundRefresh) }
                 }
                 .onFailure {
-                    _state.value = _state.value.copy(error = it.userMessage(strings.get(R.string.err_lists)))
+                    _state.value = _state.value.copy(error = it.userMessage(strings, R.string.err_lists))
                 }
         }
     }
@@ -388,7 +397,7 @@ class HomeViewModel @Inject constructor(
                 .onFailure {
                     _state.value = _state.value.copy(
                         loading = false,
-                        error = it.userMessage(strings.get(R.string.err_list_words)),
+                        error = it.userMessage(strings, R.string.err_list_words),
                     )
                 }
 
@@ -421,7 +430,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun search() {
-        if (_state.value.importActive) return
+        if (importController.state.value.busy) return
         val text = _state.value.query.trim()
         if (text.isBlank()) return
         if (!networkMonitor.isCurrentlyOnline()) {
@@ -444,7 +453,7 @@ class HomeViewModel @Inject constructor(
                     .onFailure {
                         _state.value = _state.value.copy(
                             loading = false,
-                            error = it.userMessage(strings.get(R.string.err_search)),
+                            error = it.userMessage(strings, R.string.err_search),
                         )
                     }
             }
@@ -463,352 +472,96 @@ class HomeViewModel @Inject constructor(
                 .onFailure {
                     _state.value = _state.value.copy(
                         loading = false,
-                        error = it.userMessage(strings.get(R.string.err_search)),
+                        error = it.userMessage(strings, R.string.err_search),
                     )
                 }
         }
     }
 
-    fun startImportFromText(raw: String, mode: String = "vocabulario") {
-        if (!networkMonitor.isCurrentlyOnline()) {
-            _state.value = _state.value.copy(error = strings.get(R.string.import_online_only))
-            return
-        }
-        val text = raw.trim()
-        if (text.isBlank()) {
-            _state.value = _state.value.copy(error = strings.get(R.string.err_import_empty))
-            return
-        }
-        viewModelScope.launch {
-            _state.value = _state.value.copy(
-                loading = true,
-                error = null,
-                tab = HomeTab.ADD,
-                candidates = emptyList(),
-            )
-            if (mode == "preserve") {
-                runCatching { repository.ingestImportPreserve(text) }
-                    .onSuccess { res -> applyImportDisplayResult(res.cards) }
-                    .onFailure {
-                        _state.value = _state.value.copy(
-                            loading = false,
-                            error = it.userMessage(strings.get(R.string.err_import)),
-                        )
-                    }
-            } else {
-                runCatching { repository.ingestImport(text, mode = "vocabulario") }
-                    .onSuccess { res -> applyImportResult(res.valid, res.invalid) }
-                    .onFailure {
-                        _state.value = _state.value.copy(
-                            loading = false,
-                            error = it.userMessage(strings.get(R.string.err_import)),
-                        )
-                    }
-            }
-        }
-    }
-
-    fun startImportFromFileText(raw: String) {
-        if (!networkMonitor.isCurrentlyOnline()) {
-            _state.value = _state.value.copy(error = strings.get(R.string.import_online_only))
-            return
-        }
-        val words = ImportTextParser.parse(raw)
-        if (words.isEmpty()) {
-            _state.value = _state.value.copy(error = strings.get(R.string.err_import_empty))
-            return
-        }
-        validateImport(words)
-    }
-
-    /** Plik binarny/tekstowy → backend (obsługuje też .apkg / .colpkg). */
-    fun startImportFromFileBytes(bytes: ByteArray, filename: String, mode: String = "vocabulario") {
-        if (!networkMonitor.isCurrentlyOnline()) {
-            _state.value = _state.value.copy(error = strings.get(R.string.import_online_only))
-            return
-        }
-        if (bytes.isEmpty()) {
-            _state.value = _state.value.copy(error = strings.get(R.string.err_import_empty_file))
-            return
-        }
-        viewModelScope.launch {
-            _state.value = _state.value.copy(
-                loading = true,
-                error = null,
-                tab = HomeTab.ADD,
-                candidates = emptyList(),
-            )
-            if (mode == "preserve") {
-                runCatching { repository.ingestImportFilePreserve(bytes, filename) }
-                    .onSuccess { res -> applyImportDisplayResult(res.cards) }
-                    .onFailure {
-                        _state.value = _state.value.copy(
-                            loading = false,
-                            error = it.userMessage(strings.get(R.string.err_import_file)),
-                        )
-                    }
-            } else {
-                runCatching { repository.ingestImportFile(bytes, filename, mode = "vocabulario") }
-                    .onSuccess { res -> applyImportResult(res.valid, res.invalid) }
-                    .onFailure {
-                        _state.value = _state.value.copy(
-                            loading = false,
-                            error = it.userMessage(strings.get(R.string.err_import_file)),
-                        )
-                    }
-            }
-        }
-    }
-
-    fun setImportError(message: String) {
-        _state.value = _state.value.copy(loading = false, error = message)
-    }
-
-    fun validateImport(words: List<String>) {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(
-                loading = true,
-                error = null,
-                tab = HomeTab.ADD,
-                candidates = emptyList(),
-            )
-            runCatching { repository.validateImport(words) }
-                .onSuccess { res -> applyImportResult(res.valid, res.invalid) }
-                .onFailure {
-                    _state.value = _state.value.copy(
-                        loading = false,
-                        error = it.userMessage(strings.get(R.string.err_import_validate)),
-                    )
-                }
-        }
-    }
-
-    private fun applyImportResult(
-        valid: List<ImportValidWord>,
-        invalid: List<String>,
+    fun startImportFromFile(
+        bytes: ByteArray,
+        filename: String,
+        mode: String,
+        listId: String,
+        listName: String,
     ) {
-        _state.value = _state.value.copy(
-            loading = false,
-            importActive = true,
-            importMode = "vocabulario",
-            importValid = valid,
-            importDisplayCards = emptyList(),
-            importInvalid = invalid,
-            query = "",
-            candidates = emptyList(),
-        )
+        importController.startFromFile(bytes, filename, mode, listId, listName)
     }
 
-    private fun applyImportDisplayResult(cards: List<ImportDisplayCard>) {
-        _state.value = _state.value.copy(
-            loading = false,
-            importActive = true,
-            importMode = "preserve",
-            importValid = emptyList(),
-            importDisplayCards = cards,
-            importInvalid = emptyList(),
-            query = "",
-            candidates = emptyList(),
-        )
+    fun startImportFromPaste(
+        text: String,
+        mode: String,
+        listId: String,
+        listName: String,
+    ) {
+        importController.startFromPaste(text, mode, listId, listName)
     }
 
-    fun removeImportWord(input: String) {
-        _state.value = _state.value.copy(
-            importValid = _state.value.importValid.filterNot { it.input == input },
-        )
-    }
+    fun toggleImportItem(key: String) = importController.toggleItem(key)
 
-    fun removeImportDisplayCard(key: String) {
-        _state.value = _state.value.copy(
-            importDisplayCards = _state.value.importDisplayCards.filterNot { it.key == key },
-        )
-    }
+    fun requestImportCancel() = importController.requestCancel()
 
-    fun cancelImport() {
-        _state.value = _state.value.copy(
-            importActive = false,
-            importMode = "vocabulario",
-            importValid = emptyList(),
-            importDisplayCards = emptyList(),
-            importInvalid = emptyList(),
-            importDestinationOpen = false,
-            importCommitting = false,
-            pickListOpen = false,
-            showCreateListPrompt = false,
-            createListName = "",
-        )
-    }
+    fun dismissImportAbortConfirm() = importController.dismissAbortConfirm()
 
-    fun openImportDestination() {
-        val hasItems = _state.value.importValid.isNotEmpty() ||
-            _state.value.importDisplayCards.isNotEmpty()
-        if (!hasItems) return
+    fun confirmImportCancel() = importController.confirmCancel()
+
+    fun confirmImportCommit() = importController.confirmCommit()
+
+    fun dismissImportResult(openList: Boolean = false) =
+        importController.dismissResult(openList)
+
+    fun setImportError(message: String) = importController.setUiError(message)
+
+    /** Creates a list (if needed) then starts import. */
+    fun startImportWithOptionalNewList(
+        bytes: ByteArray?,
+        filename: String?,
+        pasteText: String?,
+        mode: String,
+        listId: String?,
+        newListName: String?,
+    ) {
         viewModelScope.launch {
-            runCatching { repository.listWordLists() }
-                .onSuccess { lists ->
-                    _state.value = _state.value.copy(
-                        lists = lists,
-                        importDestinationOpen = true,
-                        pickListOpen = false,
-                        showCreateListPrompt = false,
-                        createListName = "",
-                    )
-                }
-        }
-    }
-
-    fun dismissImportDestination() {
-        _state.value = _state.value.copy(
-            importDestinationOpen = false,
-            pickListOpen = false,
-            showCreateListPrompt = false,
-            createListName = "",
-        )
-    }
-
-    fun commitImportToLearning() {
-        val learning = _state.value.lists.firstOrNull { it.is_system } ?: return
-        commitImportToList(learning.id)
-    }
-
-    fun commitImportToList(listId: String) {
-        if (_state.value.importMode == "preserve") {
-            commitDisplayImportToList(listId)
-            return
-        }
-        val words = _state.value.importValid
-        if (words.isEmpty()) return
-        viewModelScope.launch {
-            val total = words.size.coerceAtLeast(1)
-            _state.value = _state.value.copy(
-                importCommitting = false,
-                importActive = false,
-                importMode = "vocabulario",
-                importValid = emptyList(),
-                importDisplayCards = emptyList(),
-                importInvalid = emptyList(),
-                importDestinationOpen = false,
-                pickListOpen = false,
-                showCreateListPrompt = false,
-                createListName = "",
-                tab = HomeTab.DASHBOARD,
-                importJobActive = true,
-                importProgress = 0f,
-                importTargetListId = listId,
-                error = null,
-            )
-            var failed = 0
-            words.forEachIndexed { index, w ->
-                runCatching {
-                    repository.addWordToList(
-                        listId,
-                        w.lemma,
-                        w.pos,
-                        w.gloss.ifBlank { null },
-                        w.lexical_entry_id,
-                        entryKind = w.entry_kind,
-                        baseLemma = w.base_lemma,
-                        pattern = w.pattern,
-                    )
-                }.onFailure { failed++ }
-                _state.value = _state.value.copy(
-                    importProgress = (index + 1).toFloat() / total,
-                )
+            val resolved = resolveImportTarget(listId, newListName) ?: return@launch
+            when {
+                bytes != null && filename != null ->
+                    importController.startFromFile(bytes, filename, mode, resolved.first, resolved.second)
+                !pasteText.isNullOrBlank() ->
+                    importController.startFromPaste(pasteText, mode, resolved.first, resolved.second)
             }
-            loadLists(listId)
-            loadStats()
-            _state.value = _state.value.copy(
-                importJobActive = false,
-                importProgress = 0f,
-                importTargetListId = null,
-                error = if (failed > 0) strings.get(R.string.err_add_partial, failed) else null,
-            )
         }
     }
 
-    private fun commitDisplayImportToList(listId: String) {
-        val cards = _state.value.importDisplayCards
-        if (cards.isEmpty()) return
-        viewModelScope.launch {
-            _state.value = _state.value.copy(
-                importCommitting = false,
-                importActive = false,
-                importMode = "vocabulario",
-                importValid = emptyList(),
-                importDisplayCards = emptyList(),
-                importInvalid = emptyList(),
-                importDestinationOpen = false,
-                pickListOpen = false,
-                showCreateListPrompt = false,
-                createListName = "",
-                tab = HomeTab.DASHBOARD,
-                importJobActive = true,
-                importProgress = 0.15f,
-                importTargetListId = listId,
-                error = null,
-            )
-            runCatching { repository.commitImportDisplay(listId, cards) }
-                .onSuccess { res ->
-                    _state.value = _state.value.copy(importProgress = 1f)
-                    loadLists(listId)
-                    loadStats()
-                    _state.value = _state.value.copy(
-                        importJobActive = false,
-                        importProgress = 0f,
-                        importTargetListId = null,
-                        error = if (res.skipped > 0) {
-                            strings.get(R.string.msg_import_result, res.created, res.skipped)
-                        } else {
-                            null
-                        },
-                    )
-                }
-                .onFailure {
-                    _state.value = _state.value.copy(
-                        importJobActive = false,
-                        importProgress = 0f,
-                        importTargetListId = null,
-                        error = it.userMessage(strings.get(R.string.err_save_cards)),
-                    )
-                }
-        }
-    }
-
-    fun createListAndCommitImport() {
-        val name = _state.value.createListName.trim()
-        if (name.isBlank()) return
-        listNameConflictMessage(strings, _state.value.lists, name)?.let {
-            _state.value = _state.value.copy(error = it)
-            return
-        }
-        val preserve = _state.value.importMode == "preserve"
-        val words = _state.value.importValid
-        val displayCards = _state.value.importDisplayCards
-        if (!preserve && words.isEmpty()) return
-        if (preserve && displayCards.isEmpty()) return
-        viewModelScope.launch {
-            runCatching { repository.createWordList(name) }
+    private suspend fun resolveImportTarget(
+        listId: String?,
+        newListName: String?,
+    ): Pair<String, String>? {
+        val name = newListName?.trim().orEmpty()
+        if (name.isNotBlank()) {
+            listNameConflictMessage(strings, _state.value.lists, name)?.let {
+                _state.value = _state.value.copy(error = it)
+                return null
+            }
+            return runCatching { repository.createWordList(name) }
                 .onSuccess { list ->
-                    if (preserve) {
-                        _state.value = _state.value.copy(
-                            importMode = "preserve",
-                            importDisplayCards = displayCards,
-                        )
-                        commitDisplayImportToList(list.id)
-                    } else {
-                        _state.value = _state.value.copy(
-                            importMode = "vocabulario",
-                            importValid = words,
-                        )
-                        commitImportToList(list.id)
-                    }
+                    loadLists(list.id)
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_create_list)),
+                        error = it.userMessage(strings, R.string.err_create_list),
                     )
                 }
+                .getOrNull()
+                ?.let { it.id to it.name }
         }
+        val id = listId ?: return null
+        val list = _state.value.lists.firstOrNull { it.id == id } ?: return null
+        val display = when {
+            list.is_system -> strings.get(R.string.list_learning)
+            list.is_pending_inbox -> strings.get(R.string.list_pending)
+            else -> list.name
+        }
+        return id to display
     }
 
     fun openAddSheet(candidate: LookupCandidate) {
@@ -854,7 +607,7 @@ class HomeViewModel @Inject constructor(
                 }.onFailure {
                     revertCreating(candidate)
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_add)),
+                        error = it.userMessage(strings, R.string.err_add),
                     )
                 }
             }
@@ -923,7 +676,7 @@ class HomeViewModel @Inject constructor(
             }.onFailure {
                 revertCreating(candidate)
                 _state.value = _state.value.copy(
-                    error = it.userMessage(strings.get(R.string.err_create_list)),
+                    error = it.userMessage(strings, R.string.err_create_list),
                 )
             }
         }
@@ -962,7 +715,7 @@ class HomeViewModel @Inject constructor(
             }.onFailure {
                 revertCreating(candidate)
                 _state.value = _state.value.copy(
-                    error = it.userMessage(strings.get(R.string.err_add_to_list)),
+                    error = it.userMessage(strings, R.string.err_add_to_list),
                 )
             }
         }
@@ -979,7 +732,7 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { list -> loadLists(list.id) }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_create_list)),
+                        error = it.userMessage(strings, R.string.err_create_list),
                     )
                 }
         }
@@ -992,6 +745,7 @@ class HomeViewModel @Inject constructor(
             _state.value = _state.value.copy(error = it)
             return
         }
+        if (!isMovableCardId(cardId)) return
         viewModelScope.launch {
             runCatching {
                 val list = repository.createWordList(trimmed)
@@ -1004,7 +758,7 @@ class HomeViewModel @Inject constructor(
                 loadLists(list.id)
             }.onFailure {
                 _state.value = _state.value.copy(
-                    error = it.userMessage(strings.get(R.string.err_create_list)),
+                    error = it.userMessage(strings, R.string.err_create_list),
                 )
             }
         }
@@ -1021,7 +775,7 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { loadLists(listId) }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_rename)),
+                        error = it.userMessage(strings, R.string.err_rename),
                     )
                 }
         }
@@ -1044,7 +798,7 @@ class HomeViewModel @Inject constructor(
                     }
                     .onFailure {
                         _state.value = _state.value.copy(
-                            error = it.userMessage(strings.get(R.string.err_delete_list)),
+                            error = it.userMessage(strings, R.string.err_delete_list),
                         )
                     }
             }
@@ -1058,7 +812,7 @@ class HomeViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_delete_list)),
+                        error = it.userMessage(strings, R.string.err_delete_list),
                     )
                 }
         }
@@ -1077,7 +831,7 @@ class HomeViewModel @Inject constructor(
                     }
                     .onFailure {
                         _state.value = _state.value.copy(
-                            error = it.userMessage(strings.get(R.string.err_delete_word)),
+                            error = it.userMessage(strings, R.string.err_delete_word),
                         )
                     }
                 return@launch
@@ -1103,7 +857,7 @@ class HomeViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_delete_word)),
+                        error = it.userMessage(strings, R.string.err_delete_word),
                     )
                 }
         }
@@ -1160,7 +914,7 @@ class HomeViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_delete_word)),
+                        error = it.userMessage(strings, R.string.err_delete_word),
                         reviewSubmitting = false,
                     )
                 }
@@ -1213,13 +967,14 @@ class HomeViewModel @Inject constructor(
                     // Cofnij optymistyczny kafelek i pokaż błąd.
                     _state.value = _state.value.copy(
                         listWords = _state.value.listWords.filterNot { it.id == cardId },
-                        error = it.userMessage(strings.get(R.string.err_add_to_list)),
+                        error = it.userMessage(strings, R.string.err_add_to_list),
                     )
                 }
         }
     }
 
     fun moveWord(cardId: String, targetListId: String) {
+        if (!isMovableCardId(cardId)) return
         viewModelScope.launch {
             runCatching { repository.moveCard(cardId, targetListId) }
                 .onSuccess {
@@ -1231,7 +986,7 @@ class HomeViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_move)),
+                        error = it.userMessage(strings, R.string.err_move),
                     )
                 }
         }
@@ -1242,12 +997,12 @@ class HomeViewModel @Inject constructor(
     }
 
     fun startWordSelection(cardId: String) {
-        if (!isMovableCardId(cardId)) return
+        if (!isSelectableCardId(cardId)) return
         _state.value = _state.value.copy(selectedWordIds = setOf(cardId))
     }
 
     fun toggleWordSelection(cardId: String) {
-        if (!isMovableCardId(cardId)) return
+        if (!isSelectableCardId(cardId)) return
         val cur = _state.value.selectedWordIds
         _state.value = _state.value.copy(
             selectedWordIds = if (cardId in cur) cur - cardId else cur + cardId,
@@ -1255,13 +1010,13 @@ class HomeViewModel @Inject constructor(
     }
 
     fun deleteSelectedWords() {
-        val ids = _state.value.selectedWordIds.filter { isMovableCardId(it) }
+        val ids = _state.value.selectedWordIds.filter { isSelectableCardId(it) }
         if (ids.isEmpty()) return
         clearWordsByIds(ids)
     }
 
     fun clearAllWordsFromCurrentList() {
-        val ids = movableCardIds()
+        val ids = _state.value.listWords.filter { it.isSelectableOnList() }.map { it.id }
         if (ids.isEmpty()) return
         clearWordsByIds(ids)
     }
@@ -1292,12 +1047,7 @@ class HomeViewModel @Inject constructor(
             for (id in ids) {
                 runCatching { repository.moveCard(id, targetListId) }.onFailure { failed++ }
             }
-            _state.value = _state.value.copy(
-                selectedWordIds = emptySet(),
-                tab = HomeTab.LISTS,
-                error = if (failed > 0) strings.get(R.string.err_move_partial, failed) else null,
-            )
-            loadLists(targetListId)
+            finishBulkMove(movedIds = ids, targetListId = targetListId, failed = failed)
         }
     }
 
@@ -1309,12 +1059,7 @@ class HomeViewModel @Inject constructor(
             for (id in ids) {
                 runCatching { repository.moveCard(id, targetListId) }.onFailure { failed++ }
             }
-            _state.value = _state.value.copy(
-                selectedWordIds = emptySet(),
-                tab = HomeTab.LISTS,
-                error = if (failed > 0) strings.get(R.string.err_move_partial, failed) else null,
-            )
-            loadLists(targetListId)
+            finishBulkMove(movedIds = ids, targetListId = targetListId, failed = failed)
         }
     }
 
@@ -1335,15 +1080,10 @@ class HomeViewModel @Inject constructor(
                 }
                 list to failed
             }.onSuccess { (list, failed) ->
-                _state.value = _state.value.copy(
-                    selectedWordIds = emptySet(),
-                    tab = HomeTab.LISTS,
-                    error = if (failed > 0) strings.get(R.string.err_move_partial, failed) else null,
-                )
-                loadLists(list.id)
+                finishBulkMove(movedIds = ids, targetListId = list.id, failed = failed)
             }.onFailure {
                 _state.value = _state.value.copy(
-                    error = it.userMessage(strings.get(R.string.err_create_list)),
+                    error = it.userMessage(strings, R.string.err_create_list),
                 )
             }
         }
@@ -1366,29 +1106,42 @@ class HomeViewModel @Inject constructor(
                 }
                 list to failed
             }.onSuccess { (list, failed) ->
-                _state.value = _state.value.copy(
-                    selectedWordIds = emptySet(),
-                    tab = HomeTab.LISTS,
-                    error = if (failed > 0) strings.get(R.string.err_move_partial, failed) else null,
-                )
-                loadLists(list.id)
+                finishBulkMove(movedIds = ids, targetListId = list.id, failed = failed)
             }.onFailure {
                 _state.value = _state.value.copy(
-                    error = it.userMessage(strings.get(R.string.err_create_list)),
+                    error = it.userMessage(strings, R.string.err_create_list),
                 )
             }
         }
     }
 
-    private fun isMovableCard(card: CardResponse): Boolean =
-        !card.id.startsWith("pending-") &&
-            card.enrichment_status != "awaiting_network" &&
-            card.enrichment_status != "pending"
+    private fun finishBulkMove(movedIds: List<String>, targetListId: String, failed: Int) {
+        val moved = movedIds.toSet()
+        val leftover = _state.value.listWords.filterNot { it.id in moved }
+        val sourceId = _state.value.selectedListId
+        val sourceIsPending = _state.value.lists.any { it.id == sourceId && it.is_pending_inbox }
+        val stayOnSource = sourceIsPending && leftover.any { !it.isReadyToMove() }
+        val nextListId = if (stayOnSource) sourceId else targetListId
+        _state.value = _state.value.copy(
+            selectedWordIds = emptySet(),
+            listWords = leftover,
+            tab = HomeTab.LISTS,
+            error = if (failed > 0) strings.get(R.string.err_move_partial, failed) else null,
+        )
+        loadLists(nextListId)
+        if (stayOnSource) nextListId?.let { loadListWords(it, background = true) }
+    }
+
+    private fun isMovableCard(card: CardResponse): Boolean = card.isReadyToMove()
 
     private fun isMovableCardId(cardId: String): Boolean {
-        if (cardId.startsWith("pending-")) return false
-        val card = _state.value.listWords.find { it.id == cardId } ?: return true
+        val card = _state.value.listWords.find { it.id == cardId } ?: return false
         return isMovableCard(card)
+    }
+
+    private fun isSelectableCardId(cardId: String): Boolean {
+        val card = _state.value.listWords.find { it.id == cardId } ?: return true
+        return card.isSelectableOnList()
     }
 
     private fun movableCardIds(): List<String> =
@@ -1601,14 +1354,9 @@ class HomeViewModel @Inject constructor(
                 markCardActivity(cardId, "correction_processing")
                 pollCorrectionResult(cardId)
             }.onFailure { e ->
-                val limitMsg = strings.get(R.string.correction_daily_limit)
                 _state.value = _state.value.copy(
                     correctionSubmitting = false,
-                    error = if (e.message?.contains("429") == true || e.message?.contains("correction_daily_limit") == true) {
-                        limitMsg
-                    } else {
-                        e.userMessage(strings.get(R.string.err_save))
-                    },
+                    error = e.userMessage(strings, R.string.err_save),
                 )
             }
         }
@@ -1719,7 +1467,7 @@ class HomeViewModel @Inject constructor(
             }.onFailure { e ->
                 _state.value = _state.value.copy(
                     selfEditProgressCardId = null,
-                    error = e.userMessage(strings.get(R.string.err_save)),
+                    error = e.userMessage(strings, R.string.err_save),
                 )
             }
         }
@@ -1769,7 +1517,7 @@ class HomeViewModel @Inject constructor(
             _state.value = _state.value.copy(
                 selfEditSaving = false,
                 selfEditProgressCardId = null,
-                error = e.userMessage(strings.get(R.string.err_save)),
+                error = e.userMessage(strings, R.string.err_save),
             )
             maybeShowNextCorrectionResult()
         }
@@ -1793,7 +1541,7 @@ class HomeViewModel @Inject constructor(
                     _state.value = _state.value.copy(
                         historyLoading = false,
                         historyCardId = null,
-                        error = e.userMessage(strings.get(R.string.err_load_cards)),
+                        error = e.userMessage(strings, R.string.err_load_cards),
                     )
                 }
         }
@@ -1821,7 +1569,7 @@ class HomeViewModel @Inject constructor(
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         historyRestoring = false,
-                        error = e.userMessage(strings.get(R.string.err_save)),
+                        error = e.userMessage(strings, R.string.err_save),
                     )
                 }
         }

@@ -67,7 +67,7 @@ class ProfileViewModel @Inject constructor(
             }.onFailure {
                 _state.value = _state.value.copy(
                     loading = false,
-                    error = it.userMessage(strings.get(R.string.err_load_profile)),
+                    error = it.userMessage(strings, R.string.err_load_profile),
                 )
             }
         }
@@ -89,7 +89,7 @@ class ProfileViewModel @Inject constructor(
             }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_activate)),
+                        error = it.userMessage(strings, R.string.err_activate),
                     )
                 }
         }
@@ -107,7 +107,7 @@ class ProfileViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_save)),
+                        error = it.userMessage(strings, R.string.err_save),
                     )
                 }
         }
@@ -132,7 +132,7 @@ class ProfileViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_save)),
+                        error = it.userMessage(strings, R.string.err_save),
                     )
                 }
         }

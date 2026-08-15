@@ -15,8 +15,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -34,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vocabulario.app.R
 import com.vocabulario.app.data.api.WordListResponse
+import com.vocabulario.app.ui.home.NameListDialog
 import com.vocabulario.app.ui.home.isReservedListNameMessage
 
 private val SheetControlHeight = 52.dp
@@ -62,12 +61,31 @@ fun AddToListSheet(
     val scheme = MaterialTheme.colorScheme
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val customLists = remember(lists) { lists.filterNot { it.is_system } }
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = scheme.surfaceVariant,
-        unfocusedContainerColor = scheme.surfaceVariant,
-        unfocusedBorderColor = scheme.outline.copy(alpha = 0f),
-        focusedBorderColor = scheme.outline.copy(alpha = 0f),
-    )
+    val context = LocalContext.current
+    val reservedName = isReservedListNameMessage(context, createListName)
+
+    if (showCreateListPrompt) {
+        NameListDialog(
+            visible = true,
+            title = stringResource(R.string.list_new),
+            name = createListName,
+            onNameChange = onCreateNameChange,
+            nameError = createNameError,
+            reservedHint = reservedName,
+            onDismiss = onBackFromCreatePrompt,
+            onConfirm = onCreateAndAdd,
+            confirmEnabled = createListName.trim().isNotBlank() && createNameError == null,
+            extraBody = {
+                Text(
+                    lemma,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            confirmTag = TestTags.SHEET_CREATE_AND_ADD,
+            cancelTag = TestTags.SHEET_BACK_FROM_CREATE,
+        )
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -76,6 +94,7 @@ fun AddToListSheet(
         containerColor = scheme.surface,
         tonalElevation = 0.dp,
     ) {
+        AppDialogWindowChrome()
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -117,55 +136,6 @@ fun AddToListSheet(
                         modifier = Modifier.testTag(TestTags.SHEET_ADD_OTHER),
                     )
                 }
-                showCreateListPrompt -> {
-                    val context = LocalContext.current
-                    val reservedName = isReservedListNameMessage(context, createListName)
-                    OutlinedTextField(
-                        value = createListName,
-                        onValueChange = onCreateNameChange,
-                        placeholder = { Text(stringResource(R.string.list_name_full_hint)) },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(SheetControlHeight)
-                            .testTag(TestTags.SHEET_LIST_NAME),
-                        shape = AppButtonShape,
-                        isError = createNameError != null && !reservedName,
-                        colors = fieldColors,
-                        textStyle = MaterialTheme.typography.bodyLarge,
-                    )
-                    if (createNameError != null) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            createNameError,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (reservedName) scheme.onSurfaceVariant else scheme.error,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Start,
-                        )
-                    }
-                    Spacer(Modifier.height(SheetControlSpacing))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(SheetControlSpacing),
-                    ) {
-                        SheetOutlinedButton(
-                            text = stringResource(R.string.action_back),
-                            onClick = onBackFromCreatePrompt,
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag(TestTags.SHEET_BACK_FROM_CREATE),
-                        )
-                        SheetPrimaryButton(
-                            text = stringResource(R.string.action_add),
-                            onClick = onCreateAndAdd,
-                            enabled = createListName.trim().isNotBlank() && createNameError == null,
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag(TestTags.SHEET_CREATE_AND_ADD),
-                        )
-                    }
-                }
                 else -> {
                     customLists.forEach { list ->
                         SheetListRow(
@@ -181,7 +151,7 @@ fun AddToListSheet(
                     )
                     Spacer(Modifier.height(SheetControlSpacing))
                     SheetOutlinedButton(
-                        text = stringResource(R.string.action_back),
+                        text = stringResource(R.string.action_cancel),
                         onClick = onBackFromListPicker,
                         modifier = Modifier.testTag(TestTags.SHEET_BACK_FROM_LIST_PICKER),
                     )

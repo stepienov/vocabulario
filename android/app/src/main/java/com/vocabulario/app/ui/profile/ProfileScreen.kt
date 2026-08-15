@@ -103,8 +103,17 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("${profile.appLang.uppercase()} -> ${profile.learning_lang.uppercase()}")
-                            Text("CEFR ${profile.cefr_level}", style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                stringResource(
+                                    R.string.profile_active_pair,
+                                    profile.appLang.uppercase(),
+                                    profile.learning_lang.uppercase(),
+                                ),
+                            )
+                            Text(
+                                stringResource(R.string.profile_level, profile.cefr_level),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                             if (profile.is_active) {
                                 Text(
                                     stringResource(R.string.profile_active),

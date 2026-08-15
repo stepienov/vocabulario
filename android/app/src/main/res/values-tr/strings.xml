@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -90,7 +90,7 @@
 
     <string name="tab_lists">listeler</string>
 
-    <string name="auth_login_title">Hoş geldin</string>
+    <string name="auth_login_title">Giriş</string>
 
     <string name="auth_register_title">Hesap oluştur</string>
 
@@ -100,27 +100,29 @@
 
     <string name="auth_google">Google ile devam et</string>
 
+    <string name="auth_or_continue">Veya e-posta ile devam et</string>
+
     <string name="auth_email">E-posta</string>
 
     <string name="auth_password">Şifre</string>
 
-    <string name="auth_tagline">Kelimeleri kendi hızında öğren</string>
 
-    <string name="auth_password_hint">En az 8 karakter</string>
 
     <string name="auth_have_account">Zaten bir hesabım var</string>
 
-    <string name="onboarding_title">Öğrenme ayarı</string>
+    <string name="onboarding_app_setup">Uygulama kurulumu</string>
 
-    <string name="onboarding_subtitle">Bir dil çifti, CEFR seviyesi ve fiil zamanları seçin.</string>
+    <string name="onboarding_choose_language">Dilinizi seçin</string>
 
-    <string name="onboarding_native">Uygulama dili</string>
+    <string name="onboarding_continue">Devam</string>
 
-    <string name="onboarding_learning">Öğrenme dili</string>
+    <string name="onboarding_want_to_learn">Öğrenmek istiyorum:</string>
 
     <string name="onboarding_start">Başla</string>
 
-    <string name="onboarding_cefr">CEFR seviyesi</string>
+    <string name="onboarding_level">Dil seviyesini seçin</string>
+
+    <string name="onboarding_level_unknown">Bilmiyorum</string>
 
     <string name="onboarding_tenses">Fiil zamanları</string>
 
@@ -151,6 +153,8 @@
 
     <string name="settings_mode_flash">Flash kartlar</string>
 
+    <string name="settings_mode_vocabulario_only">yalnızca Vocabulario kartları</string>
+
     <string name="settings_tolerate_typos">Küçük yazım hatalarına izin ver</string>
 
     <string name="settings_tolerate_typos_sub">Yazım ve işaretler</string>
@@ -165,13 +169,14 @@
 
     <string name="settings_card_layout_sub">Cevaptan sonra gördüğünüz şey</string>
 
-    <string name="settings_examples">Örnek cümleler</string>
+    <string name="settings_examples">Cümleler</string>
 
-    <string name="settings_usages">Kullanım örnekleri</string>
+    <string name="settings_usages">İfadeler</string>
 
     <string name="settings_periphrases">Kalıplar</string>
 
     <string name="settings_syn_ant">Eş anlamlılar ve zıt anlamlılar</string>
+    <string name="settings_word_family">Kelime ailesi</string>
 
     <string name="settings_conjugation">Çekim</string>
 
@@ -333,8 +338,27 @@
     <string name="import_empty_hint">Bir kelime yaz veya bir liste içe aktar (CSV/TXT/apkg)</string>
 
     <string name="import_file_label">Dosya: \'%1$s\'</string>
-
-    <string name="section_meanings">ANLAMLAR</string>
+    <!-- TODO: translate import UI strings -->
+    <string name="import_start_title">Kartları içe aktar</string>
+    <string name="import_pick_list">Hedef liste</string>
+    <string name="import_action_start">İçe aktar</string>
+<string name="import_limit_exceeded">Şimdilik en fazla 50 Vocabulario kartı içe aktarabilirsiniz.</string>
+        <string name="import_status_analyzing">%1$s analiz ediliyor…</string>
+    <string name="import_status_importing">%1$s dosyasından sözcükler içe aktarılıyor</string>
+    <string name="import_progress_count">İçe aktarıldı %1$d/%2$d</string>
+    <string name="action_abort">Durdur</string>
+    <string name="import_abort_title">İçe aktarma durdurulsun mu?</string>
+    <string name="import_abort_body">İlerleme silinecek.</string>
+    <string name="import_result_title">İçe aktarma bitti</string>
+    <string name="import_result_body">Eklenen %1$d, yinelenen %2$d</string>
+    <string name="import_result_body_failed">Eklenen %1$d, yinelenen %2$d, hata %3$d</string>
+    <string name="import_review_flagged">Deyimler ve yapılar</string>
+    <string name="action_show_list">Listeyi göster</string>
+    <string name="import_paste_source">Yapıştırma</string>
+    <string name="import_interrupted">İçe aktarma kesildi — yeniden deneyin</string>
+    <string name="import_review_ready">İçe aktarmaya hazır</string>
+    <string name="import_new_list_option">+ Yeni liste</string>
+<string name="section_meanings">ANLAMLAR</string>
 
     <string name="section_synonyms">EŞ ANLAMLI KELİMELER</string>
 
@@ -348,7 +372,7 @@
 
     <string name="section_periphrases">YAPILAR</string>
 
-    <string name="section_usages">kullanım örnekleri</string>
+    <string name="section_usages">ifadeler</string>
 
     <string name="home_search_hint">Bir kelime ara…</string>
 
@@ -395,6 +419,8 @@
     <string name="status_new">yeni</string>
 
     <string name="status_learning">öğreniliyor</string>
+
+    <string name="card_badge_import">İçe aktarım</string>
 
     <string name="status_mastered">öğrenildi</string>
 
@@ -544,6 +570,11 @@
 
     <string name="err_login">Giriş başarısız</string>
 
+    <string name="err_login_email_unknown">Bu e-posta ile hesap yok</string>
+    <string name="err_login_wrong_password">Yanlış şifre</string>
+    <string name="err_login_use_google">Bu hesap Google kullanıyor. Google ile devam edin.</string>
+
+
     <string name="err_register">Kayıt başarısız</string>
 
     <string name="err_google_login">Google ile giriş başarısız</string>
@@ -561,10 +592,11 @@
     <string name="section_synonyms_short">Eşanlamlılar</string>
 
     <string name="section_antonyms_short">Zıt anlamlılar</string>
+    <string name="section_word_family">Kelime ailesi</string>
 
     <string name="section_conjugation_short">Çekim</string>
 
-    <string name="section_usages_short">Kullanımlar</string>
+    <string name="section_usages_short">İfadeler</string>
 
     <string name="cd_back">Geri</string>
 
@@ -604,7 +636,7 @@
 
     <string name="cd_search">Ara</string>
 
-    <string name="correction_fix_card">Kartı düzelt</string>
+    <string name="correction_fix_card">Düzeltme bildir</string>
 
     <string name="correction_report_title">Bir sorun bildir</string>
 
@@ -616,7 +648,7 @@
 
     <string name="correction_section_meanings">Anlamlar</string>
 
-    <string name="correction_section_examples">Örnekler</string>
+    <string name="correction_section_examples">Cümleler</string>
 
     <string name="correction_section_conjugation">Çekim</string>
 
@@ -642,7 +674,8 @@
 
     <string name="correction_result_rejected_body">Kartı kendiniz düzenleyebilirsiniz — kendi riskinizle. Bu, özel bir kopya oluşturur.</string>
 
-    <string name="correction_edit_self">Kendimi düzenle</string>
+    <string name="correction_edit_self">Düzenle</string>
+    <string name="correction_history_button">Değişiklik geçmişi</string>
 
     <string name="correction_self_edit_title">Kartı düzenle</string>
 
@@ -653,14 +686,6 @@
     <string name="correction_field_gloss">Ana açıklama</string>
 
     <string name="correction_field_extra_glosses">Ek açıklamalar (her satıra bir tane)</string>
-
-    <string name="review_status_reported">Düzeltme bildirildi</string>
-
-    <string name="review_status_accepted">Güncellendi</string>
-
-    <string name="review_status_rejected">Rapor reddedildi</string>
-
-    <string name="review_status_user_edited">Manuel olarak düzenlendi</string>
 
     <string name="cd_voice_search">Sesli arama</string>
 
@@ -699,5 +724,91 @@
     <string name="notif_cards_ready_title">Kartlar hazır</string>
 
     <string name="notif_cards_ready_body">%1$d kelime(ler) çalışmaya hazır</string>
+
+    <string name="status_needs_review">İnceleme gerekli</string>
+    <string name="review_title">Sözcük incelenmeli</string>
+    <string name="review_no_match">«%1$s» için eşleşme bulunamadı.</string>
+    <string name="review_did_you_mean">Bunu mu demek istediniz:</string>
+    <string name="review_reject">Reddet</string>
+    <string name="review_search_again">Ara</string>
+    <string name="review_confirm">Onayla</string>
+    <string name="review_close">Kapat</string>
+    <string name="list_delete">Listeyi sil</string>
+    <string name="err_word_on_list">Bu sözcük zaten öğrenme listenizde.</string>
+    <string name="correction_report_subtitle">Kartın tamamını inceleriz. Seçimleriniz ve not yalnızca kontrole yol gösterir.</string>
+    <string name="correction_daily_limit">Günde en fazla 20 bildirim gönderebilirsiniz.</string>
+    <string name="correction_field_ipa">IPA telaffuzu</string>
+    <string name="correction_field_notes">Notlar</string>
+    <string name="correction_field_synonyms_l1">Eş anlamlılar (L1, satır başına bir)</string>
+    <string name="correction_field_examples">Cümleler</string>
+    <string name="correction_field_usages">Deyimler</string>
+    <string name="correction_field_l2">Cümle (L2)</string>
+    <string name="correction_field_l1">Çeviri (L1)</string>
+    <string name="correction_field_similar">Benzer sözcükler</string>
+    <string name="correction_field_conjugation_json">Çekim (JSON)</string>
+    <string name="correction_section_meaning">Anlam %1$d</string>
+    <string name="correction_add_meaning">Anlam ekle</string>
+    <string name="correction_add_row">Satır ekle</string>
+    <string name="correction_empty_rows_hint">Henüz satır yok — Satır ekle’ye dokunun.</string>
+    <string name="correction_self_edit_link">Kartı kendiniz düzenlemek için buraya dokunun</string>
+    <string name="correction_processing">Bildirim inceleniyor…</string>
+    <string name="self_edit_processing">Düzenlemeniz kaydedilip doğrulanıyor…</string>
+    <string name="self_edit_validating">Düzenlemeleriniz kontrol ediliyor…</string>
+    <string name="self_edit_warning_title">Bu değişiklikleri onaylıyor musun?</string>
+    <string name="self_edit_warning_body">«%1$s» kartındaki değişikliklerinizin hatalı olabileceğini tespit ettik. Kaydetmeden önce kontrol edin.</string>
+    <string name="self_edit_warning_confirm">Değişiklikleri onayla</string>
+    <string name="self_edit_warning_revert">Değişiklikleri geri al</string>
+    <string name="correction_result_accepted_body">«%1$s» kartı güncellendi.</string>
+    <string name="correction_code_accepted">Bildirim kabul edildi — kart güncellendi.</string>
+    <string name="correction_code_unfounded">Bu kartta hata bulunamadı.</string>
+    <string name="correction_code_insufficient">Bu kartta hata bulunamadı.</string>
+    <string name="correction_code_not_applicable">Bu bölüm bu sözcük türüne uygulanmaz.</string>
+    <string name="correction_code_failed">Bildirim işlenemedi. Yeniden deneyin.</string>
+    <string name="card_history_title">Kart geçmişi</string>
+    <string name="card_history_empty">Henüz bildirim veya değişiklik yok.</string>
+    <string name="card_history_restore">Orijinal sürümü geri yükle</string>
+    <string name="card_history_restored">Kartın orijinal sürümü geri yüklendi</string>
+    <string name="card_history_actor_you">Siz</string>
+    <string name="card_history_actor_system">Sistem</string>
+    <string name="card_history_event_report">Bildirim gönderildi</string>
+    <string name="card_history_event_accepted">Bildirim kabul edildi — kart güncellendi</string>
+    <string name="card_history_event_self_edit">Elle düzenleme</string>
+    <string name="card_history_event_reviewed">Düzenleme doğrulandı</string>
+    <string name="card_history_summary_report">Bölümler: %1$s</string>
+    <string name="card_history_summary_restored">Orijinal sürüm geri yüklendi.</string>
+    <string name="card_history_diff_lemma">lem: %1$s → %2$s</string>
+    <string name="card_history_diff_pos">tür: %1$s → %2$s</string>
+    <string name="card_history_diff_gloss">çeviri: %1$s → %2$s</string>
+    <string name="card_history_diff_ipa">ipa: %1$s → %2$s</string>
+    <string name="card_history_diff_conjugation">çekim güncellendi</string>
+    <string name="card_history_diff_meanings">anlamlar güncellendi</string>
+    <string name="card_history_diff_similar">benzer sözcükler güncellendi</string>
+    <string name="card_history_diff_content">içerik güncellendi</string>
+    <string name="cd_card_history">Kart geçmişi</string>
+    <string name="cd_view_card">Tam kartı gör</string>
+    <string name="cd_list_word_actions">Sözcük işlemleri</string>
+    <string name="voice_searching">Aranıyor…</string>
+    <string name="voice_either_lang_hint">İki dilden birinde konuşun</string>
+    <string name="voice_no_match">Anlaşılamadı — yeniden deneyin.</string>
+    <string name="voice_network_required">Sesli giriş internet bağlantısı gerektirir.</string>
+
+    <string name="pos_noun">isim</string>
+    <string name="pos_verb">fiil</string>
+    <string name="pos_adj">sıfat</string>
+    <string name="pos_adv">zarf</string>
+    <string name="pos_prep">edat</string>
+    <string name="pos_conj">bağlaç</string>
+    <string name="pos_pron">zamir</string>
+    <string name="pos_det">belirteç</string>
+    <string name="pos_interj">ünlem</string>
+    <string name="err_empty_list_name">Bir liste adı girin</string>
+    <string name="err_list_not_editable">Bu liste düzenlenemez</string>
+    <string name="err_list_not_deletable">Bu liste silinemez</string>
+    <string name="err_pending_inbox_not_deletable">Bekleyen listesi silinemez</string>
+    <string name="err_pending_inbox_clear">Bekleyen sözcüklerin tümü silinemedi</string>
+    <string name="err_offline">Çevrimdışısınız</string>
+    <string name="err_offline_card">Bu kart çevrimdışı kullanılamaz</string>
+    <string name="err_no_inbox">Bekleyen listesi açılamadı</string>
+    <string name="err_email_taken">Bu e-posta zaten kayıtlı</string>
 
 </resources>

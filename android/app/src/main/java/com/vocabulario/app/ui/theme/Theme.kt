@@ -9,14 +9,17 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import com.vocabulario.app.R
 
 /** Brand palette from design swatches. */
@@ -28,7 +31,8 @@ val BrandInk = Color(0xFF000000)
 
 /** Shared action colors (cancel / confirm) — both themes. */
 val ActionCancel = Color(0xFFBF557F)
-val ActionConfirm = Color(0xFF6DCF65)
+val ActionConfirm = Color(0xFF569252)
+val ActionTeal = Color(0xFF74AEAB)
 
 val GradeAgain = ActionCancel
 val GradeHard = Color(0xFFB85C5C)
@@ -193,6 +197,15 @@ fun VocabularioTheme(
             chipStatusOnContainer = BrandInk,
         )
     }
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = view.context.findActivity()?.window ?: return@SideEffect
+            val insets = WindowCompat.getInsetsController(window, view)
+            insets.isAppearanceLightStatusBars = !darkTheme
+            insets.isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
     CompositionLocalProvider(LocalVocabExtraColors provides extras) {
         MaterialTheme(
             colorScheme = if (darkTheme) DarkColors else LightColors,
@@ -201,4 +214,13 @@ fun VocabularioTheme(
             content = content,
         )
     }
+}
+
+private fun android.content.Context.findActivity(): android.app.Activity? {
+    var ctx: android.content.Context = this
+    while (ctx is android.content.ContextWrapper) {
+        if (ctx is android.app.Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }

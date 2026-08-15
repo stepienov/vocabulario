@@ -68,7 +68,7 @@
 
     <string name="tab_lists">listy</string>
 
-    <string name="auth_login_title">Witaj z powrotem</string>
+    <string name="auth_login_title">Logowanie</string>
 
     <string name="auth_register_title">Załóż konto</string>
 
@@ -78,27 +78,29 @@
 
     <string name="auth_google">Kontynuuj z Google</string>
 
+    <string name="auth_or_continue">Lub kontynuuj e-mailem</string>
+
     <string name="auth_email">E-mail</string>
 
     <string name="auth_password">Hasło</string>
 
-    <string name="auth_tagline">Ucz się słówek w swoim tempie</string>
 
-    <string name="auth_password_hint">Minimum 8 znaków</string>
 
     <string name="auth_have_account">Mam już konto</string>
 
-    <string name="onboarding_title">Konfiguracja nauki</string>
+    <string name="onboarding_app_setup">Konfiguracja aplikacji</string>
 
-    <string name="onboarding_subtitle">Wybierz parę językową, poziom CEFR i czasy czasowników.</string>
+    <string name="onboarding_choose_language">Wybierz swój język</string>
 
-    <string name="onboarding_native">Język aplikacji</string>
+    <string name="onboarding_continue">Dalej</string>
 
-    <string name="onboarding_learning">Język nauki</string>
+    <string name="onboarding_want_to_learn">Chcę uczyć się:</string>
 
     <string name="onboarding_start">Zacznij naukę</string>
 
-    <string name="onboarding_cefr">Poziom CEFR</string>
+    <string name="onboarding_level">Wybierz poziom języka</string>
+
+    <string name="onboarding_level_unknown">Nie wiem</string>
 
     <string name="onboarding_tenses">Czasy czasowników</string>
 
@@ -129,6 +131,8 @@
 
     <string name="settings_mode_flash">Fiszki</string>
 
+    <string name="settings_mode_vocabulario_only">tylko karty Vocabulario</string>
+
     <string name="settings_tolerate_typos">Toleruj drobne błędy</string>
 
     <string name="settings_tolerate_typos_sub">Literówki i diakrytyki</string>
@@ -143,13 +147,14 @@
 
     <string name="settings_card_layout_sub">Co widać po odpowiedzi</string>
 
-    <string name="settings_examples">Przykłady zdań</string>
+    <string name="settings_examples">Zdania</string>
 
-    <string name="settings_usages">Przykłady użycia</string>
+    <string name="settings_usages">Zwroty</string>
 
     <string name="settings_periphrases">Peryfrazy</string>
 
     <string name="settings_syn_ant">Synonimy i przeciwieństwa</string>
+    <string name="settings_word_family">Wyrazy pokrewne</string>
 
     <string name="settings_conjugation">Koniugacja</string>
 
@@ -313,6 +318,25 @@
     <string name="import_empty_hint">Wpisz słowo albo zaimportuj listę (CSV/TXT/apkg)</string>
 
     <string name="import_file_label">Plik: \'%1$s\'</string>
+    <string name="import_start_title">Import fiszek</string>
+    <string name="import_pick_list">Lista docelowa</string>
+    <string name="import_action_start">Importuj</string>
+    <string name="import_limit_exceeded">Na razie możesz zaimportować maksymalnie 50 kart Vocabulario.</string>
+    <string name="import_status_analyzing">Analizuję %1$s…</string>
+    <string name="import_status_importing">Import słówek z pliku %1$s</string>
+    <string name="import_progress_count">Zaimportowano %1$d/%2$d</string>
+    <string name="action_abort">Przerwij</string>
+    <string name="import_abort_title">Przerwać import?</string>
+    <string name="import_abort_body">Postęp zostanie porzucony.</string>
+    <string name="import_result_title">Import zakończony</string>
+    <string name="import_result_body">Dodano %1$d, duplikaty %2$d</string>
+    <string name="import_result_body_failed">Dodano %1$d, duplikaty %2$d, błędy %3$d</string>
+    <string name="import_review_flagged">Zwroty i konstrukcje</string>
+    <string name="action_show_list">Pokaż listę</string>
+    <string name="import_paste_source">Wklejka</string>
+    <string name="import_interrupted">Import przerwany — spróbuj ponownie</string>
+    <string name="import_review_ready">Do zaimportowania</string>
+    <string name="import_new_list_option">+ Nowa lista</string>
 
     <string name="section_meanings">ZNACZENIA</string>
 
@@ -328,7 +352,7 @@
 
     <string name="section_periphrases">PERYFRAZY</string>
 
-    <string name="section_usages">przykłady użycia</string>
+    <string name="section_usages">zwroty</string>
 
     <string name="home_search_hint">Szukaj słowa…</string>
 
@@ -375,6 +399,8 @@
     <string name="status_new">nowe</string>
 
     <string name="status_learning">w nauce</string>
+
+    <string name="card_badge_import">Import</string>
 
     <string name="status_mastered">opanowane</string>
 
@@ -525,6 +551,11 @@
 
     <string name="err_login">Błąd logowania</string>
 
+    <string name="err_login_email_unknown">Nie ma konta z tym e-mailem</string>
+    <string name="err_login_wrong_password">Nieprawidłowe hasło</string>
+    <string name="err_login_use_google">To konto korzysta z Google. Zaloguj się przez Google.</string>
+
+
     <string name="err_register">Błąd rejestracji</string>
 
     <string name="err_google_login">Błąd logowania Google</string>
@@ -542,10 +573,11 @@
     <string name="section_synonyms_short">Synonimy</string>
 
     <string name="section_antonyms_short">Antonimy</string>
+    <string name="section_word_family">Wyrazy pokrewne</string>
 
     <string name="section_conjugation_short">Odmiana</string>
 
-    <string name="section_usages_short">Użycia</string>
+    <string name="section_usages_short">Zwroty</string>
 
     <string name="cd_back">Wstecz</string>
 
@@ -586,14 +618,14 @@
     <string name="cd_search">Szukaj</string>
 
 
-    <string name="correction_fix_card">Popraw kartę</string>
+    <string name="correction_fix_card">Zgłoś poprawkę</string>
     <string name="correction_report_title">Sprawdź i napraw kartę</string>
     <string name="correction_report_subtitle">Sprawdzamy całą kartę. Zaznaczenia i notatka tylko naprowadzają weryfikację.</string>
     <string name="correction_section_lemma">Lemat</string>
     <string name="correction_section_pos">Część mowy</string>
     <string name="correction_section_gloss">Główne tłumaczenie</string>
     <string name="correction_section_meanings">Znaczenia</string>
-    <string name="correction_section_examples">Przykłady</string>
+    <string name="correction_section_examples">Zdania</string>
     <string name="correction_section_conjugation">Odmiana</string>
     <string name="correction_section_similar">Podobne słowa</string>
     <string name="correction_section_pronunciation">Wymowa</string>
@@ -606,8 +638,8 @@
     <string name="correction_field_ipa">Wymowa IPA</string>
     <string name="correction_field_notes">Notatki</string>
     <string name="correction_field_synonyms_l1">Synonimy (L1, jeden w linii)</string>
-    <string name="correction_field_examples">Przykłady</string>
-    <string name="correction_field_usages">Użycia</string>
+    <string name="correction_field_examples">Zdania</string>
+    <string name="correction_field_usages">Zwroty</string>
     <string name="correction_field_l2">Zdanie (L2)</string>
     <string name="correction_field_l1">Tłumaczenie (L1)</string>
     <string name="correction_field_similar">Podobne słowa</string>
@@ -621,7 +653,7 @@
     <string name="correction_processing">Analizuję zgłoszenie…</string>
     <string name="self_edit_processing">Zapisuję i weryfikuję Twoją edycję…</string>
     <string name="self_edit_validating">Sprawdzanie edycji…</string>
-    <string name="self_edit_warning_title">Zmiany mogą być nieprawidłowe</string>
+    <string name="self_edit_warning_title">Potwierdzasz zmiany?</string>
     <string name="self_edit_warning_body">Wykryliśmy, że Twoje zmiany na karcie „%1$s” mogą być nieprawidłowe. Upewnij się, czy chcesz dokonać edycji karty.</string>
     <string name="self_edit_warning_confirm">Zatwierdź zmiany</string>
     <string name="self_edit_warning_revert">Wycofaj zmiany</string>
@@ -634,7 +666,8 @@
     <string name="correction_code_insufficient">Nie znaleźliśmy błędów na tej karcie.</string>
     <string name="correction_code_not_applicable">Ta sekcja nie dotyczy tego typu słowa.</string>
     <string name="correction_code_failed">Nie udało się przetworzyć zgłoszenia. Spróbuj ponownie.</string>
-    <string name="correction_edit_self">Edytuj samodzielnie</string>
+    <string name="correction_edit_self">Edytuj</string>
+    <string name="correction_history_button">Historia zmian</string>
     <string name="correction_self_edit_title">Edytuj kartę</string>
     <string name="correction_field_lemma">Lemat</string>
     <string name="correction_field_pos">Część mowy</string>
@@ -686,6 +719,25 @@
     <string name="notif_study_body">%1$d kart do powtórki</string>
     <string name="notif_cards_ready_title">Karty gotowe</string>
     <string name="notif_cards_ready_body">%1$d słów gotowych do nauki</string>
+
+    <string name="pos_noun">rzeczownik</string>
+    <string name="pos_verb">czasownik</string>
+    <string name="pos_adj">przymiotnik</string>
+    <string name="pos_adv">przysłówek</string>
+    <string name="pos_prep">przyimek</string>
+    <string name="pos_conj">spójnik</string>
+    <string name="pos_pron">zaimek</string>
+    <string name="pos_det">przedimek</string>
+    <string name="pos_interj">wykrzyknik</string>
+    <string name="err_empty_list_name">Podaj nazwę listy</string>
+    <string name="err_list_not_editable">Tej listy nie można edytować</string>
+    <string name="err_list_not_deletable">Tej listy nie można usunąć</string>
+    <string name="err_pending_inbox_not_deletable">Listy oczekujących nie można usunąć</string>
+    <string name="err_pending_inbox_clear">Nie udało się wyczyścić wszystkich oczekujących słów</string>
+    <string name="err_offline">Jesteś offline</string>
+    <string name="err_offline_card">Ta karta jest niedostępna offline</string>
+    <string name="err_no_inbox">Nie udało się otworzyć listy oczekujących</string>
+    <string name="err_email_taken">Ten e-mail jest już zarejestrowany</string>
 
 </resources>
 

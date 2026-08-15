@@ -47,6 +47,8 @@ _STATEMENTS = (
     "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS "
     "show_antonyms BOOLEAN NOT NULL DEFAULT true",
     "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS "
+    "show_word_family BOOLEAN NOT NULL DEFAULT true",
+    "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS "
     "show_conjugation BOOLEAN NOT NULL DEFAULT true",
     "ALTER TABLE srs_state ADD COLUMN IF NOT EXISTS stability DOUBLE PRECISION",
     "ALTER TABLE srs_state ADD COLUMN IF NOT EXISTS difficulty DOUBLE PRECISION",

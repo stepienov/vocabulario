@@ -1,5 +1,6 @@
 package com.vocabulario.app.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -18,10 +19,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.vocabulario.app.data.PairSession
+import com.vocabulario.app.data.imports.ImportController
+import com.vocabulario.app.data.imports.ImportStatus
 import com.vocabulario.app.ui.auth.AuthScreen
 import com.vocabulario.app.ui.auth.AuthViewModel
 import com.vocabulario.app.ui.components.PairSwitchHost
 import com.vocabulario.app.ui.home.HomeScreen
+import com.vocabulario.app.ui.home.ImportErrorDialog
+import com.vocabulario.app.ui.home.ImportResultDialog
 import com.vocabulario.app.ui.learning.LearningScreen
 import com.vocabulario.app.ui.onboarding.OnboardingScreen
 import com.vocabulario.app.ui.packs.PacksScreen
@@ -50,6 +55,12 @@ interface PairSessionEntryPoint {
     fun pairSession(): PairSession
 }
 
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface ImportControllerEntryPoint {
+    fun importController(): ImportController
+}
+
 @Composable
 fun VocabularioAppRoot(
     appViewModel: AppViewModel = hiltViewModel(),
@@ -57,77 +68,114 @@ fun VocabularioAppRoot(
 ) {
     val startRoute by appViewModel.startRoute.collectAsState()
     val pairSession = rememberPairSession()
+    val importController = rememberImportController()
+    val importState by importController.state.collectAsState()
     val pairBusy by pairSession.busy.collectAsState()
 
     LaunchedEffect(Unit) { appViewModel.bootstrap() }
 
     if (startRoute == AppStartRoute.LOADING) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center,
+        ) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
         return
     }
 
-    PairSwitchHost(busy = pairBusy) {
-        // Przebuduj graf przy zmianie trasy startowej (HOME ↔ AUTH ↔ ONBOARDING).
-        key(startRoute) {
-            val navController = rememberNavController()
-            val graphStart = when (startRoute) {
-                AppStartRoute.AUTH -> Routes.AUTH
-                AppStartRoute.ONBOARDING -> Routes.ONBOARDING
-                AppStartRoute.HOME -> Routes.HOME
-                AppStartRoute.LOADING -> Routes.AUTH
-            }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
+        PairSwitchHost(busy = pairBusy) {
+            // Przebuduj graf przy zmianie trasy startowej (HOME ↔ AUTH ↔ ONBOARDING).
+            key(startRoute) {
+                val navController = rememberNavController()
+                val graphStart = when (startRoute) {
+                    AppStartRoute.AUTH -> Routes.AUTH
+                    AppStartRoute.ONBOARDING -> Routes.ONBOARDING
+                    AppStartRoute.HOME -> Routes.HOME
+                    AppStartRoute.LOADING -> Routes.AUTH
+                }
 
-            NavHost(navController = navController, startDestination = graphStart) {
-                composable(Routes.AUTH) {
-                    AuthScreen(
-                        onAuthenticated = { needsOnboarding ->
-                            appViewModel.onAuthenticated(needsOnboarding)
-                        },
-                        onRegisterComplete = {
-                            appViewModel.onAuthenticated(needsOnboarding = true)
-                        },
-                    )
-                }
-                composable(Routes.ONBOARDING) {
-                    OnboardingScreen(
-                        onComplete = { appViewModel.onOnboardingComplete() },
-                    )
-                }
-                composable(Routes.HOME) {
-                    HomeScreen(
-                        onPractice = { navController.navigate(Routes.PRACTICE) },
-                        onSettings = { navController.navigate(Routes.SETTINGS) },
-                        onOpenCard = { navController.navigate(Routes.LEARNING) },
-                    )
-                }
-                composable(Routes.PRACTICE) {
-                    PracticeScreen(onBack = { navController.popBackStack() })
-                }
-                composable(Routes.SETTINGS) {
-                    SettingsScreen(
-                        onBack = { navController.popBackStack() },
-                        onLogout = {
-                            authViewModel.logout {
-                                appViewModel.onLogout()
-                            }
-                        },
-                    )
-                }
-                composable(Routes.PROFILE) {
-                    ProfileScreen(
-                        onBack = { navController.popBackStack() },
-                        onAddProfile = { navController.navigate(Routes.ONBOARDING) },
-                    )
-                }
-                composable(Routes.LEARNING) {
-                    LearningScreen(onBack = { navController.popBackStack() })
-                }
-                composable(Routes.PACKS) {
-                    PacksScreen(onBack = { navController.popBackStack() })
+                NavHost(navController = navController, startDestination = graphStart) {
+                    composable(Routes.AUTH) {
+                        AuthScreen(
+                            onAuthenticated = { needsOnboarding ->
+                                appViewModel.onAuthenticated(needsOnboarding)
+                            },
+                            onRegisterComplete = {
+                                appViewModel.onAuthenticated(needsOnboarding = true)
+                            },
+                        )
+                    }
+                    composable(Routes.ONBOARDING) {
+                        OnboardingScreen(
+                            onComplete = { appViewModel.onOnboardingComplete() },
+                        )
+                    }
+                    composable(Routes.HOME) {
+                        HomeScreen(
+                            onPractice = { navController.navigate(Routes.PRACTICE) },
+                            onSettings = { navController.navigate(Routes.SETTINGS) },
+                            onOpenCard = { navController.navigate(Routes.LEARNING) },
+                        )
+                    }
+                    composable(Routes.PRACTICE) {
+                        PracticeScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(Routes.SETTINGS) {
+                        SettingsScreen(
+                            onBack = { navController.popBackStack() },
+                            onLogout = {
+                                authViewModel.logout {
+                                    appViewModel.onLogout()
+                                }
+                            },
+                        )
+                    }
+                    composable(Routes.PROFILE) {
+                        ProfileScreen(
+                            onBack = { navController.popBackStack() },
+                            onAddProfile = { navController.navigate(Routes.ONBOARDING) },
+                        )
+                    }
+                    composable(Routes.LEARNING) {
+                        LearningScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(Routes.PACKS) {
+                        PacksScreen(onBack = { navController.popBackStack() })
+                    }
                 }
             }
+        }
+
+        // Modal wyników / błędu nad każdą trasą (poza key(startRoute)).
+        when (importState.status) {
+            ImportStatus.Done -> {
+                val result = importState.result
+                if (result != null) {
+                    ImportResultDialog(
+                        result = result,
+                        onShowList = { importController.dismissResult(openList = true) },
+                        onOk = { importController.dismissResult() },
+                    )
+                }
+            }
+            ImportStatus.Error -> {
+                val msg = importState.error
+                if (!msg.isNullOrBlank()) {
+                    ImportErrorDialog(
+                        message = msg,
+                        onDismiss = { importController.dismissResult() },
+                    )
+                }
+            }
+            else -> Unit
         }
     }
 }
@@ -137,5 +185,14 @@ private fun rememberPairSession(): PairSession {
     val context = LocalContext.current.applicationContext
     return remember {
         EntryPointAccessors.fromApplication(context, PairSessionEntryPoint::class.java).pairSession()
+    }
+}
+
+@Composable
+private fun rememberImportController(): ImportController {
+    val context = LocalContext.current.applicationContext
+    return remember {
+        EntryPointAccessors.fromApplication(context, ImportControllerEntryPoint::class.java)
+            .importController()
     }
 }

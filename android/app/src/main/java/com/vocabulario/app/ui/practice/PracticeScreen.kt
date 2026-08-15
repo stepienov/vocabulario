@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.Icon
@@ -30,11 +29,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,9 +56,13 @@ import com.vocabulario.app.ui.card.cardActivityStatusLabel
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.data.langDisplayName
 import com.vocabulario.app.ui.card.FlashcardBackContent
+import com.vocabulario.app.ui.components.ImportDisplayFlip
+import com.vocabulario.app.ui.components.parseImportDisplayFromContent
 import com.vocabulario.app.ui.components.AddToListSheet
+import com.vocabulario.app.ui.components.AppAlertDialog
 import com.vocabulario.app.ui.components.AppButtonShape
-import com.vocabulario.app.ui.components.AppDialogShape
+import com.vocabulario.app.ui.components.AppDialogButtonRow
+import com.vocabulario.app.ui.components.AppGrayField
 import com.vocabulario.app.ui.components.AppScreenScaffold
 import com.vocabulario.app.ui.components.ChoiceTile
 import com.vocabulario.app.ui.components.EmptyState
@@ -120,11 +120,9 @@ fun PracticeScreen(
                 wrong.gloss ?: "?",
             )
         }
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = viewModel::dismissWrongModal,
-            shape = AppDialogShape,
-            containerColor = scheme.surface,
-            title = {
+            titleContent = {
                 Text(
                     stringResource(R.string.practice_error_title),
                     fontWeight = FontWeight.Bold,
@@ -158,14 +156,13 @@ fun PracticeScreen(
                     )
                 }
             },
-            confirmButton = {
-                Button(
-                    onClick = viewModel::dismissWrongModal,
-                    shape = AppButtonShape,
-                    modifier = Modifier.testTag(TestTags.PRACTICE_WRONG_DISMISS),
-                ) { Text(stringResource(R.string.action_return)) }
+            buttons = {
+                AppDialogButtonRow(
+                    primaryText = stringResource(R.string.action_ok),
+                    onPrimary = viewModel::dismissWrongModal,
+                    primaryModifier = Modifier.testTag(TestTags.PRACTICE_WRONG_DISMISS),
+                )
             },
-            dismissButton = {},
         )
     }
 
@@ -206,13 +203,13 @@ fun PracticeScreen(
                         }
                     }
                     state.emptyQueue -> {
-                        EmptyState(stringResource(R.string.practice_empty), stringResource(R.string.practice_empty_hint))
+                        EmptyState(stringResource(R.string.practice_empty))
                         Spacer(Modifier.height(16.dp))
                         Button(
                             onClick = onBack,
                             modifier = Modifier.fillMaxWidth().testTag(TestTags.PRACTICE_EMPTY_BACK),
                             shape = AppButtonShape,
-                        ) { Text(stringResource(R.string.action_back)) }
+                        ) { Text(stringResource(R.string.action_return)) }
                     }
                     item == null -> BoxCentered { CircularProgressIndicator() }
                     state.answerMode == AnswerMode.CHOICE && state.loadingChoices -> BoxCentered { CircularProgressIndicator() }
@@ -279,19 +276,12 @@ fun PracticeScreen(
                                         prompt?.let { PromptCard(it) }
                                         Spacer(Modifier.height(20.dp))
                                         Column(modifier = Modifier.weight(1f)) {
-                                            OutlinedTextField(
+                                            AppGrayField(
                                                 value = state.typedAnswer,
                                                 onValueChange = viewModel::onTypedAnswerChange,
-                                                placeholder = { Text(stringResource(R.string.practice_your_answer)) },
-                                                modifier = Modifier.fillMaxWidth().testTag(TestTags.PRACTICE_ANSWER_INPUT),
+                                                placeholder = stringResource(R.string.practice_your_answer),
+                                                modifier = Modifier.testTag(TestTags.PRACTICE_ANSWER_INPUT),
                                                 singleLine = true,
-                                                shape = AppButtonShape,
-                                                colors = OutlinedTextFieldDefaults.colors(
-                                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                                ),
                                             )
                                             Spacer(Modifier.height(16.dp))
                                             Button(
@@ -339,23 +329,34 @@ fun PracticeScreen(
                                                 )
                                             }
                                         }
-                                        FlashcardBackContent(
-                                            content = item.content,
-                                            lemmaFallback = item.lemma_l2,
-                                            userTenses = state.userTenses,
-                                            userCefr = state.userCefr,
-                                            showUsages = state.showUsages,
-                                            showExampleSentences = state.showExampleSentences,
-                                            showSynonyms = state.showSynonyms,
-                                            showAntonyms = state.showAntonyms,
-                                            showPeriphrases = state.showPeriphrases,
-                                            showConjugation = state.showConjugation,
-                                            conjugationExpandedDefault = state.conjugationExpandedDefault,
-                                            relatedWordsExpandedDefault = state.relatedWordsExpandedDefault,
-                                            profile = state.activeProfile,
-                                            onAddRelated = viewModel::openAddRelated,
-                                            learningLemmas = state.learningLemmas,
-                                        )
+                                        val importDisplay = parseImportDisplayFromContent(item.content)
+                                        if (importDisplay != null) {
+                                            ImportDisplayFlip(
+                                                display = importDisplay,
+                                                enableTts = true,
+                                                learningLang = state.learningLang,
+                                                revealed = true,
+                                            )
+                                        } else {
+                                            FlashcardBackContent(
+                                                content = item.content,
+                                                lemmaFallback = item.lemma_l2,
+                                                userTenses = state.userTenses,
+                                                userCefr = state.userCefr,
+                                                showUsages = state.showUsages,
+                                                showExampleSentences = state.showExampleSentences,
+                                                showSynonyms = state.showSynonyms,
+                                                showAntonyms = state.showAntonyms,
+                                                showWordFamily = state.showWordFamily,
+                                                showPeriphrases = state.showPeriphrases,
+                                                showConjugation = state.showConjugation,
+                                                conjugationExpandedDefault = state.conjugationExpandedDefault,
+                                                relatedWordsExpandedDefault = state.relatedWordsExpandedDefault,
+                                                profile = state.activeProfile,
+                                                onAddRelated = viewModel::openAddRelated,
+                                                learningLemmas = state.learningLemmas,
+                                            )
+                                        }
                                         Spacer(Modifier.height(8.dp))
                                     }
                                     val activityLabel = cardActivityStatusLabel(item.card_activity_status)
@@ -374,30 +375,6 @@ fun PracticeScreen(
                                             )
                                         }
                                         Spacer(Modifier.height(8.dp))
-                                    }
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.Center,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        TextButton(
-                                            onClick = viewModel::openCorrection,
-                                            enabled = item.card_activity_status.isNullOrBlank(),
-                                            modifier = Modifier.testTag(TestTags.BTN_FIX_CARD),
-                                        ) {
-                                            Text(stringResource(R.string.correction_fix_card))
-                                        }
-                                        if (item.has_content_changes) {
-                                            TextButton(
-                                                onClick = viewModel::openCardHistory,
-                                                modifier = Modifier.testTag(TestTags.BTN_CARD_HISTORY),
-                                            ) {
-                                                Text(
-                                                    stringResource(R.string.card_history_title),
-                                                    color = CorrectionActivityColor,
-                                                )
-                                            }
-                                        }
                                     }
                                     Column(
                                         modifier = Modifier

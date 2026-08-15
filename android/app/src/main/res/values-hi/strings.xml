@@ -1,32 +1,32 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
     <string name="app_name">Vocabulario</string>
 
-    <string name="action_sort">Sort</string>
-    <string name="action_filter">Filter</string>
-    <string name="action_filter_active">Filter · %1$d</string>
-    <string name="action_clear_filters">Clear filters</string>
-    <string name="action_clear_all">Clear all</string>
-    <string name="action_apply">Apply</string>
-    <string name="list_words_meta">%1$d words</string>
-    <string name="list_filter_empty">No words match filters</string>
-    <string name="sort_title">Sort</string>
-    <string name="sort_lemma_asc">A → Z</string>
+        <string name="action_sort">क्रम</string>
+    <string name="action_filter">फ़िल्टर</string>
+    <string name="action_filter_active">फ़िल्टर · %1$d</string>
+    <string name="action_clear_filters">फ़िल्टर साफ़ करें</string>
+    <string name="action_clear_all">सब साफ़ करें</string>
+    <string name="action_apply">लागू करें</string>
+    <string name="list_words_meta">%1$d शब्द</string>
+    <string name="list_filter_empty">फ़िल्टर से कोई शब्द मेल नहीं खाता</string>
+    <string name="sort_title">क्रम</string>
+<string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
-    <string name="sort_pos">Part of speech</string>
-    <string name="sort_newest">Newest first</string>
-    <string name="sort_oldest">Oldest first</string>
-    <string name="sort_status">Card state</string>
-    <string name="filter_title">Filter</string>
-    <string name="filter_section_pos">Part of speech</string>
-    <string name="filter_section_state">Card state</string>
-    <string name="filter_pos_unknown">No POS</string>
-    <string name="status_review">review</string>
-    <string name="action_undo">Undo</string>
-    <string name="cd_undo">Undo last grade</string>
-    <string name="action_cancel">रद्द करें</string>
+        <string name="sort_pos">शब्द भेद</string>
+    <string name="sort_newest">नए पहले</string>
+    <string name="sort_oldest">पुराने पहले</string>
+    <string name="sort_status">कार्ड की स्थिति</string>
+    <string name="filter_title">फ़िल्टर</string>
+    <string name="filter_section_pos">शब्द भेद</string>
+    <string name="filter_section_state">कार्ड की स्थिति</string>
+    <string name="filter_pos_unknown">शब्द भेद नहीं</string>
+    <string name="status_review">दोहराव</string>
+    <string name="action_undo">पूर्ववत</string>
+    <string name="cd_undo">पिछला ग्रेड पूर्ववत करें</string>
+<string name="action_cancel">रद्द करें</string>
 
     <string name="action_ok">ठीक</string>
 
@@ -68,7 +68,7 @@
 
     <string name="tab_lists">सूचियाँ</string>
 
-    <string name="auth_login_title">वापसी पर स्वागत है</string>
+    <string name="auth_login_title">लॉग इन</string>
 
     <string name="auth_register_title">खाता बनाएँ</string>
 
@@ -78,44 +78,45 @@
 
     <string name="auth_google">Google से जारी रखें</string>
 
+    <string name="auth_or_continue">या ईमेल से जारी रखें</string>
+
     <string name="auth_email">ईमेल</string>
 
     <string name="auth_password">पासवर्ड</string>
 
-    <string name="auth_tagline">अपनी गति से शब्दावली सीखें</string>
 
-    <string name="auth_password_hint">कम से कम 8 अक्षर</string>
 
     <string name="auth_have_account">मेरा पहले से खाता है</string>
 
-    <string name="onboarding_title">सीखने की सेटअप</string>
+    <string name="onboarding_app_setup">ऐप सेटअप</string>
 
-    <string name="onboarding_subtitle">भाषा जोड़ी, CEFR स्तर और क्रिया काल चुनें।</string>
+    <string name="onboarding_choose_language">अपनी भाषा चुनें</string>
 
-    <string name="onboarding_native">मातृभाषा</string>
+    <string name="onboarding_continue">आगे</string>
 
-    <string name="onboarding_learning">सीखने की भाषा</string>
+    <string name="onboarding_want_to_learn">मैं सीखना चाहता हूँ:</string>
 
     <string name="onboarding_start">शुरू करें</string>
 
-    <string name="onboarding_cefr">CEFR स्तर</string>
+    <string name="onboarding_level">भाषा स्तर चुनें</string>
+
+    <string name="onboarding_level_unknown">पता नहीं</string>
 
     <string name="onboarding_tenses">क्रिया काल</string>
 
     <string name="settings_title">सेटिंग्स</string>
 
 
-    <string name="settings_native_lang">App language</string>
-    <string name="settings_tense_labels">काल लेबल</string>
+        <string name="settings_native_lang">ऐप की भाषा</string>
+<string name="settings_tense_labels">काल लेबल</string>
     <string name="settings_tense_labels_app">ऐप की भाषा में</string>
     <string name="settings_tense_labels_learning">सीखने की भाषा में</string>
 
 
     <string name="settings_learning_lang">सीखने की भाषा</string>
 
-    <string name="settings_langs_hint">App language is the language of the interface and card translations. Learning language is what you study.</string>
-
-    <string name="settings_theme">थीम</string>
+        <string name="settings_langs_hint">ऐप की भाषा इंटरफ़ेस और कार्ड अनुवाद की भाषा है। सीखने की भाषा वह है जिसे आप पढ़ते हैं।</string>
+<string name="settings_theme">थीम</string>
 
     <string name="settings_mode">अध्ययन मोड</string>
 
@@ -128,6 +129,8 @@
     <string name="settings_mode_type">शब्द टाइप करें</string>
 
     <string name="settings_mode_flash">फ्लैशकार्ड</string>
+
+    <string name="settings_mode_vocabulario_only">केवल Vocabulario कार्ड</string>
 
     <string name="settings_tolerate_typos">छोटी गलतियाँ अनुमति दें</string>
 
@@ -143,13 +146,14 @@
 
     <string name="settings_card_layout_sub">उत्तर के बाद क्या दिखे</string>
 
-    <string name="settings_examples">उदाहरण वाक्य</string>
+    <string name="settings_examples">वाक्य</string>
 
-    <string name="settings_usages">प्रयोग उदाहरण</string>
+    <string name="settings_usages">मुहावरे</string>
 
     <string name="settings_periphrases">पैटर्न</string>
 
     <string name="settings_syn_ant">पर्याय और विलोम</string>
+    <string name="settings_word_family">शब्द परिवार</string>
 
     <string name="settings_conjugation">क्रिया रूप</string>
 
@@ -221,16 +225,15 @@
     <string name="creating_card_failed">कार्ड तैयार नहीं हो सका</string>
 
     <string name="list_learning">सीख रहा हूँ</string>
-    <string name="list_pending">Pending</string>
-    <string name="offline_banner_title">You’re offline</string>
-    <string name="offline_banner_body">Added words go to the "Pending" list and will be looked up when you’re back online.</string>
-    <string name="offline_search_hint">Enter a word</string>
-    <string name="import_online_only">Import is only available online.</string>
-    <string name="offline_lookup_queued">Added to "Pending" — lookup when you’re back online.</string>
-    <string name="offline_lookup_duplicate">That word is already waiting on "Pending".</string>
-    <string name="status_awaiting_network">Waiting for network</string>
-
-    <string name="list_other">अन्य सूची</string>
+        <string name="list_pending">लंबित</string>
+    <string name="offline_banner_title">आप ऑफ़लाइन हैं</string>
+    <string name="offline_banner_body">जोड़े गए शब्द «लंबित» सूची में जाएँगे और ऑनलाइन लौटने पर खोजे जाएँगे।</string>
+    <string name="offline_search_hint">एक शब्द लिखें</string>
+    <string name="import_online_only">आयात केवल ऑनलाइन उपलब्ध है।</string>
+    <string name="offline_lookup_queued">«लंबित» में जोड़ा गया — ऑनलाइन लौटने पर खोज।</string>
+    <string name="offline_lookup_duplicate">यह शब्द पहले से «लंबित» में है।</string>
+    <string name="status_awaiting_network">नेटवर्क की प्रतीक्षा</string>
+<string name="list_other">अन्य सूची</string>
 
     <string name="list_new">नई सूची</string>
 
@@ -303,8 +306,27 @@
     <string name="import_empty_hint">शब्द लिखें या सूची आयात करें (CSV/TXT/apkg)</string>
 
     <string name="import_file_label">फ़ाइल: \'%1$s\'</string>
-
-    <string name="section_meanings">अर्थ</string>
+    <!-- TODO: translate import UI strings -->
+    <string name="import_start_title">फ्लैशकार्ड आयात करें</string>
+    <string name="import_pick_list">गंतव्य सूची</string>
+    <string name="import_action_start">आयात</string>
+<string name="import_limit_exceeded">अभी आप अधिकतम 50 Vocabulario कार्ड आयात कर सकते हैं।</string>
+        <string name="import_status_analyzing">%1$s का विश्लेषण…</string>
+    <string name="import_status_importing">%1$s से शब्द आयात हो रहे हैं</string>
+    <string name="import_progress_count">आयातित %1$d/%2$d</string>
+    <string name="action_abort">रोकें</string>
+    <string name="import_abort_title">आयात रोकें?</string>
+    <string name="import_abort_body">प्रगति रद्द हो जाएगी।</string>
+    <string name="import_result_title">आयात पूरा</string>
+    <string name="import_result_body">जोड़े %1$d, डुप्लिकेट %2$d</string>
+    <string name="import_result_body_failed">जोड़े %1$d, डुप्लिकेट %2$d, त्रुटियाँ %3$d</string>
+    <string name="import_review_flagged">मुहावरे और संरचनाएँ</string>
+    <string name="action_show_list">सूची दिखाएँ</string>
+    <string name="import_paste_source">चिपकाया</string>
+    <string name="import_interrupted">आयात बाधित — फिर कोशिश करें</string>
+    <string name="import_review_ready">आयात के लिए तैयार</string>
+    <string name="import_new_list_option">+ नई सूची</string>
+<string name="section_meanings">अर्थ</string>
 
     <string name="section_synonyms">पर्याय</string>
 
@@ -318,7 +340,7 @@
 
     <string name="section_periphrases">पैटर्न</string>
 
-    <string name="section_usages">प्रयोग उदाहरण</string>
+    <string name="section_usages">मुहावरे</string>
 
     <string name="home_search_hint">शब्द खोजें…</string>
 
@@ -365,6 +387,8 @@
     <string name="status_new">नया</string>
 
     <string name="status_learning">सीख रहा</string>
+
+    <string name="card_badge_import">आयातित</string>
 
     <string name="status_mastered">निपुण</string>
 
@@ -514,6 +538,11 @@
 
     <string name="err_login">लॉगिन विफल</string>
 
+    <string name="err_login_email_unknown">इस ईमेल से कोई खाता नहीं है</string>
+    <string name="err_login_wrong_password">गलत पासवर्ड</string>
+    <string name="err_login_use_google">यह खाता Google का उपयोग करता है। Google से जारी रखें।</string>
+
+
     <string name="err_register">पंजीकरण विफल</string>
 
     <string name="err_google_login">Google साइन-इन विफल</string>
@@ -531,10 +560,11 @@
     <string name="section_synonyms_short">पर्याय</string>
 
     <string name="section_antonyms_short">विलोम</string>
+    <string name="section_word_family">शब्द परिवार</string>
 
     <string name="section_conjugation_short">क्रिया रूप</string>
 
-    <string name="section_usages_short">प्रयोग</string>
+    <string name="section_usages_short">मुहावरे</string>
 
     <string name="cd_back">वापस</string>
 
@@ -548,81 +578,149 @@
 
     <string name="cd_add_to_list">सूची में जोड़ें</string>
 
-    <string name="list_clear_all">Delete all words</string>
-
-    <string name="list_clear_all_title">Delete all words?</string>
-
-    <string name="list_clear_all_body">You’ll remove every word from “%1$s”. The list itself stays.</string>
-
-    <string name="settings_level">Level</string>
-
-    <string name="settings_selected_tenses">Selected tenses</string>
-
-    <string name="action_edit">Edit</string>
-
-    <string name="import_cards_count">Imported cards (%1$d)</string>
-
-    <string name="import_flashcards_count">Flashcards: %1$d</string>
-
-    <string name="import_done_count">Imported: %1$d</string>
-
-    <string name="list_unnamed">list</string>
-
-    <string name="periphrase_n">Periphrase %1$d</string>
-
-    <string name="practice_well_done">Nice!</string>
-
-    <string name="cd_search">Search</string>
-
-
-    <string name="correction_fix_card">Fix card</string>
-    <string name="correction_report_title">Report a problem</string>
-    <string name="correction_section_lemma">Lemma</string>
-    <string name="correction_section_pos">Part of speech</string>
-    <string name="correction_section_gloss">Primary gloss</string>
-    <string name="correction_section_meanings">Meanings</string>
-    <string name="correction_section_examples">Examples</string>
-    <string name="correction_section_conjugation">Conjugation</string>
-    <string name="correction_section_similar">Similar words</string>
-    <string name="correction_section_pronunciation">Pronunciation</string>
-    <string name="correction_section_other">Other</string>
-    <string name="correction_note_label">Note</string>
-    <string name="correction_note_hint">Describe what is wrong…</string>
-    <string name="correction_validation">Select at least one section or write a note (min. 3 characters).</string>
-    <string name="correction_submit">Submit report</string>
-    <string name="correction_requires_online">Requires internet connection.</string>
-    <string name="correction_result_accepted_title">Report accepted — card updated.</string>
+        <string name="list_clear_all">सभी शब्द हटाएँ</string>
+    <string name="list_clear_all_title">सभी शब्द हटाएँ?</string>
+    <string name="list_clear_all_body">आप «%1$s» से हर शब्द हटा देंगे। सूची बनी रहेगी।</string>
+    <string name="settings_level">स्तर</string>
+    <string name="settings_selected_tenses">चुने हुए काल</string>
+    <string name="action_edit">संपादित करें</string>
+    <string name="import_cards_count">आयातित कार्ड (%1$d)</string>
+    <string name="import_flashcards_count">फ्लैशकार्ड: %1$d</string>
+    <string name="import_done_count">आयातित: %1$d</string>
+    <string name="list_unnamed">सूची</string>
+    <string name="periphrase_n">पेरिफ़्रेज़ %1$d</string>
+    <string name="practice_well_done">बहुत बढ़िया!</string>
+    <string name="cd_search">खोजें</string>
+    <string name="correction_fix_card">सुधार रिपोर्ट करें</string>
+<string name="correction_report_title">Report a problem</string>
+        <string name="correction_section_lemma">मूल रूप</string>
+    <string name="correction_section_pos">शब्द भेद</string>
+    <string name="correction_section_gloss">मुख्य अनुवाद</string>
+    <string name="correction_section_meanings">अर्थ</string>
+<string name="correction_section_examples">वाक्य</string>
+        <string name="correction_section_conjugation">रूप परिवर्तन</string>
+    <string name="correction_section_similar">समान शब्द</string>
+    <string name="correction_section_pronunciation">उच्चारण</string>
+    <string name="correction_section_other">अन्य</string>
+    <string name="correction_note_label">नोट</string>
+    <string name="correction_note_hint">गलती बताएँ…</string>
+    <string name="correction_validation">कम से कम एक अनुभाग चुनें या नोट लिखें (न्यूनतम 3 अक्षर)।</string>
+<string name="correction_submit">Submit report</string>
+        <string name="correction_requires_online">इंटरनेट कनेक्शन चाहिए।</string>
+<string name="correction_result_accepted_title">Report accepted — card updated.</string>
     <string name="correction_result_rejected_title">Report not accepted.</string>
     <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
-    <string name="correction_edit_self">Edit myself</string>
-    <string name="correction_self_edit_title">Edit card</string>
-    <string name="correction_field_lemma">Lemma</string>
-    <string name="correction_field_pos">Part of speech</string>
-    <string name="correction_field_gloss">Primary gloss</string>
-    <string name="correction_field_extra_glosses">Extra glosses (one per line)</string>
-    <string name="review_status_reported">Correction reported</string>
-    <string name="review_status_accepted">Updated</string>
-    <string name="review_status_rejected">Report rejected</string>
-    <string name="review_status_user_edited">Edited manually</string>
-    <string name="cd_voice_search">Voice search</string>
-    <string name="voice_listening">Listening…</string>
-    <string name="voice_listening_hint">Speak now</string>
-    <string name="voice_tap_to_start">Tap Start to speak</string>
-    <string name="voice_start">Start</string>
+        <string name="correction_edit_self">संपादित करें</string>
+        <string name="correction_history_button">परिवर्तन इतिहास</string>
+    <string name="correction_self_edit_title">कार्ड संपादित करें</string>
+    <string name="correction_field_lemma">मूल रूप</string>
+    <string name="correction_field_pos">शब्द भेद</string>
+    <string name="correction_field_gloss">मुख्य अनुवाद</string>
+    <string name="correction_field_extra_glosses">अतिरिक्त अनुवाद (एक पंक्ति में एक)</string>
+    <string name="cd_voice_search">आवाज़ से खोज</string>
+    <string name="voice_listening">सुन रहा हूँ…</string>
+    <string name="voice_listening_hint">अब बोलें</string>
+    <string name="voice_tap_to_start">बोलने के लिए प्रारंभ टैप करें</string>
+<string name="voice_start">Start</string>
     <string name="voice_stop">Stop</string>
-    <string name="voice_permission_denied">Microphone permission denied.</string>
-    <string name="voice_unavailable">Speech recognition unavailable on this device.</string>
-    <string name="settings_notifications">Notifications</string>
-    <string name="settings_notifications_summary">Study reminders and card readiness</string>
-    <string name="settings_notif_study">Study reminders</string>
-    <string name="settings_notif_cards">Cards ready</string>
-    <string name="settings_reminder_hour">Reminder hour (0–23)</string>
-    <string name="notif_channel_study">Study</string>
-    <string name="notif_channel_cards">Cards</string>
-    <string name="notif_study_title">Time to review</string>
-    <string name="notif_study_body">%1$d cards due</string>
-    <string name="notif_cards_ready_title">Cards ready</string>
-    <string name="notif_cards_ready_body">%1$d word(s) ready to study</string>
+        <string name="voice_permission_denied">माइक्रोफ़ोन अनुमति अस्वीकृत।</string>
+    <string name="voice_unavailable">इस डिवाइस पर वाक् पहचान उपलब्ध नहीं।</string>
+    <string name="settings_notifications">सूचनाएँ</string>
+    <string name="settings_notifications_summary">अध्ययन अनुस्मारक और तैयार कार्ड</string>
+    <string name="settings_notif_study">अध्ययन अनुस्मारक</string>
+    <string name="settings_notif_cards">कार्ड तैयार</string>
+    <string name="settings_reminder_hour">अनुस्मारक घंटा (0–23)</string>
+    <string name="notif_channel_study">अध्ययन</string>
+    <string name="notif_channel_cards">कार्ड</string>
+    <string name="notif_study_title">दोहराने का समय</string>
+    <string name="notif_study_body">%1$d कार्ड बाकी</string>
+    <string name="notif_cards_ready_title">कार्ड तैयार</string>
+    <string name="notif_cards_ready_body">%1$d शब्द अध्ययन के लिए तैयार</string>
+    <string name="status_needs_review">जाँच ज़रूरी</string>
+    <string name="review_title">शब्द की जाँच ज़रूरी है</string>
+    <string name="review_no_match">«%1$s» से कोई मेल नहीं मिला।</string>
+    <string name="review_did_you_mean">क्या आपका मतलब था:</string>
+    <string name="review_reject">अस्वीकार</string>
+    <string name="review_search_again">खोजें</string>
+    <string name="review_confirm">पुष्टि करें</string>
+    <string name="review_close">बंद करें</string>
+    <string name="list_delete">सूची हटाएँ</string>
+    <string name="err_word_on_list">यह शब्द पहले से आपकी सीखने की सूची में है।</string>
+    <string name="correction_report_subtitle">हम पूरा कार्ड जाँचते हैं। आपके चयन और नोट केवल दिशा देते हैं।</string>
+    <string name="correction_daily_limit">आप दिन में अधिकतम 20 रिपोर्ट भेज सकते हैं।</string>
+    <string name="correction_field_ipa">IPA उच्चारण</string>
+    <string name="correction_field_notes">नोट्स</string>
+    <string name="correction_field_synonyms_l1">समानार्थी (L1, एक पंक्ति में एक)</string>
+    <string name="correction_field_examples">वाक्य</string>
+    <string name="correction_field_usages">मुहावरे</string>
+    <string name="correction_field_l2">वाक्य (L2)</string>
+    <string name="correction_field_l1">अनुवाद (L1)</string>
+    <string name="correction_field_similar">समान शब्द</string>
+    <string name="correction_field_conjugation_json">रूप परिवर्तन (JSON)</string>
+    <string name="correction_section_meaning">अर्थ %1$d</string>
+    <string name="correction_add_meaning">अर्थ जोड़ें</string>
+    <string name="correction_add_row">पंक्ति जोड़ें</string>
+    <string name="correction_empty_rows_hint">अभी पंक्ति नहीं — पंक्ति जोड़ें टैप करें।</string>
+    <string name="correction_self_edit_link">कार्ड खुद संपादित करने के लिए यहाँ टैप करें</string>
+    <string name="correction_processing">रिपोर्ट का विश्लेषण…</string>
+    <string name="self_edit_processing">आपका संपादन सहेजकर जाँचा जा रहा है…</string>
+    <string name="self_edit_validating">संपादन जाँचे जा रहे हैं…</string>
+    <string name="self_edit_warning_title">इन परिवर्तनों की पुष्टि करें?</string>
+    <string name="self_edit_warning_body">हमने पाया कि कार्ड «%1$s» पर आपके परिवर्तन गलत हो सकते हैं। सहेजने से पहले जाँचें।</string>
+    <string name="self_edit_warning_confirm">परिवर्तन पुष्टि करें</string>
+    <string name="self_edit_warning_revert">परिवर्तन वापस लें</string>
+    <string name="correction_result_accepted_body">कार्ड «%1$s» अपडेट हो गया।</string>
+    <string name="correction_code_accepted">रिपोर्ट स्वीकृत — कार्ड अपडेट।</string>
+    <string name="correction_code_unfounded">इस कार्ड पर कोई त्रुटि नहीं मिली।</string>
+    <string name="correction_code_insufficient">इस कार्ड पर कोई त्रुटि नहीं मिली।</string>
+    <string name="correction_code_not_applicable">यह अनुभाग इस प्रकार के शब्द पर लागू नहीं होता।</string>
+    <string name="correction_code_failed">रिपोर्ट संसाधित नहीं हो सकी। फिर कोशिश करें।</string>
+    <string name="card_history_title">कार्ड इतिहास</string>
+    <string name="card_history_empty">अभी कोई रिपोर्ट या बदलाव नहीं।</string>
+    <string name="card_history_restore">मूल संस्करण पुनर्स्थापित करें</string>
+    <string name="card_history_restored">कार्ड का मूल संस्करण पुनर्स्थापित</string>
+    <string name="card_history_actor_you">आप</string>
+    <string name="card_history_actor_system">सिस्टम</string>
+    <string name="card_history_event_report">रिपोर्ट भेजी गई</string>
+    <string name="card_history_event_accepted">रिपोर्ट स्वीकृत — कार्ड अपडेट</string>
+    <string name="card_history_event_self_edit">मैनुअल संपादन</string>
+    <string name="card_history_event_reviewed">संपादन सत्यापित</string>
+    <string name="card_history_summary_report">अनुभाग: %1$s</string>
+    <string name="card_history_summary_restored">मूल संस्करण पुनर्स्थापित।</string>
+    <string name="card_history_diff_lemma">मूल रूप: %1$s → %2$s</string>
+    <string name="card_history_diff_pos">शब्द भेद: %1$s → %2$s</string>
+    <string name="card_history_diff_gloss">अनुवाद: %1$s → %2$s</string>
+    <string name="card_history_diff_ipa">ipa: %1$s → %2$s</string>
+    <string name="card_history_diff_conjugation">रूप परिवर्तन अपडेट</string>
+    <string name="card_history_diff_meanings">अर्थ अपडेट</string>
+    <string name="card_history_diff_similar">समान शब्द अपडेट</string>
+    <string name="card_history_diff_content">सामग्री अपडेट</string>
+    <string name="cd_card_history">कार्ड इतिहास</string>
+    <string name="cd_view_card">पूरा कार्ड देखें</string>
+    <string name="cd_list_word_actions">शब्द क्रियाएँ</string>
+    <string name="voice_searching">खोज रहा हूँ…</string>
+    <string name="voice_either_lang_hint">किसी भी भाषा में बोलें</string>
+    <string name="voice_no_match">समझ नहीं आया — फिर कोशिश करें।</string>
+    <string name="voice_network_required">आवाज़ इनपुट के लिए इंटरनेट चाहिए।</string>
+
+    <string name="pos_noun">संज्ञा</string>
+    <string name="pos_verb">क्रिया</string>
+    <string name="pos_adj">विशेषण</string>
+    <string name="pos_adv">क्रियाविशेषण</string>
+    <string name="pos_prep">संबंधबोधक</string>
+    <string name="pos_conj">समुच्चयबोधक</string>
+    <string name="pos_pron">सर्वनाम</string>
+    <string name="pos_det">निर्धारक</string>
+    <string name="pos_interj">विस्मयादिबोधक</string>
+    <string name="err_empty_list_name">सूची का नाम लिखें</string>
+    <string name="err_list_not_editable">इस सूची को संपादित नहीं किया जा सकता</string>
+    <string name="err_list_not_deletable">इस सूची को हटाया नहीं जा सकता</string>
+    <string name="err_pending_inbox_not_deletable">लंबित सूची को हटाया नहीं जा सकता</string>
+    <string name="err_pending_inbox_clear">सभी लंबित शब्द नहीं हटाए जा सके</string>
+    <string name="err_offline">आप ऑफ़लाइन हैं</string>
+    <string name="err_offline_card">यह कार्ड ऑफ़लाइन उपलब्ध नहीं है</string>
+    <string name="err_no_inbox">लंबित सूची नहीं खोली जा सकी</string>
+    <string name="err_email_taken">यह ईमेल पहले से पंजीकृत है</string>
 
 </resources>
 

@@ -1,6 +1,6 @@
 package com.vocabulario.app.di
 
-import com.vocabulario.app.BuildConfig
+import com.vocabulario.app.data.ApiBaseUrl
 import com.vocabulario.app.data.api.TokenAuthenticator
 import com.vocabulario.app.data.api.VocabularioApi
 import com.vocabulario.app.data.local.TokenStore
@@ -68,7 +68,7 @@ object AppModule {
   fun provideApi(client: OkHttpClient): VocabularioApi {
     val contentType = "application/json".toMediaType()
     return Retrofit.Builder()
-      .baseUrl(BuildConfig.API_BASE_URL)
+      .baseUrl(ApiBaseUrl.resolve())
       .client(client)
       .addConverterFactory(json.asConverterFactory(contentType))
       .build()

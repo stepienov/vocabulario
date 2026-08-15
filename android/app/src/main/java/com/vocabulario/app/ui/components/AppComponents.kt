@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -106,10 +107,16 @@ fun AppScreenScaffold(
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
             TopAppBar(
                 title = {
-                    Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
                 },
                 navigationIcon = {
                     if (onBack != null) {
@@ -124,6 +131,9 @@ fun AppScreenScaffold(
                 actions = actions,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                    actionIconContentColor = MaterialTheme.colorScheme.onBackground,
                 ),
             )
         },
@@ -164,6 +174,71 @@ fun AppCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         content = { content() },
     )
+}
+
+@Composable
+fun LemmaActionRow(
+    lemma: String,
+    gloss: String?,
+    trailing: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    belowGloss: (@Composable ColumnScope.() -> Unit)? = null,
+) {
+    val body: @Composable () -> Unit = {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    lemma,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                if (!gloss.isNullOrBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        gloss,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                belowGloss?.invoke(this)
+            }
+            trailing()
+        }
+    }
+    if (onClick != null) {
+        AppCard(onClick = onClick, modifier = modifier, content = body)
+    } else {
+        AppCard(modifier = modifier, content = body)
+    }
+}
+
+@Composable
+fun LemmaAddButton(
+    onClick: () -> Unit,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = scheme.primary,
+        contentColor = scheme.onPrimary,
+        modifier = modifier.size(40.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Icon(Icons.Default.Add, contentDescription = contentDescription, modifier = Modifier.size(22.dp))
+        }
+    }
 }
 
 @Composable
@@ -400,53 +475,19 @@ fun ChoiceTile(
 ) {
     val scheme = MaterialTheme.colorScheme
     if (showActions) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().testTag(TestTags.PRACTICE_CHOICE),
-            shape = RoundedCornerShape(20.dp),
-            color = scheme.surfaceVariant,
-            contentColor = scheme.onSurface,
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    gloss?.takeIf { it.isNotBlank() }?.let {
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = scheme.onSurfaceVariant,
-                            maxLines = 3,
-                        )
-                    }
-                }
+        LemmaActionRow(
+            lemma = text,
+            gloss = gloss,
+            modifier = Modifier.testTag(TestTags.PRACTICE_CHOICE),
+            trailing = {
                 if (onAddLearning != null) {
-                    Surface(
+                    LemmaAddButton(
                         onClick = onAddLearning,
-                        shape = CircleShape,
-                        color = scheme.primary,
-                        contentColor = scheme.onPrimary,
-                        modifier = Modifier.size(40.dp),
-                    ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = stringResource(R.string.cd_add_to_list),
-                                modifier = Modifier.size(22.dp),
-                            )
-                        }
-                    }
+                        contentDescription = stringResource(R.string.cd_add_to_list),
+                    )
                 }
-            }
-        }
+            },
+        )
         return
     }
 
@@ -633,7 +674,11 @@ fun WordListItem(
                     color = MaterialTheme.colorScheme.primary,
                 )
             } else {
-                pos?.let { TagChip(it) }
+                when {
+                    pos.equals("imported", ignoreCase = true) ->
+                        TagChip(stringResource(R.string.card_badge_import))
+                    !pos.isNullOrBlank() -> TagChip(pos)
+                }
             }
         }
     }
@@ -649,13 +694,23 @@ fun EmptyState(message: String, subtitle: String? = null) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 48.dp),
+            .padding(horizontal = 24.dp, vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(message, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        Text(
+            message,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
         subtitle?.let {
             Spacer(Modifier.height(8.dp))
-            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+            Text(
+                it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

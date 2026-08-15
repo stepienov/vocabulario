@@ -14,11 +14,11 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
-/** Speaks L2 text once the engine is ready (queues the first tap if needed). */
+/** Speaks text once the engine is ready (queues the first tap if needed). */
 class L2TtsSpeaker {
     private val engine = AtomicReference<TextToSpeech?>(null)
     private val ready = AtomicBoolean(false)
-    private val pending = AtomicReference<Pair<String, String>?>(null)
+    private val pending = AtomicReference<Triple<String, String, String?>?>(null)
 
     fun attach(tts: TextToSpeech?) {
         engine.set(tts)
@@ -28,21 +28,30 @@ class L2TtsSpeaker {
         ready.set(ok)
         if (!ok) return
         val next = pending.getAndSet(null) ?: return
-        speakNow(next.first, next.second)
+        speakNow(next.first, next.second, next.third)
     }
 
-    fun speak(text: String, utteranceId: String) {
+    fun speak(text: String, utteranceId: String, languageTag: String? = null) {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return
         if (!ready.get() || engine.get() == null) {
-            pending.set(trimmed to utteranceId)
+            pending.set(Triple(trimmed, utteranceId, languageTag))
             return
         }
-        speakNow(trimmed, utteranceId)
+        speakNow(trimmed, utteranceId, languageTag)
     }
 
-    private fun speakNow(text: String, utteranceId: String) {
+    private fun speakNow(text: String, utteranceId: String, languageTag: String? = null) {
         val tts = engine.get() ?: return
+        if (!languageTag.isNullOrBlank()) {
+            val locale = Locale.forLanguageTag(languageTag)
+            val result = tts.setLanguage(locale)
+            if (result == TextToSpeech.LANG_MISSING_DATA ||
+                result == TextToSpeech.LANG_NOT_SUPPORTED
+            ) {
+                tts.language = Locale(locale.language)
+            }
+        }
         // Flush previous utterance so repeated taps always restart cleanly.
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
     }

@@ -254,6 +254,9 @@ Zwróć WYŁĄCZNIE JSON:
   "antonyms_l2": [
     {{"lemma": "antonim w L2", "pos": "ta sama część mowy co lemat", "gloss_l1": "tłumaczenie na {native}"}}
   ],
+  "word_family_l2": [
+    {{"lemma": "wyraz pokrewny w L2 (inny od lematu)", "pos": "noun|verb|adj|...", "gloss_l1": "tłumaczenie na {native}"}}
+  ],
   "notes": null,
   "confidence": 0.95
 }}
@@ -280,9 +283,12 @@ Znaczenia (meanings) — najważniejsza część karty:
 - ZAKAZ sensów rzadkich, archaicznych, slangowych i niszowych.
 - Znaczenia opisują WYŁĄCZNIE goły lemat (bez stałego przyimka wymaganego do sensu).
   Stałe „lemat + przyimek” z innym sensu → periphrases (osobny krok), nie meanings.
-- usages ilustrują goły lemat.
+- usages = krótkie ZWROTY / kolokacje (nie pełne zdania); ilustrują goły lemat.
 - Poziom {cefr} wpływa na dobór słownictwa w tłumaczeniach, NIE na liczbę znaczeń.
 - usages: 2–4 prawdziwe kolokacje w {learning} z tłumaczeniem na {native}.
+- Jeśli dwa sensy mają to samo słowo L1 (np. PL „lot”), ROZRÓŻNIJ gloss_l1
+  krótkim dopiskiem w nawiasie, np. „lot (samolot)” / „lot (ptaka)” — nie zostawiaj
+  identycznego gloss_l1 dla różnych sensów.
 - Forma zwrotna z innym sensu tylko gdy należy do 3 najczęstszych I dotyczy formy
   zwrotnej jako lematu karty.
 
@@ -292,7 +298,30 @@ ZAMIAST gloss_l1 (L1) lub lematu (L2).
 
 synonyms_l1: tylko {native}, ta sama POS co gloss_l1.
 synonyms_l2 / antonyms_l2: obiekty {{lemma, pos, gloss_l1}}, ta sama POS co lemat.
-ZAKAZ: inna POS, derywaty z tej samej rodziny, ogólniki, powtórzenia lematu.
+ZAKAZ w synonyms_l2 / antonyms_l2: inna POS, derywaty z tej samej rodziny
+  wyrazów, ogólniki, powtórzenia lematu.
+
+Wyrazy pokrewne (word_family_l2) — rodzina wyrazów / wspólny rdzeń:
+- Inne lematy L2 z TEGO SAMEGO rdzenia morfologicznego co hasło karty
+  (np. trabajar → trabajo, trabajador; escribir → escritura, escritor;
+  aguantar → aguante, aguantador, aguantado, inaguantable).
+- DOZWOLONA (i oczekiwana) inna część mowy niż lemat — tu trafiają derywaty.
+- Dla produktywnych rodzin podaj 4–10 NAJCZĘSTSZYCH, realnych lematów.
+  Typowe sloty (gdy istnieją i są częste w L2):
+  • rzeczownik odczasownikowy / abstrakcyjny (aguante, trabajo)
+  • agent / osoba (aguantador, trabajador) — także forma żeńska, jeśli osobna
+  • imiesłów / adj odczasownikowy używany jako lemat (aguantado, cansado)
+  • antonimiczny derywat z negacją (inaguantable, imposible) gdy częsty
+  • inne częste derywaty (czasownik zwrotny jako osobny lemat tylko gdy
+    słownikowy i inny sens — inaczej pomiń)
+- NIE pomijaj oczywistych, wysokoczęstotliwych derywatów (np. -dor/-tora,
+  -ción/-sión, -miento, -ado/-ido jako adj, in-/des- + rdzeń).
+- Jeśli brak wyraźnej rodziny → pusta tablica [].
+- ZAKAZ: powtórzenie lematu karty, synonimy/antonimy bez wspólnego rdzenia,
+  formy fleksyjne tego samego lematu (odmiana → conjugation, nie tu),
+  kolokacje wielowyrazowe, hapaxy i neologizmy.
+- Format: obiekty {{lemma, pos, gloss_l1}} — pole pos OBOWIĄZKOWE
+  (noun|verb|adj|adv|…), nigdy puste.
 """
 
 EXAMPLES_PROMPT_V1 = """Jesteś ekspertem od przykładów zdań do nauki języków.
@@ -302,10 +331,11 @@ EXAMPLES_PROMPT_V1 = """Jesteś ekspertem od przykładów zdań do nauki język�
 Para językowa: L1 = {native}, L2 = {learning}
 Lemat (L2): {lemma}
 Część mowy: {pos}
-Znaczenia (gloss_l1): {glosses}
+Znaczenia (gloss_l1) — w TEJ KOLEJNOŚCI, po jednym bloku examples na znaczenie:
+{glosses}
 
-Dla KAŻDEGO znaczenia wygeneruj DOKŁADNIE 3 przykłady zdań w tablicy examples —
-po jednym na poziom A2, B2 i C2.
+Dla KAŻDEGO znaczenia z listy wygeneruj DOKŁADNIE 3 pełne ZDANIA w tablicy
+examples — po jednym na poziom A2, B2 i C2.
 
 Każde zdanie obsługuje całe pasmo poziomów, więc różnica między nimi musi być
 wyraźna:
@@ -315,7 +345,15 @@ wyraźna:
   bogatsza morfologia L2.
 - C2 — dla zaawansowanego (poziomy C1 i C2): naturalne i idiomatyczne.
 
-Każde zdanie MUSI pokazywać dokładnie to znaczenie, przy którym stoi.
+TWARDY ZAKAZ powtórzeń między znaczeniami:
+- Żadne zdanie l2 NIE MOŻE się powtórzyć w innym znaczeniu (ani lekko
+  parafrazowane to samo zdanie).
+- Zdania przy znaczeniu N muszą ilustrować WYŁĄCZNIE sens N — nie kopiuj
+  przykładów z sensu 1 do sensu 2.
+- Jeśli gloss_l1 wygląda podobnie (np. „lot (samolot)” vs „lot (ptaka)”),
+  konteksty muszą być wyraźnie różne (np. lotnisko vs ptak/motyl).
+- Tablica meanings musi mieć TĘ SAMĄ DŁUGOŚĆ i KOLEJNOŚĆ co lista znaczeń powyżej.
+
 Tekst L2 w skrypcie L2; tłumaczenie L1 w skrypcie L1.
 Każdy przykład: {{"l2": "zdanie w L2", "l1": "tłumaczenie w L1", "cefr": "A2"}}
 {retry_note}
@@ -324,7 +362,7 @@ Zwróć WYŁĄCZNIE JSON:
 {{
   "meanings": [
     {{
-      "gloss_l1": "to samo co w liście znaczeń",
+      "gloss_l1": "to samo co w liście znaczeń (ta sama kolejność)",
       "examples": [
         {{"l2": "...", "l1": "...", "cefr": "A2"}},
         {{"l2": "...", "l1": "...", "cefr": "B2"}},
@@ -366,8 +404,9 @@ def build_examples_prompt(
     retry: bool = False,
 ) -> str:
     retry_note = (
-        "POPRZEDNIA ODPOWIEDŹ BYŁA NIEKOMPLETNA. Każde znaczenie musi mieć dokładnie "
-        "3 przykłady: jeden z cefr A2, jeden z B2 i jeden z C2."
+        "POPRZEDNIA ODPOWIEDŹ BYŁA BŁĘDNA LUB NIEKOMPLETNA. Każde znaczenie musi mieć "
+        "dokładnie 3 zdania (A2, B2, C2). ZAKAZ powtarzania tego samego l2 między "
+        "znaczeniami — każde znaczenie dostaje własne, unikalne zdania."
         if retry
         else ""
     )
@@ -564,7 +603,8 @@ WAŻNE:
 IMPORT_CLASSIFY_SYSTEM_V1 = (
     "Klasyfikujesz zaimportowane fiszki pod karty Vocabulario. "
     "Dla każdej notatki ustalasz entry_kind i headword_l2 (język uczony). "
-    "Nie odrzucasz zwrotów ani konstrukcji — to ważne hasła do nauki. "
+    "Cel: wyciągnąć LEMATY słownikowe do pełnych kart Vocabulario (jak lookup). "
+    "Dla zwrotów/konstrukcji podaj base_lemma (goły lemat). "
     "valid=false tylko przy pustce / śmieciach / braku treści L2. Tylko JSON."
 )
 
@@ -590,7 +630,10 @@ Dla KAŻDEJ notatki (po indeksie) zwróć wpis:
 - valid — false tylko jeśli brak treści do nauki
 - invalid_reason — gdy valid=false
 
-WAŻNE: „volver a hacer algo” = construction, NIE invalid.
+WAŻNE:
+- „volver a hacer algo” = construction + base_lemma=\"volver\" (z tego powstanie karta lematu).
+- Zdania bez sensownego lematu: entry_kind=sentence; backend odrzuci je z trybu Vocabulario.
+- Pojedyncze słowa / article+noun = lemma.
 Zwróć entries dla wszystkich indeksów 0..N-1.
 rationale po polsku.
 """
@@ -675,7 +718,9 @@ IMPORT_DISPLAY_SYSTEM_V1 = (
     "Jesteś warstwą layoutu importu fiszek w Vocabulario. "
     "Notatki są JUŻ posegmentowane (wcześniejsza analiza formatu / Anki fields). "
     "Dostajesz próbkę notatek i zwracasz JSON: które pole to hasło (prompt), "
-    "które to odpowiedź, oraz SZABLON bloków UI (front/back) z field_index. "
+    "które to odpowiedź, oraz SZABLON bloków UI (front/back) z field_index "
+    "ORAZ intencją prezentacji (align/size/semantic/tts). "
+    "Karta ma wyglądać spójnie ze stylem Vocabulario (czysto, mobilnie). "
     "Nie kopiujesz CSS/JS Anki. Nie zmyślasz treści — tylko mapowanie i strukturę. "
     "Tylko JSON."
 )
@@ -692,25 +737,44 @@ Próbka notatek (każda = lista pól; może być HTML):
 {sample_json}
 
 Zadanie:
-1. Dla każdego indeksu pola ustaw role:
+1. Wykryj języki w próbce (potwierdź L1/L2).
+2. Dla każdego indeksu pola ustaw role:
    prompt | answer | secondary | example | meta | detail | ignore
-2. Zbuduj prompt_blocks (front) i answer_blocks (tył) jako SZABLON:
+3. Zbuduj prompt_blocks (front) i answer_blocks (tył) jako SZABLON:
    - Używaj field_index / l2_field_index / l1_field_index zamiast wklejać długi tekst.
-   - type ∈ title, paragraph, bilingual, list, table, meta, chip, section, divider, pre
+   - type ∈ headword, gloss, bilingual, list, table, note, chip, section, divider, text
    - section: heading + collapsed + children (1 poziom)
-   - Długie odmiany / HTML / tabele → section collapsed=true, type pre lub table
-   - Na froncie max 1 główny title (+ meta/chip)
-   - Na tył: najpierw główna odpowiedź (title/paragraph), potem przykłady, potem detale
-3. prompt_style: word | phrase | sentence | html_block
-4. answer_needs_structure=true gdy prawa strona jest długa, HTML-owa lub wielosegmentowa
-5. Wszystkie nieużywane pola w bloku ustaw na null (text, emphasis, field_index, …, children)
-6. rationale po polsku
+   - Tabela odmiany/koniugacji w HTML → type=table ALBO section z field_index na pole HTML
+     (NIE type=pre, NIE ściana tekstu)
+   - FRONT: WYŁĄCZNIE 1× headword (align=center, size=lemma, semantic=headword, tts L2).
+     NIE wstawiaj na front: oboczności, chipów meta, przykładów, odmiany, przycisków ▶.
+   - BACK kolejność:
+     (a) gloss = czyste znaczenie L1 (semantic=translation, size=gloss) — BEZ zdań przykładów
+     (b) opcjonalnie chip oboczności / irregularity (meta) — TYLKO na answer
+     (c) section „Przykłady” z bilingual (ES+PL) gdy przykłady są w tym samym polu co gloss
+         albo w osobnych polach example
+     (d) section „Odmiana” collapsed z tabelami z pola conjugation/HTML
+   - Jeśli jedno pole zawiera „znaczenie + przykłady” (Meanings_Block):
+     ustaw je jako gloss (field_index) — backend rozdzieli pierwszą linię / pary przykładów.
+   - Usuń Anki chrome: <script>, play-btn / ▶ → to NIE jest tekst karty; użyj tts na headword.
+   - Dla każdego bloku ustaw: align, size, semantic, tts (lub null)
+4. prompt_style: word | phrase | sentence | html_block
+5. answer_needs_structure=true tylko gdy prawa strona jest długa i NIE masz osobnego pola HTML tabel
+6. bidirectional=true TYLKO gdy pewnie: headword=L2 + gloss=czyste L1; inaczej false
+7. rationale po polsku
 
-Przykład (Anki: Tiempo, Spanish, Polish, Example_ES, Example_PL, Conjugation):
-- roles: meta, prompt, answer, example, example, detail
-- prompt: meta(field 0) + title(field 1, lemma)
-- answer: title(field 2, gloss) + section Przykład[bilingual 3/4] + section Odmiana collapsed[pre 5]
+Przykład A (Anki 4 pola: Spanish, Meanings_Block, Irregularity, Conjugation):
+- roles: prompt, answer, meta, detail
+- prompt: headword(Spanish)
+- answer: gloss(Meanings_Block) + chip(Irregularity) + section Odmiana[field Conjugation → tables]
+- bidirectional=true
+
+Przykład B (Quizlet term/definition):
+- prompt: headword(term) · answer: gloss(definition) · bidirectional=true
 """
+
+IMPORT_LAYOUT_SYSTEM_V1 = IMPORT_DISPLAY_SYSTEM_V1
+IMPORT_LAYOUT_PROMPT_V1 = IMPORT_DISPLAY_PROMPT_V1
 
 IMPORT_ANSWER_STRUCTURE_SYSTEM_V1 = (
     "Dzielisz treść prawej strony fiszki na czytelne bloki UI (JSON). "

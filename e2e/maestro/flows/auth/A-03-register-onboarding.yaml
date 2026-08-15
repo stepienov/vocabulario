@@ -27,4 +27,12 @@ tags:
       id: onboarding_native_lang
     timeout: 45000
 - assertVisible:
+    id: onboarding_continue
+- tapOn:
+    id: onboarding_continue
+- extendedWaitUntil:
+    visible:
+      id: onboarding_learning_lang
+    timeout: 20000
+- assertVisible:
     id: onboarding_learning_lang

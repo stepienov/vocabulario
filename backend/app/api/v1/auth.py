@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
+from app.core.http_errors import api_error
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -52,7 +53,7 @@ async def _ensure_settings(db: AsyncSession, user_id) -> UserSettings:
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     existing = await db.execute(select(User).where(User.email == body.email.lower()))
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+        raise api_error(status.HTTP_409_CONFLICT, "email_taken", "Email already registered")
 
     user = User(email=body.email.lower(), password_hash=hash_password(body.password))
     db.add(user)
@@ -67,8 +68,16 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == body.email.lower()))
     user = result.scalar_one_or_none()
-    if user is None or not user.password_hash or not verify_password(body.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    if user is None:
+        raise api_error(status.HTTP_401_UNAUTHORIZED, "email_not_found", "No account with this email")
+    if not user.password_hash:
+        raise api_error(
+            status.HTTP_401_UNAUTHORIZED,
+            "google_login_required",
+            "This account uses Google sign-in",
+        )
+    if not verify_password(body.password, user.password_hash):
+        raise api_error(status.HTTP_401_UNAUTHORIZED, "wrong_password", "Wrong password")
     return await _issue_tokens(user)
 
 
@@ -77,7 +86,7 @@ async def google_auth(body: GoogleAuthRequest, db: AsyncSession = Depends(get_db
     try:
         token_data = await verify_google_id_token(body.id_token)
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Google token") from exc
+        raise api_error(status.HTTP_401_UNAUTHORIZED, "invalid_google_token", "Invalid Google token") from exc
 
     google_id = token_data["sub"]
     email = token_data["email"].lower()
@@ -106,12 +115,12 @@ async def refresh(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
         payload = decode_token(body.refresh_token)
         user_id = verify_token_type(payload, "refresh")
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
+        raise api_error(status.HTTP_401_UNAUTHORIZED, "invalid_refresh_token", "Invalid refresh token") from exc
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise api_error(status.HTTP_401_UNAUTHORIZED, "user_not_found", "User not found")
     return await _issue_tokens(user)
 
 
@@ -201,7 +210,7 @@ async def update_profile(
     )
     profile = result.scalar_one_or_none()
     if profile is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        raise api_error(404, "profile_not_found", "Profile not found")
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(profile, field, value)
     await db.commit()
@@ -232,7 +241,7 @@ async def activate_profile(
             p.last_used_at = datetime.now(UTC)
             active = p
     if active is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        raise api_error(404, "profile_not_found", "Profile not found")
     await db.commit()
     await db.refresh(active)
     return active

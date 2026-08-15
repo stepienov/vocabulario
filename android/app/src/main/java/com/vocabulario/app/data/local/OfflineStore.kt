@@ -69,10 +69,11 @@ class OfflineStore @Inject constructor(
         if (pull.deleted_card_ids.isNotEmpty()) {
             cardDao.deleteIds(pull.deleted_card_ids)
         }
-        // Tombstony list (inkrementalny pull): usuń listę i uwolnij jej karty do „Uczę się”.
+        // Tombstony list (inkrementalny pull): usuń listę i jej karty (nie wracają do „Uczę się”).
         for (deletedListId in pull.deleted_list_ids) {
-            cardDao.cardsByDeckId(deletedListId).forEach { card ->
-                cardDao.update(card.copy(deckId = null, updatedAt = System.currentTimeMillis()))
+            val deckCards = cardDao.cardsByDeckId(deletedListId)
+            if (deckCards.isNotEmpty()) {
+                cardDao.deleteIds(deckCards.map { it.id })
             }
             listDao.deleteById(deletedListId)
         }
@@ -434,7 +435,7 @@ class OfflineStore @Inject constructor(
     }
 
     suspend fun moveCardLocally(cardId: String, targetListId: String?, systemListId: String?): String {
-        val card = cardDao.byId(cardId) ?: error("Card not in cache")
+        val card = cardDao.byId(cardId) ?: error("offline_card")
         val newDeckId = when {
             targetListId == null -> null
             systemListId != null && targetListId == systemListId -> null
@@ -672,12 +673,15 @@ class OfflineStore @Inject constructor(
         return entity
     }
 
-    /** Usuwa listę lokalnie; karty wracają do „Uczę się” (deck_id = null) — rekomendacja §8.1(a). */
-    suspend fun deleteListLocally(listId: String) {
-        cardDao.cardsByDeckId(listId).forEach { card ->
-            cardDao.update(card.copy(deckId = null, updatedAt = System.currentTimeMillis()))
+    /** Usuwa listę lokalnie wraz z kartami (nie wracają do „Uczę się”). Zwraca ID skasowanych kart. */
+    suspend fun deleteListLocally(listId: String): List<String> {
+        val deckCards = cardDao.cardsByDeckId(listId)
+        val ids = deckCards.map { it.id }
+        if (ids.isNotEmpty()) {
+            cardDao.deleteIds(ids)
         }
         listDao.deleteById(listId)
+        return ids
     }
 
     suspend fun listNameClashes(profileId: String, name: String): Boolean {

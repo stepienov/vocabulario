@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -90,7 +90,7 @@
 
     <string name="tab_lists">danh sách</string>
 
-    <string name="auth_login_title">Chào mừng trở lại</string>
+    <string name="auth_login_title">Đăng nhập</string>
 
     <string name="auth_register_title">Tạo tài khoản</string>
 
@@ -100,27 +100,28 @@
 
     <string name="auth_google">Tiếp tục với Google</string>
 
-    <string name="auth_email">Email</string>
+    <string name="auth_or_continue">Hoặc tiếp tục bằng email</string>
 
-    <string name="auth_password">Mật khẩu</string>
+        <string name="auth_email">Email</string>
+<string name="auth_password">Mật khẩu</string>
 
-    <string name="auth_tagline">Học từ vựng theo tốc độ của bạn</string>
 
-    <string name="auth_password_hint">Tối thiểu 8 ký tự</string>
 
     <string name="auth_have_account">Tôi đã có tài khoản</string>
 
-    <string name="onboarding_title">Cài đặt học tập</string>
+    <string name="onboarding_app_setup">Cài đặt ứng dụng</string>
 
-    <string name="onboarding_subtitle">Chọn cặp ngôn ngữ, cấp độ CEFR và thì động từ.</string>
+    <string name="onboarding_choose_language">Chọn ngôn ngữ của bạn</string>
 
-    <string name="onboarding_native">Ngôn ngữ ứng dụng</string>
+    <string name="onboarding_continue">Tiếp tục</string>
 
-    <string name="onboarding_learning">Ngôn ngữ học tập</string>
+    <string name="onboarding_want_to_learn">Tôi muốn học:</string>
 
     <string name="onboarding_start">Bắt đầu</string>
 
-    <string name="onboarding_cefr">Cấp độ CEFR</string>
+    <string name="onboarding_level">Chọn trình độ ngôn ngữ</string>
+
+    <string name="onboarding_level_unknown">Tôi không biết</string>
 
     <string name="onboarding_tenses">Thì động từ</string>
 
@@ -151,6 +152,8 @@
 
     <string name="settings_mode_flash">Thẻ flash</string>
 
+    <string name="settings_mode_vocabulario_only">chỉ thẻ Vocabulario</string>
+
     <string name="settings_tolerate_typos">Cho phép lỗi chính tả nhỏ</string>
 
     <string name="settings_tolerate_typos_sub">Chính tả và dấu</string>
@@ -165,13 +168,14 @@
 
     <string name="settings_card_layout_sub">Những gì bạn thấy sau câu trả lời</string>
 
-    <string name="settings_examples">Câu ví dụ</string>
+    <string name="settings_examples">Câu</string>
 
-    <string name="settings_usages">Cách sử dụng</string>
+    <string name="settings_usages">Cụm từ</string>
 
     <string name="settings_periphrases">Cách diễn đạt</string>
 
     <string name="settings_syn_ant">Từ đồng nghĩa và trái nghĩa</string>
+    <string name="settings_word_family">Họ từ</string>
 
     <string name="settings_conjugation">Chia động từ</string>
 
@@ -333,8 +337,27 @@
     <string name="import_empty_hint">Nhập một từ hoặc nhập danh sách (CSV/TXT/apkg)</string>
 
     <string name="import_file_label">Tệp: \'%1$s\'</string>
-
-    <string name="section_meanings">NGHĨA</string>
+    <!-- TODO: translate import UI strings -->
+    <string name="import_start_title">Nhập thẻ</string>
+    <string name="import_pick_list">Danh sách đích</string>
+    <string name="import_action_start">Nhập</string>
+<string name="import_limit_exceeded">Hiện bạn chỉ có thể nhập tối đa 50 thẻ Vocabulario.</string>
+        <string name="import_status_analyzing">Đang phân tích %1$s…</string>
+    <string name="import_status_importing">Đang nhập từ từ %1$s</string>
+    <string name="import_progress_count">Đã nhập %1$d/%2$d</string>
+    <string name="action_abort">Hủy giữa chừng</string>
+    <string name="import_abort_title">Hủy nhập?</string>
+    <string name="import_abort_body">Tiến trình sẽ bị hủy.</string>
+    <string name="import_result_title">Đã nhập xong</string>
+    <string name="import_result_body">Đã thêm %1$d, trùng %2$d</string>
+    <string name="import_result_body_failed">Đã thêm %1$d, trùng %2$d, lỗi %3$d</string>
+    <string name="import_review_flagged">Cụm từ và cấu trúc</string>
+    <string name="action_show_list">Hiện danh sách</string>
+    <string name="import_paste_source">Dán</string>
+    <string name="import_interrupted">Nhập bị gián đoạn — thử lại</string>
+    <string name="import_review_ready">Sẵn sàng nhập</string>
+    <string name="import_new_list_option">+ Danh sách mới</string>
+<string name="section_meanings">NGHĨA</string>
 
     <string name="section_synonyms">ĐỒNG NGHĨA</string>
 
@@ -348,7 +371,7 @@
 
     <string name="section_periphrases">CÁCH DIỄN ĐẠT</string>
 
-    <string name="section_usages">ví dụ sử dụng</string>
+    <string name="section_usages">cụm từ</string>
 
     <string name="home_search_hint">Tìm một từ…</string>
 
@@ -395,6 +418,8 @@
     <string name="status_new">mới</string>
 
     <string name="status_learning">đang học</string>
+
+    <string name="card_badge_import">Nhập</string>
 
     <string name="status_mastered">đã học</string>
 
@@ -544,6 +569,11 @@
 
     <string name="err_login">Đăng nhập không thành công</string>
 
+    <string name="err_login_email_unknown">Không có tài khoản với email này</string>
+    <string name="err_login_wrong_password">Sai mật khẩu</string>
+    <string name="err_login_use_google">Tài khoản này dùng Google. Tiếp tục với Google.</string>
+
+
     <string name="err_register">Đăng ký không thành công</string>
 
     <string name="err_google_login">Đăng nhập Google không thành công</string>
@@ -561,10 +591,11 @@
     <string name="section_synonyms_short">Từ đồng nghĩa</string>
 
     <string name="section_antonyms_short">Từ trái nghĩa</string>
+    <string name="section_word_family">Họ từ</string>
 
     <string name="section_conjugation_short">Chia động từ</string>
 
-    <string name="section_usages_short">Cách sử dụng</string>
+    <string name="section_usages_short">Cụm từ</string>
 
     <string name="cd_back">Quay lại</string>
 
@@ -604,7 +635,7 @@
 
     <string name="cd_search">Tìm kiếm</string>
 
-    <string name="correction_fix_card">Sửa thẻ</string>
+    <string name="correction_fix_card">Báo cáo chỉnh sửa</string>
 
     <string name="correction_report_title">Báo cáo vấn đề</string>
 
@@ -616,7 +647,7 @@
 
     <string name="correction_section_meanings">Ý nghĩa</string>
 
-    <string name="correction_section_examples">Ví dụ</string>
+    <string name="correction_section_examples">Câu</string>
 
     <string name="correction_section_conjugation">Chia động từ</string>
 
@@ -642,25 +673,17 @@
 
     <string name="correction_result_rejected_body">Bạn có thể tự chỉnh sửa thẻ — với rủi ro của riêng bạn. Điều này tạo ra bản sao riêng của bạn.</string>
 
-    <string name="correction_edit_self">Chỉnh sửa bản thân</string>
+    <string name="correction_edit_self">Chỉnh sửa</string>
+    <string name="correction_history_button">Lịch sử thay đổi</string>
 
     <string name="correction_self_edit_title">Chỉnh sửa thẻ</string>
 
-    <string name="correction_field_lemma">Lemma</string>
-
-    <string name="correction_field_pos">Thành phần từ loại</string>
+        <string name="correction_field_lemma">Từ gốc</string>
+<string name="correction_field_pos">Thành phần từ loại</string>
 
     <string name="correction_field_gloss">Giải thích chính</string>
 
     <string name="correction_field_extra_glosses">Giải thích bổ sung (mỗi dòng một)</string>
-
-    <string name="review_status_reported">Đã báo cáo chỉnh sửa</string>
-
-    <string name="review_status_accepted">Đã cập nhật</string>
-
-    <string name="review_status_rejected">Báo cáo bị từ chối</string>
-
-    <string name="review_status_user_edited">Đã chỉnh sửa thủ công</string>
 
     <string name="cd_voice_search">Tìm kiếm bằng giọng nói</string>
 
@@ -699,5 +722,91 @@
     <string name="notif_cards_ready_title">Thẻ đã sẵn sàng</string>
 
     <string name="notif_cards_ready_body">%1$d từ(s) đã sẵn sàng để học</string>
+
+    <string name="status_needs_review">Cần kiểm tra</string>
+    <string name="review_title">Từ cần được kiểm tra</string>
+    <string name="review_no_match">Không tìm thấy khớp cho “%1$s”.</string>
+    <string name="review_did_you_mean">Ý bạn là:</string>
+    <string name="review_reject">Từ chối</string>
+    <string name="review_search_again">Tìm</string>
+    <string name="review_confirm">Xác nhận</string>
+    <string name="review_close">Đóng</string>
+    <string name="list_delete">Xóa danh sách</string>
+    <string name="err_word_on_list">Từ này đã có trong danh sách học của bạn.</string>
+    <string name="correction_report_subtitle">Chúng tôi kiểm tra cả thẻ. Lựa chọn và ghi chú chỉ định hướng kiểm tra.</string>
+    <string name="correction_daily_limit">Bạn có thể gửi tối đa 20 báo cáo mỗi ngày.</string>
+    <string name="correction_field_ipa">Phát âm IPA</string>
+    <string name="correction_field_notes">Ghi chú</string>
+    <string name="correction_field_synonyms_l1">Từ đồng nghĩa (L1, mỗi dòng một)</string>
+    <string name="correction_field_examples">Câu</string>
+    <string name="correction_field_usages">Cụm từ</string>
+    <string name="correction_field_l2">Câu (L2)</string>
+    <string name="correction_field_l1">Bản dịch (L1)</string>
+    <string name="correction_field_similar">Từ tương tự</string>
+    <string name="correction_field_conjugation_json">Chia động từ (JSON)</string>
+    <string name="correction_section_meaning">Nghĩa %1$d</string>
+    <string name="correction_add_meaning">Thêm nghĩa</string>
+    <string name="correction_add_row">Thêm hàng</string>
+    <string name="correction_empty_rows_hint">Chưa có hàng — chạm Thêm hàng.</string>
+    <string name="correction_self_edit_link">Chạm vào đây để tự sửa thẻ</string>
+    <string name="correction_processing">Đang phân tích báo cáo…</string>
+    <string name="self_edit_processing">Đang lưu và kiểm tra chỉnh sửa…</string>
+    <string name="self_edit_validating">Đang kiểm tra chỉnh sửa…</string>
+    <string name="self_edit_warning_title">Xác nhận các thay đổi này?</string>
+    <string name="self_edit_warning_body">Chúng tôi phát hiện thay đổi trên thẻ “%1$s” có thể không đúng. Hãy kiểm tra trước khi lưu.</string>
+    <string name="self_edit_warning_confirm">Xác nhận thay đổi</string>
+    <string name="self_edit_warning_revert">Hoàn tác thay đổi</string>
+    <string name="correction_result_accepted_body">Thẻ “%1$s” đã được cập nhật.</string>
+    <string name="correction_code_accepted">Báo cáo được chấp nhận — thẻ đã cập nhật.</string>
+    <string name="correction_code_unfounded">Không tìm thấy lỗi trên thẻ này.</string>
+    <string name="correction_code_insufficient">Không tìm thấy lỗi trên thẻ này.</string>
+    <string name="correction_code_not_applicable">Mục này không áp dụng cho loại từ này.</string>
+    <string name="correction_code_failed">Không xử lý được báo cáo. Hãy thử lại.</string>
+    <string name="card_history_title">Lịch sử thẻ</string>
+    <string name="card_history_empty">Chưa có báo cáo hay thay đổi.</string>
+    <string name="card_history_restore">Khôi phục bản gốc</string>
+    <string name="card_history_restored">Đã khôi phục bản gốc của thẻ</string>
+    <string name="card_history_actor_you">Bạn</string>
+    <string name="card_history_actor_system">Hệ thống</string>
+    <string name="card_history_event_report">Đã gửi báo cáo</string>
+    <string name="card_history_event_accepted">Báo cáo được chấp nhận — thẻ đã cập nhật</string>
+    <string name="card_history_event_self_edit">Sửa thủ công</string>
+    <string name="card_history_event_reviewed">Chỉnh sửa đã được xác minh</string>
+    <string name="card_history_summary_report">Mục: %1$s</string>
+    <string name="card_history_summary_restored">Đã khôi phục bản gốc.</string>
+    <string name="card_history_diff_lemma">từ gốc: %1$s → %2$s</string>
+    <string name="card_history_diff_pos">từ loại: %1$s → %2$s</string>
+    <string name="card_history_diff_gloss">nghĩa: %1$s → %2$s</string>
+    <string name="card_history_diff_ipa">ipa: %1$s → %2$s</string>
+    <string name="card_history_diff_conjugation">đã cập nhật chia động từ</string>
+    <string name="card_history_diff_meanings">đã cập nhật nghĩa</string>
+    <string name="card_history_diff_similar">đã cập nhật từ tương tự</string>
+    <string name="card_history_diff_content">đã cập nhật nội dung</string>
+    <string name="cd_card_history">Lịch sử thẻ</string>
+    <string name="cd_view_card">Xem thẻ đầy đủ</string>
+    <string name="cd_list_word_actions">Thao tác với từ</string>
+    <string name="voice_searching">Đang tìm…</string>
+    <string name="voice_either_lang_hint">Nói bằng một trong hai ngôn ngữ</string>
+    <string name="voice_no_match">Không hiểu — hãy thử lại.</string>
+    <string name="voice_network_required">Nhập giọng nói cần kết nối internet.</string>
+
+    <string name="pos_noun">danh từ</string>
+    <string name="pos_verb">động từ</string>
+    <string name="pos_adj">tính từ</string>
+    <string name="pos_adv">trạng từ</string>
+    <string name="pos_prep">giới từ</string>
+    <string name="pos_conj">liên từ</string>
+    <string name="pos_pron">đại từ</string>
+    <string name="pos_det">mạo từ</string>
+    <string name="pos_interj">thán từ</string>
+    <string name="err_empty_list_name">Nhập tên danh sách</string>
+    <string name="err_list_not_editable">Không thể sửa danh sách này</string>
+    <string name="err_list_not_deletable">Không thể xóa danh sách này</string>
+    <string name="err_pending_inbox_not_deletable">Không thể xóa danh sách đang chờ</string>
+    <string name="err_pending_inbox_clear">Không xóa được tất cả từ đang chờ</string>
+    <string name="err_offline">Bạn đang ngoại tuyến</string>
+    <string name="err_offline_card">Thẻ này không khả dụng khi ngoại tuyến</string>
+    <string name="err_no_inbox">Không mở được danh sách đang chờ</string>
+    <string name="err_email_taken">Email này đã được đăng ký</string>
 
 </resources>

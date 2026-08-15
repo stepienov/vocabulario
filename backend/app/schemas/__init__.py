@@ -47,6 +47,7 @@ class UserSettingsResponse(BaseModel):
     show_synonyms_antonyms: bool = True
     show_synonyms: bool = True
     show_antonyms: bool = True
+    show_word_family: bool = True
     show_periphrases: bool = True
     show_conjugation: bool = True
     conjugation_expanded_default: bool = False
@@ -70,6 +71,7 @@ class UserSettingsUpdate(BaseModel):
     show_synonyms_antonyms: bool | None = None
     show_synonyms: bool | None = None
     show_antonyms: bool | None = None
+    show_word_family: bool | None = None
     show_periphrases: bool | None = None
     show_conjugation: bool | None = None
     conjugation_expanded_default: bool | None = None
@@ -193,7 +195,7 @@ class LookupResponse(BaseModel):
 
 
 class ImportValidateRequest(BaseModel):
-    words: list[str] = Field(min_length=1, max_length=500)
+    words: list[str] = Field(min_length=1, max_length=50)
     profile_id: UUID
 
 
@@ -224,6 +226,10 @@ class ImportDisplayBlock(BaseModel):
     headers: list[str] | None = None
     rows: list[list[str]] | None = None
     children: list["ImportDisplayBlock"] | None = None
+    align: str | None = None
+    size: str | None = None
+    semantic: str | None = None
+    tts: dict | None = None
 
 
 class ImportDisplaySide(BaseModel):
@@ -234,6 +240,7 @@ class ImportDisplayPayload(BaseModel):
     prompt: ImportDisplaySide = Field(default_factory=ImportDisplaySide)
     answer: ImportDisplaySide = Field(default_factory=ImportDisplaySide)
     prompt_style: str = "word"
+    bidirectional: bool = False
 
 
 class ImportDisplayCard(BaseModel):
@@ -254,7 +261,7 @@ class ImportDisplayResponse(BaseModel):
 class ImportDisplayCommitRequest(BaseModel):
     profile_id: UUID
     list_id: UUID
-    cards: list[ImportDisplayCard] = Field(min_length=1, max_length=2000)
+    cards: list[ImportDisplayCard] = Field(min_length=1, max_length=50)
 
 
 class ImportDisplayCommitResponse(BaseModel):
@@ -356,6 +363,7 @@ class CardContent(BaseModel):
     meanings: list[dict] = Field(default_factory=list)
     synonyms_l2: list[dict | str] = Field(default_factory=list)
     antonyms_l2: list[dict | str] = Field(default_factory=list)
+    word_family_l2: list[dict | str] = Field(default_factory=list)
     similar_words: list[dict] = Field(default_factory=list)
     conjugation: dict | None = None
     notes: str | None = None

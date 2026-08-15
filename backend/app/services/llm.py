@@ -17,6 +17,8 @@ from app.ai.prompts.v1 import (
     IMPORT_DISPLAY_SYSTEM_V1,
     IMPORT_FORMAT_PROMPT_V1,
     IMPORT_FORMAT_SYSTEM_V1,
+    IMPORT_LAYOUT_PROMPT_V1,
+    IMPORT_LAYOUT_SYSTEM_V1,
     IMPORT_STRUCTURE_SYSTEM_V1,
     LOOKUP_L1_TYPO_PROMPT_V1,
     LOOKUP_PROMPT_V1,
@@ -36,6 +38,7 @@ from app.ai.schemas.import_classify import (
 from app.ai.schemas.import_display import (
     import_answer_structure_schema,
     import_display_schema,
+    validate_import_display_payload,
 )
 from app.ai.schemas.import_format import import_format_schema
 from app.ai.schemas.import_structure import import_structure_schema
@@ -50,7 +53,11 @@ def _log_import_llm(title: str, body: str) -> None:
     sep = "=" * 72
     block = f"\n{sep}\n{title}\n{sep}\n{body}\n{sep}\n"
     logger.info(block)
-    print(block, flush=True)
+    try:
+        print(block, flush=True)
+    except UnicodeEncodeError:
+        # Windows cp1250 consoles can't print arrows / some Spanish diacritics
+        print(block.encode("utf-8", errors="replace").decode("ascii", errors="replace"), flush=True)
 
 
 class LLMService:
@@ -62,6 +69,21 @@ class LLMService:
         )
         self.lookup_model = settings.llm_lookup_model
         self.enrichment_model = settings.llm_enrichment_model
+        self.import_layout_model = (
+            settings.llm_import_layout_model.strip()
+            or settings.llm_lookup_model
+        )
+        self.import_provider = (settings.llm_import_provider or "openai").strip().lower()
+        self.anthropic_api_key = settings.anthropic_api_key.strip()
+        self._anthropic = None
+        if self.import_provider == "anthropic" and self.anthropic_api_key:
+            try:
+                from anthropic import AsyncAnthropic
+
+                self._anthropic = AsyncAnthropic(api_key=self.anthropic_api_key)
+            except Exception:
+                logger.exception("Anthropic client init failed; falling back to OpenAI")
+                self.import_provider = "openai"
 
     @staticmethod
     def _is_reasoning_model(model: str) -> bool:
@@ -78,9 +100,19 @@ class LLMService:
         json_schema: dict | None = None,
         max_tokens: int | None = None,
         temperature: float = 0.2,
+        provider: str | None = None,
     ) -> dict[str, Any]:
         if self.mock:
             return self._mock_response(prompt)
+        use_provider = (provider or "openai").strip().lower()
+        if use_provider == "anthropic" and self._anthropic is not None:
+            return await self._chat_json_anthropic(
+                model,
+                prompt,
+                system,
+                json_schema=json_schema,
+                max_tokens=max_tokens,
+            )
         assert self.client is not None
         system_content = system or (
             "Jesteś asystentem językowym. Zwracasz wyłącznie poprawny JSON "
@@ -116,6 +148,39 @@ class LLMService:
         response = await self.client.chat.completions.create(**kwargs)
         content = response.choices[0].message.content or "{}"
         return json.loads(content)
+
+    async def _chat_json_anthropic(
+        self,
+        model: str,
+        prompt: str,
+        system: str | None,
+        *,
+        json_schema: dict | None = None,
+        max_tokens: int | None = None,
+    ) -> dict[str, Any]:
+        """Anthropic path: force JSON via instruction + parse (no native json_schema)."""
+        assert self._anthropic is not None
+        schema_hint = ""
+        if json_schema:
+            schema_hint = (
+                "\n\nZwróć JSON zgodny ze schematem "
+                f"{json_schema.get('name', 'response')}."
+            )
+        system_content = (system or "Return only valid JSON.") + schema_hint
+        msg = await self._anthropic.messages.create(
+            model=model,
+            max_tokens=max_tokens or 4096,
+            system=system_content,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = "".join(
+            block.text for block in msg.content if getattr(block, "type", "") == "text"
+        )
+        text = text.strip()
+        if text.startswith("```"):
+            text = re.sub(r"^```(?:json)?\s*", "", text)
+            text = re.sub(r"\s*```$", "", text)
+        return json.loads(text or "{}")
 
     def _mock_similar_words(self, lemma: str) -> list[dict[str, str]]:
         """Dystraktory — inne słowa, nie odmiany lematu."""
@@ -357,7 +422,8 @@ class LLMService:
                 "stylistic variants of the same sense go to synonyms, not meanings. "
                 "Periphrases belong to THIS L2 only (never invent Spanish acabar de / ir a "
                 "for other L2) and are NOT lemma meanings — omit them from meanings. "
-                "Synonyms must match POS of gloss_l1 (L1) or lemma (L2). "
+                "Synonyms/antonyms must match POS of the lemma; same-root derivatives go to "
+                "word_family_l2 (other POS allowed), not synonyms. "
                 "No examples, no conjugation. JSON only."
             ),
         )
@@ -384,8 +450,9 @@ class LLMService:
             prompt,
             system=(
                 "Generujesz przykłady zdań. Dla każdego znaczenia MUSISZ zwrócić dokładnie "
-                "3 przykłady: jeden A2, jeden B2, jeden C2. Poziomy muszą się wyraźnie "
-                "różnić trudnością. Tylko poprawny JSON."
+                "3 zdania: jedno A2, jedno B2, jedno C2. Poziomy muszą się wyraźnie "
+                "różnić trudnością. ZAKAZ powtarzania tego samego zdania l2 między "
+                "znaczeniami. Tylko poprawny JSON."
             ),
         )
 
@@ -719,6 +786,71 @@ class LLMService:
             json.dumps(result, ensure_ascii=False, indent=2),
         )
         return result
+
+    async def analyze_import_layout(
+        self,
+        *,
+        native: str,
+        learning: str,
+        kind: str,
+        field_names: list[str] | None,
+        sample_notes: list[list[str]],
+        total_notes: int,
+    ) -> dict:
+        """One-shot layout analysis for preserve import (display v2).
+
+        Uses llm_import_layout_model / llm_import_provider. Validates output;
+        raises ValueError on invalid payload so caller can fall back to heuristics.
+        """
+        compact = []
+        for note in sample_notes:
+            row = []
+            for cell in note:
+                row.append(cell[:800] if "<" in cell else cell)
+            compact.append(row)
+        prompt = IMPORT_LAYOUT_PROMPT_V1.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            kind=kind,
+            total_notes=total_notes,
+            field_names=json.dumps(field_names, ensure_ascii=False)
+            if field_names
+            else "nieznane",
+            sample_json=json.dumps(compact, ensure_ascii=False, indent=2),
+        )
+        model = self.import_layout_model
+        provider = self.import_provider
+        _log_import_llm(
+            f"IMPORT LAYOUT → PROMPT (model={model}, provider={provider}, kind={kind})",
+            f"--- SYSTEM ---\n{IMPORT_LAYOUT_SYSTEM_V1}\n\n--- USER ---\n{prompt}",
+        )
+
+        last_err: Exception | None = None
+        for attempt in range(2):
+            try:
+                result = await self._chat_json(
+                    model,
+                    prompt,
+                    system=IMPORT_LAYOUT_SYSTEM_V1,
+                    json_schema=import_display_schema(),
+                    max_tokens=4500,
+                    temperature=0.1,
+                    provider=provider,
+                )
+                ok, reason = validate_import_display_payload(result)
+                if not ok:
+                    raise ValueError(f"invalid import layout payload: {reason}")
+                if "bidirectional" not in result:
+                    result["bidirectional"] = False
+                _log_import_llm(
+                    f"IMPORT LAYOUT ← RESPONSE (attempt={attempt + 1})",
+                    json.dumps(result, ensure_ascii=False, indent=2),
+                )
+                return result
+            except Exception as exc:
+                last_err = exc
+                logger.warning("import layout attempt %s failed: %s", attempt + 1, exc)
+        raise ValueError(f"import layout failed: {last_err}") from last_err
 
     async def analyze_import_answer_structure(
         self,

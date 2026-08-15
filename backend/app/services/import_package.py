@@ -112,7 +112,11 @@ def load_text_import(text: str) -> RawImportDeck:
     if "guid column" in meta or "notetype column" in meta:
         notes = _parse_anki_notes_tsv(body, separator=separator, meta=meta)
         return RawImportDeck(
-            kind="notes", notes=notes, field_names=None, meta=meta, raw_text=body
+            kind="notes",
+            notes=notes,
+            field_names=_infer_notes_field_names(notes),
+            meta=meta,
+            raw_text=body,
         )
 
     # Anki Cards HTML (często wieloliniowe cytowane pola)
@@ -169,7 +173,7 @@ def load_anki_package(data: bytes) -> RawImportDeck:
     for (flds,) in rows:
         if not flds:
             continue
-        fields = [_clean_field(f) for f in str(flds).split("\x1f")]
+        fields = [_sanitize_import_field(f) for f in str(flds).split("\x1f")]
         if _is_anki_stub_note(fields):
             continue
         if any(fields):
@@ -285,7 +289,14 @@ def sample_notes_for_llm(deck: RawImportDeck, limit: int = 12) -> list[list[str]
     for i in idxs:
         row = []
         for cell in deck.notes[i]:
-            text = cell if len(cell) <= 220 else cell[:220] + "…"
+            raw = cell or ""
+            if "<table" in raw.lower():
+                n_tables = len(re.findall(r"(?i)<table\b", raw))
+                # Keep a readable prefix + marker so layout AI knows HTML tables exist
+                prefix = raw[:500]
+                text = f"{prefix}…\n[HTML tables: {n_tables}]"
+            else:
+                text = raw if len(raw) <= 400 else raw[:400] + "…"
             row.append(text)
         samples.append(row)
     return samples
@@ -313,11 +324,31 @@ def _read_best_anki_db(zf: zipfile.ZipFile) -> bytes:
         if _db_has_real_notes(raw):
             return raw
     if "collection.anki21b" in names:
+        db = _decompress_anki21b(zf.read("collection.anki21b"))
+        if _db_has_real_notes(db):
+            return db
         raise ImportPackageError(
-            "Talia jest w formacie anki21b (skompresowany). "
-            "Wyeksportuj z Anki ze zgodnością wstecz albo jako Notes (.txt)."
+            "Pakiet anki21b nie zawiera odczytywalnych notatek."
         )
     raise ImportPackageError("To nie wygląda na prawidłowy plik .apkg / .colpkg.")
+
+
+def _decompress_anki21b(raw: bytes) -> bytes:
+    """collection.anki21b = zstd-compressed SQLite (Anki ≥ 2.1.50)."""
+    try:
+        import zstandard as zstd
+    except ImportError as exc:
+        raise ImportPackageError(
+            "Pakiet anki21b wymaga zależności zstandard "
+            "(pip install zstandard)."
+        ) from exc
+    try:
+        # Frame often omits content size — stream_reader is required.
+        return zstd.ZstdDecompressor().stream_reader(io.BytesIO(raw)).read()
+    except Exception as exc:  # noqa: BLE001 — surface as import error
+        raise ImportPackageError(
+            "Nie udało się zdekompresować collection.anki21b."
+        ) from exc
 
 
 def _db_has_real_notes(db_bytes: bytes) -> bool:
@@ -367,31 +398,50 @@ def _looks_like_anki_zip(data: bytes) -> bool:
 
 
 def _field_names_from_col(conn: sqlite3.Connection) -> list[str] | None:
+    mid_row = None
     try:
-        row = conn.execute("SELECT models FROM col").fetchone()
-        if not row or not row[0]:
-            return None
-        models = json.loads(row[0])
-        # weź najczęściej używany model z notes
         mid_row = conn.execute(
             "SELECT mid, COUNT(*) AS c FROM notes GROUP BY mid ORDER BY c DESC LIMIT 1"
         ).fetchone()
-        if not mid_row:
-            return None
-        mid = str(mid_row[0])
-        model = models.get(mid) or models.get(int(mid))  # type: ignore[arg-type]
-        if model is None:
-            # keys czasem int w JSON jako str
-            for k, v in models.items():
-                if str(k) == mid:
-                    model = v
-                    break
-        if not model:
-            return None
-        names = [str(f.get("name") or f"Field{i}") for i, f in enumerate(model.get("flds") or [])]
-        return names or None
+    except sqlite3.Error:
+        mid_row = None
+
+    # Legacy: models JSON in col
+    try:
+        row = conn.execute("SELECT models FROM col").fetchone()
+        if row and row[0]:
+            models = json.loads(row[0])
+            if mid_row and models:
+                mid = str(mid_row[0])
+                model = models.get(mid)
+                if model is None:
+                    for k, v in models.items():
+                        if str(k) == mid:
+                            model = v
+                            break
+                if model:
+                    names = [
+                        str(f.get("name") or f"Field{i}")
+                        for i, f in enumerate(model.get("flds") or [])
+                    ]
+                    if names:
+                        return names
     except Exception:
-        return None
+        pass
+
+    # Schema v15+ / anki21b: dedicated fields table
+    if mid_row:
+        try:
+            rows = conn.execute(
+                "SELECT name FROM fields WHERE ntid = ? ORDER BY ord",
+                (mid_row[0],),
+            ).fetchall()
+            names = [str(r[0]) for r in rows if r and r[0]]
+            if names:
+                return names
+        except sqlite3.Error:
+            pass
+    return None
 
 
 def _parse_anki_notes_tsv(body: str, separator: str, meta: dict[str, str]) -> list[list[str]]:
@@ -407,7 +457,7 @@ def _parse_anki_notes_tsv(body: str, separator: str, meta: dict[str, str]) -> li
         if not row or all(not (c or "").strip() for c in row):
             continue
         fields = [
-            _clean_field(cell)
+            _sanitize_import_field(cell)
             for i, cell in enumerate(row)
             if i not in skip
         ]
@@ -422,11 +472,29 @@ def _parse_anki_cards_tsv(body: str, separator: str) -> list[list[str]]:
     for row in reader:
         if not row:
             continue
-        # Zachowaj surowy HTML (klasy CSS); LLM / extractor class na tym działa.
-        raw_cells = [(c or "").strip() for c in row[:2]]
+        # Zachowaj HTML (klasy CSS / tabele); usuń skrypty i play-btn.
+        raw_cells = [_sanitize_import_field(c) for c in row[:2]]
         if any(raw_cells):
             notes.append(raw_cells)
     return notes
+
+
+def _infer_notes_field_names(notes: list[list[str]]) -> list[str] | None:
+    """Gdy Notes.txt nie ma nazw pól — rozpoznaj typowy deck conjugations ES."""
+    if not notes:
+        return None
+    width = max((len(n) for n in notes), default=0)
+    if width != 4:
+        return None
+    sample = notes[0]
+    last = sample[3] if len(sample) > 3 else ""
+    mid = sample[1] if len(sample) > 1 else ""
+    has_tables = "<table" in last.lower()
+    has_gerundio = "gerundio" in last.lower() or "participio" in last.lower()
+    looks_meanings = "\n" in mid or len(mid) > 20
+    if (has_tables or has_gerundio) and looks_meanings:
+        return ["Spanish", "Meanings_Block", "Irregularity", "Conjugation"]
+    return None
 
 
 def _parse_generic_table(body: str, separator: str | None) -> list[list[str]]:
@@ -655,7 +723,31 @@ def _meta_col(meta: dict[str, str], key: str) -> int | None:
 
 
 def _clean_field(s: str) -> str:
+    """Legacy: plain text only (lemma extractors). Prefer _sanitize_import_field for preserve."""
     return _strip_html(s or "").strip().strip('"')
+
+
+def _sanitize_import_field(s: str) -> str:
+    """Zachowaj HTML strukturę (tabele), usuń skrypty / przyciski Anki TTS."""
+    raw = (s or "").strip().strip('"')
+    if not raw:
+        return ""
+    if "<" not in raw and "[anki:tts" not in raw.lower():
+        lines = [
+            re.sub(r"[ \t]+", " ", ln).strip()
+            for ln in raw.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+        ]
+        return "\n".join(ln for ln in lines if ln).strip()
+    out = re.sub(r"(?is)<(script|style)\b[^>]*>.*?</\1>", "", raw)
+    out = re.sub(r"(?is)<button\b[^>]*>.*?</button>", "", out)
+    out = re.sub(
+        r"\[anki:tts[^\]]*].*?\[/anki:tts]",
+        "",
+        out,
+        flags=re.IGNORECASE,
+    )
+    # Anki HTML export often doubles quotes inside attributes — leave as-is for parsers
+    return out.strip()
 
 
 def _strip_html(s: str) -> str:
@@ -667,10 +759,31 @@ def _strip_html(s: str) -> str:
             re.sub(r"[ \t]+", " ", ln).strip()
             for ln in raw.replace("\r\n", "\n").replace("\r", "\n").split("\n")
         ]
-        return "\n".join(ln for ln in lines if ln).strip()
-    s = re.sub(r"<[^>]+>", " ", raw)
-    s = re.sub(r"\[anki:tts[^\]]*].*?\[/anki:tts]", " ", s, flags=re.IGNORECASE)
-    return re.sub(r"\s+", " ", s).strip()
+        text = "\n".join(ln for ln in lines if ln).strip()
+        return re.sub(r"[▶►]\s*", "", re.sub(r"\[sound:[^\]]+\]", " ", text, flags=re.I)).strip()
+    # Prefer explicit lemma node from Anki card templates
+    m = re.search(
+        r'class=["\'][^"\']*(?:front-word|answer-word|es-word)[^"\']*["\'][^>]*>([^<]+)',
+        raw,
+        re.I,
+    )
+    if m and re.search(r"play-btn|AnkiDroid|speechSynthesis", raw, re.I):
+        return m.group(1).strip()
+    cleaned = re.sub(r"(?is)<(script|style)\b[^>]*>.*?</\1>", " ", raw)
+    cleaned = re.sub(r"(?is)<button\b[^>]*>.*?</button>", " ", cleaned)
+    cleaned = re.sub(r"\[sound:[^\]]+\]", " ", cleaned, flags=re.I)
+    cleaned = re.sub(r"<[^>]+>", " ", cleaned)
+    cleaned = re.sub(
+        r"\[anki:tts[^\]]*].*?\[/anki:tts]",
+        " ",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"[▶►]", " ", cleaned)
+    cleaned = re.sub(r"[ \t]*\n[ \t]*", "\n", cleaned)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
 
 
 def _is_likely_lemma(s: str) -> bool:

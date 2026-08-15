@@ -148,7 +148,7 @@ class LearningRepository @Inject constructor(
     suspend fun activeProfileId(): String {
         tokenStore.activeProfileId.first()?.takeIf { it.isNotBlank() }?.let { return it }
         offlineStore.cachedActiveProfile()?.id?.takeIf { it.isNotBlank() }?.let { return it }
-        return getActiveProfile()?.id ?: error("No active language profile")
+        return getActiveProfile()?.id ?: error("no_active_profile")
     }
 
     suspend fun hasSyncableSession(): Boolean {
@@ -408,7 +408,7 @@ class LearningRepository @Inject constructor(
             ?: WordListResponse(id = listId, name = trimmed, is_system = false)
     }
 
-    /** Local-first delete: Room (karty wracają do „Uczę się”) + operacja outboxu, drenaż online. */
+    /** Local-first delete listy wraz z kartami + operacja outboxu, drenaż online. */
     suspend fun deleteWordList(listId: String) {
         val profileId = activeProfileId()
         val lists = offlineStore.localLists(profileId)
@@ -425,7 +425,16 @@ class LearningRepository @Inject constructor(
             offlineStore.deleteListLocally(listId)
             return
         }
-        offlineStore.deleteListLocally(listId)
+        val deletedCardIds = offlineStore.deleteListLocally(listId)
+        for (cardId in deletedCardIds) {
+            offlineStore.enqueueOp(
+                OP_CARD_DELETE,
+                buildJsonObject {
+                    put("cardId", cardId)
+                    put("profileId", profileId)
+                }.toString(),
+            )
+        }
         offlineStore.enqueueOp(
             OP_LIST_DELETE,
             buildJsonObject {
@@ -522,6 +531,9 @@ class LearningRepository @Inject constructor(
     }
 
     suspend fun moveCard(cardId: String, targetListId: String): CardResponse {
+        if (cardId.startsWith("pending-")) {
+            error("cannot_move_unready_card")
+        }
         val profileId = activeProfileId()
         val lists = runCatching { listWordLists() }.getOrElse { offlineStore.localLists(profileId) }
         val systemId = lists.find { it.is_system }?.id
@@ -664,7 +676,7 @@ class LearningRepository @Inject constructor(
         cardId: String,
         direction: String,
     ): DistractorsResponse {
-        val card = offlineStore.cardById(cardId) ?: error("Brak karty offline")
+        val card = offlineStore.cardById(cardId) ?: error("offline_card")
         val content = offlineStore.parseContent(card.contentJson)
         val correctText = if (direction == "l2_to_l1") {
             card.glossPrimary ?: LocalAnswerCheck.collectAnswers(content, direction).firstOrNull().orEmpty()
@@ -1160,7 +1172,7 @@ class LearningRepository @Inject constructor(
                 com.vocabulario.app.data.api.CheckAnswerRequest(cardId, answer, direction),
             )
         }.getOrElse {
-            val card = offlineStore.cardById(cardId) ?: error("Brak karty offline")
+            val card = offlineStore.cardById(cardId) ?: error("offline_card")
             val content = offlineStore.parseContent(card.contentJson)
             val (ok, expected, typo) = LocalAnswerCheck.check(answer, content, direction)
             CheckAnswerResponse(correct = ok, expected = expected, accepted_as_typo = typo)
@@ -1200,6 +1212,7 @@ class LearningRepository @Inject constructor(
         show_synonyms_antonyms = u.show_synonyms_antonyms ?: show_synonyms_antonyms,
         show_synonyms = u.show_synonyms ?: show_synonyms,
         show_antonyms = u.show_antonyms ?: show_antonyms,
+        show_word_family = u.show_word_family ?: show_word_family,
         show_periphrases = u.show_periphrases ?: show_periphrases,
         show_conjugation = u.show_conjugation ?: show_conjugation,
         conjugation_expanded_default = u.conjugation_expanded_default ?: conjugation_expanded_default,

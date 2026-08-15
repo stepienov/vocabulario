@@ -10,18 +10,18 @@
     <application
         android:name=".VocabularioApp"
         android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:localeConfig="@xml/locales_config"
-        android:roundIcon="@drawable/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Vocabulario"
+        android:theme="@style/Theme.Vocabulario.Splash"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:configChanges="locale|layoutDirection|fontScale"
-            android:theme="@style/Theme.Vocabulario">
+            android:theme="@style/Theme.Vocabulario.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

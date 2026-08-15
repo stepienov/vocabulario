@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -6,6 +8,14 @@ plugins {
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
 }
+
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val apiEmulatorHost = localProps.getProperty("api.emulator.host", "10.0.2.2").trim()
+val apiDeviceHost = localProps.getProperty("api.device.host", "").trim()
+val apiPort = localProps.getProperty("api.port", "8000").trim()
 
 android {
     namespace = "com.vocabulario.app"
@@ -17,7 +27,10 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/api/v1/\"")
+        // Emulator vs fizyczny telefon — wybór w runtime: ApiBaseUrl.resolve()
+        buildConfigField("String", "API_EMULATOR_HOST", "\"$apiEmulatorHost\"")
+        buildConfigField("String", "API_DEVICE_HOST", "\"$apiDeviceHost\"")
+        buildConfigField("String", "API_PORT", "\"$apiPort\"")
         buildConfigField(
             "String",
             "GOOGLE_WEB_CLIENT_ID",
@@ -51,6 +64,7 @@ dependencies {
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.activity:activity-compose:1.9.3")

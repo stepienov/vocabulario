@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vocabulario — porównanie UI do standaryzacji</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #F7F8FA;
+  --surface: #fff;
+  --sv: #EEF1F4;
+  --muted: #5C6670;
+  --border: #E2E6EA;
+  --outline-var: #F0F2F4;
+  --ink: #000;
+  --primary: #407DC0;
+  --on-primary: #fff;
+  --pc: #D9E8F7;
+  --on-pc: #163A5C;
+  --teal: #72AEAA;
+  --cream: #FFF5DC;
+  --error: #BF557F;
+  --confirm: #6DCF65;
+  --on-confirm: #fff;
+  --on-error: #fff;
+  --sec-c: #D8ECEB;
+  --on-sec-c: #1F3F3D;
+  --ter-c: #D8F5D5;
+  --dialog: 24px;
+  --pill: 28px;
+  --card: 18px;
+  --chip: 999px;
+  --page: #ece8e1;
+  --ink2: #1c1917;
+  --stone: #78716c;
+  --line: #e7e5e4;
+  --pick: #1b4d18;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: "DM Sans", system-ui, sans-serif;
+  background: var(--page);
+  color: var(--ink2);
+}
+a { color: var(--primary); }
+header.hero {
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  padding: 28px 28px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+header.hero h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: -0.3px; }
+.note {
+  margin: 0 0 14px;
+  color: var(--stone);
+  font-size: 13.5px;
+  max-width: 920px;
+  line-height: 1.45;
+}
+.note strong { color: var(--ink2); }
+nav.toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+nav.toc a {
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--ink2);
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+nav.toc a:hover { border-color: var(--primary); color: var(--primary); }
+.picks-bar {
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: var(--stone);
+}
+.picks-bar b { color: var(--pick); }
+main { padding: 8px 20px 80px; max-width: 1400px; margin: 0 auto; }
+section.cluster {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 22px 22px 18px;
+  margin: 18px 0;
+}
+section.cluster h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  letter-spacing: -0.2px;
+}
+h3.subq {
+  margin: 18px 0 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.ask {
+  margin: 0 0 6px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--primary);
+}
+.why { margin: 0 0 16px; font-size: 13px; color: var(--stone); line-height: 1.45; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+article.v {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fafaf9;
+  display: flex;
+  flex-direction: column;
+}
+article.v.chosen { outline: 2px solid var(--confirm); outline-offset: -1px; }
+.v-meta { padding: 10px 12px 8px; background: #fff; border-bottom: 1px solid var(--line); }
+.v-meta h3 { margin: 0 0 2px; font-size: 13.5px; }
+.v-meta p { margin: 0; font-size: 11.5px; color: var(--stone); line-height: 1.35; }
+.stage {
+  background: #c5cdd4;
+  padding: 14px 12px 10px;
+  display: flex;
+  justify-content: center;
+}
+.stage.pair {
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.shot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.shot-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4b5563;
+}
+article.v.pair { grid-column: span 2; }
+@media (max-width: 720px) {
+  article.v.pair { grid-column: span 1; }
+}
+.phone {
+  width: 280px;
+  height: 500px;
+  background: var(--bg);
+  border-radius: 22px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 28px rgba(0,0,0,.18);
+  font-family: "DM Sans", sans-serif;
+  color: var(--ink);
+}
+.phone.short { height: 420px; }
+.phone.tall { height: 560px; }
+.scrim {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.scrim.bottom { align-items: flex-end; padding: 0; }
+.scrim.dark { background: rgba(0,0,0,.52); }
+.home-fake {
+  padding: 14px 14px 0;
+}
+.logo { font-weight: 700; font-size: 15px; color: var(--primary); }
+.tabs { display: flex; gap: 8px; margin-top: 10px; font-size: 11px; color: var(--muted); }
+.tabs span.on { color: var(--ink); font-weight: 700; border-bottom: 2px solid var(--ink); padding-bottom: 4px; }
+.fake-tile {
+  margin-top: 12px; height: 54px; background: var(--surface); border-radius: var(--pill);
+}
+.dialog {
+  background: var(--surface);
+  border-radius: var(--dialog);
+  width: 100%;
+  padding: 18px 16px 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  overflow: visible;
+}
+.dialog h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.dialog .body { font-size: 13.5px; color: var(--muted); line-height: 1.4; margin: 0 0 14px; }
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.actions.fill { display: grid; grid-template-columns: 1fr 1fr; }
+.actions.stack { flex-direction: column; }
+.btn {
+  border: 0;
+  cursor: default;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: var(--pill);
+  padding: 10px 14px;
+  line-height: 1.1;
+  text-align: center;
+}
+.btn.h48 { height: 48px; display: flex; align-items: center; justify-content: center; padding: 0 12px; }
+.btn.h52 { height: 52px; display: flex; align-items: center; justify-content: center; }
+.btn.block { width: 100%; }
+.btn.primary { background: var(--primary); color: #fff; }
+.btn.tertiary { background: var(--confirm); color: #fff; }
+.btn.danger { background: var(--error); color: #fff; }
+.btn.outline {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--ink);
+}
+.btn.outline.err { color: var(--error); }
+.btn.outline.mute { color: var(--muted); }
+.btn.text {
+  background: transparent;
+  color: var(--primary);
+  font-weight: 600;
+  padding: 8px 10px;
+}
+.btn.text.err { color: var(--error); }
+.field {
+  width: 100%;
+  border: 0;
+  background: var(--sv);
+  padding: 12px 14px;
+  font: 14px/1.3 "DM Sans", sans-serif;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+.field.r14 { border-radius: 14px; }
+.field.pill { border-radius: var(--pill); }
+.field.def { border-radius: 4px; box-shadow: inset 0 0 0 1px #8a8a8a; background: #fff; }
+.field.surface { background: #fff; box-shadow: inset 0 0 0 1px var(--border); border-radius: var(--pill); }
+.hint { font-size: 11.5px; color: var(--muted); margin: 0 0 10px; }
+.errt { font-size: 11.5px; color: var(--error); margin: -2px 0 8px; }
+.sheet {
+  width: 100%;
+  background: var(--surface);
+  border-radius: var(--pill) var(--pill) 0 0;
+  padding: 10px 18px 20px;
+  box-shadow: none;
+}
+.sheet.material {
+  border-radius: 32px 32px 0 0;
+  background: #f3f4f6;
+  box-shadow: 0 -10px 32px rgba(0,0,0,.2);
+}
+.handle { width: 36px; height: 4px; background: #ccc; border-radius: 4px; margin: 4px auto 12px; }
+.sheet h4 { margin: 0 0 4px; font-size: 18px; font-weight: 700; text-align: center; }
+.sheet .sub { text-align: center; color: var(--muted); font-size: 13.5px; margin: 0 0 16px; }
+.row-pill {
+  height: 52px;
+  border-radius: var(--pill);
+  background: var(--sv);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+.radio, .check {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; padding: 4px 0;
+}
+.dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--muted);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.dot.on { box-shadow: inset 0 0 0 2px var(--primary); }
+.dot.on::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
+.box {
+  width: 18px; height: 18px; border-radius: 2px;
+  box-shadow: inset 0 0 0 2px var(--muted);
+}
+.box.on { background: var(--primary); box-shadow: none; }
+.diffs {
+  list-style: none;
+  margin: 0;
+  padding: 8px 12px 10px;
+  font-size: 11.5px;
+  color: var(--ink2);
+  background: #fff;
+  border-top: 1px solid var(--line);
+  line-height: 1.45;
+}
+.diffs li::before { content: "≠ "; color: var(--error); font-weight: 700; }
+.pick {
+  margin: 0;
+  border: 0;
+  width: 100%;
+  padding: 10px;
+  background: var(--sv);
+  font: 600 12.5px/1 "DM Sans", sans-serif;
+  cursor: pointer;
+  color: var(--ink2);
+}
+.pick:hover { background: var(--pc); }
+article.v.chosen .pick { background: var(--confirm); color: #fff; }
+.lemma {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  background: #fff;
+}
+.lemma .txt { flex: 1; min-width: 0; }
+.lemma .l { font-weight: 600; font-size: 15px; }
+.lemma .g { font-size: 13px; color: var(--muted); }
+.chip {
+  display: inline-block;
+  background: var(--pc);
+  color: var(--on-pc);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--chip);
+}
+.add-circle {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 500; flex-shrink: 0;
+}
+.appcard { margin: 8px 10px; border: 1px solid var(--border); border-radius: var(--card); overflow: hidden; background: #fff; }
+.dd-wrap { position: relative; z-index: 3; }
+.dropdown {
+  border-radius: 14px;
+  background: var(--sv);
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+.dropdown.open,
+.field.open {
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+.caret { font-size: 11px; color: var(--muted); line-height: 1; }
+.dd-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  z-index: 6;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.22);
+  font-size: 13.5px;
+  max-height: 200px;
+  overflow: auto;
+}
+.dd-menu div { padding: 10px 12px; }
+.dd-menu div.on { background: var(--pc); font-weight: 600; }
+.settings-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--outline-var);
+}
+.acc {
+  margin: 10px; background: #fff; border: 1px solid var(--border); border-radius: var(--card); overflow: visible;
+}
+.phone-pad { padding: 12px 16px; }
+.x {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--muted);
+}
+.sug {
+  border-radius: 16px;
+  background: var(--sv);
+  padding: 10px 12px;
+  margin-top: 8px;
+}
+.sug.on { background: rgba(64,125,192,.12); box-shadow: inset 0 0 0 2px var(--primary); }
+.grade {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; padding: 8px;
+}
+.grade i {
+  height: 40px; border-radius: 12px; color: #fff; font-style: normal;
+  font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center;
+}
+footer.foot {
+  text-align: center; color: var(--stone); font-size: 12px; padding: 8px 0 24px;
+}
+.legend {
+  display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--stone); margin-top: 8px;
+}
+.legend span { display: flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<header class="hero">
+  <h1>Porównanie powtarzających się flow</h1>
+  <p class="note">
+    To <strong>nie są zrzuty z emulatora</strong> — w repo nie ma screenshot testów Compose, a odpalenie każdej ścieżki wymagałoby zalogowanej sesji.
+    Poniższe makiety są złożone 1:1 z kodu: tokeny z <code>Theme.kt</code> (kolory, 18/24/28 dp), copy z <code>values-pl/strings.xml</code>, wysokości przycisków i kształty pól z konkretnych composable.
+    Kliknij <strong>Wybieram ten</strong> przy wariancie, który ma zostać standardem — wybór zostaje w przeglądarce.
+  </p>
+  <nav class="toc">
+    <a href="#create">Nazwa listy</a>
+    <a href="#pick-list">Wybór listy</a>
+    <a href="#delete">Usuwanie</a>
+    <a href="#dialog">Chrome dialogu</a>
+    <a href="#lemma">Wiersz słowa</a>
+    <a href="#cefr">CEFR</a>
+    <a href="#tenses">Czasy</a>
+    <a href="#lang">Dropdown języka</a>
+    <a href="#sheets">Sheety</a>
+    <a href="#fields">Pola tekstowe</a>
+    <a href="#fix">Popraw kartę</a>
+    <a href="#empty">Puste stany</a>
+    <a href="#secondary">Przycisk wtórny</a>
+  </nav>
+  <div class="picks-bar">Twoje wybory: <b id="picks-out">jeszcze nic nie zaznaczono</b></div>
+  <div class="legend">
+    <span><i class="sw" style="background:var(--primary)"></i> primary #407DC0</span>
+    <span><i class="sw" style="background:var(--confirm)"></i> tertiary / confirm #6DCF65</span>
+    <span><i class="sw" style="background:var(--error)"></i> error / Anuluj #BF557F</span>
+    <span>pill 28 · dialog 24 · card 18 · pole list 14</span>
+  </div>
+</header>
+<main>
+
+<section class="cluster" id="create">
+  <h2>1. Jak nazwać nową listę?</h2>
+  <p class="ask">To samo pytanie w trzech miejscach — trzy CTA, trzy pola, trzy Anuluj.</p>
+  <p class="why">Listy → chip + · AddToListSheet po „Nowa lista” · ImportStartDialog opcja „+ Nowa lista”.</p>
+  <div class="grid">
+    <article class="v" data-cluster="create" data-id="list-dialog">
+      <div class="v-meta">
+        <h3>Listy → chip +</h3>
+        <p>AlertDialog · HomeScreen.kt · CTA „Utwórz”</p>
+      </div>
+      <div class="stage"><div class="phone">
+        <div class="home-fake"><div class="logo">vocabulario</div><div class="tabs"><span>panel</span><span>dodaj</span><span class="on">listy</span></div><div class="fake-tile"></div></div>
+        <div class="scrim"><div class="dialog">
+          <h4>Nowa lista</h4>
+          <input class="field r14" value="" placeholder="Nazwa" readonly />
+          <div class="actions">
+            <span class="btn outline err">Anuluj</span>
+            <span class="btn tertiary">Utwórz</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs">
+        <li>pole 14 dp, surfaceVariant, bez ramki</li>
+        <li>primary = tertiary (zielony) „Utwórz”</li>
+        <li>Anuluj Outlined, kolor error</li>
+      </ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+
+    <article class="v" data-cluster="create" data-id="add-sheet">
+      <div class="v-meta">
+        <h3>Dodaj słowo → Nowa lista</h3>
+        <p>ModalBottomSheet · AddToListSheet.kt · CTA „Dodaj”</p>
+      </div>
+      <div class="stage"><div class="phone">
+        <div class="home-fake"><div class="logo">vocabulario</div><div class="fake-tile"></div></div>
+        <div class="scrim bottom"><div class="sheet">
+          <div class="handle"></div>
+          <h4>despertarse</h4>
+          <p class="sub">budzić się</p>
+          <input class="field pill" placeholder="Nazwa listy" readonly style="height:52px" />
+          <div class="actions fill" style="margin-top:10px">
+            <span class="btn outline h52">Wróć</span>
+            <span class="btn primary h52">Dodaj</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs">
+        <li>pole pill 28 dp, wysokość 52</li>
+        <li>CTA „Dodaj” primary (niebieski), nie Utwórz</li>
+        <li>wtórny to „Wróć”, nie Anuluj</li>
+      </ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+
+    <article class="v" data-cluster="create" data-id="import-inline">
+      <div class="v-meta">
+        <h3>Import → + Nowa lista</h3>
+        <p>AlertDialog · ImportUi.kt · pole w wizardzie importu</p>
+      </div>
+      <div class="stage"><div class="phone">
+        <div class="scrim"><div class="dialog">
+          <h4>Import fiszek</h4>
+          <div class="hint" style="font-weight:600;color:var(--ink)">Lista docelowa</div>
+          <input class="field def" placeholder="Nazwa" readonly />
+          <button class="btn text" style="padding-left:0">Anuluj</button>
+          <div class="actions" style="margin-top:8px">
+            <span class="btn outline err">Anuluj</span>
+            <span class="btn primary">Importuj</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs">
+        <li>domyślny OutlinedTextField (4 dp + ramka)</li>
+        <li>dwa „Anuluj”: TextButton przy polu i Outlined error na dole</li>
+        <li>brak osobnego CTA Utwórz — zatwierdza cały import</li>
+      </ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+  </div>
+</section>
+
+<section class="cluster" id="pick-list">
+  <h2>2. Do której listy?</h2>
+  <p class="ask">To samo pytanie: wybierz listę docelową.</p>
+  <p class="why">Sheet z kafelkami vs dropdown w Alercie. Move word / selected / all to trzy kopie tego samego dropdownu.</p>
+  <div class="grid">
+    <article class="v" data-cluster="pick-list" data-id="sheet-rows">
+      <div class="v-meta">
+        <h3>AddToListSheet — lista kafelków</h3>
+        <p>po tapnięciu „Inna lista”</p>
+      </div>
+      <div class="stage"><div class="phone">
+        <div class="scrim bottom"><div class="sheet">
+          <div class="handle"></div>
+          <h4>planear</h4>
+          <p class="sub">planować</p>
+          <div class="row-pill">Podróże</div>
+          <div class="row-pill">Praca</div>
+          <span class="btn outline block h52">Nowa lista</span>
+          <div style="height:10px"></div>
+          <span class="btn outline block h52">Wróć</span>
+        </div></div>
+      </div></div>
+      <ul class="diffs">
+        <li>każda lista = Surface pill 52 dp, surfaceVariant</li>
+        <li>Nowa lista i Wróć jako pełnej szerokości Outlined</li>
+      </ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+
+    <article class="v pair" data-cluster="pick-list" data-id="import-dd">
+      <div class="v-meta">
+        <h3>Import — ExposedDropdown</h3>
+        <p>w tym samym dialogu co tryb importu</p>
+      </div>
+      <div class="stage pair">
+        <div class="shot">
+          <div class="shot-label">Zwinięty</div>
+          <div class="phone">
+            <div class="scrim"><div class="dialog">
+              <h4>Import fiszek</h4>
+              <div class="hint" style="font-weight:600;color:var(--ink)">Lista docelowa</div>
+              <div class="dd-wrap">
+                <div class="dropdown">Uczę się <span class="caret">▾</span></div>
+              </div>
+              <div class="actions" style="margin-top:12px">
+                <span class="btn outline err">Anuluj</span>
+                <span class="btn primary">Importuj</span>
+              </div>
+            </div></div>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="shot-label">Rozwinięty</div>
+          <div class="phone">
+            <div class="scrim"><div class="dialog">
+              <h4>Import fiszek</h4>
+              <div class="hint" style="font-weight:600;color:var(--ink)">Lista docelowa</div>
+              <div class="dd-wrap">
+                <div class="dropdown open">Uczę się <span class="caret">▴</span></div>
+                <div class="dd-menu">
+                  <div class="on">Uczę się</div>
+                  <div>Podróże</div>
+                  <div>Praca</div>
+                  <div>+ Nowa lista</div>
+                </div>
+              </div>
+              <div class="actions" style="margin-top:12px">
+                <span class="btn outline err">Anuluj</span>
+                <span class="btn primary">Importuj</span>
+              </div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+      <ul class="diffs">
+        <li>kompaktowy dropdown, opcja nowej listy w menu</li>
+        <li>Anuluj error — choć to nie jest destrukcja</li>
+      </ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+
+    <article class="v pair" data-cluster="pick-list" data-id="move-dd">
+      <div class="v-meta">
+        <h3>Przenieś słowo / zaznaczone / wszystkie</h3>
+        <p>3× skopiowany AlertDialog w HomeScreen</p>
+      </div>
+      <div class="stage pair">
+        <div class="shot">
+          <div class="shot-label">Zwinięty</div>
+          <div class="phone">
+            <div class="scrim"><div class="dialog">
+              <h4>Przenieś słowo do listy</h4>
+              <div class="dd-wrap" style="margin-bottom:8px">
+                <div class="dropdown">Podróże <span class="caret">▾</span></div>
+              </div>
+              <button class="btn text" style="padding-left:0">Nowa lista</button>
+              <div class="actions">
+                <span class="btn outline err">Anuluj</span>
+                <span class="btn primary">Przenieś</span>
+              </div>
+            </div></div>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="shot-label">Rozwinięty</div>
+          <div class="phone">
+            <div class="scrim"><div class="dialog">
+              <h4>Przenieś słowo do listy</h4>
+              <div class="dd-wrap" style="margin-bottom:8px">
+                <div class="dropdown open">Podróże <span class="caret">▴</span></div>
+                <div class="dd-menu">
+                  <div>Uczę się</div>
+                  <div class="on">Podróże</div>
+                  <div>Praca</div>
+                </div>
+              </div>
+              <button class="btn text" style="padding-left:0">Nowa lista</button>
+              <div class="actions">
+                <span class="btn outline err">Anuluj</span>
+                <span class="btn primary">Przenieś</span>
+              </div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+      <ul class="diffs">
+        <li>pole 14 dp surfaceVariant</li>
+        <li>„Nowa lista” jako TextButton primary — poza menu</li>
+        <li>identyczny układ w MoveAll i MoveSelected (inny tytuł)</li>
+      </ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+  </div>
+</section>
+
+<section class="cluster" id="delete">
+  <h2>3. Potwierdź usunięcie / destrukcję</h2>
+  <p class="ask">User ma potwierdzić nieodwracalną akcję. Wtórny przycisk skacze między „Wróć” i „Anuluj”, kolor raz error raz onSurface. Wyloguj w ogóle nie pyta.</p>
+  <div class="grid">
+    <article class="v" data-cluster="delete" data-id="del-list">
+      <div class="v-meta"><h3>Usuń listę</h3><p>tytuł + body · secondary = Wróć onSurface</p></div>
+      <div class="stage"><div class="phone short">
+        <div class="scrim"><div class="dialog">
+          <h4>Usunąć listę?</h4>
+          <p class="body">Lista „Podróże” i jej słowa zostaną usunięte.</p>
+          <div class="actions">
+            <span class="btn outline">Wróć</span>
+            <span class="btn danger">Usuń</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs"><li>Wróć, nie Anuluj · outlined bez error</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="delete" data-id="clear">
+      <div class="v-meta"><h3>Wyczyść listę systemową</h3><p>secondary = Anuluj onSurface</p></div>
+      <div class="stage"><div class="phone short">
+        <div class="scrim"><div class="dialog">
+          <h4>Usunąć wszystkie słowa?</h4>
+          <p class="body">Usuniesz wszystkie słowa z listy „Uczę się”. Sama lista zostanie.</p>
+          <div class="actions">
+            <span class="btn outline">Anuluj</span>
+            <span class="btn danger">Usuń wszystkie słowa</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs"><li>Anuluj (onSurface) — inny label niż delete list</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="delete" data-id="del-word">
+      <div class="v-meta"><h3>Usuń słowo</h3><p>tylko tytuł, bez body</p></div>
+      <div class="stage"><div class="phone short">
+        <div class="scrim"><div class="dialog">
+          <h4>Czy potwierdzasz usunięcie słowa?</h4>
+          <div class="actions">
+            <span class="btn outline">Wróć</span>
+            <span class="btn danger">Usuń</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs"><li>brak treści · Wróć · nie pokazuje którego słowa</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="delete" data-id="abort">
+      <div class="v-meta"><h3>Przerwij import</h3><p>jedyne destrukcyjne z Anuluj bez czerwonego tekstu na outlined</p></div>
+      <div class="stage"><div class="phone short">
+        <div class="scrim"><div class="dialog">
+          <h4>Przerwać import?</h4>
+          <p class="body">Postęp zostanie porzucony.</p>
+          <div class="actions">
+            <span class="btn outline">Anuluj</span>
+            <span class="btn danger">Przerwij</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs"><li>Anuluj default onSurface · primary error „Przerwij”</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="delete" data-id="logout">
+      <div class="v-meta"><h3>Wyloguj — brak dialogu</h3><p>Settings, OutlinedButton od razu wylogowuje</p></div>
+      <div class="stage"><div class="phone short">
+        <div class="phone-pad">
+          <div class="hint">OGÓLNE</div>
+          <span class="btn outline block h48">Wyloguj</span>
+          <p class="hint" style="margin-top:12px">Jedyna destrukcja bez potwierdzenia. Hierarchia ryzyka inna niż przy usuwaniu słowa.</p>
+        </div>
+      </div></div>
+      <ul class="diffs"><li>brak modalu · warto dodać wariant destructive jak abort</li></ul>
+      <button class="pick" type="button">Wybieram ten (zostaw bez dialogu)</button>
+    </article>
+  </div>
+</section>
+
+<section class="cluster" id="dialog">
+  <h2>4. Chrome okna — tu nie wybierasz jednego na wszystko</h2>
+  <p class="ask">To nie jest to samo pytanie co „jak nazwać listę”. Pięć mockupów to trzy różne roboty. User ma czuć ten sam <em>rodzaj</em> okna, nie ten sam ekran.</p>
+  <p class="why">
+    Dziś apka ma 5 osobnych pudełek na overlay. Standaryzacja = zostawić <strong>2–3 szablony</strong> i przypisać do nich zadania.
+    Nie wrzucaj wyszukiwania głosowego do AlertDialogu i nie dawaj X na „usunąć listę?”.
+  </p>
+
+  <h3 class="subq">4a. Dialog decyzji — to jest ten wybór</h3>
+  <p class="why">Białe pudełko 24 dp na przyciemnionym tle, tytuł, treść, Anuluj + akcja. Tu lądują: nowa lista, usuwanie, import, korekta, czasy, ostrzeżenie self-edit. Dziś te trzy wyglądają jak z trzech aptek.</p>
+  <div class="grid">
+    <article class="v" data-cluster="dialog-decision" data-id="card-blocking">
+      <div class="v-meta"><h3>A — równe przyciski 48 dp</h3><p>CardBlockingAlertDialog · dziś: korekta, self-edit, review</p></div>
+      <div class="stage"><div class="phone">
+        <div class="scrim"><div class="dialog">
+          <h4>Zmiany mogą być nieprawidłowe</h4>
+          <p style="font-weight:700;margin:0 0 8px">despertarse</p>
+          <p class="body">Wykryliśmy, że Twoje zmiany na karcie „despertarse” mogą być nieprawidłowe.</p>
+          <div class="actions fill">
+            <span class="btn outline h48">Wycofaj zmiany</span>
+            <span class="btn primary h48">Zatwierdź zmiany</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs">
+        <li>przyciski na pełną szerokość, zawsze 48 dp</li>
+        <li>nie zamyka się tapem w tło (blocking) — dobre przy ostrzeżeniu, złe przy „nowa lista”</li>
+        <li>rekomendacja z inwentarza: to ma być standard <em>wyglądu</em> dialogu; blocking tylko gdy trzeba</li>
+      </ul>
+      <button class="pick" type="button">Wybieram ten wygląd na dialogi decyzji</button>
+    </article>
+    <article class="v" data-cluster="dialog-decision" data-id="material-slots">
+      <div class="v-meta"><h3>B — przyciski do prawej, niska wysokość</h3><p>AlertDialog Material · dziś: listy, import</p></div>
+      <div class="stage"><div class="phone">
+        <div class="scrim"><div class="dialog">
+          <h4>Nowa lista</h4>
+          <input class="field r14" placeholder="Nazwa" readonly />
+          <div class="actions">
+            <span class="btn outline err">Anuluj</span>
+            <span class="btn tertiary">Utwórz</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs">
+        <li>ten sam 24 dp i scrim, ale rząd przycisków „doklejony” z prawej</li>
+        <li>zamyka się tapem w tło</li>
+        <li>to jest ten sam szablon co A, tylko niedokończony — nie osobny produkt</li>
+      </ul>
+      <button class="pick" type="button">Wybieram ten wygląd na dialogi decyzji</button>
+    </article>
+    <article class="v" data-cluster="dialog-decision" data-id="tense-custom">
+      <div class="v-meta"><h3>C — własny Dialog 92%</h3><p>TensePicker · ten sam job co A/B, inna ramka</p></div>
+      <div class="stage"><div class="phone">
+        <div class="scrim"><div class="dialog" style="padding:0;overflow:hidden">
+          <div style="padding:16px 20px;font-weight:700;font-size:16px">Wybrane czasy</div>
+          <div style="height:1px;background:var(--outline-var);margin:0 16px"></div>
+          <div class="settings-row">Presente <span class="box on"></span></div>
+          <div class="settings-row">Pretérito <span class="box"></span></div>
+          <div class="settings-row" style="border:0">Futuro <span class="box on"></span></div>
+          <div style="height:1px;background:var(--outline-var);margin:0 16px"></div>
+          <div class="actions" style="padding:10px 12px">
+            <span class="btn outline err">Anuluj</span>
+            <span class="btn tertiary">Zatwierdź</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs">
+        <li>szerszy, z dividerami, elevation 3 — wygląda jak trzecia apka</li>
+        <li>treść (lista checkboxów) może zostać; ramka powinna być jak A albo B</li>
+      </ul>
+      <button class="pick" type="button">Wybieram ten wygląd na dialogi decyzji</button>
+    </article>
+  </div>
+
+  <h3 class="subq">4b. Overlay narzędzia — nie konkuruje z 4a</h3>
+  <p class="why">Głos: user ma mówić, nie zatwierdzać. X + ciemniejszy scrim ma sens. Nie wybieraj tego jako wyglądu „usuń listę”. Pytanie: zostawić ten overlay, czy przerobić na branded bottom sheet (jak AddToList).</p>
+  <div class="grid">
+    <article class="v" data-cluster="dialog-tool" data-id="voice-overlay">
+      <div class="v-meta"><h3>Zostaw overlay (ciemny scrim + X)</h3><p>VoiceSearchSheet · Dialog, nie sheet</p></div>
+      <div class="stage"><div class="phone">
+        <div class="scrim dark"><div class="dialog">
+          <div style="display:flex;align-items:center">
+            <div style="flex:1;font-weight:600">Słucham…</div>
+            <div class="x">✕</div>
+          </div>
+          <div style="text-align:center;font-size:36px;padding:12px 0;color:var(--primary)">●</div>
+          <p style="text-align:center;margin:0 0 8px">Mów teraz</p>
+        </div></div>
+      </div></div>
+      <ul class="diffs"><li>52% czerń, elevation 6, tap w tło zamyka</li></ul>
+      <button class="pick" type="button">Zostaw overlay na głos</button>
+    </article>
+    <article class="v" data-cluster="dialog-tool" data-id="voice-sheet">
+      <div class="v-meta"><h3>Przerób głos na bottom sheet</h3><p>ten sam skin co AddToList (pill, elevation 0)</p></div>
+      <div class="stage"><div class="phone">
+        <div class="scrim bottom"><div class="sheet">
+          <div class="handle"></div>
+          <div style="display:flex;align-items:center;margin-bottom:8px">
+            <div style="flex:1;font-weight:700;text-align:center">Słucham…</div>
+          </div>
+          <div style="text-align:center;font-size:36px;padding:8px 0;color:var(--primary)">●</div>
+          <p class="sub">Mów teraz</p>
+        </div></div>
+      </div></div>
+      <ul class="diffs"><li>wtedy głos, dodaj-do-listy, sort i filtr mają jedną metaforę: sheet od dołu</li></ul>
+      <button class="pick" type="button">Głos jako sheet</button>
+    </article>
+  </div>
+
+  <h3 class="subq">4c. Lekki podgląd — tylko radius</h3>
+  <p class="why">Zwroty na fiszce: tap w tło zamyka, brak przycisków. To nie jest dialog decyzji. Jedyne co tu ujednolicić: 16 dp vs 24 dp (reszta apki).</p>
+  <div class="grid">
+    <article class="v" data-cluster="dialog-peek" data-id="usages-16">
+      <div class="v-meta"><h3>Zostaw 16 dp</h3><p>obecny FlashcardBackContent</p></div>
+      <div class="stage"><div class="phone">
+        <div class="scrim dark"><div class="dialog" style="border-radius:16px">
+          <div style="font-weight:500">despertarse temprano</div>
+          <div class="hint">wstawać wcześnie</div>
+          <div style="height:1px;background:var(--outline-var);margin:10px 0"></div>
+          <div style="font-weight:500">no te despiertes</div>
+          <div class="hint">nie budź się</div>
+        </div></div>
+      </div></div>
+      <ul class="diffs"><li>wypada z tokenu AppDialogShape 24</li></ul>
+      <button class="pick" type="button">Zostaw 16 dp</button>
+    </article>
+    <article class="v" data-cluster="dialog-peek" data-id="usages-24">
+      <div class="v-meta"><h3>Dopnij 24 dp jak reszta dialogów</h3><p>ta sama treść, token AppDialogShape</p></div>
+      <div class="stage"><div class="phone">
+        <div class="scrim dark"><div class="dialog">
+          <div style="font-weight:500">despertarse temprano</div>
+          <div class="hint">wstawać wcześnie</div>
+          <div style="height:1px;background:var(--outline-var);margin:10px 0"></div>
+          <div style="font-weight:500">no te despiertes</div>
+          <div class="hint">nie budź się</div>
+        </div></div>
+      </div></div>
+      <ul class="diffs"><li>nadal bez przycisków, nadal tap w tło — tylko spójny róg</li></ul>
+      <button class="pick" type="button">24 dp jak dialogi</button>
+    </article>
+  </div>
+</section>
+
+<section class="cluster" id="lemma">
+  <h2>5. Wiersz słowa (lemma + gloss + akcja)</h2>
+  <p class="ask">Pięć kafelków tej samej encji LookupCandidate / related word.</p>
+  <div class="grid">
+    <article class="v" data-cluster="lemma" data-id="candidate">
+      <div class="v-meta"><h3>CandidateRow — szukaj tekstowy</h3><p>AppCard 18 dp · koło + 40 dp</p></div>
+      <div class="stage"><div class="phone short" style="height:220px;display:flex;align-items:center">
+        <div class="appcard" style="width:100%">
+          <div class="lemma">
+            <div class="txt">
+              <div class="l">quejarse</div>
+              <div class="g">skarżyć się</div>
+              <div style="margin-top:8px"><span class="chip">czasownik</span></div>
+            </div>
+            <div class="add-circle">+</div>
+          </div>
+        </div>
+      </div></div>
+      <ul class="diffs"><li>karta z ramką outline · POS chip · koło primary</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="lemma" data-id="voice-row">
+      <div class="v-meta"><h3>VoiceCandidateRow</h3><p>AppDialogShape 24 · IconButton +, nie koło</p></div>
+      <div class="stage"><div class="phone short" style="height:220px;display:flex;align-items:center;padding:16px">
+        <div style="background:var(--sv);border-radius:var(--dialog);width:100%">
+          <div class="lemma" style="background:transparent">
+            <div class="txt">
+              <div class="l" style="font-size:14px">quejarse</div>
+              <div class="g">skarżyć się</div>
+            </div>
+            <div style="font-size:22px;color:var(--primary);padding:8px">+</div>
+          </div>
+        </div>
+      </div></div>
+      <ul class="diffs"><li>brak POS · brak chipa „już na liście” · + to IconButton</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="lemma" data-id="choice">
+      <div class="v-meta"><h3>ChoiceTile po błędzie</h3><p>20 dp · surfaceVariant · koło 40 jak CandidateRow</p></div>
+      <div class="stage"><div class="phone short" style="height:220px;display:flex;align-items:center;padding:16px">
+        <div style="background:var(--sv);border-radius:20px;width:100%">
+          <div class="lemma" style="background:transparent">
+            <div class="txt">
+              <div class="l">quejarse</div>
+              <div class="g">skarżyć się</div>
+            </div>
+            <div class="add-circle">+</div>
+          </div>
+        </div>
+      </div></div>
+      <ul class="diffs"><li>aktywny choice jest pill 28 z ramką; ten stan 20 dp bez ramki</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="lemma" data-id="suggest">
+      <div class="v-meta"><h3>SuggestionTile — review</h3><p>16 dp · border 2 gdy selected · bez +</p></div>
+      <div class="stage"><div class="phone short" style="height:260px;padding:16px">
+        <div class="hint">Czy chodziło Ci o:</div>
+        <div class="sug on">
+          <div style="display:flex;justify-content:space-between">
+            <div>
+              <div class="l">despertarse</div>
+              <div class="g">budzić się</div>
+              <div style="margin-top:8px"><span class="chip">czasownik</span></div>
+            </div>
+            <div style="color:var(--primary);font-size:18px">✓</div>
+          </div>
+        </div>
+        <div class="sug">
+          <div class="l">despertar</div>
+          <div class="g">budzić kogoś</div>
+        </div>
+      </div></div>
+      <ul class="diffs"><li>wybór kafelkiem, nie plusem · inny radius</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="lemma" data-id="related">
+      <div class="v-meta"><h3>RelatedWordsList na rewersie</h3><p>wiersz w sekcji · koło 40 · TagChip POS</p></div>
+      <div class="stage"><div class="phone short" style="height:220px;padding:16px">
+        <div class="lemma" style="padding:8px 0;background:transparent;border-bottom:1px solid var(--border)">
+          <div class="txt">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="l">dormir</div><span class="chip">czasownik</span>
+            </div>
+            <div class="g">spać</div>
+          </div>
+          <div class="add-circle">+</div>
+        </div>
+      </div></div>
+      <ul class="diffs"><li>najbliżej CandidateRow, bez AppCard</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+  </div>
+</section>
+
+<section class="cluster" id="cefr">
+  <h2>6. Poziom CEFR</h2>
+  <p class="ask">To samo pytanie, inny kontroler: radio lista vs dropdown.</p>
+  <div class="grid">
+    <article class="v" data-cluster="cefr" data-id="radio">
+      <div class="v-meta"><h3>Onboarding — radio</h3><p>OnboardingScreen.kt · też martwy Profile</p></div>
+      <div class="stage"><div class="phone">
+        <div class="phone-pad">
+          <div style="font-size:22px;font-weight:700;margin-bottom:4px">Konfiguracja nauki</div>
+          <div class="hint">Poziom CEFR</div>
+          <div class="radio"><span class="dot"></span> A1</div>
+          <div class="radio"><span class="dot"></span> A2</div>
+          <div class="radio"><span class="dot on"></span> B1</div>
+          <div class="radio"><span class="dot"></span> B2</div>
+          <div class="radio"><span class="dot"></span> C1</div>
+          <div class="radio"><span class="dot"></span> C2</div>
+        </div>
+      </div></div>
+      <ul class="diffs"><li>gołe RadioButton, bez AppCard, bez pill</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v pair" data-cluster="cefr" data-id="dropdown">
+      <div class="v-meta"><h3>Settings — dropdown</h3><p>SettingsDropdown, pill + surface</p></div>
+      <div class="stage pair">
+        <div class="shot">
+          <div class="shot-label">Zwinięty</div>
+          <div class="phone">
+            <div class="phone-pad">
+              <div class="acc">
+                <div style="padding:12px 16px">
+                  <div style="font-weight:600">Poziom</div>
+                  <div class="hint" style="margin:0">B1</div>
+                </div>
+                <div style="height:1px;background:var(--outline-var);margin:0 16px"></div>
+                <div style="padding:8px 16px 16px">
+                  <div class="hint">Znajomość języka uczonego</div>
+                  <div class="dd-wrap">
+                    <div class="field surface" style="display:flex;justify-content:space-between;align-items:center">B1 <span class="caret">▾</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="shot-label">Rozwinięty</div>
+          <div class="phone">
+            <div class="phone-pad">
+              <div class="acc">
+                <div style="padding:12px 16px">
+                  <div style="font-weight:600">Poziom</div>
+                  <div class="hint" style="margin:0">B1</div>
+                </div>
+                <div style="height:1px;background:var(--outline-var);margin:0 16px"></div>
+                <div style="padding:8px 16px 16px">
+                  <div class="hint">Znajomość języka uczonego</div>
+                  <div class="dd-wrap">
+                    <div class="field surface open" style="display:flex;justify-content:space-between;align-items:center">B1 <span class="caret">▴</span></div>
+                    <div class="dd-menu">
+                      <div>A1</div>
+                      <div>A2</div>
+                      <div class="on">B1</div>
+                      <div>B2</div>
+                      <div>C1</div>
+                      <div>C2</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul class="diffs"><li>ten sam zestaw A1–C2 w ExposedDropdown</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+  </div>
+</section>
+
+<section class="cluster" id="tenses">
+  <h2>7. Czasy czasownika</h2>
+  <p class="ask">Onboarding: checkboxy na stronie. Settings: radio + osobny modal.</p>
+  <div class="grid">
+    <article class="v" data-cluster="tenses" data-id="inline">
+      <div class="v-meta"><h3>Onboarding — checkboxy inline</h3><p>brak Potwierdź, zmiana od razu</p></div>
+      <div class="stage"><div class="phone">
+        <div class="phone-pad">
+          <div class="hint" style="font-weight:600;color:var(--ink);font-size:15px">Czasy czasowników</div>
+          <div class="radio"><span class="box on"></span> Presente</div>
+          <div class="radio"><span class="box"></span> Pretérito indefinido</div>
+          <div class="radio"><span class="box on"></span> Pretérito imperfecto</div>
+          <div class="radio"><span class="box"></span> Futuro</div>
+          <div class="radio"><span class="box"></span> Condicional</div>
+          <span class="btn primary block" style="margin-top:20px">Zacznij naukę</span>
+        </div>
+      </div></div>
+      <ul class="diffs"><li>Start bez AppButtonShape w kodzie · wygląda jak prototyp</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="tenses" data-id="modal">
+      <div class="v-meta"><h3>Settings — modal TensePicker</h3><p>radio Wszystkie / Wybrane + Edytuj</p></div>
+      <div class="stage"><div class="phone">
+        <div class="scrim"><div class="dialog" style="padding:0;overflow:hidden">
+          <div style="padding:16px 20px;font-weight:700">Wybrane czasy</div>
+          <div class="settings-row">Presente <span class="box on"></span></div>
+          <div class="settings-row">Pretérito indefinido <span class="box"></span></div>
+          <div class="settings-row">Futuro <span class="box on"></span></div>
+          <div class="actions" style="padding:10px 12px">
+            <span class="btn outline err">Anuluj</span>
+            <span class="btn tertiary">Zatwierdź</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs"><li>dojrzalszy UX: draft, Anuluj, Zatwierdź tertiary</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+  </div>
+</section>
+
+<section class="cluster" id="lang">
+  <h2>8. Dropdown języka</h2>
+  <p class="ask">Onboarding i Settings pytają o ten sam język — inny kształt pola.</p>
+  <div class="grid">
+    <article class="v pair" data-cluster="lang" data-id="onb">
+      <div class="v-meta"><h3>Onboarding LangDropdown</h3><p>brak AppButtonShape, default outlined</p></div>
+      <div class="stage pair">
+        <div class="shot">
+          <div class="shot-label">Zwinięty</div>
+          <div class="phone short">
+            <div class="phone-pad">
+              <div class="hint">Język aplikacji</div>
+              <div class="field def" style="display:flex;justify-content:space-between;align-items:center">Polski <span class="caret">▾</span></div>
+              <div class="hint">Język nauki</div>
+              <div class="field def" style="display:flex;justify-content:space-between;align-items:center">Hiszpański <span class="caret">▾</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="shot-label">Rozwinięty</div>
+          <div class="phone short">
+            <div class="phone-pad">
+              <div class="hint">Język aplikacji</div>
+              <div class="dd-wrap">
+                <div class="field def open" style="display:flex;justify-content:space-between;align-items:center">Polski <span class="caret">▴</span></div>
+                <div class="dd-menu">
+                  <div class="on">Polski</div>
+                  <div>English</div>
+                  <div>Español</div>
+                  <div>Français</div>
+                  <div>Deutsch</div>
+                </div>
+              </div>
+              <div class="hint">Język nauki</div>
+              <div class="field def" style="display:flex;justify-content:space-between;align-items:center">Hiszpański <span class="caret">▾</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul class="diffs"><li>ostre rogi Material, białe tło, ramka</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v pair" data-cluster="lang" data-id="set">
+      <div class="v-meta"><h3>SettingsDropdown</h3><p>pill + surface fill</p></div>
+      <div class="stage pair">
+        <div class="shot">
+          <div class="shot-label">Zwinięty</div>
+          <div class="phone short">
+            <div class="phone-pad">
+              <div class="hint">Język aplikacji</div>
+              <div class="field surface" style="display:flex;justify-content:space-between;align-items:center">Polski <span class="caret">▾</span></div>
+              <div class="hint">Język nauki</div>
+              <div class="field surface" style="display:flex;justify-content:space-between;align-items:center">Hiszpański <span class="caret">▾</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="shot-label">Rozwinięty</div>
+          <div class="phone short">
+            <div class="phone-pad">
+              <div class="hint">Język aplikacji</div>
+              <div class="dd-wrap">
+                <div class="field surface open" style="display:flex;justify-content:space-between;align-items:center">Polski <span class="caret">▴</span></div>
+                <div class="dd-menu">
+                  <div class="on">Polski</div>
+                  <div>English</div>
+                  <div>Español</div>
+                  <div>Français</div>
+                  <div>Deutsch</div>
+                </div>
+              </div>
+              <div class="hint">Język nauki</div>
+              <div class="field surface" style="display:flex;justify-content:space-between;align-items:center">Hiszpański <span class="caret">▾</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul class="diffs"><li>spójne z Auth / Practice type / Settings liczby</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+  </div>
+</section>
+
+<section class="cluster" id="sheets">
+  <h2>9. Bottom sheet — skin ramki, nie wybór funkcji</h2>
+  <p class="ask">Nie wybierasz między „Dodaj do listy” a „Popraw kartę”. Oba zostają. Pytanie: jak ma wyglądać <em>szuflada od dołu</em>, gdy już wjedzie.</p>
+  <p class="why">
+    W kodzie wszystko to <code>ModalBottomSheet</code>. AddToList i SelfEdit dostają <code>shape = AppButtonShape</code> (pill 28) i <code>tonalElevation = 0</code>.
+    Correction, History, Sort, Filter nie ustawiają nic — leci default Material (inny róg, cień).
+    User widzi tę samą gestykę (wjeżdża z dołu, pasek, zrzut), ale panel wygląda jak z dwóch aptek.
+    Poniżej ta sama treść w obu ramkach — wybierasz ramkę.
+  </p>
+  <div class="grid">
+    <article class="v" data-cluster="sheets" data-id="branded">
+      <div class="v-meta"><h3>Skin marki (pill, płaski)</h3><p>dziś: AddToList, SelfEdit</p></div>
+      <div class="stage"><div class="phone">
+        <div class="scrim bottom"><div class="sheet">
+          <div class="handle"></div>
+          <h4>despertarse</h4>
+          <p class="sub">budzić się</p>
+          <span class="btn primary block h52">Uczę się</span>
+          <div style="height:10px"></div>
+          <span class="btn outline block h52">Inna lista</span>
+        </div></div>
+      </div></div>
+      <ul class="diffs">
+        <li>górne rogi pill 28 dp, bez cienia</li>
+        <li>to jest ten sam token co przyciski Auth / Ucz się</li>
+      </ul>
+      <button class="pick" type="button">Ta ramka na wszystkie sheety</button>
+    </article>
+    <article class="v" data-cluster="sheets" data-id="material">
+      <div class="v-meta"><h3>Skin Material (default)</h3><p>dziś: Correction, History, Sort, Filter — tu ta sama treść co obok</p></div>
+      <div class="stage"><div class="phone">
+        <div class="scrim bottom"><div class="sheet material">
+          <div class="handle"></div>
+          <h4>despertarse</h4>
+          <p class="sub">budzić się</p>
+          <span class="btn primary block h52">Uczę się</span>
+          <div style="height:10px"></div>
+          <span class="btn outline block h52">Inna lista</span>
+        </div></div>
+      </div></div>
+      <ul class="diffs">
+        <li>górne rogi default M3 (~28, ale z cieniem / tonem)</li>
+        <li>treść identyczna — różni się tylko ramka</li>
+      </ul>
+      <button class="pick" type="button">Ta ramka na wszystkie sheety</button>
+    </article>
+  </div>
+  <p class="why" style="margin-top:14px;margin-bottom:0">
+    Correction (chipy + notatka) i Sort (lista opcji) zostają jako osobne ekrany. Po wyborze ramki dostaną ten sam kształt i elevation, bez zmiany treści.
+    Osobna decyzja, nie tu: czy SelfEdit ma blokować zrzut gestem (dziś tak), a reszta nie.
+  </p>
+</section>
+
+<section class="cluster" id="fields">
+  <h2>10. Pole tekstowe — trzy radiusy</h2>
+  <p class="ask">User wpisuje tekst. Auth/AddToList/Settings = pill 28. Dialogi list = 14. Import paste / self-edit / notatka korekty = default 4.</p>
+  <div class="grid">
+    <article class="v" data-cluster="fields" data-id="pill">
+      <div class="v-meta"><h3>Pill 28 — Auth, szukaj, practice type</h3></div>
+      <div class="stage"><div class="phone short" style="height:200px;padding:20px">
+        <input class="field pill" placeholder="Szukaj słowa…" readonly />
+        <input class="field pill" placeholder="Twoja odpowiedź" readonly />
+      </div></div>
+      <ul class="diffs"><li>to jest już język wizualny marki</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v pair" data-cluster="fields" data-id="r14">
+      <div class="v-meta"><h3>14 dp — create / rename / move dropdown</h3></div>
+      <div class="stage pair">
+        <div class="shot">
+          <div class="shot-label">Zwinięty</div>
+          <div class="phone short" style="height:240px;padding:20px">
+            <input class="field r14" placeholder="Nazwa" readonly />
+            <div class="dd-wrap">
+              <div class="dropdown">Uczę się <span class="caret">▾</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="shot-label">Rozwinięty</div>
+          <div class="phone short" style="height:240px;padding:20px">
+            <input class="field r14" placeholder="Nazwa" readonly />
+            <div class="dd-wrap">
+              <div class="dropdown open">Uczę się <span class="caret">▴</span></div>
+              <div class="dd-menu">
+                <div class="on">Uczę się</div>
+                <div>Podróże</div>
+                <div>Praca</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul class="diffs"><li>tylko w dialogach list</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="fields" data-id="def">
+      <div class="v-meta"><h3>Default Material — paste, self-edit, notatka</h3></div>
+      <div class="stage"><div class="phone short" style="height:200px;padding:20px">
+        <div class="field def" style="height:88px">Wklej tekst…</div>
+      </div></div>
+      <ul class="diffs"><li>wypada z reszty apki</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+  </div>
+</section>
+
+<section class="cluster" id="fix">
+  <h2>11. Wejście w „Popraw kartę” — drzwi, nie pokój</h2>
+  <p class="ask">Listy i Practice zostają. Po tapnięciu leci ten sam zestaw: zgłoś błąd → wynik AI → edytuj sam → historia. Różnią się tylko drzwi.</p>
+  <p class="why">
+    Na liście: kafelek → ⋮ → ikona ołówka (bez napisu „Popraw kartę”).
+    W nauce: pod rewersem fiszki dwa napisy <em>Popraw kartę</em> / <em>Historia karty</em>.
+    User uczy się dwóch gestów na tę samą akcję. Pytanie: czy drzwi mają być wszędzie takie same, czy wolno inne w gęstej liście i inne po odpowiedzi.
+  </p>
+
+  <h3 class="subq">11a. Jeden rodzaj drzwi wszędzie</h3>
+  <p class="why">Wybierasz kontrolkę. Poniżej ta sama akcja narysowana na kafelku listy i pod fiszką — żeby było widać, jakby wyglądało po ujednoliceniu.</p>
+  <div class="grid">
+    <article class="v pair" data-cluster="fix-door" data-id="labels">
+      <div class="v-meta"><h3>Drzwi z etykietą</h3><p>dziś tylko Practice — tu też na kafelku listy</p></div>
+      <div class="stage pair">
+        <div class="shot">
+          <div class="shot-label">Na liście</div>
+          <div class="phone short" style="height:260px;padding:16px">
+            <div style="background:var(--sv);border-radius:20px;padding:14px 16px">
+              <div style="display:flex;justify-content:space-between;font-weight:600">despertarse <span class="chip" style="background:#CAD3BB;color:#000">w nauce</span></div>
+              <div class="g" style="margin:8px 0 10px">budzić się</div>
+              <div style="text-align:center">
+                <span class="btn text">Popraw kartę</span>
+                <span class="btn text" style="color:#E65100">Historia karty</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="shot-label">W nauce</div>
+          <div class="phone short" style="height:260px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end">
+            <div style="text-align:center">
+              <span class="btn text">Popraw kartę</span>
+              <span class="btn text" style="color:#E65100">Historia karty</span>
+            </div>
+            <div class="grade">
+              <i style="background:#BF557F">Powtórz</i>
+              <i style="background:#B85C5C">Trudne</i>
+              <i style="background:#C4894A">Dobrze</i>
+              <i style="background:#6DCF65">Łatwe</i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul class="diffs">
+        <li>zawsze widać, co robi przycisk — bez zgadywania ikon</li>
+        <li>na kafelku listy zajmuje więcej miejsca niż ⋮</li>
+      </ul>
+      <button class="pick" type="button">Etykiety na liście i w nauce</button>
+    </article>
+
+    <article class="v pair" data-cluster="fix-door" data-id="icons">
+      <div class="v-meta"><h3>Drzwi-ikony</h3><p>dziś tylko Listy (za ⋮) — tu też pod fiszką</p></div>
+      <div class="stage pair">
+        <div class="shot">
+          <div class="shot-label">Na liście (⋮ otwarte)</div>
+          <div class="phone short" style="height:260px;padding:16px">
+            <div style="background:var(--sv);border-radius:20px;padding:14px 16px">
+              <div style="display:flex;justify-content:space-between;font-weight:600">despertarse <span class="chip" style="background:#CAD3BB;color:#000">w nauce</span></div>
+              <div class="g" style="margin:8px 0 12px">budzić się</div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div class="add-circle" style="background:var(--sec-c);color:var(--on-sec-c);font-size:13px">☰</div>
+                <div style="display:flex;gap:8px">
+                  <div class="add-circle" style="background:rgba(191,85,127,.15);color:var(--error);font-size:14px">✕</div>
+                  <div class="add-circle" style="background:var(--pc);color:var(--on-pc);font-size:14px">→</div>
+                  <div class="add-circle" style="background:var(--ter-c);color:#1B4D18;font-size:14px">✎</div>
+                  <div class="add-circle" style="background:rgba(230,81,0,.15);color:#E65100;font-size:14px">⏱</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="shot">
+          <div class="shot-label">W nauce</div>
+          <div class="phone short" style="height:260px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end">
+            <div style="display:flex;justify-content:center;gap:12px;margin-bottom:10px">
+              <div class="add-circle" style="background:var(--ter-c);color:#1B4D18;font-size:16px">✎</div>
+              <div class="add-circle" style="background:rgba(230,81,0,.15);color:#E65100;font-size:16px">⏱</div>
+            </div>
+            <div class="grade">
+              <i style="background:#BF557F">Powtórz</i>
+              <i style="background:#B85C5C">Trudne</i>
+              <i style="background:#C4894A">Dobrze</i>
+              <i style="background:#6DCF65">Łatwe</i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul class="diffs">
+        <li>gęsto, spójne z innymi ikonami na kafelku</li>
+        <li>w nauce łatwiej trafić w zły przycisk obok ocen — bez etykiety</li>
+      </ul>
+      <button class="pick" type="button">Ikony na liście i w nauce</button>
+    </article>
+  </div>
+
+  <h3 class="subq">11b. Albo zostaw różne drzwi</h3>
+  <p class="why">To jest legalna opcja: lista jest gęsta (ikony za ⋮), nauka ma czas i miejsce na napis. Wtedy nic nie ujednolicasz poza tym, że po tapnięciu leci ten sam sheet (już tak jest).</p>
+  <div class="grid">
+    <article class="v" data-cluster="fix-door" data-id="keep-split">
+      <div class="v-meta"><h3>Zostaw jak jest</h3><p>ikony na liście · etykiety w nauce</p></div>
+      <div class="stage"><div class="phone short" style="height:220px;padding:20px;display:flex;align-items:center">
+        <p class="hint" style="font-size:14px;line-height:1.45;color:var(--ink)">
+          Lista: ⋮ → ✎ / historia.<br/>
+          Nauka: „Popraw kartę” + „Historia karty”.<br/>
+          Pokój ten sam, drzwi różne — świadomie.
+        </p>
+      </div></div>
+      <ul class="diffs"><li>zero pracy UI · user i tak uczy się dwóch wejść</li></ul>
+      <button class="pick" type="button">Różne drzwi w różnych ekranach</button>
+    </article>
+  </div>
+</section>
+
+<section class="cluster" id="empty">
+  <h2>12. Pusty stan</h2>
+  <p class="ask">EmptyState composable vs zwykły Text.</p>
+  <div class="grid">
+    <article class="v" data-cluster="empty" data-id="component">
+      <div class="v-meta"><h3>EmptyState — Practice / Learning</h3><p>tytuł + hint, padding 48</p></div>
+      <div class="stage"><div class="phone short" style="display:flex;align-items:center;justify-content:center;padding:24px;text-align:center">
+        <div>
+          <div style="font-weight:600;font-size:16px">Brak kart do ćwiczenia</div>
+          <div class="hint">Dodaj słówka z ekranu głównego</div>
+          <span class="btn primary block" style="margin-top:16px">Wróć</span>
+        </div>
+      </div></div>
+      <ul class="diffs"><li>jedyne miejsce z tytułem + podtytułem + CTA</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="empty" data-id="text">
+      <div class="v-meta"><h3>Goły Text — Listy / Dodaj</h3><p>padding 40–56, bez hintu dwulinijkowego</p></div>
+      <div class="stage"><div class="phone short" style="display:flex;align-items:center;justify-content:center;padding:24px;text-align:center">
+        <div class="hint" style="font-size:16px;color:var(--muted)">Pusta lista</div>
+      </div></div>
+      <ul class="diffs"><li>Dodaj: „Wpisz słowo albo zaimportuj listę…” · inny tekst, ten sam ubogi layout</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+  </div>
+</section>
+
+<section class="cluster" id="secondary">
+  <h2>13. Przycisk wtórny w dialogu</h2>
+  <p class="ask">Import wynik używa TextButton. Wszystko inne — OutlinedButton. Cancel raz error, raz nie.</p>
+  <div class="grid">
+    <article class="v" data-cluster="secondary" data-id="outlined">
+      <div class="v-meta"><h3>OutlinedButton — standard list/import start</h3></div>
+      <div class="stage"><div class="phone short">
+        <div class="scrim"><div class="dialog">
+          <h4>Import fiszek</h4>
+          <p class="body">Plik: quizlet.txt</p>
+          <div class="actions">
+            <span class="btn outline err">Anuluj</span>
+            <span class="btn primary">Importuj</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs"><li>Anuluj w kolorze error mimo że to nie destrukcja</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="secondary" data-id="text">
+      <div class="v-meta"><h3>TextButton — tylko ImportResult</h3></div>
+      <div class="stage"><div class="phone short">
+        <div class="scrim"><div class="dialog">
+          <h4>Import zakończony</h4>
+          <p class="body">Dodano 12, duplikaty 3</p>
+          <div class="actions">
+            <span class="btn text">Pokaż listę</span>
+            <span class="btn primary">OK</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs"><li>jedyny TextButton jako secondary w dialogu importu</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+    <article class="v" data-cluster="secondary" data-id="equal">
+      <div class="v-meta"><h3>Równy rząd 48 — CardDialogButtonRow</h3></div>
+      <div class="stage"><div class="phone short">
+        <div class="scrim"><div class="dialog">
+          <h4>Zgłoszenie odrzucone</h4>
+          <p style="font-weight:700;margin:0 0 8px">despertarse</p>
+          <p class="body">Nie znaleźliśmy błędów na tej karcie.</p>
+          <div class="actions fill">
+            <span class="btn outline h48">Anuluj</span>
+            <span class="btn primary h48">Edytuj samodzielnie</span>
+          </div>
+        </div></div>
+      </div></div>
+      <ul class="diffs"><li>najbardziej „produktowy” rząd przycisków w apce</li></ul>
+      <button class="pick" type="button">Wybieram ten</button>
+    </article>
+  </div>
+</section>
+
+</main>
+<footer class="foot">
+  Tokeny z Theme.kt / AppComponents.kt · copy PL z values-pl/strings.xml · inwentarz w ui-ux-inwentarz-standaryzacja.md
+</footer>
+<script>
+const KEY = "vocab-ui-picks-v1";
+const labels = {};
+document.querySelectorAll("article.v").forEach((el) => {
+  const h = el.querySelector("h3");
+  labels[el.dataset.cluster + ":" + el.dataset.id] = h ? h.textContent : el.dataset.id;
+});
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; }
+}
+function save(p) { localStorage.setItem(KEY, JSON.stringify(p)); }
+function paint() {
+  const p = load();
+  document.querySelectorAll("article.v").forEach((el) => {
+    el.classList.toggle("chosen", p[el.dataset.cluster] === el.dataset.id);
+  });
+  const parts = Object.entries(p).map(([c, id]) => labels[c + ":" + id] || id);
+  document.getElementById("picks-out").textContent = parts.length ? parts.join(" · ") : "jeszcze nic nie zaznaczono";
+}
+document.querySelectorAll(".pick").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const art = btn.closest("article.v");
+    const p = load();
+    p[art.dataset.cluster] = art.dataset.id;
+    save(p);
+    paint();
+  });
+});
+paint();
+</script>
+</body>
+</html>

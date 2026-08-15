@@ -1,18 +1,49 @@
-"""JSON schema — analiza layoutu importowanych fiszek (role pól + bloki UI)."""
+"""JSON schema — analiza layoutu importowanych fiszek (display v2)."""
 
 
+# Zamknięty słownik + legacy (title/paragraph/pre/meta) dla wstecznej zgodności.
 _BLOCK_TYPES = [
-    "title",
-    "paragraph",
+    "headword",
+    "gloss",
     "bilingual",
     "list",
     "table",
-    "meta",
+    "note",
     "chip",
     "section",
     "divider",
+    "text",
+    # legacy
+    "title",
+    "paragraph",
+    "meta",
     "pre",
 ]
+
+_ALIGN = ["start", "center", None]
+_SIZE = ["display", "lemma", "gloss", "body", "caption", None]
+_SEMANTIC = [
+    "headword",
+    "translation",
+    "example",
+    "note",
+    "conjugation",
+    "pronunciation",
+    "tags",
+    None,
+]
+
+
+def _tts_schema() -> dict:
+    return {
+        "type": ["object", "null"],
+        "additionalProperties": False,
+        "properties": {
+            "enabled": {"type": "boolean"},
+            "lang": {"type": ["string", "null"]},
+        },
+        "required": ["enabled", "lang"],
+    }
 
 
 def _leaf_block_props() -> dict:
@@ -38,6 +69,10 @@ def _leaf_block_props() -> dict:
             "type": ["string", "null"],
             "enum": ["none", "paragraphs", "headings", None],
         },
+        "align": {"type": ["string", "null"], "enum": _ALIGN},
+        "size": {"type": ["string", "null"], "enum": _SIZE},
+        "semantic": {"type": ["string", "null"], "enum": _SEMANTIC},
+        "tts": _tts_schema(),
     }
 
 
@@ -54,6 +89,10 @@ _LEAF_REQUIRED = [
     "headers",
     "rows",
     "split",
+    "align",
+    "size",
+    "semantic",
+    "tts",
 ]
 
 
@@ -136,6 +175,13 @@ def import_display_schema() -> dict:
                         "dodatkowego podziału (split/headings) zamiast jednego akapitu"
                     ),
                 },
+                "bidirectional": {
+                    "type": "boolean",
+                    "description": (
+                        "True tylko gdy pewnie otagowano semantic=headword (L2) "
+                        "i semantic=translation (L1)"
+                    ),
+                },
                 "rationale": {"type": "string"},
             },
             "required": [
@@ -144,6 +190,7 @@ def import_display_schema() -> dict:
                 "prompt_blocks",
                 "answer_blocks",
                 "answer_needs_structure",
+                "bidirectional",
                 "rationale",
             ],
         },
@@ -177,3 +224,27 @@ def import_answer_structure_schema() -> dict:
             "required": ["strategy", "heading_hints", "sample_blocks", "rationale"],
         },
     }
+
+
+def validate_import_display_payload(data: dict) -> tuple[bool, str]:
+    """Lekka walidacja strukturalna wyjścia AI (nie pełny JSON Schema)."""
+    if not isinstance(data, dict):
+        return False, "not an object"
+    for key in (
+        "prompt_style",
+        "field_roles",
+        "prompt_blocks",
+        "answer_blocks",
+        "answer_needs_structure",
+        "rationale",
+    ):
+        if key not in data:
+            return False, f"missing {key}"
+    if not isinstance(data.get("prompt_blocks"), list):
+        return False, "prompt_blocks not a list"
+    if not isinstance(data.get("answer_blocks"), list):
+        return False, "answer_blocks not a list"
+    if not data["prompt_blocks"]:
+        return False, "prompt_blocks empty"
+    # bidirectional opcjonalne w starych odpowiedziach — domyślnie false przy braku
+    return True, ""

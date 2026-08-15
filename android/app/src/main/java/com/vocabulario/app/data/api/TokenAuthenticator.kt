@@ -1,6 +1,6 @@
 package com.vocabulario.app.data.api
 
-import com.vocabulario.app.BuildConfig
+import com.vocabulario.app.data.ApiBaseUrl
 import com.vocabulario.app.data.local.TokenStore
 import kotlinx.serialization.json.Json
 import okhttp3.Authenticator
@@ -63,7 +63,7 @@ class TokenAuthenticator @Inject constructor(
             }
 
             return try {
-                val url = BuildConfig.API_BASE_URL.trimEnd('/') + "/auth/refresh"
+                val url = ApiBaseUrl.resolve().trimEnd('/') + "/auth/refresh"
                 val bodyJson = json.encodeToString(
                     RefreshRequest.serializer(),
                     RefreshRequest(refresh_token = refresh),

@@ -68,7 +68,7 @@
 
     <string name="tab_lists">lists</string>
 
-    <string name="auth_login_title">Welcome back</string>
+    <string name="auth_login_title">Log in</string>
 
     <string name="auth_register_title">Create account</string>
 
@@ -78,27 +78,29 @@
 
     <string name="auth_google">Continue with Google</string>
 
+    <string name="auth_or_continue">Or continue with email</string>
+
     <string name="auth_email">Email</string>
 
     <string name="auth_password">Password</string>
 
-    <string name="auth_tagline">Learn vocabulary at your pace</string>
 
-    <string name="auth_password_hint">At least 8 characters</string>
 
     <string name="auth_have_account">I already have an account</string>
 
-    <string name="onboarding_title">Learning setup</string>
+    <string name="onboarding_app_setup">App setup</string>
 
-    <string name="onboarding_subtitle">Choose a language pair, CEFR level and verb tenses.</string>
+    <string name="onboarding_choose_language">Choose your language</string>
 
-    <string name="onboarding_native">App language</string>
+    <string name="onboarding_continue">Continue</string>
 
-    <string name="onboarding_learning">Learning language</string>
+    <string name="onboarding_want_to_learn">I want to learn:</string>
 
     <string name="onboarding_start">Start</string>
 
-    <string name="onboarding_cefr">CEFR level</string>
+    <string name="onboarding_level">Choose language level</string>
+
+    <string name="onboarding_level_unknown">I don\'t know</string>
 
     <string name="onboarding_tenses">Verb tenses</string>
 
@@ -129,6 +131,8 @@
 
     <string name="settings_mode_flash">Flashcards</string>
 
+    <string name="settings_mode_vocabulario_only">Vocabulario cards only</string>
+
     <string name="settings_tolerate_typos">Allow minor typos</string>
 
     <string name="settings_tolerate_typos_sub">Spelling and diacritics</string>
@@ -143,13 +147,14 @@
 
     <string name="settings_card_layout_sub">What you see after the answer</string>
 
-    <string name="settings_examples">Example sentences</string>
+    <string name="settings_examples">Sentences</string>
 
-    <string name="settings_usages">Usage examples</string>
+    <string name="settings_usages">Phrases</string>
 
     <string name="settings_periphrases">Patterns</string>
 
     <string name="settings_syn_ant">Synonyms and antonyms</string>
+    <string name="settings_word_family">Word family</string>
 
     <string name="settings_conjugation">Conjugation</string>
 
@@ -313,6 +318,25 @@
     <string name="import_empty_hint">Type a word or import a list (CSV/TXT/apkg)</string>
 
     <string name="import_file_label">File: \'%1$s\'</string>
+    <string name="import_start_title">Import flashcards</string>
+    <string name="import_pick_list">Target list</string>
+    <string name="import_action_start">Import</string>
+    <string name="import_limit_exceeded">For now you can import at most 50 Vocabulario cards.</string>
+    <string name="import_status_analyzing">Analyzing %1$s…</string>
+    <string name="import_status_importing">Importing words from %1$s</string>
+    <string name="import_progress_count">Imported %1$d/%2$d</string>
+    <string name="action_abort">Abort</string>
+    <string name="import_abort_title">Abort import?</string>
+    <string name="import_abort_body">Progress will be discarded.</string>
+    <string name="import_result_title">Import finished</string>
+    <string name="import_result_body">Added %1$d, duplicates %2$d</string>
+    <string name="import_result_body_failed">Added %1$d, duplicates %2$d, errors %3$d</string>
+    <string name="import_review_flagged">Phrases and constructions</string>
+    <string name="action_show_list">Show list</string>
+    <string name="import_paste_source">Paste</string>
+    <string name="import_interrupted">Import interrupted — try again</string>
+    <string name="import_review_ready">Ready to import</string>
+    <string name="import_new_list_option">+ New list</string>
 
     <string name="section_meanings">MEANINGS</string>
 
@@ -328,7 +352,7 @@
 
     <string name="section_periphrases">PATTERNS</string>
 
-    <string name="section_usages">usage examples</string>
+    <string name="section_usages">phrases</string>
 
     <string name="home_search_hint">Search a word…</string>
 
@@ -375,6 +399,8 @@
     <string name="status_new">new</string>
 
     <string name="status_learning">learning</string>
+
+    <string name="card_badge_import">Imported</string>
 
     <string name="status_mastered">mastered</string>
 
@@ -525,6 +551,11 @@
 
     <string name="err_login">Login failed</string>
 
+    <string name="err_login_email_unknown">No account with this email</string>
+    <string name="err_login_wrong_password">Wrong password</string>
+    <string name="err_login_use_google">This account uses Google. Continue with Google.</string>
+
+
     <string name="err_register">Registration failed</string>
 
     <string name="err_google_login">Google sign-in failed</string>
@@ -542,10 +573,11 @@
     <string name="section_synonyms_short">Synonyms</string>
 
     <string name="section_antonyms_short">Antonyms</string>
+    <string name="section_word_family">Word family</string>
 
     <string name="section_conjugation_short">Conjugation</string>
 
-    <string name="section_usages_short">Usages</string>
+    <string name="section_usages_short">Phrases</string>
 
     <string name="cd_back">Back</string>
 
@@ -586,14 +618,14 @@
     <string name="cd_search">Search</string>
 
 
-    <string name="correction_fix_card">Fix card</string>
+    <string name="correction_fix_card">Report a correction</string>
     <string name="correction_report_title">Check and fix card</string>
     <string name="correction_report_subtitle">We review the whole card. Your selections and note only guide the check.</string>
     <string name="correction_section_lemma">Lemma</string>
     <string name="correction_section_pos">Part of speech</string>
     <string name="correction_section_gloss">Primary gloss</string>
     <string name="correction_section_meanings">Meanings</string>
-    <string name="correction_section_examples">Examples</string>
+    <string name="correction_section_examples">Sentences</string>
     <string name="correction_section_conjugation">Conjugation</string>
     <string name="correction_section_similar">Similar words</string>
     <string name="correction_section_pronunciation">Pronunciation</string>
@@ -606,8 +638,8 @@
     <string name="correction_field_ipa">IPA pronunciation</string>
     <string name="correction_field_notes">Notes</string>
     <string name="correction_field_synonyms_l1">Synonyms (L1, one per line)</string>
-    <string name="correction_field_examples">Examples</string>
-    <string name="correction_field_usages">Usages</string>
+    <string name="correction_field_examples">Sentences</string>
+    <string name="correction_field_usages">Phrases</string>
     <string name="correction_field_l2">Sentence (L2)</string>
     <string name="correction_field_l1">Translation (L1)</string>
     <string name="correction_field_similar">Similar words</string>
@@ -621,7 +653,7 @@
     <string name="correction_processing">Analyzing report…</string>
     <string name="self_edit_processing">Saving and verifying your edit…</string>
     <string name="self_edit_validating">Checking your edits…</string>
-    <string name="self_edit_warning_title">Changes may be incorrect</string>
+    <string name="self_edit_warning_title">Confirm these changes?</string>
     <string name="self_edit_warning_body">We detected that your changes to card \"%1$s\" may be incorrect. Please verify before saving.</string>
     <string name="self_edit_warning_confirm">Confirm changes</string>
     <string name="self_edit_warning_revert">Revert changes</string>
@@ -634,7 +666,8 @@
     <string name="correction_code_insufficient">No errors found on this card.</string>
     <string name="correction_code_not_applicable">This section does not apply to this type of word.</string>
     <string name="correction_code_failed">Could not process the report. Please try again.</string>
-    <string name="correction_edit_self">Edit myself</string>
+    <string name="correction_edit_self">Edit</string>
+    <string name="correction_history_button">Change history</string>
     <string name="correction_self_edit_title">Edit card</string>
     <string name="correction_field_lemma">Lemma</string>
     <string name="correction_field_pos">Part of speech</string>
@@ -686,6 +719,25 @@
     <string name="notif_study_body">%1$d cards due</string>
     <string name="notif_cards_ready_title">Cards ready</string>
     <string name="notif_cards_ready_body">%1$d word(s) ready to study</string>
+
+    <string name="pos_noun">noun</string>
+    <string name="pos_verb">verb</string>
+    <string name="pos_adj">adjective</string>
+    <string name="pos_adv">adverb</string>
+    <string name="pos_prep">preposition</string>
+    <string name="pos_conj">conjunction</string>
+    <string name="pos_pron">pronoun</string>
+    <string name="pos_det">determiner</string>
+    <string name="pos_interj">interjection</string>
+    <string name="err_empty_list_name">Enter a list name</string>
+    <string name="err_list_not_editable">This list can’t be edited</string>
+    <string name="err_list_not_deletable">This list can’t be deleted</string>
+    <string name="err_pending_inbox_not_deletable">The pending list can’t be deleted</string>
+    <string name="err_pending_inbox_clear">Couldn’t clear all pending words</string>
+    <string name="err_offline">You’re offline</string>
+    <string name="err_offline_card">This card isn’t available offline</string>
+    <string name="err_no_inbox">Couldn’t open the pending list</string>
+    <string name="err_email_taken">This email is already registered</string>
 
 </resources>
 

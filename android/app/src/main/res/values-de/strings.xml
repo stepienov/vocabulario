@@ -1,32 +1,32 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
     <string name="app_name">Vocabulario</string>
 
-    <string name="action_sort">Sort</string>
-    <string name="action_filter">Filter</string>
+        <string name="action_sort">Sortieren</string>
+    <string name="action_filter">Filtern</string>
     <string name="action_filter_active">Filter · %1$d</string>
-    <string name="action_clear_filters">Clear filters</string>
-    <string name="action_clear_all">Clear all</string>
-    <string name="action_apply">Apply</string>
-    <string name="list_words_meta">%1$d words</string>
-    <string name="list_filter_empty">No words match filters</string>
-    <string name="sort_title">Sort</string>
-    <string name="sort_lemma_asc">A → Z</string>
+    <string name="action_clear_filters">Filter löschen</string>
+    <string name="action_clear_all">Alles löschen</string>
+    <string name="action_apply">Übernehmen</string>
+    <string name="list_words_meta">%1$d Wörter</string>
+    <string name="list_filter_empty">Keine Wörter passen zu den Filtern</string>
+    <string name="sort_title">Sortierung</string>
+<string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
-    <string name="sort_pos">Part of speech</string>
-    <string name="sort_newest">Newest first</string>
-    <string name="sort_oldest">Oldest first</string>
-    <string name="sort_status">Card state</string>
+        <string name="sort_pos">Wortart</string>
+    <string name="sort_newest">Neueste zuerst</string>
+    <string name="sort_oldest">Älteste zuerst</string>
+    <string name="sort_status">Kartenstatus</string>
     <string name="filter_title">Filter</string>
-    <string name="filter_section_pos">Part of speech</string>
-    <string name="filter_section_state">Card state</string>
-    <string name="filter_pos_unknown">No POS</string>
-    <string name="status_review">review</string>
-    <string name="action_undo">Undo</string>
-    <string name="cd_undo">Undo last grade</string>
-    <string name="action_cancel">Abbrechen</string>
+    <string name="filter_section_pos">Wortart</string>
+    <string name="filter_section_state">Kartenstatus</string>
+    <string name="filter_pos_unknown">Ohne Wortart</string>
+    <string name="status_review">Wiederholung</string>
+    <string name="action_undo">Rückgängig</string>
+    <string name="cd_undo">Letzte Bewertung rückgängig</string>
+<string name="action_cancel">Abbrechen</string>
 
     <string name="action_ok">OK</string>
 
@@ -68,7 +68,7 @@
 
     <string name="tab_lists">listen</string>
 
-    <string name="auth_login_title">Willkommen zurück</string>
+    <string name="auth_login_title">Anmeldung</string>
 
     <string name="auth_register_title">Konto erstellen</string>
 
@@ -78,27 +78,29 @@
 
     <string name="auth_google">Weiter mit Google</string>
 
+    <string name="auth_or_continue">Oder mit E-Mail fortfahren</string>
+
     <string name="auth_email">E-Mail</string>
 
     <string name="auth_password">Passwort</string>
 
-    <string name="auth_tagline">Vokabeln in deinem Tempo lernen</string>
 
-    <string name="auth_password_hint">Mindestens 8 Zeichen</string>
 
     <string name="auth_have_account">Ich habe schon ein Konto</string>
 
-    <string name="onboarding_title">Lerneinrichtung</string>
+    <string name="onboarding_app_setup">App-Einrichtung</string>
 
-    <string name="onboarding_subtitle">Wähle ein Sprachpaar, CEFR-Niveau und Verbzeiten.</string>
+    <string name="onboarding_choose_language">Wähle deine Sprache</string>
 
-    <string name="onboarding_native">Muttersprache</string>
+    <string name="onboarding_continue">Weiter</string>
 
-    <string name="onboarding_learning">Lernsprache</string>
+    <string name="onboarding_want_to_learn">Ich möchte lernen:</string>
 
     <string name="onboarding_start">Los geht’s</string>
 
-    <string name="onboarding_cefr">CEFR-Niveau</string>
+    <string name="onboarding_level">Wähle das Sprachniveau</string>
+
+    <string name="onboarding_level_unknown">Weiß ich nicht</string>
 
     <string name="onboarding_tenses">Verbzeiten</string>
 
@@ -129,6 +131,8 @@
 
     <string name="settings_mode_flash">Karteikarten</string>
 
+    <string name="settings_mode_vocabulario_only">nur Vocabulario-Karten</string>
+
     <string name="settings_tolerate_typos">Kleine Tippfehler erlauben</string>
 
     <string name="settings_tolerate_typos_sub">Rechtschreibung und Diakritika</string>
@@ -143,13 +147,14 @@
 
     <string name="settings_card_layout_sub">Was du nach der Antwort siehst</string>
 
-    <string name="settings_examples">Beispielsätze</string>
+    <string name="settings_examples">Sätze</string>
 
-    <string name="settings_usages">Verwendungsbeispiele</string>
+    <string name="settings_usages">Wendungen</string>
 
     <string name="settings_periphrases">Muster</string>
 
     <string name="settings_syn_ant">Synonyme und Antonyme</string>
+    <string name="settings_word_family">Wortfamilie</string>
 
     <string name="settings_conjugation">Konjugation</string>
 
@@ -221,16 +226,15 @@
     <string name="creating_card_failed">Karte konnte nicht vorbereitet werden</string>
 
     <string name="list_learning">Lernen</string>
-    <string name="list_pending">Pending</string>
-    <string name="offline_banner_title">You’re offline</string>
-    <string name="offline_banner_body">Added words go to the "Pending" list and will be looked up when you’re back online.</string>
-    <string name="offline_search_hint">Enter a word</string>
-    <string name="import_online_only">Import is only available online.</string>
-    <string name="offline_lookup_queued">Added to "Pending" — lookup when you’re back online.</string>
-    <string name="offline_lookup_duplicate">That word is already waiting on "Pending".</string>
-    <string name="status_awaiting_network">Waiting for network</string>
-
-    <string name="list_other">Andere Liste</string>
+        <string name="list_pending">Ausstehend</string>
+    <string name="offline_banner_title">Du bist offline</string>
+    <string name="offline_banner_body">Hinzugefügte Wörter landen in der Liste „Ausstehend“ und werden gesucht, sobald du wieder online bist.</string>
+    <string name="offline_search_hint">Wort eingeben</string>
+    <string name="import_online_only">Import ist nur online verfügbar.</string>
+    <string name="offline_lookup_queued">Zu „Ausstehend“ hinzugefügt — Suche bei Verbindung.</string>
+    <string name="offline_lookup_duplicate">Dieses Wort wartet bereits unter „Ausstehend“.</string>
+    <string name="status_awaiting_network">Wartet auf Netzwerk</string>
+<string name="list_other">Andere Liste</string>
 
     <string name="list_new">Neue Liste</string>
 
@@ -244,9 +248,8 @@
 
     <string name="list_move_to">In Liste verschieben</string>
 
-    <string name="list_name_hint">Name</string>
-
-    <string name="list_name_full_hint">Listenname</string>
+        <string name="list_name_hint">Name</string>
+<string name="list_name_full_hint">Listenname</string>
 
     <string name="list_pick">Liste wählen</string>
 
@@ -303,8 +306,27 @@
     <string name="import_empty_hint">Wort eingeben oder Liste importieren (CSV/TXT/apkg)</string>
 
     <string name="import_file_label">Datei: \'%1$s\'</string>
-
-    <string name="section_meanings">BEDEUTUNGEN</string>
+    <!-- TODO: translate import UI strings -->
+    <string name="import_start_title">Karteikarten importieren</string>
+    <string name="import_pick_list">Zielliste</string>
+    <string name="import_action_start">Importieren</string>
+<string name="import_limit_exceeded">Du kannst vorerst höchstens 50 Vocabulario-Karten importieren.</string>
+        <string name="import_status_analyzing">%1$s wird analysiert…</string>
+    <string name="import_status_importing">Wörter aus %1$s werden importiert</string>
+    <string name="import_progress_count">Importiert %1$d/%2$d</string>
+    <string name="action_abort">Abbrechen</string>
+    <string name="import_abort_title">Import abbrechen?</string>
+    <string name="import_abort_body">Der Fortschritt geht verloren.</string>
+    <string name="import_result_title">Import abgeschlossen</string>
+    <string name="import_result_body">Hinzugefügt %1$d, Duplikate %2$d</string>
+    <string name="import_result_body_failed">Hinzugefügt %1$d, Duplikate %2$d, Fehler %3$d</string>
+    <string name="import_review_flagged">Wendungen und Konstruktionen</string>
+    <string name="action_show_list">Liste anzeigen</string>
+    <string name="import_paste_source">Einfügen</string>
+    <string name="import_interrupted">Import unterbrochen — bitte erneut versuchen</string>
+    <string name="import_review_ready">Bereit zum Import</string>
+    <string name="import_new_list_option">+ Neue Liste</string>
+<string name="section_meanings">BEDEUTUNGEN</string>
 
     <string name="section_synonyms">SYNONYME</string>
 
@@ -318,7 +340,7 @@
 
     <string name="section_periphrases">MUSTER</string>
 
-    <string name="section_usages">Verwendungsbeispiele</string>
+    <string name="section_usages">Wendungen</string>
 
     <string name="home_search_hint">Wort suchen…</string>
 
@@ -365,6 +387,8 @@
     <string name="status_new">neu</string>
 
     <string name="status_learning">lernen</string>
+
+    <string name="card_badge_import">Import</string>
 
     <string name="status_mastered">beherrscht</string>
 
@@ -514,6 +538,11 @@
 
     <string name="err_login">Anmeldung fehlgeschlagen</string>
 
+    <string name="err_login_email_unknown">Kein Konto mit dieser E-Mail</string>
+    <string name="err_login_wrong_password">Falsches Passwort</string>
+    <string name="err_login_use_google">Dieses Konto nutzt Google. Melde dich mit Google an.</string>
+
+
     <string name="err_register">Registrierung fehlgeschlagen</string>
 
     <string name="err_google_login">Google-Anmeldung fehlgeschlagen</string>
@@ -531,10 +560,11 @@
     <string name="section_synonyms_short">Synonyme</string>
 
     <string name="section_antonyms_short">Antonyme</string>
+    <string name="section_word_family">Wortfamilie</string>
 
     <string name="section_conjugation_short">Konjugation</string>
 
-    <string name="section_usages_short">Verwendung</string>
+    <string name="section_usages_short">Wendungen</string>
 
     <string name="cd_back">Zurück</string>
 
@@ -548,81 +578,149 @@
 
     <string name="cd_add_to_list">Zur Liste hinzufügen</string>
 
-    <string name="list_clear_all">Delete all words</string>
-
-    <string name="list_clear_all_title">Delete all words?</string>
-
-    <string name="list_clear_all_body">You’ll remove every word from “%1$s”. The list itself stays.</string>
-
-    <string name="settings_level">Level</string>
-
-    <string name="settings_selected_tenses">Selected tenses</string>
-
-    <string name="action_edit">Edit</string>
-
-    <string name="import_cards_count">Imported cards (%1$d)</string>
-
-    <string name="import_flashcards_count">Flashcards: %1$d</string>
-
-    <string name="import_done_count">Imported: %1$d</string>
-
-    <string name="list_unnamed">list</string>
-
-    <string name="periphrase_n">Periphrase %1$d</string>
-
-    <string name="practice_well_done">Nice!</string>
-
-    <string name="cd_search">Search</string>
-
-
-    <string name="correction_fix_card">Fix card</string>
-    <string name="correction_report_title">Report a problem</string>
-    <string name="correction_section_lemma">Lemma</string>
-    <string name="correction_section_pos">Part of speech</string>
-    <string name="correction_section_gloss">Primary gloss</string>
-    <string name="correction_section_meanings">Meanings</string>
-    <string name="correction_section_examples">Examples</string>
-    <string name="correction_section_conjugation">Conjugation</string>
-    <string name="correction_section_similar">Similar words</string>
-    <string name="correction_section_pronunciation">Pronunciation</string>
-    <string name="correction_section_other">Other</string>
-    <string name="correction_note_label">Note</string>
-    <string name="correction_note_hint">Describe what is wrong…</string>
-    <string name="correction_validation">Select at least one section or write a note (min. 3 characters).</string>
-    <string name="correction_submit">Submit report</string>
-    <string name="correction_requires_online">Requires internet connection.</string>
-    <string name="correction_result_accepted_title">Report accepted — card updated.</string>
+        <string name="list_clear_all">Alle Wörter löschen</string>
+    <string name="list_clear_all_title">Alle Wörter löschen?</string>
+    <string name="list_clear_all_body">Du entfernst alle Wörter aus „%1$s“. Die Liste bleibt erhalten.</string>
+    <string name="settings_level">Niveau</string>
+    <string name="settings_selected_tenses">Ausgewählte Zeiten</string>
+    <string name="action_edit">Bearbeiten</string>
+    <string name="import_cards_count">Importierte Karten (%1$d)</string>
+    <string name="import_flashcards_count">Karteikarten: %1$d</string>
+    <string name="import_done_count">Importiert: %1$d</string>
+    <string name="list_unnamed">Liste</string>
+    <string name="periphrase_n">Umschreibung %1$d</string>
+    <string name="practice_well_done">Gut!</string>
+    <string name="cd_search">Suchen</string>
+    <string name="correction_fix_card">Korrektur melden</string>
+<string name="correction_report_title">Report a problem</string>
+        <string name="correction_section_lemma">Lemma</string>
+    <string name="correction_section_pos">Wortart</string>
+    <string name="correction_section_gloss">Hauptübersetzung</string>
+    <string name="correction_section_meanings">Bedeutungen</string>
+<string name="correction_section_examples">Sätze</string>
+        <string name="correction_section_conjugation">Konjugation</string>
+    <string name="correction_section_similar">Ähnliche Wörter</string>
+    <string name="correction_section_pronunciation">Aussprache</string>
+    <string name="correction_section_other">Sonstiges</string>
+    <string name="correction_note_label">Notiz</string>
+    <string name="correction_note_hint">Beschreibe den Fehler…</string>
+    <string name="correction_validation">Wähle mindestens einen Abschnitt oder schreibe eine Notiz (mind. 3 Zeichen).</string>
+<string name="correction_submit">Submit report</string>
+        <string name="correction_requires_online">Internetverbindung erforderlich.</string>
+<string name="correction_result_accepted_title">Report accepted — card updated.</string>
     <string name="correction_result_rejected_title">Report not accepted.</string>
     <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
-    <string name="correction_edit_self">Edit myself</string>
-    <string name="correction_self_edit_title">Edit card</string>
+        <string name="correction_edit_self">Bearbeiten</string>
+        <string name="correction_history_button">Änderungsverlauf</string>
+    <string name="correction_self_edit_title">Karte bearbeiten</string>
     <string name="correction_field_lemma">Lemma</string>
-    <string name="correction_field_pos">Part of speech</string>
-    <string name="correction_field_gloss">Primary gloss</string>
-    <string name="correction_field_extra_glosses">Extra glosses (one per line)</string>
-    <string name="review_status_reported">Correction reported</string>
-    <string name="review_status_accepted">Updated</string>
-    <string name="review_status_rejected">Report rejected</string>
-    <string name="review_status_user_edited">Edited manually</string>
-    <string name="cd_voice_search">Voice search</string>
-    <string name="voice_listening">Listening…</string>
-    <string name="voice_listening_hint">Speak now</string>
-    <string name="voice_tap_to_start">Tap Start to speak</string>
-    <string name="voice_start">Start</string>
+    <string name="correction_field_pos">Wortart</string>
+    <string name="correction_field_gloss">Hauptübersetzung</string>
+    <string name="correction_field_extra_glosses">Weitere Übersetzungen (eine pro Zeile)</string>
+    <string name="cd_voice_search">Sprachsuche</string>
+    <string name="voice_listening">Zuhören…</string>
+    <string name="voice_listening_hint">Jetzt sprechen</string>
+    <string name="voice_tap_to_start">Tippe auf Start, um zu sprechen</string>
+<string name="voice_start">Start</string>
     <string name="voice_stop">Stop</string>
-    <string name="voice_permission_denied">Microphone permission denied.</string>
-    <string name="voice_unavailable">Speech recognition unavailable on this device.</string>
-    <string name="settings_notifications">Notifications</string>
-    <string name="settings_notifications_summary">Study reminders and card readiness</string>
-    <string name="settings_notif_study">Study reminders</string>
-    <string name="settings_notif_cards">Cards ready</string>
-    <string name="settings_reminder_hour">Reminder hour (0–23)</string>
-    <string name="notif_channel_study">Study</string>
-    <string name="notif_channel_cards">Cards</string>
-    <string name="notif_study_title">Time to review</string>
-    <string name="notif_study_body">%1$d cards due</string>
-    <string name="notif_cards_ready_title">Cards ready</string>
-    <string name="notif_cards_ready_body">%1$d word(s) ready to study</string>
+        <string name="voice_permission_denied">Mikrofonberechtigung verweigert.</string>
+    <string name="voice_unavailable">Spracherkennung auf diesem Gerät nicht verfügbar.</string>
+    <string name="settings_notifications">Benachrichtigungen</string>
+    <string name="settings_notifications_summary">Lern-Erinnerungen und bereite Karten</string>
+    <string name="settings_notif_study">Lern-Erinnerungen</string>
+    <string name="settings_notif_cards">Karten bereit</string>
+    <string name="settings_reminder_hour">Erinnerungszeit (0–23)</string>
+    <string name="notif_channel_study">Lernen</string>
+    <string name="notif_channel_cards">Karten</string>
+    <string name="notif_study_title">Zeit zum Wiederholen</string>
+    <string name="notif_study_body">%1$d Karten fällig</string>
+    <string name="notif_cards_ready_title">Karten bereit</string>
+    <string name="notif_cards_ready_body">%1$d Wort/Wörter bereit zum Lernen</string>
+    <string name="status_needs_review">Prüfung nötig</string>
+    <string name="review_title">Wort muss geprüft werden</string>
+    <string name="review_no_match">Keine Treffer für „%1$s“.</string>
+    <string name="review_did_you_mean">Meintest du:</string>
+    <string name="review_reject">Ablehnen</string>
+    <string name="review_search_again">Suchen</string>
+    <string name="review_confirm">Bestätigen</string>
+    <string name="review_close">Schließen</string>
+    <string name="list_delete">Liste löschen</string>
+    <string name="err_word_on_list">Dieses Wort ist bereits auf deiner Lernliste.</string>
+    <string name="correction_report_subtitle">Wir prüfen die ganze Karte. Markierungen und Notiz dienen nur als Hinweis.</string>
+    <string name="correction_daily_limit">Du kannst bis zu 20 Meldungen pro Tag senden.</string>
+    <string name="correction_field_ipa">IPA-Aussprache</string>
+    <string name="correction_field_notes">Notizen</string>
+    <string name="correction_field_synonyms_l1">Synonyme (L1, eins pro Zeile)</string>
+    <string name="correction_field_examples">Sätze</string>
+    <string name="correction_field_usages">Wendungen</string>
+    <string name="correction_field_l2">Satz (L2)</string>
+    <string name="correction_field_l1">Übersetzung (L1)</string>
+    <string name="correction_field_similar">Ähnliche Wörter</string>
+    <string name="correction_field_conjugation_json">Konjugation (JSON)</string>
+    <string name="correction_section_meaning">Bedeutung %1$d</string>
+    <string name="correction_add_meaning">Bedeutung hinzufügen</string>
+    <string name="correction_add_row">Zeile hinzufügen</string>
+    <string name="correction_empty_rows_hint">Noch keine Zeilen — tippe auf Zeile hinzufügen.</string>
+    <string name="correction_self_edit_link">Tippe hier, um die Karte selbst zu bearbeiten</string>
+    <string name="correction_processing">Meldung wird analysiert…</string>
+    <string name="self_edit_processing">Änderung wird gespeichert und geprüft…</string>
+    <string name="self_edit_validating">Änderungen werden geprüft…</string>
+    <string name="self_edit_warning_title">Änderungen bestätigen?</string>
+    <string name="self_edit_warning_body">Wir haben erkannt, dass deine Änderungen an der Karte „%1$s“ falsch sein könnten. Bitte vor dem Speichern prüfen.</string>
+    <string name="self_edit_warning_confirm">Änderungen bestätigen</string>
+    <string name="self_edit_warning_revert">Änderungen verwerfen</string>
+    <string name="correction_result_accepted_body">Karte „%1$s“ wurde aktualisiert.</string>
+    <string name="correction_code_accepted">Meldung angenommen — Karte aktualisiert.</string>
+    <string name="correction_code_unfounded">Auf dieser Karte wurden keine Fehler gefunden.</string>
+    <string name="correction_code_insufficient">Auf dieser Karte wurden keine Fehler gefunden.</string>
+    <string name="correction_code_not_applicable">Dieser Abschnitt gilt nicht für diesen Worttyp.</string>
+    <string name="correction_code_failed">Die Meldung konnte nicht verarbeitet werden. Bitte erneut versuchen.</string>
+    <string name="card_history_title">Kartenverlauf</string>
+    <string name="card_history_empty">Noch keine Meldungen oder Änderungen.</string>
+    <string name="card_history_restore">Originalversion wiederherstellen</string>
+    <string name="card_history_restored">Originalversion der Karte wiederhergestellt</string>
+    <string name="card_history_actor_you">Du</string>
+    <string name="card_history_actor_system">System</string>
+    <string name="card_history_event_report">Meldung gesendet</string>
+    <string name="card_history_event_accepted">Meldung angenommen — Karte aktualisiert</string>
+    <string name="card_history_event_self_edit">Manuelle Bearbeitung</string>
+    <string name="card_history_event_reviewed">Bearbeitung geprüft</string>
+    <string name="card_history_summary_report">Abschnitte: %1$s</string>
+    <string name="card_history_summary_restored">Originalversion wiederhergestellt.</string>
+    <string name="card_history_diff_lemma">Lemma: %1$s → %2$s</string>
+    <string name="card_history_diff_pos">Wortart: %1$s → %2$s</string>
+    <string name="card_history_diff_gloss">Übersetzung: %1$s → %2$s</string>
+    <string name="card_history_diff_ipa">ipa: %1$s → %2$s</string>
+    <string name="card_history_diff_conjugation">Konjugation aktualisiert</string>
+    <string name="card_history_diff_meanings">Bedeutungen aktualisiert</string>
+    <string name="card_history_diff_similar">ähnliche Wörter aktualisiert</string>
+    <string name="card_history_diff_content">Inhalt aktualisiert</string>
+    <string name="cd_card_history">Kartenverlauf</string>
+    <string name="cd_view_card">Vollständige Karte anzeigen</string>
+    <string name="cd_list_word_actions">Wortaktionen</string>
+    <string name="voice_searching">Suche…</string>
+    <string name="voice_either_lang_hint">Sprich in einer der beiden Sprachen</string>
+    <string name="voice_no_match">Nicht verstanden — bitte erneut versuchen.</string>
+    <string name="voice_network_required">Spracheingabe braucht eine Internetverbindung.</string>
+
+    <string name="pos_noun">Nomen</string>
+    <string name="pos_verb">Verb</string>
+    <string name="pos_adj">Adjektiv</string>
+    <string name="pos_adv">Adverb</string>
+    <string name="pos_prep">Präposition</string>
+    <string name="pos_conj">Konjunktion</string>
+    <string name="pos_pron">Pronomen</string>
+    <string name="pos_det">Artikel</string>
+    <string name="pos_interj">Interjektion</string>
+    <string name="err_empty_list_name">Gib einen Listennamen ein</string>
+    <string name="err_list_not_editable">Diese Liste kann nicht bearbeitet werden</string>
+    <string name="err_list_not_deletable">Diese Liste kann nicht gelöscht werden</string>
+    <string name="err_pending_inbox_not_deletable">Die Warteliste kann nicht gelöscht werden</string>
+    <string name="err_pending_inbox_clear">Ausstehende Wörter konnten nicht vollständig gelöscht werden</string>
+    <string name="err_offline">Du bist offline</string>
+    <string name="err_offline_card">Diese Karte ist offline nicht verfügbar</string>
+    <string name="err_no_inbox">Die Warteliste konnte nicht geöffnet werden</string>
+    <string name="err_email_taken">Diese E-Mail ist bereits registriert</string>
 
 </resources>
 

@@ -37,7 +37,7 @@ object LanguagePacks {
             TenseItem("gerundio", "Gerundio"),
             TenseItem("participio", "Participio"),
         ),
-        defaultSelectedTenses = listOf("presente", "preterito_indefinido", "preterito_imperfecto"),
+        defaultSelectedTenses = listOf("presente"),
     )
 
     private val en = LanguagePack(
@@ -58,7 +58,7 @@ object LanguagePacks {
             TenseItem("ing_form", "-ing form"),
             TenseItem("past_participle", "Past participle"),
         ),
-        defaultSelectedTenses = listOf("present_simple", "past_simple", "present_continuous"),
+        defaultSelectedTenses = listOf("present_simple"),
     )
 
     private val fr = LanguagePack(
@@ -78,7 +78,7 @@ object LanguagePacks {
             TenseItem("participe_passe", "Participe passé"),
             TenseItem("gerondif", "Gérondif"),
         ),
-        defaultSelectedTenses = listOf("present", "passe_compose", "imparfait"),
+        defaultSelectedTenses = listOf("present"),
     )
 
     private val de = LanguagePack(
@@ -96,7 +96,7 @@ object LanguagePacks {
             TenseItem("infinitiv", "Infinitiv"),
             TenseItem("partizip_ii", "Partizip II"),
         ),
-        defaultSelectedTenses = listOf("prasens", "perfekt", "prateritum"),
+        defaultSelectedTenses = listOf("prasens"),
     )
 
     private val it = LanguagePack(
@@ -114,7 +114,7 @@ object LanguagePacks {
             TenseItem("gerundio", "Gerundio"),
             TenseItem("participio", "Participio"),
         ),
-        defaultSelectedTenses = listOf("presente", "passato_prossimo", "imperfetto"),
+        defaultSelectedTenses = listOf("presente"),
     )
 
     private val ptBr = LanguagePack(
@@ -132,7 +132,7 @@ object LanguagePacks {
             TenseItem("gerundio", "Gerúndio"),
             TenseItem("participio", "Particípio"),
         ),
-        defaultSelectedTenses = listOf("presente", "preterito_perfeito", "preterito_imperfeito"),
+        defaultSelectedTenses = listOf("presente"),
     )
 
     private val ptPt = LanguagePack(
@@ -156,7 +156,7 @@ object LanguagePacks {
             TenseItem("imieslow_przeszly", "Imiesłów przeszły"),
             TenseItem("imieslow_przyszly", "Imiesłów przyszły"),
         ),
-        defaultSelectedTenses = listOf("czas_terazniejszy", "czas_przeszly"),
+        defaultSelectedTenses = listOf("czas_terazniejszy"),
     )
 
     private val ru = LanguagePack(
@@ -171,7 +171,7 @@ object LanguagePacks {
             TenseItem("infinitiv", "Инфинитив"),
             TenseItem("deeprichastie", "Деепричастие"),
         ),
-        defaultSelectedTenses = listOf("nastoyashchee", "proshedshee"),
+        defaultSelectedTenses = listOf("nastoyashchee"),
     )
 
     private val ja = LanguagePack(
@@ -190,7 +190,7 @@ object LanguagePacks {
             TenseItem("te", "て形"),
             TenseItem("ta", "た形"),
         ),
-        defaultSelectedTenses = listOf("jisho", "masu", "te"),
+        defaultSelectedTenses = listOf("jisho"),
     )
 
     private val ko = LanguagePack(
@@ -203,7 +203,7 @@ object LanguagePacks {
             TenseItem("imperative", "명령"),
         ),
         nonFinite = listOf(TenseItem("base", "어간")),
-        defaultSelectedTenses = listOf("present", "past", "future"),
+        defaultSelectedTenses = listOf("present"),
     )
 
     private val zh = LanguagePack(
@@ -217,7 +217,7 @@ object LanguagePacks {
             TenseItem("perfect", "完成"),
         ),
         nonFinite = listOf(TenseItem("base", "原形")),
-        defaultSelectedTenses = listOf("present", "past", "future"),
+        defaultSelectedTenses = listOf("present"),
     )
 
     private val vi = LanguagePack(
@@ -230,7 +230,7 @@ object LanguagePacks {
             TenseItem("imperative", "Mệnh lệnh"),
         ),
         nonFinite = listOf(TenseItem("infinitive", "Nguyên mẫu")),
-        defaultSelectedTenses = listOf("present", "past", "future"),
+        defaultSelectedTenses = listOf("present"),
     )
 
     private val packs: Map<String, LanguagePack> = mapOf(
@@ -254,7 +254,7 @@ object LanguagePacks {
                 TenseItem("gelecek_zaman", "Gelecek zaman"),
             ),
             nonFinite = listOf(TenseItem("mastar", "Mastar")),
-            defaultSelectedTenses = listOf("simdi_zaman", "gecmis_zaman"),
+            defaultSelectedTenses = listOf("simdi_zaman"),
         ),
         "ja" to ja,
         "ko" to ko,
@@ -268,7 +268,7 @@ object LanguagePacks {
                 TenseItem("imperative", "الأمر"),
             ),
             nonFinite = listOf(TenseItem("masdar", "المصدر")),
-            defaultSelectedTenses = listOf("perfect", "imperfect"),
+            defaultSelectedTenses = listOf("imperfect"),
         ),
         "hi" to LanguagePack(
             code = "hi",
@@ -279,7 +279,7 @@ object LanguagePacks {
                 TenseItem("imperative", "आज्ञार्थ"),
             ),
             nonFinite = listOf(TenseItem("infinitive", "मूलधातु")),
-            defaultSelectedTenses = listOf("present", "past"),
+            defaultSelectedTenses = listOf("present"),
         ),
     )
 

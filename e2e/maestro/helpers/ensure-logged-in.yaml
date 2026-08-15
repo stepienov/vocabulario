@@ -10,18 +10,7 @@ appId: com.vocabulario.app
     when:
       visible:
         id: onboarding_native_lang
-    commands:
-      - scrollUntilVisible:
-          element:
-            id: onboarding_start
-          direction: DOWN
-          timeout: 40000
-      - tapOn:
-          id: onboarding_start
-      - extendedWaitUntil:
-          visible:
-            id: tab_dashboard
-          timeout: 45000
+    file: complete-onboarding.yaml
 - runFlow:
     when:
       visible:

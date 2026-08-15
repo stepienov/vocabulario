@@ -67,6 +67,7 @@ class UserSettings(Base):
     show_synonyms_antonyms: Mapped[bool] = mapped_column(Boolean, default=True)
     show_synonyms: Mapped[bool] = mapped_column(Boolean, default=True)
     show_antonyms: Mapped[bool] = mapped_column(Boolean, default=True)
+    show_word_family: Mapped[bool] = mapped_column(Boolean, default=True)
     show_periphrases: Mapped[bool] = mapped_column(Boolean, default=True)
     show_conjugation: Mapped[bool] = mapped_column(Boolean, default=True)
     conjugation_expanded_default: Mapped[bool] = mapped_column(Boolean, default=False)

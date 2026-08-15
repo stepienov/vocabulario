@@ -23,12 +23,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.horizontalScroll
@@ -64,23 +62,16 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -97,7 +88,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -122,12 +112,19 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.vocabulario.app.data.normalizePosKey
 import com.vocabulario.app.ui.theme.LocalVocabExtraColors
 import com.vocabulario.app.ui.components.AddToListSheet
+import com.vocabulario.app.ui.components.AppAlertDialog
 import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.AppCard
 import com.vocabulario.app.ui.components.AppChipShape
+import com.vocabulario.app.ui.components.AppDialogAction
+import com.vocabulario.app.ui.components.AppDialogButtonRow
 import com.vocabulario.app.ui.components.AppDialogShape
+import com.vocabulario.app.ui.components.AppGrayField
+import com.vocabulario.app.ui.components.AppDialogWindowChrome
 import com.vocabulario.app.ui.components.BrandLogo
 import com.vocabulario.app.ui.components.ButtonLabel
+import com.vocabulario.app.ui.components.LemmaActionRow
+import com.vocabulario.app.ui.components.LemmaAddButton
 import com.vocabulario.app.ui.components.TagChip
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -160,6 +157,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val importState by viewModel.importState.collectAsState()
     val isOnline by viewModel.connectivity.collectAsState()
     val scheme = MaterialTheme.colorScheme
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -190,14 +188,11 @@ fun HomeScreen(
             .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
-        if (state.importJobActive) {
-            ImportProgressBar(progress = state.importProgress)
-        }
         HomeHeader(onSettings = onSettings)
         HomeTabs(
             selected = state.tab,
             onSelect = viewModel::selectTab,
-            importBusy = state.importJobActive,
+            importBusy = importState.busy,
         )
         Box(
             modifier = Modifier
@@ -208,20 +203,20 @@ fun HomeScreen(
                 HomeTab.DASHBOARD -> DashboardTab(state = state)
                 HomeTab.ADD -> AddTab(
                     state = state,
+                    importState = importState,
                     isOnline = isOnline,
                     onQueryChange = viewModel::onQueryChange,
                     onSearch = viewModel::search,
                     onPrepareVoiceSearch = viewModel::prepareVoiceSearch,
                     onAdd = viewModel::openAddSheet,
                     onOpenWord = viewModel::openWordOnList,
-                    onImportText = viewModel::startImportFromText,
-                    onImportFileBytes = viewModel::startImportFromFileBytes,
+                    onStartImport = viewModel::startImportWithOptionalNewList,
                     onImportError = viewModel::setImportError,
-                    onRemoveImportWord = viewModel::removeImportWord,
-                    onRemoveImportDisplayCard = viewModel::removeImportDisplayCard,
+                    onAbortImport = viewModel::requestImportCancel,
                 )
                 HomeTab.LISTS -> ListsTab(
                     state = state,
+                    importTargetListId = importState.targetListId?.takeIf { importState.busy },
                     isOnline = isOnline,
                     onSelectList = viewModel::selectList,
                     onCreateList = viewModel::createEmptyList,
@@ -250,47 +245,6 @@ fun HomeScreen(
             }
         }
         when {
-            state.importActive -> {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = ScreenPad, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    OutlinedButton(
-                        onClick = viewModel::cancelImport,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(54.dp)
-                            .testTag(TestTags.BTN_IMPORT_CANCEL),
-                        shape = AppButtonShape,
-                        enabled = !state.importCommitting,
-                    ) {
-                        Text(stringResource(R.string.action_cancel), color = scheme.error)
-                    }
-                    Button(
-                        onClick = viewModel::openImportDestination,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(54.dp)
-                            .testTag(TestTags.BTN_IMPORT_CONFIRM),
-                        shape = AppButtonShape,
-                        enabled = (state.importValid.isNotEmpty() || state.importDisplayCards.isNotEmpty()) &&
-                            !state.importCommitting,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = scheme.tertiary,
-                            contentColor = scheme.onTertiary,
-                        ),
-                    ) {
-                        Text(
-                            stringResource(R.string.action_confirm),
-                            fontWeight = FontWeight.SemiBold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-            }
             state.selectionMode -> Unit // akcje multi-select w ListsTab
             else -> {
                 Button(
@@ -317,33 +271,19 @@ fun HomeScreen(
         }
     }
 
-    if (state.importDestinationOpen) {
-        val importCount = if (state.importMode == "preserve") {
-            state.importDisplayCards.size
-        } else {
-            state.importValid.size
-        }
-        AddToListSheet(
-            lemma = stringResource(R.string.import_cards_count, importCount),
-            gloss = stringResource(R.string.list_pick_target),
-            lists = state.lists,
-            pickListOpen = state.pickListOpen,
-            showCreateListPrompt = state.showCreateListPrompt,
-            createListName = state.createListName,
-            createNameError = listNameConflictMessage(
-                LocalContext.current,
-                state.lists,
-                state.createListName,
-            ),
-            onDismiss = viewModel::dismissImportDestination,
-            onLearning = viewModel::commitImportToLearning,
-            onOther = viewModel::openOtherLists,
-            onPickList = viewModel::commitImportToList,
-            onCreateNameChange = viewModel::onCreateListNameChange,
-            onCreateAndAdd = viewModel::createListAndCommitImport,
-            onShowCreatePrompt = viewModel::openCreateListPrompt,
-            onBackFromCreatePrompt = viewModel::backFromCreateListPrompt,
-            onBackFromListPicker = viewModel::backFromListPicker,
+    if (importState.showAbortConfirm) {
+        ImportAbortConfirmDialog(
+            onConfirm = viewModel::confirmImportCancel,
+            onDismiss = viewModel::dismissImportAbortConfirm,
+        )
+    }
+
+    if (importState.status == com.vocabulario.app.data.imports.ImportStatus.Review) {
+        ImportReviewDialog(
+            state = importState,
+            onToggle = viewModel::toggleImportItem,
+            onCancel = viewModel::confirmImportCancel,
+            onConfirm = viewModel::confirmImportCommit,
         )
     }
 
@@ -421,53 +361,6 @@ fun HomeScreen(
         onConfirm = viewModel::approveReviewWord,
         onClose = viewModel::closePendingReview,
     )
-}
-
-@Composable
-private fun ImportProgressBar(progress: Float) {
-    val scheme = MaterialTheme.colorScheme
-    val p = progress.coerceIn(0f, 1f)
-    val label = stringResource(R.string.import_progress)
-    val labelStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(22.dp),
-    ) {
-        val fullW = maxWidth
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(scheme.surfaceVariant),
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(fullW * p)
-                .background(scheme.primary),
-        )
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(label, style = labelStyle, color = scheme.onSurfaceVariant)
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(fullW * p)
-                .clipToBounds(),
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(fullW)
-                    .fillMaxHeight(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(label, style = labelStyle, color = scheme.onPrimary)
-            }
-        }
-    }
 }
 
 @Composable
@@ -815,40 +708,37 @@ private fun ReviewForecastBars(
 @Composable
 private fun AddTab(
     state: HomeUiState,
+    importState: com.vocabulario.app.data.imports.ImportJobState,
     isOnline: Boolean,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     onPrepareVoiceSearch: () -> Unit,
     onAdd: (LookupCandidate) -> Unit,
     onOpenWord: (LookupCandidate) -> Unit,
-    onImportText: (String, String) -> Unit,
-    onImportFileBytes: (ByteArray, String, String) -> Unit,
+    onStartImport: (ByteArray?, String?, String?, String, String?, String?) -> Unit,
     onImportError: (String) -> Unit,
-    onRemoveImportWord: (String) -> Unit,
-    onRemoveImportDisplayCard: (String) -> Unit,
+    onAbortImport: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val context = LocalContext.current
-    var showFileDialog by remember { mutableStateOf(false) }
-    var showPasteDialog by remember { mutableStateOf(false) }
-    var showInvalidDialog by remember { mutableStateOf(false) }
-    var showModeDialog by remember { mutableStateOf(false) }
+    var showStartDialog by remember { mutableStateOf(false) }
+    var pasteMode by remember { mutableStateOf(false) }
     var pasteDraft by remember { mutableStateOf("") }
     var pendingFileBytes by remember { mutableStateOf<ByteArray?>(null) }
     var pendingFileName by remember { mutableStateOf<String?>(null) }
-    var pendingPasteText by remember { mutableStateOf<String?>(null) }
     var pickingFile by remember { mutableStateOf(false) }
     var showVoiceSheet by remember { mutableStateOf(false) }
     val speechAvailable = remember { android.speech.SpeechRecognizer.isRecognitionAvailable(context) }
     val nativeLang = state.activeProfile?.appLang ?: "pl"
     val learningLang = state.activeProfile?.learning_lang ?: "es"
+    val importBusy = importState.busy
 
     val fileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         pickingFile = false
         if (uri == null) {
-            showFileDialog = true
+            showStartDialog = true
             return@rememberLauncherForActivityResult
         }
         runCatching {
@@ -868,9 +758,10 @@ private fun AddTab(
         }.onSuccess { (name, bytes) ->
             pendingFileName = name
             pendingFileBytes = bytes
-            showFileDialog = true
+            pasteMode = false
+            showStartDialog = true
         }.onFailure {
-            showFileDialog = true
+            showStartDialog = true
             onImportError(it.message ?: context.getString(R.string.import_file_errors))
         }
     }
@@ -898,7 +789,9 @@ private fun AddTab(
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (!state.importActive) {
+        if (importBusy) {
+            ImportStatusPanel(state = importState, onAbort = onAbortImport)
+        } else {
             if (isOnline) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -908,7 +801,9 @@ private fun AddTab(
                         onClick = {
                             pendingFileBytes = null
                             pendingFileName = null
-                            showFileDialog = true
+                            pasteMode = false
+                            pasteDraft = ""
+                            showStartDialog = true
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -920,8 +815,11 @@ private fun AddTab(
                     }
                     OutlinedButton(
                         onClick = {
+                            pendingFileBytes = null
+                            pendingFileName = null
+                            pasteMode = true
                             pasteDraft = ""
-                            showPasteDialog = true
+                            showStartDialog = true
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -969,19 +867,14 @@ private fun AddTab(
                     }
                 }
             }
-            OutlinedTextField(
+            AppGrayField(
                 value = state.query,
                 onValueChange = onQueryChange,
-                placeholder = {
-                    Text(
-                        stringResource(
-                            if (isOnline) R.string.home_search_hint else R.string.offline_search_hint,
-                        ),
-                    )
-                },
-                modifier = Modifier.fillMaxWidth().testTag(TestTags.SEARCH_INPUT),
+                placeholder = stringResource(
+                    if (isOnline) R.string.home_search_hint else R.string.offline_search_hint,
+                ),
+                modifier = Modifier.testTag(TestTags.SEARCH_INPUT),
                 singleLine = true,
-                shape = AppButtonShape,
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = null, tint = scheme.onSurfaceVariant)
                 },
@@ -1013,43 +906,11 @@ private fun AddTab(
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = scheme.surfaceVariant,
-                    unfocusedContainerColor = scheme.surfaceVariant,
-                    disabledContainerColor = scheme.surfaceVariant,
-                    focusedBorderColor = scheme.outline,
-                    unfocusedBorderColor = scheme.outline.copy(alpha = 0f),
-                    cursorColor = scheme.primary,
-                ),
             )
             Spacer(modifier = Modifier.height(16.dp))
-        } else {
-            val importedCount = if (state.importMode == "preserve") {
-                state.importDisplayCards.size
-            } else {
-                state.importValid.size
-            }
-            Text(
-                if (state.importMode == "preserve") stringResource(R.string.import_flashcards_count, importedCount) else stringResource(R.string.import_done_count, importedCount),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = scheme.onSurface,
-            )
-            if (state.importInvalid.isNotEmpty()) {
-                Text(
-                    stringResource(R.string.import_file_errors),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.error,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .padding(top = 6.dp)
-                        .clickable { showInvalidDialog = true },
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        if (state.loading || state.importCommitting) {
+        if (state.loading && !importBusy) {
             CircularProgressIndicator(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
@@ -1061,50 +922,12 @@ private fun AddTab(
         state.error?.let { Text(it, color = scheme.error) }
         state.notice?.let { Text(it, color = scheme.onSurfaceVariant) }
 
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(bottom = 12.dp),
-        ) {
-            if (state.importActive && state.importMode == "preserve") {
-                items(state.importDisplayCards, key = { it.key }) { card ->
-                    ImportDisplayPreviewTile(
-                        card = card,
-                        onRemove = { onRemoveImportDisplayCard(card.key) },
-                    )
-                }
-                if (state.importDisplayCards.isEmpty() && !state.loading) {
-                    item {
-                        Text(
-                            stringResource(R.string.import_no_cards),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = scheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 24.dp),
-                        )
-                    }
-                }
-            } else if (state.importActive) {
-                items(state.importValid, key = { it.input }) { word ->
-                    ImportWordTile(
-                        display = word.lemma,
-                        subtitle = listOfNotNull(
-                            entryKindLabelPl(word.entry_kind),
-                            word.gloss.takeIf { it.isNotBlank() },
-                        ).joinToString(" · ").ifBlank { null },
-                        onRemove = { onRemoveImportWord(word.input) },
-                    )
-                }
-                if (state.importValid.isEmpty() && !state.loading) {
-                    item {
-                        Text(
-                            stringResource(R.string.import_no_valid),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = scheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 24.dp),
-                        )
-                    }
-                }
-            } else {
+        if (!importBusy) {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 12.dp),
+            ) {
                 items(state.candidates) { candidate ->
                     CandidateRow(
                         candidate = candidate,
@@ -1131,226 +954,32 @@ private fun AddTab(
         }
     }
 
-
-    if (showModeDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showModeDialog = false
+    if (showStartDialog && !importBusy) {
+        ImportStartDialog(
+            lists = state.lists,
+            sourceLabel = pendingFileName,
+            pasteMode = pasteMode,
+            pasteDraft = pasteDraft,
+            onPasteDraftChange = { pasteDraft = it },
+            onPickFile = { launchFilePicker() },
+            onDismiss = {
+                if (pickingFile) return@ImportStartDialog
+                showStartDialog = false
                 pendingFileBytes = null
                 pendingFileName = null
-                pendingPasteText = null
+                pasteDraft = ""
             },
-            shape = AppDialogShape,
-            containerColor = scheme.surface,
-            title = {
-                Text(stringResource(R.string.import_how), fontWeight = FontWeight.Bold, color = scheme.onSurface)
-            },
-            text = {
-                Text(
-                    stringResource(R.string.import_vocab_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.onSurfaceVariant,
-                )
-            },
-            confirmButton = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Button(
-                        onClick = {
-                            val mode = "vocabulario"
-                            val bytes = pendingFileBytes
-                            val name = pendingFileName
-                            val paste = pendingPasteText
-                            showModeDialog = false
-                            pendingFileBytes = null
-                            pendingFileName = null
-                            pendingPasteText = null
-                            when {
-                                bytes != null && name != null -> onImportFileBytes(bytes, name, mode)
-                                !paste.isNullOrBlank() -> onImportText(paste, mode)
-                            }
-                        },
-                        shape = AppButtonShape,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag(TestTags.IMPORT_MODE_VOCAB),
-                    ) { Text(stringResource(R.string.import_vocab_mode), fontWeight = FontWeight.SemiBold) }
-                    OutlinedButton(
-                        onClick = {
-                            val mode = "preserve"
-                            val bytes = pendingFileBytes
-                            val name = pendingFileName
-                            val paste = pendingPasteText
-                            showModeDialog = false
-                            pendingFileBytes = null
-                            pendingFileName = null
-                            pendingPasteText = null
-                            when {
-                                bytes != null && name != null -> onImportFileBytes(bytes, name, mode)
-                                !paste.isNullOrBlank() -> onImportText(paste, mode)
-                            }
-                        },
-                        shape = AppButtonShape,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag(TestTags.IMPORT_MODE_PRESERVE),
-                    ) { Text(stringResource(R.string.import_preserve_mode)) }
-                    TextButton(
-                        onClick = {
-                            showModeDialog = false
-                            pendingFileBytes = null
-                            pendingFileName = null
-                            pendingPasteText = null
-                        },
-                        modifier = Modifier.fillMaxWidth().testTag(TestTags.DIALOG_CANCEL),
-                    ) { Text(stringResource(R.string.action_cancel), color = scheme.error) }
-                }
-            },
-            dismissButton = {},
-        )
-    }
-    if (showFileDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                if (pickingFile) return@AlertDialog
-                showFileDialog = false
+            onStart = { mode, listId, newListName ->
+                showStartDialog = false
+                val bytes = pendingFileBytes
+                val name = pendingFileName
+                val paste = pasteDraft.takeIf { pasteMode }
                 pendingFileBytes = null
                 pendingFileName = null
+                pasteDraft = ""
+                onStartImport(bytes, name, paste, mode, listId, newListName)
             },
-            shape = AppDialogShape,
-            containerColor = scheme.surface,
-            title = {
-                Text(stringResource(R.string.import_from_file), fontWeight = FontWeight.Bold, color = scheme.onSurface)
-            },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    if (pendingFileName != null) {
-                        Text(
-                            stringResource(R.string.import_file_label, pendingFileName ?: ""),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = scheme.primary,
-                        )
-                    }
-                    OutlinedButton(
-                        onClick = { launchFilePicker() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = AppButtonShape,
-                    ) {
-                        Text(
-                            if (pendingFileName == null) stringResource(R.string.import_add_file) else stringResource(R.string.import_other_file),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (pendingFileBytes == null) return@Button
-                        showFileDialog = false
-                        showModeDialog = true
-                    },
-                    enabled = pendingFileBytes != null,
-                    shape = AppButtonShape,
-                    modifier = Modifier.testTag(TestTags.DIALOG_CONFIRM),
-                ) { Text(stringResource(R.string.action_import)) }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = {
-                        showFileDialog = false
-                        pendingFileBytes = null
-                        pendingFileName = null
-                    },
-                    shape = AppButtonShape,
-                    modifier = Modifier.testTag(TestTags.DIALOG_CANCEL),
-                ) { Text(stringResource(R.string.action_cancel), color = scheme.error) }
-            },
-        )
-    }
-
-    if (showPasteDialog) {
-        AlertDialog(
-            onDismissRequest = { showPasteDialog = false },
-            shape = AppDialogShape,
-            containerColor = scheme.surface,
-            title = null,
-            text = {
-                OutlinedTextField(
-                    value = pasteDraft,
-                    onValueChange = { pasteDraft = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .testTag(TestTags.IMPORT_PASTE_INPUT),
-                    placeholder = { Text(stringResource(R.string.import_paste_hint)) },
-                    shape = RoundedCornerShape(14.dp),
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val text = pasteDraft
-                        showPasteDialog = false
-                        pasteDraft = ""
-                        pendingPasteText = text
-                        if (text.isNotBlank()) showModeDialog = true
-                    },
-                    enabled = pasteDraft.isNotBlank(),
-                    shape = AppButtonShape,
-                    modifier = Modifier.testTag(TestTags.DIALOG_CONFIRM),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = scheme.tertiary,
-                        contentColor = scheme.onTertiary,
-                    ),
-                ) { Text(stringResource(R.string.action_confirm)) }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { showPasteDialog = false },
-                    shape = AppButtonShape,
-                    modifier = Modifier.testTag(TestTags.DIALOG_CANCEL),
-                ) { Text(stringResource(R.string.action_cancel), color = scheme.error) }
-            },
-        )
-    }
-
-    if (showInvalidDialog) {
-        AlertDialog(
-            onDismissRequest = { showInvalidDialog = false },
-            shape = AppDialogShape,
-            containerColor = scheme.surface,
-            title = {
-                Text(stringResource(R.string.import_invalid_title), fontWeight = FontWeight.Bold, color = scheme.onSurface)
-            },
-            text = {
-                Column(
-                    modifier = Modifier.height(280.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    androidx.compose.foundation.lazy.LazyColumn {
-                        items(state.importInvalid) { w ->
-                            Text("• $w", color = scheme.onSurface)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { showInvalidDialog = false },
-                    shape = AppButtonShape,
-                ) { Text(stringResource(R.string.action_close)) }
-            },
+            listDisplayName = { listDisplayName(it) },
         )
     }
 
@@ -1371,124 +1000,10 @@ private fun AddTab(
 }
 
 @Composable
-private fun ImportDisplayPreviewTile(
-    card: com.vocabulario.app.data.api.ImportDisplayCard,
-    onRemove: () -> Unit,
-) {
-    val scheme = MaterialTheme.colorScheme
-    var expanded by remember(card.key) { mutableStateOf(false) }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = scheme.surfaceVariant,
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { expanded = !expanded },
-                ) {
-                    Text(
-                        card.lemma_l2,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Surface(
-                    onClick = onRemove,
-                    shape = CircleShape,
-                    color = scheme.error.copy(alpha = 0.15f),
-                    contentColor = scheme.error,
-                    modifier = Modifier.size(34.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_delete), modifier = Modifier.size(18.dp))
-                    }
-                }
-            }
-            AnimatedVisibility(visible = expanded) {
-                Column(modifier = Modifier.padding(top = 10.dp)) {
-                    key(card.key, expanded) {
-                        com.vocabulario.app.ui.components.ImportDisplayFlip(
-                            display = card.display,
-                            showPrompt = false,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun listDisplayName(list: WordListResponse): String = when {
     list.is_system -> stringResource(R.string.list_learning)
     list.is_pending_inbox -> stringResource(R.string.list_pending)
     else -> list.name
-}
-@Composable
-private fun entryKindLabelPl(kind: String): String? = when (kind.lowercase()) {
-    "lemma" -> stringResource(R.string.kind_lemma)
-    "phrase" -> stringResource(R.string.kind_phrase)
-    "construction" -> stringResource(R.string.kind_construction)
-    "sentence" -> stringResource(R.string.kind_sentence)
-    "other" -> stringResource(R.string.kind_other)
-    else -> null
-}
-
-@Composable
-private fun ImportWordTile(
-    display: String,
-    subtitle: String? = null,
-    onRemove: () -> Unit,
-) {
-    val scheme = MaterialTheme.colorScheme
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = scheme.surfaceVariant,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    display,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = scheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (!subtitle.isNullOrBlank()) {
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = scheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            Surface(
-                onClick = onRemove,
-                shape = CircleShape,
-                color = scheme.error.copy(alpha = 0.15f),
-                contentColor = scheme.error,
-                modifier = Modifier.size(34.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_delete), modifier = Modifier.size(18.dp))
-                }
-            }
-        }
-    }
 }
 
 @Composable
@@ -1498,46 +1013,31 @@ private fun CandidateRow(
     onOpenWord: (LookupCandidate) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val rowContent: @Composable () -> Unit = {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    candidate.lemma,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = scheme.onSurface,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    candidate.gloss,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    candidate.pos?.let { TagChip(localizedPosLabel(it).ifBlank { it }) }
-                    if (candidate.onList) {
-                        TagChip(
-                            text = candidate.list_name ?: stringResource(R.string.list_unnamed),
-                            onClick = { onOpenWord(candidate) },
-                        )
-                    }
-                }
-                if (candidate.isCreating) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    CreatingCardHint()
+    LemmaActionRow(
+        lemma = candidate.lemma,
+        gloss = candidate.gloss,
+        modifier = Modifier.testTag(TestTags.SEARCH_RESULT),
+        onClick = if (candidate.onList) {{ onOpenWord(candidate) }} else null,
+        belowGloss = {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                candidate.pos?.let { TagChip(localizedPosLabel(it).ifBlank { it }) }
+                if (candidate.onList) {
+                    TagChip(
+                        text = candidate.list_name ?: stringResource(R.string.list_unnamed),
+                        onClick = { onOpenWord(candidate) },
+                    )
                 }
             }
+            if (candidate.isCreating) {
+                Spacer(modifier = Modifier.height(8.dp))
+                CreatingCardHint()
+            }
+        },
+        trailing = {
             when {
                 candidate.isCreating -> {
                     CircularProgressIndicator(
@@ -1555,33 +1055,15 @@ private fun CandidateRow(
                     )
                 }
                 else -> {
-                    Surface(
+                    LemmaAddButton(
                         onClick = onAdd,
-                        shape = CircleShape,
-                        color = scheme.primary,
-                        contentColor = scheme.onPrimary,
-                        modifier = Modifier.size(40.dp).testTag(TestTags.CANDIDATE_ADD),
-                    ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add), modifier = Modifier.size(22.dp))
-                        }
-                    }
+                        contentDescription = stringResource(R.string.action_add),
+                        modifier = Modifier.testTag(TestTags.CANDIDATE_ADD),
+                    )
                 }
             }
-        }
-    }
-    if (candidate.onList) {
-        AppCard(
-            modifier = Modifier.testTag(TestTags.SEARCH_RESULT),
-            onClick = { onOpenWord(candidate) },
-            content = rowContent,
-        )
-    } else {
-        AppCard(
-            modifier = Modifier.testTag(TestTags.SEARCH_RESULT),
-            content = rowContent,
-        )
-    }
+        },
+    )
 }
 
 @Composable
@@ -1611,6 +1093,7 @@ private enum class MultiEditDialog { None, DeleteConfirm, Move }
 @Composable
 private fun ListsTab(
     state: HomeUiState,
+    importTargetListId: String? = null,
     isOnline: Boolean,
     onSelectList: (String) -> Unit,
     onCreateList: (String) -> Unit,
@@ -1726,7 +1209,7 @@ private fun ListsTab(
                     list = list,
                     selected = list.id == state.selectedListId,
                     showMenu = list.id == state.selectedListId,
-                    showSpinner = state.importJobActive && list.id == state.importTargetListId,
+                    showSpinner = list.id == importTargetListId,
                     onClick = {
                         expandedId = null
                         closeWordDialogs()
@@ -1843,20 +1326,14 @@ private fun ListsTab(
                                     onToggleWordSelection(card.id)
                                     return@ListWordTile
                                 }
-                                if (card.enrichment_status == "pending" ||
-                                    card.enrichment_status == "awaiting_network" ||
-                                    card.id.startsWith("pending-")
-                                ) {
+                                if (!card.isSelectableOnList()) {
                                     return@ListWordTile
                                 }
                                 expandedId = if (expandedId == card.id) null else card.id
                                 closeWordDialogs()
                             },
                             onLongPress = {
-                                if (card.enrichment_status == "pending" ||
-                                    card.enrichment_status == "awaiting_network" ||
-                                    card.id.startsWith("pending-")
-                                ) {
+                                if (!card.isSelectableOnList()) {
                                     return@ListWordTile
                                 }
                                 expandedId = null
@@ -1872,6 +1349,7 @@ private fun ListsTab(
                                 wordDialog = WordEditDialog.DeleteConfirm
                             },
                             onMove = {
+                                if (!card.isReadyToMove()) return@ListWordTile
                                 wordTargetId = card.id
                                 if (moveTargets.isNotEmpty()) {
                                     moveTargetId = moveTargets.firstOrNull()?.id
@@ -1927,6 +1405,7 @@ private fun ListsTab(
                 }
                 Button(
                     onClick = {
+                        if (!state.hasMovableSelectedWords) return@Button
                         if (moveTargets.isNotEmpty()) {
                             moveTargetId = moveTargets.firstOrNull()?.id
                             multiDialog = MultiEditDialog.Move
@@ -1941,6 +1420,7 @@ private fun ListsTab(
                         .testTag(TestTags.MULTI_MOVE),
                     shape = AppButtonShape,
                     contentPadding = btnPad,
+                    enabled = state.hasMovableSelectedWords,
                 ) {
                     ButtonLabel(stringResource(R.string.action_move))
                 }
@@ -1955,79 +1435,42 @@ private fun ListsTab(
         val movingWord = createThenMoveCardId != null
         val movingSelected = createThenMoveSelected
         val movingAll = createThenMoveAll
-        AlertDialog(
-            onDismissRequest = { closeCreateDialog() },
-            shape = AppDialogShape,
-            containerColor = scheme.surface,
-            title = {
-                Text(stringResource(R.string.list_new), fontWeight = FontWeight.Bold, color = scheme.onSurface)
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (movingWord || movingSelected || movingAll) {
-                        Text(
-                            when {
-                                movingAll -> stringResource(R.string.list_create_move_all)
-                                movingSelected -> stringResource(R.string.list_create_move_sel)
-                                else -> stringResource(R.string.list_create_move_one)
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = scheme.onSurfaceVariant,
-                        )
-                    }
-                    OutlinedTextField(
-                        value = newName,
-                        onValueChange = { newName = it },
-                        placeholder = { Text(stringResource(R.string.list_name_hint), color = scheme.onSurfaceVariant) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth().testTag(TestTags.SHEET_LIST_NAME),
-                        isError = createNameError != null && !reservedName,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = scheme.onSurface,
-                            unfocusedTextColor = scheme.onSurface,
-                            focusedContainerColor = scheme.surfaceVariant,
-                            unfocusedContainerColor = scheme.surfaceVariant,
-                            unfocusedBorderColor = scheme.outline.copy(alpha = 0f),
-                            cursorColor = scheme.primary,
-                        ),
-                    )
-                    if (createNameError != null) {
-                        Text(
-                            createNameError,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (reservedName) scheme.onSurfaceVariant else scheme.error,
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
+        NameListDialog(
+            visible = true,
+            title = stringResource(R.string.list_new),
+            name = newName,
+            onNameChange = { newName = it },
+            nameError = createNameError,
+            reservedHint = reservedName,
+            extraBody = if (movingWord || movingSelected || movingAll) {
+                {
+                    Text(
                         when {
-                            createThenMoveCardId != null -> {
-                                onCreateListAndMove(newName, createThenMoveCardId!!)
-                                expandedId = null
-                            }
-                            createThenMoveSelected -> onCreateListAndMoveSelected(newName)
-                            createThenMoveAll -> onCreateListAndMoveAll(newName)
-                            else -> onCreateList(newName)
-                        }
-                        closeCreateDialog()
-                    },
-                    shape = AppButtonShape,
-                    enabled = trimmedCreate.isNotBlank() && createNameError == null,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = scheme.tertiary,
-                        contentColor = scheme.onTertiary,
-                    ),
-                ) { Text(stringResource(R.string.action_create)) }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { closeCreateDialog() }, shape = AppButtonShape) {
-                    Text(stringResource(R.string.action_cancel), color = scheme.error)
+                            movingAll -> stringResource(R.string.list_create_move_all)
+                            movingSelected -> stringResource(R.string.list_create_move_sel)
+                            else -> stringResource(R.string.list_create_move_one)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = scheme.onSurfaceVariant,
+                    )
                 }
+            } else {
+                null
             },
+            onDismiss = { closeCreateDialog() },
+            onConfirm = {
+                when {
+                    createThenMoveCardId != null -> {
+                        onCreateListAndMove(newName, createThenMoveCardId!!)
+                        expandedId = null
+                    }
+                    createThenMoveSelected -> onCreateListAndMoveSelected(newName)
+                    createThenMoveAll -> onCreateListAndMoveAll(newName)
+                    else -> onCreateList(newName)
+                }
+                closeCreateDialog()
+            },
+            confirmEnabled = trimmedCreate.isNotBlank() && createNameError == null,
         )
     }
 
@@ -2035,36 +1478,16 @@ private fun ListsTab(
         ListEditDialog.Menu -> {
             val systemList = selectedList?.is_system == true
             val pendingInbox = selectedList?.is_pending_inbox == true
-            AlertDialog(
+            AppAlertDialog(
                 onDismissRequest = { closeListDialogs() },
-                shape = AppDialogShape,
-                containerColor = scheme.surface,
-                title = {
-                    Text(
-                        selectedList?.let { listDisplayName(it) }
-                            ?: stringResource(R.string.list_fallback),
-                        fontWeight = FontWeight.Bold,
-                        color = scheme.onSurface,
-                    )
-                },
+                title = selectedList?.let { listDisplayName(it) }
+                    ?: stringResource(R.string.list_fallback),
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (systemList) {
-                            OutlinedButton(
-                                onClick = { listDialog = ListEditDialog.ClearAllConfirm },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = AppButtonShape,
-                                enabled = state.listWords.isNotEmpty(),
-                            ) {
-                                ButtonLabel(
-                                    stringResource(R.string.list_clear_all),
-                                    color = scheme.error,
-                                )
-                            }
-                        } else if (pendingInbox) {
                             Button(
                                 onClick = {
-                                    if (state.listWords.isEmpty()) {
+                                    if (!state.hasMovableListWords) {
                                         closeListDialogs()
                                         return@Button
                                     }
@@ -2079,7 +1502,38 @@ private fun ListsTab(
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = AppButtonShape,
+                                enabled = state.hasMovableListWords,
+                            ) { ButtonLabel(stringResource(R.string.list_move_all)) }
+                            OutlinedButton(
+                                onClick = { listDialog = ListEditDialog.ClearAllConfirm },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = AppButtonShape,
                                 enabled = state.listWords.isNotEmpty(),
+                            ) {
+                                ButtonLabel(
+                                    stringResource(R.string.list_clear_all),
+                                    color = scheme.error,
+                                )
+                            }
+                        } else if (pendingInbox) {
+                            Button(
+                                onClick = {
+                                    if (!state.hasMovableListWords) {
+                                        closeListDialogs()
+                                        return@Button
+                                    }
+                                    if (moveTargets.isNotEmpty()) {
+                                        moveTargetId = moveTargets.firstOrNull()?.id
+                                        listDialog = ListEditDialog.MoveAll
+                                    } else {
+                                        closeListDialogs()
+                                        createThenMoveAll = true
+                                        showCreate = true
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = AppButtonShape,
+                                enabled = state.hasMovableListWords,
                             ) { ButtonLabel(stringResource(R.string.list_move_all)) }
                             OutlinedButton(
                                 onClick = { listDialog = ListEditDialog.DeleteConfirm },
@@ -2102,7 +1556,7 @@ private fun ListsTab(
                             ) { ButtonLabel(stringResource(R.string.list_rename)) }
                             Button(
                                 onClick = {
-                                    if (state.listWords.isEmpty()) {
+                                    if (!state.hasMovableListWords) {
                                         closeListDialogs()
                                         return@Button
                                     }
@@ -2117,7 +1571,7 @@ private fun ListsTab(
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = AppButtonShape,
-                                enabled = state.listWords.isNotEmpty(),
+                                enabled = state.hasMovableListWords,
                             ) { ButtonLabel(stringResource(R.string.list_move_all)) }
                             OutlinedButton(
                                 onClick = { listDialog = ListEditDialog.DeleteConfirm },
@@ -2132,11 +1586,12 @@ private fun ListsTab(
                         }
                     }
                 },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { closeListDialogs() }) {
-                        Text(stringResource(R.string.action_back), color = scheme.onSurfaceVariant)
-                    }
+                buttons = {
+                    AppDialogButtonRow(
+                        primaryText = stringResource(R.string.action_cancel),
+                        onPrimary = { closeListDialogs() },
+                        primaryKind = AppDialogAction.Neutral,
+                    )
                 },
             )
         }
@@ -2149,207 +1604,71 @@ private fun ListsTab(
                 excludeId = selectedList?.id,
             )
             val reservedRename = isReservedListNameMessage(LocalContext.current, trimmedRename)
-            AlertDialog(
-                onDismissRequest = { closeListDialogs() },
-                shape = AppDialogShape,
-                containerColor = scheme.surface,
-                title = {
-                    Text(stringResource(R.string.list_rename), fontWeight = FontWeight.Bold, color = scheme.onSurface)
+            NameListDialog(
+                visible = true,
+                title = stringResource(R.string.list_rename),
+                name = renameDraft,
+                onNameChange = { renameDraft = it },
+                nameError = renameNameError,
+                reservedHint = reservedRename,
+                nameFieldTag = null,
+                onDismiss = { closeListDialogs() },
+                onConfirm = {
+                    val id = selectedList?.id
+                    if (id != null) onRenameList(id, renameDraft)
+                    closeListDialogs()
                 },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = renameDraft,
-                            onValueChange = { renameDraft = it },
-                            singleLine = true,
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                            isError = renameNameError != null && !reservedRename,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = scheme.onSurface,
-                                unfocusedTextColor = scheme.onSurface,
-                                focusedContainerColor = scheme.surfaceVariant,
-                                unfocusedContainerColor = scheme.surfaceVariant,
-                                unfocusedBorderColor = scheme.outline.copy(alpha = 0f),
-                            ),
-                        )
-                        if (renameNameError != null) {
-                            Text(
-                                renameNameError,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (reservedRename) scheme.onSurfaceVariant else scheme.error,
-                            )
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val id = selectedList?.id
-                            if (id != null) onRenameList(id, renameDraft)
-                            closeListDialogs()
-                        },
-                        shape = AppButtonShape,
-                        enabled = trimmedRename.isNotBlank() && renameNameError == null,
-                    ) { Text(stringResource(R.string.action_ok)) }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { closeListDialogs() }, shape = AppButtonShape) {
-                        Text(stringResource(R.string.action_cancel), color = scheme.onSurface)
-                    }
-                },
+                confirmEnabled = trimmedRename.isNotBlank() && renameNameError == null,
             )
         }
         ListEditDialog.DeleteConfirm -> {
-            AlertDialog(
-                onDismissRequest = { closeListDialogs() },
-                shape = AppDialogShape,
-                containerColor = scheme.surface,
-                title = {
-                    Text(stringResource(R.string.list_delete_confirm_title), fontWeight = FontWeight.Bold, color = scheme.onSurface)
-                },
-                text = {
-                    Text(
-                        stringResource(
-                            R.string.list_delete_confirm_body,
-                            selectedList?.let { listDisplayName(it) }.orEmpty(),
-                        ),
-                        color = scheme.onSurfaceVariant,
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val id = selectedList?.id
-                            if (id != null) onDeleteList(id)
-                            expandedId = null
-                            closeListDialogs()
-                        },
-                        shape = AppButtonShape,
-                        colors = ButtonDefaults.buttonColors(containerColor = scheme.error),
-                    ) { Text(stringResource(R.string.action_delete)) }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { closeListDialogs() }, shape = AppButtonShape) {
-                        Text(stringResource(R.string.action_back), color = scheme.onSurface)
-                    }
+            DestroyConfirmDialog(
+                visible = true,
+                title = stringResource(R.string.list_delete_confirm_title),
+                onDismiss = { closeListDialogs() },
+                onConfirm = {
+                    val id = selectedList?.id
+                    if (id != null) onDeleteList(id)
+                    expandedId = null
+                    closeListDialogs()
                 },
             )
         }
         ListEditDialog.ClearAllConfirm -> {
-            AlertDialog(
-                onDismissRequest = { closeListDialogs() },
-                shape = AppDialogShape,
-                containerColor = scheme.surface,
-                title = {
-                    Text(
-                        stringResource(R.string.list_clear_all_title),
-                        fontWeight = FontWeight.Bold,
-                        color = scheme.onSurface,
-                    )
-                },
-                text = {
-                    Text(
-                        stringResource(
-                            R.string.list_clear_all_body,
-                            selectedList?.let { listDisplayName(it) }.orEmpty(),
-                        ),
-                        color = scheme.onSurfaceVariant,
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            onClearAllWords()
-                            expandedId = null
-                            closeListDialogs()
-                        },
-                        shape = AppButtonShape,
-                        colors = ButtonDefaults.buttonColors(containerColor = scheme.error),
-                        enabled = state.listWords.isNotEmpty(),
-                    ) { Text(stringResource(R.string.list_clear_all)) }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { closeListDialogs() }, shape = AppButtonShape) {
-                        Text(stringResource(R.string.action_cancel), color = scheme.onSurface)
-                    }
+            DestroyConfirmDialog(
+                visible = true,
+                title = stringResource(R.string.list_clear_all_title),
+                confirmText = stringResource(R.string.action_delete),
+                confirmEnabled = state.listWords.isNotEmpty(),
+                onDismiss = { closeListDialogs() },
+                onConfirm = {
+                    onClearAllWords()
+                    expandedId = null
+                    closeListDialogs()
                 },
             )
         }
         ListEditDialog.MoveAll -> {
             val selectedMove = moveTargets.firstOrNull { it.id == moveTargetId } ?: moveTargets.firstOrNull()
-            AlertDialog(
-                onDismissRequest = { closeListDialogs() },
-                shape = AppDialogShape,
-                containerColor = scheme.surface,
-                title = {
-                    Text(stringResource(R.string.list_move_to), fontWeight = FontWeight.Bold, color = scheme.onSurface)
+            MoveToListDialog(
+                visible = true,
+                title = stringResource(R.string.list_move_to),
+                options = moveTargets.map { ListPickOption(it.id, listDisplayName(it)) },
+                selectedId = moveTargetId ?: selectedMove?.id,
+                onSelect = { moveTargetId = it },
+                onDismiss = { closeListDialogs() },
+                onNewList = {
+                    closeListDialogs()
+                    createThenMoveAll = true
+                    showCreate = true
                 },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ExposedDropdownMenuBox(
-                            expanded = moveMenuOpen,
-                            onExpandedChange = { moveMenuOpen = it },
-                        ) {
-                            OutlinedTextField(
-                                value = selectedMove?.let { listDisplayName(it) }.orEmpty(),
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = moveMenuOpen) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedTextColor = scheme.onSurface,
-                                    unfocusedTextColor = scheme.onSurface,
-                                    focusedContainerColor = scheme.surfaceVariant,
-                                    unfocusedContainerColor = scheme.surfaceVariant,
-                                ),
-                            )
-                            ExposedDropdownMenu(
-                                expanded = moveMenuOpen,
-                                onDismissRequest = { moveMenuOpen = false },
-                            ) {
-                                moveTargets.forEach { list ->
-                                    DropdownMenuItem(
-                                        text = { Text(listDisplayName(list)) },
-                                        onClick = {
-                                            moveTargetId = list.id
-                                            moveMenuOpen = false
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                        TextButton(
-                            onClick = {
-                                closeListDialogs()
-                                createThenMoveAll = true
-                                showCreate = true
-                            },
-                        ) {
-                            Text(stringResource(R.string.list_new), color = scheme.primary)
-                        }
-                    }
+                onConfirm = {
+                    val target = moveTargetId ?: selectedMove?.id
+                    if (target != null) onMoveAllWords(target)
+                    expandedId = null
+                    closeListDialogs()
                 },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val target = moveTargetId ?: selectedMove?.id
-                            if (target != null) onMoveAllWords(target)
-                            expandedId = null
-                            closeListDialogs()
-                        },
-                        shape = AppButtonShape,
-                        enabled = (moveTargetId ?: selectedMove?.id) != null,
-                    ) { Text(stringResource(R.string.action_move)) }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { closeListDialogs() }, shape = AppButtonShape) {
-                        Text(stringResource(R.string.action_cancel), color = scheme.error)
-                    }
-                },
+                confirmEnabled = (moveTargetId ?: selectedMove?.id) != null,
             )
         }
         ListEditDialog.None -> Unit
@@ -2357,99 +1676,39 @@ private fun ListsTab(
 
     when (wordDialog) {
         WordEditDialog.DeleteConfirm -> {
-            AlertDialog(
-                onDismissRequest = { closeWordDialogs() },
-                shape = AppDialogShape,
-                containerColor = scheme.surface,
-                title = {
-                    Text(
-                        stringResource(R.string.list_delete_word_confirm),
-                        fontWeight = FontWeight.Bold,
-                        color = scheme.onSurface,
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            wordTargetId?.let(onDeleteWord)
-                            expandedId = null
-                            closeWordDialogs()
-                        },
-                        shape = AppButtonShape,
-                        colors = ButtonDefaults.buttonColors(containerColor = scheme.error),
-                    ) { Text(stringResource(R.string.action_delete)) }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { closeWordDialogs() }, shape = AppButtonShape) {
-                        Text(stringResource(R.string.action_back), color = scheme.onSurface)
-                    }
+            DestroyConfirmDialog(
+                visible = true,
+                title = stringResource(R.string.list_delete_word_confirm),
+                onDismiss = { closeWordDialogs() },
+                onConfirm = {
+                    wordTargetId?.let(onDeleteWord)
+                    expandedId = null
+                    closeWordDialogs()
                 },
             )
         }
         WordEditDialog.Move -> {
             val selectedMove = moveTargets.firstOrNull { it.id == moveTargetId } ?: moveTargets.firstOrNull()
-            AlertDialog(
-                onDismissRequest = { closeWordDialogs() },
-                shape = AppDialogShape,
-                containerColor = scheme.surface,
-                title = {
-                    Text(stringResource(R.string.list_move_word), fontWeight = FontWeight.Bold, color = scheme.onSurface)
+            MoveToListDialog(
+                visible = true,
+                title = stringResource(R.string.list_move_word),
+                options = moveTargets.map { ListPickOption(it.id, listDisplayName(it)) },
+                selectedId = moveTargetId ?: selectedMove?.id,
+                onSelect = { moveTargetId = it },
+                onDismiss = { closeWordDialogs() },
+                onNewList = {
+                    closeWordDialogs()
+                    createThenMoveCardId = wordTargetId
+                    showCreate = true
                 },
-                text = {
-                    ExposedDropdownMenuBox(
-                        expanded = moveMenuOpen,
-                        onExpandedChange = { moveMenuOpen = it },
-                    ) {
-                        OutlinedTextField(
-                            value = selectedMove?.let { listDisplayName(it) }.orEmpty(),
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = moveMenuOpen) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = scheme.onSurface,
-                                unfocusedTextColor = scheme.onSurface,
-                                focusedContainerColor = scheme.surfaceVariant,
-                                unfocusedContainerColor = scheme.surfaceVariant,
-                            ),
-                        )
-                        ExposedDropdownMenu(
-                            expanded = moveMenuOpen,
-                            onDismissRequest = { moveMenuOpen = false },
-                        ) {
-                            moveTargets.forEach { list ->
-                                DropdownMenuItem(
-                                    text = { Text(listDisplayName(list)) },
-                                    onClick = {
-                                        moveTargetId = list.id
-                                        moveMenuOpen = false
-                                    },
-                                )
-                            }
-                        }
-                    }
+                onConfirm = {
+                    val cardId = wordTargetId
+                    val target = moveTargetId ?: selectedMove?.id
+                    if (cardId != null && target != null) onMoveWord(cardId, target)
+                    expandedId = null
+                    closeWordDialogs()
                 },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val cardId = wordTargetId
-                            val target = moveTargetId ?: selectedMove?.id
-                            if (cardId != null && target != null) onMoveWord(cardId, target)
-                            expandedId = null
-                            closeWordDialogs()
-                        },
-                        shape = AppButtonShape,
-                        enabled = (moveTargetId ?: selectedMove?.id) != null,
-                    ) { Text(stringResource(R.string.action_move)) }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { closeWordDialogs() }, shape = AppButtonShape) {
-                        Text(stringResource(R.string.action_cancel), color = scheme.error)
-                    }
-                },
+                confirmEnabled = (moveTargetId ?: selectedMove?.id) != null,
             )
         }
         WordEditDialog.None -> Unit
@@ -2457,115 +1716,38 @@ private fun ListsTab(
 
     when (multiDialog) {
         MultiEditDialog.DeleteConfirm -> {
-            AlertDialog(
-                onDismissRequest = { closeMultiDialogs() },
-                shape = AppDialogShape,
-                containerColor = scheme.surface,
-                title = {
-                    Text(
-                        stringResource(R.string.list_delete_selected_title),
-                        fontWeight = FontWeight.Bold,
-                        color = scheme.onSurface,
-                    )
-                },
-                text = {
-                    Text(
-                        stringResource(R.string.list_delete_selected_body, state.selectedWordIds.size),
-                        color = scheme.onSurfaceVariant,
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            onDeleteSelectedWords()
-                            expandedId = null
-                            closeMultiDialogs()
-                        },
-                        shape = AppButtonShape,
-                        colors = ButtonDefaults.buttonColors(containerColor = scheme.error),
-                    ) { Text(stringResource(R.string.action_delete)) }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { closeMultiDialogs() }, shape = AppButtonShape) {
-                        Text(stringResource(R.string.action_back), color = scheme.onSurface)
-                    }
+            DestroyConfirmDialog(
+                visible = true,
+                title = stringResource(R.string.list_delete_selected_title),
+                onDismiss = { closeMultiDialogs() },
+                onConfirm = {
+                    onDeleteSelectedWords()
+                    expandedId = null
+                    closeMultiDialogs()
                 },
             )
         }
         MultiEditDialog.Move -> {
             val selectedMove = moveTargets.firstOrNull { it.id == moveTargetId } ?: moveTargets.firstOrNull()
-            AlertDialog(
-                onDismissRequest = { closeMultiDialogs() },
-                shape = AppDialogShape,
-                containerColor = scheme.surface,
-                title = {
-                    Text(stringResource(R.string.list_move_to), fontWeight = FontWeight.Bold, color = scheme.onSurface)
+            MoveToListDialog(
+                visible = true,
+                title = stringResource(R.string.list_move_to),
+                options = moveTargets.map { ListPickOption(it.id, listDisplayName(it)) },
+                selectedId = moveTargetId ?: selectedMove?.id,
+                onSelect = { moveTargetId = it },
+                onDismiss = { closeMultiDialogs() },
+                onNewList = {
+                    closeMultiDialogs()
+                    createThenMoveSelected = true
+                    showCreate = true
                 },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ExposedDropdownMenuBox(
-                            expanded = moveMenuOpen,
-                            onExpandedChange = { moveMenuOpen = it },
-                        ) {
-                            OutlinedTextField(
-                                value = selectedMove?.let { listDisplayName(it) }.orEmpty(),
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = moveMenuOpen) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedTextColor = scheme.onSurface,
-                                    unfocusedTextColor = scheme.onSurface,
-                                    focusedContainerColor = scheme.surfaceVariant,
-                                    unfocusedContainerColor = scheme.surfaceVariant,
-                                ),
-                            )
-                            ExposedDropdownMenu(
-                                expanded = moveMenuOpen,
-                                onDismissRequest = { moveMenuOpen = false },
-                            ) {
-                                moveTargets.forEach { list ->
-                                    DropdownMenuItem(
-                                        text = { Text(listDisplayName(list)) },
-                                        onClick = {
-                                            moveTargetId = list.id
-                                            moveMenuOpen = false
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                        TextButton(
-                            onClick = {
-                                closeMultiDialogs()
-                                createThenMoveSelected = true
-                                showCreate = true
-                            },
-                        ) {
-                            Text(stringResource(R.string.list_new), color = scheme.primary)
-                        }
-                    }
+                onConfirm = {
+                    val target = moveTargetId ?: selectedMove?.id
+                    if (target != null) onMoveSelectedWords(target)
+                    expandedId = null
+                    closeMultiDialogs()
                 },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val target = moveTargetId ?: selectedMove?.id
-                            if (target != null) onMoveSelectedWords(target)
-                            expandedId = null
-                            closeMultiDialogs()
-                        },
-                        shape = AppButtonShape,
-                        enabled = (moveTargetId ?: selectedMove?.id) != null,
-                    ) { Text(stringResource(R.string.action_move)) }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { closeMultiDialogs() }, shape = AppButtonShape) {
-                        Text(stringResource(R.string.action_cancel), color = scheme.error)
-                    }
-                },
+                confirmEnabled = (moveTargetId ?: selectedMove?.id) != null,
             )
         }
         MultiEditDialog.None -> Unit
@@ -2576,6 +1758,7 @@ private fun ListsTab(
             onDismissRequest = { showSortSheet = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         ) {
+            AppDialogWindowChrome()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -2619,6 +1802,7 @@ private fun ListsTab(
             onDismissRequest = { showFilterSheet = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         ) {
+            AppDialogWindowChrome()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -2702,7 +1886,7 @@ private fun ListsTab(
                             .testTag(TestTags.FILTER_APPLY),
                         shape = AppButtonShape,
                     ) {
-                        Text(stringResource(R.string.action_apply))
+                        Text(stringResource(R.string.action_ok))
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -2776,6 +1960,9 @@ private fun ListWordTile(
     val imported = remember(card.id, card.content) {
         com.vocabulario.app.ui.components.parseImportDisplayFromContent(card.content)
     }
+    val isImportPreserve = imported != null ||
+        card.pos.equals("imported", ignoreCase = true) ||
+        com.vocabulario.app.ui.components.isImportPreserveContent(card.content)
     val muted = awaitingNetwork || activityProcessing || needsReview
     val tileColor = when {
         selected -> scheme.primary.copy(alpha = 0.12f)
@@ -2805,7 +1992,7 @@ private fun ListWordTile(
                     .fillMaxWidth()
                     .heightIn(min = tileHeaderHeight, max = tileHeaderHeight)
                     .combinedClickable(
-                        enabled = needsReview || (!pending && !awaitingNetwork && !activityProcessing),
+                        enabled = needsReview || (!pending && !activityProcessing),
                         onClick = { if (needsReview) onReview() else onToggle() },
                         onLongClick = onLongPress,
                     ),
@@ -2873,13 +2060,25 @@ private fun ListWordTile(
                             modifier = Modifier.size(22.dp),
                         )
                     }
-                    !selectionMode && statusLabel != null -> {
+                    !selectionMode && (statusLabel != null || isImportPreserve) -> {
                         Spacer(modifier = Modifier.width(8.dp))
-                        StatusChip(
-                            label = statusLabel,
-                            failed = failed,
-                            muted = awaitingNetwork,
-                        )
+                        if (isImportPreserve) {
+                            StatusChip(
+                                label = stringResource(R.string.card_badge_import),
+                                failed = false,
+                                muted = false,
+                            )
+                            if (statusLabel != null) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                            }
+                        }
+                        if (statusLabel != null) {
+                            StatusChip(
+                                label = statusLabel,
+                                failed = failed,
+                                muted = awaitingNetwork,
+                            )
+                        }
                     }
                 }
             }
@@ -2899,16 +2098,34 @@ private fun ListWordTile(
             }
 
             AnimatedVisibility(
-                visible = expanded && !pending && !awaitingNetwork && !activityProcessing && !selectionMode,
+                visible = expanded && !pending && !activityProcessing && !selectionMode,
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut(),
             ) {
                 Column(modifier = Modifier.padding(top = 4.dp)) {
+                    if (awaitingNetwork) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HorizontalDivider(color = scheme.outline.copy(alpha = 0.5f))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            ListTileIconButton(
+                                onClick = onDelete,
+                                icon = Icons.Default.Close,
+                                contentDescription = stringResource(R.string.cd_delete),
+                                containerColor = scheme.error.copy(alpha = 0.15f),
+                                contentColor = scheme.error,
+                            )
+                        }
+                    } else {
                     if (imported != null) {
                         key(card.id, expanded) {
                             com.vocabulario.app.ui.components.ImportDisplayFlip(
                                 display = imported,
                                 showPrompt = false,
+                                enableTts = false,
                             )
                         }
                     } else {
@@ -2950,13 +2167,15 @@ private fun ListWordTile(
                                         containerColor = scheme.error.copy(alpha = 0.15f),
                                         contentColor = scheme.error,
                                     )
-                                    ListTileIconButton(
-                                        onClick = onMove,
-                                        icon = Icons.AutoMirrored.Outlined.DriveFileMove,
-                                        contentDescription = stringResource(R.string.cd_move),
-                                        containerColor = scheme.primaryContainer,
-                                        contentColor = scheme.onPrimaryContainer,
-                                    )
+                                    if (card.isReadyToMove()) {
+                                        ListTileIconButton(
+                                            onClick = onMove,
+                                            icon = Icons.AutoMirrored.Outlined.DriveFileMove,
+                                            contentDescription = stringResource(R.string.cd_move),
+                                            containerColor = scheme.primaryContainer,
+                                            contentColor = scheme.onPrimaryContainer,
+                                        )
+                                    }
                                     ListTileIconButton(
                                         onClick = onFixCard,
                                         icon = Icons.Outlined.Edit,
@@ -2987,6 +2206,7 @@ private fun ListWordTile(
                                 )
                             }
                         }
+                    }
                     }
                 }
             }

@@ -47,6 +47,9 @@ import com.vocabulario.app.data.api.CardHistoryEventResponse
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppButtonShape
+import com.vocabulario.app.ui.components.AppDialogAction
+import com.vocabulario.app.ui.components.AppDialogWindowChrome
+import com.vocabulario.app.ui.components.AppGrayField
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -109,6 +112,7 @@ fun CardCorrectionReportSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
     ) {
+        AppDialogWindowChrome()
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -155,15 +159,14 @@ fun CardCorrectionReportSheet(
                 }
             }
             Spacer(Modifier.height(10.dp))
-            OutlinedTextField(
+            AppGrayField(
                 value = note,
                 onValueChange = { note = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(TestTags.CORRECTION_NOTE),
-                label = { Text(stringResource(R.string.correction_note_label)) },
-                placeholder = { Text(stringResource(R.string.correction_note_hint)) },
+                modifier = Modifier.testTag(TestTags.CORRECTION_NOTE),
+                placeholder = stringResource(R.string.correction_note_hint),
+                singleLine = false,
                 minLines = 3,
+                maxLines = 6,
             )
             if (quotaBlocked) {
                 Spacer(Modifier.height(8.dp))
@@ -243,13 +246,6 @@ fun CardCorrectionResultDialog(
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                item.reason?.takeIf { it.isNotBlank() }?.let { reason ->
-                    Text(
-                        reason,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = scheme.onSurfaceVariant,
-                    )
-                }
             }
         },
         buttons = {
@@ -265,6 +261,7 @@ fun CardCorrectionResultDialog(
                     onSecondary = onDismiss,
                     primaryText = stringResource(R.string.correction_edit_self),
                     onPrimary = onEditSelf,
+                    primaryKind = AppDialogAction.Teal,
                     primaryModifier = Modifier.testTag(TestTags.BTN_CORRECTION_EDIT_SELF),
                 )
             }
@@ -294,6 +291,7 @@ fun CardHistorySheet(
         sheetState = sheetState,
         modifier = Modifier.testTag(TestTags.SHEET_CARD_HISTORY),
     ) {
+        AppDialogWindowChrome()
         Column(
             modifier = Modifier
                 .fillMaxWidth()

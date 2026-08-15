@@ -159,8 +159,13 @@ async def resolve_list_for_card(
     system = await ensure_system_list(db, user_id, profile_id)
     if card.deck_id is None:
         return system.id, system.name
-    result = await db.execute(select(WordList).where(WordList.id == card.deck_id))
+    result = await db.execute(
+        select(WordList).where(
+            WordList.id == card.deck_id,
+            WordList.deleted_at.is_(None),
+        )
+    )
     wl = result.scalar_one_or_none()
     if wl:
         return wl.id, wl.name
-    return card.deck_id, "Lista"
+    return None, None

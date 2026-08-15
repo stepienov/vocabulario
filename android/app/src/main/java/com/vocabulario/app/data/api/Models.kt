@@ -43,6 +43,7 @@ data class UserSettingsResponse(
     val show_synonyms_antonyms: Boolean = true,
     val show_synonyms: Boolean = true,
     val show_antonyms: Boolean = true,
+    val show_word_family: Boolean = true,
     val show_periphrases: Boolean = true,
     val show_conjugation: Boolean = true,
     val conjugation_expanded_default: Boolean = false,
@@ -65,6 +66,7 @@ data class UserSettingsUpdate(
     val show_synonyms_antonyms: Boolean? = null,
     val show_synonyms: Boolean? = null,
     val show_antonyms: Boolean? = null,
+    val show_word_family: Boolean? = null,
     val show_periphrases: Boolean? = null,
     val show_conjugation: Boolean? = null,
     val conjugation_expanded_default: Boolean? = null,
@@ -166,6 +168,12 @@ data class ImportIngestRequest(
 )
 
 @Serializable
+data class ImportTts(
+    val enabled: Boolean = false,
+    val lang: String? = null,
+)
+
+@Serializable
 data class ImportDisplayBlock(
     val type: String,
     val text: String? = null,
@@ -176,6 +184,10 @@ data class ImportDisplayBlock(
     val headers: List<String>? = null,
     val rows: List<List<String>>? = null,
     val children: List<ImportDisplayBlock>? = null,
+    val align: String? = null,
+    val size: String? = null,
+    val semantic: String? = null,
+    val tts: ImportTts? = null,
 )
 
 @Serializable
@@ -188,6 +200,7 @@ data class ImportDisplayPayload(
     val prompt: ImportDisplaySide = ImportDisplaySide(),
     val answer: ImportDisplaySide = ImportDisplaySide(),
     val prompt_style: String = "word",
+    val bidirectional: Boolean = false,
 )
 
 @Serializable

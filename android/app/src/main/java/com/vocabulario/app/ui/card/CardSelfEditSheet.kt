@@ -19,16 +19,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -48,6 +43,9 @@ import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.i18n.localizedPosLabel
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppButtonShape
+import com.vocabulario.app.ui.components.AppDialogWindowChrome
+import com.vocabulario.app.ui.components.AppGrayField
+import com.vocabulario.app.ui.components.AppPillDropdown
 import com.vocabulario.app.ui.home.LIST_FILTER_POS_KEYS
 import kotlinx.serialization.json.JsonObject
 
@@ -77,6 +75,7 @@ fun CardSelfEditSheet(
         containerColor = scheme.surface,
         tonalElevation = 0.dp,
     ) {
+        AppDialogWindowChrome()
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -217,50 +216,25 @@ fun CardSelfEditSheet(
                     modifier = Modifier.weight(1f).testTag(TestTags.BTN_SELF_EDIT_SAVE),
                     shape = AppButtonShape,
                 ) {
-                    Text(stringResource(R.string.action_save))
+                    Text(stringResource(R.string.action_ok))
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PosDropdown(value: String, onValueChange: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val options = LIST_FILTER_POS_KEYS.filter { it != "unknown" }
-    val label = localizedPosLabel(value).ifBlank { value }.ifBlank {
-        stringResource(R.string.correction_field_pos)
+    val options = LIST_FILTER_POS_KEYS.filter { it != "unknown" }.map { key ->
+        key to localizedPosLabel(key).ifBlank { key }
     }
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(TestTags.SELF_EDIT_POS),
-    ) {
-        OutlinedTextField(
-            value = label,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(stringResource(R.string.correction_field_pos)) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-        )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { key ->
-                DropdownMenuItem(
-                    text = { Text(localizedPosLabel(key).ifBlank { key }) },
-                    onClick = {
-                        onValueChange(key)
-                        expanded = false
-                    },
-                )
-            }
-        }
-    }
+    AppPillDropdown(
+        options = options,
+        selectedCode = value,
+        onSelect = onValueChange,
+        label = stringResource(R.string.correction_field_pos),
+        testTag = TestTags.SELF_EDIT_POS,
+    )
     Spacer(Modifier.height(8.dp))
 }
 
@@ -279,13 +253,11 @@ private fun SelfEditField(
     minLines: Int = 1,
     testTag: String? = null,
 ) {
-    OutlinedTextField(
+    AppGrayField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
+        placeholder = label,
+        modifier = if (testTag != null) Modifier.testTag(testTag) else Modifier,
         minLines = minLines,
         singleLine = minLines == 1,
     )
@@ -317,21 +289,20 @@ private fun PairRowsSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                OutlinedTextField(
+                AppGrayField(
                     value = row.l2,
                     onValueChange = { onChange(index, row.copy(l2 = it)) },
-                    label = { Text(stringResource(R.string.correction_field_l2)) },
+                    placeholder = stringResource(R.string.correction_field_l2),
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                 )
                 SelfEditRemoveButton(onClick = { onRemove(index) })
             }
             Spacer(Modifier.height(6.dp))
-            OutlinedTextField(
+            AppGrayField(
                 value = row.l1,
                 onValueChange = { onChange(index, row.copy(l1 = it)) },
-                label = { Text(stringResource(R.string.correction_field_l1)) },
-                modifier = Modifier.fillMaxWidth(),
+                placeholder = stringResource(R.string.correction_field_l1),
                 singleLine = true,
             )
         }

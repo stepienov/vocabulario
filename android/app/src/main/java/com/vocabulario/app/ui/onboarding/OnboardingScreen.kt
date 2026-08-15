@@ -1,160 +1,250 @@
 package com.vocabulario.app.ui.onboarding
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.foundation.layout.Row
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vocabulario.app.R
 import com.vocabulario.app.data.CEFR_LEVELS
-import com.vocabulario.app.data.LanguagePacks
 import com.vocabulario.app.data.SUPPORTED_LEARNING_LANGS
-import com.vocabulario.app.data.verbTensesFor
 import com.vocabulario.app.ui.TestTags
+import com.vocabulario.app.ui.components.AppButtonShape
+import com.vocabulario.app.ui.components.AppPillDropdown
+import com.vocabulario.app.ui.components.ButtonLabel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingScreen(
     onComplete: () -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-            .verticalScroll(rememberScrollState()),
-    ) {
-        Text(stringResource(R.string.onboarding_title), style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(R.string.onboarding_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Spacer(Modifier.height(24.dp))
-
-        LangDropdown(
-            label = stringResource(R.string.onboarding_native),
-            selected = state.appLang,
-            onSelect = viewModel::setAppLang,
-            testTag = TestTags.ONBOARDING_NATIVE,
-        )
-        Spacer(Modifier.height(12.dp))
-        LangDropdown(
-            label = stringResource(R.string.onboarding_learning),
-            selected = state.learningLang,
-            onSelect = viewModel::setLearningLang,
-            testTag = TestTags.ONBOARDING_LEARNING,
-        )
-
-        Spacer(Modifier.height(20.dp))
-        Text(stringResource(R.string.onboarding_cefr), style = MaterialTheme.typography.titleMedium)
-        CEFR_LEVELS.forEach { level ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.testTag(TestTags.ONBOARDING_CEFR_PREFIX + level),
-            ) {
-                RadioButton(
-                    selected = state.cefrLevel == level,
-                    onClick = { viewModel.setCefr(level) },
-                )
-                Text(level)
-            }
-        }
-
-        if (LanguagePacks.showsTensePicker(state.learningLang)) {
-            Spacer(Modifier.height(20.dp))
-            Text(stringResource(R.string.onboarding_tenses), style = MaterialTheme.typography.titleMedium)
-            verbTensesFor(state.learningLang).forEach { (key, label) ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = key in state.selectedTenses,
-                        onCheckedChange = { viewModel.toggleTense(key) },
-                    )
-                    Text(label)
-                }
-            }
-        }
-
-        state.error?.let {
-            Spacer(Modifier.height(12.dp))
-            Text(it, color = MaterialTheme.colorScheme.error)
-        }
-
-        Spacer(Modifier.height(24.dp))
-        if (state.loading) {
-            CircularProgressIndicator()
+    val localeTag = LocalConfiguration.current.locales.toLanguageTags()
+    key(localeTag) {
+        if (state.step == 1) {
+            OnboardingAppLangStep(
+                appLang = state.appLang,
+                onSelectLang = viewModel::setAppLang,
+                onContinue = viewModel::goToLearningStep,
+            )
         } else {
-            Button(
-                onClick = { viewModel.complete(onComplete) },
-                modifier = Modifier.fillMaxWidth().testTag(TestTags.ONBOARDING_START),
-            ) { Text(stringResource(R.string.onboarding_start)) }
+            OnboardingLearningStep(
+                state = state,
+                onBack = viewModel::backToAppLang,
+                onSelectLearning = viewModel::setLearningLang,
+                onSelectLevel = viewModel::setCefr,
+                onStart = { viewModel.complete(onComplete) },
+            )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LangDropdown(
-    label: String,
-    selected: String,
-    onSelect: (String) -> Unit,
-    testTag: String? = null,
+private fun OnboardingAppLangStep(
+    appLang: String,
+    onSelectLang: (String) -> Unit,
+    onContinue: () -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedLabel = SUPPORTED_LEARNING_LANGS.firstOrNull { it.first == selected }?.second ?: selected
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = Modifier.then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
+    OnboardingChrome(
+        footer = {
+            OnboardingPrimaryButton(
+                label = stringResource(R.string.onboarding_continue),
+                onClick = onContinue,
+                testTag = TestTags.ONBOARDING_CONTINUE,
+            )
+        },
     ) {
-        OutlinedTextField(
-            value = selectedLabel,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+        AppPillDropdown(
+            options = SUPPORTED_LEARNING_LANGS,
+            selectedCode = appLang,
+            onSelect = onSelectLang,
+            label = stringResource(R.string.onboarding_choose_language),
+            testTag = TestTags.ONBOARDING_NATIVE,
+            labelTextAlign = TextAlign.Center,
+            labelBottomPadding = 20.dp,
         )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            SUPPORTED_LEARNING_LANGS.forEach { (code, name) ->
-                DropdownMenuItem(
-                    text = { Text(name) },
-                    onClick = {
-                        onSelect(code)
-                        expanded = false
-                    },
+    }
+}
+
+@Composable
+private fun OnboardingLearningStep(
+    state: OnboardingUiState,
+    onBack: () -> Unit,
+    onSelectLearning: (String) -> Unit,
+    onSelectLevel: (String) -> Unit,
+    onStart: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val learningOptions = SUPPORTED_LEARNING_LANGS.filterNot {
+        it.first.equals(state.appLang, ignoreCase = true)
+    }
+    val levelOptions = CEFR_LEVELS.map { it to it } +
+        (LEVEL_UNSURE to stringResource(R.string.onboarding_level_unknown))
+    val canStart = state.learningLang.isNotBlank() && state.cefrLevel.isNotBlank() && !state.loading
+
+    OnboardingChrome(
+        onBack = onBack,
+        footer = {
+            if (state.loading) {
+                CircularProgressIndicator(
+                    color = scheme.primary,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
+            } else {
+                OnboardingPrimaryButton(
+                    label = stringResource(R.string.onboarding_start),
+                    onClick = onStart,
+                    enabled = canStart,
+                    testTag = TestTags.ONBOARDING_START,
                 )
             }
+        },
+    ) {
+        AppPillDropdown(
+            options = learningOptions,
+            selectedCode = state.learningLang,
+            onSelect = onSelectLearning,
+            label = stringResource(R.string.onboarding_want_to_learn),
+            testTag = TestTags.ONBOARDING_LEARNING,
+            labelTextAlign = TextAlign.Center,
+            labelBottomPadding = 20.dp,
+        )
+        if (state.learningLang.isNotBlank()) {
+            Spacer(Modifier.height(24.dp))
+            AppPillDropdown(
+                options = levelOptions,
+                selectedCode = state.cefrLevel,
+                onSelect = onSelectLevel,
+                label = stringResource(R.string.onboarding_level),
+                testTag = TestTags.ONBOARDING_LEVEL,
+                labelTextAlign = TextAlign.Center,
+                labelBottomPadding = 20.dp,
+            )
         }
+        state.error?.let {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                it,
+                color = scheme.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun OnboardingChrome(
+    onBack: (() -> Unit)? = null,
+    footer: @Composable ColumnScope.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(scheme.background)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 20.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+        ) {
+            if (onBack != null) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .testTag(TestTags.BTN_BACK),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.cd_back),
+                        tint = scheme.onBackground,
+                    )
+                }
+            }
+            Text(
+                stringResource(R.string.onboarding_app_setup),
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 48.dp),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = scheme.onBackground,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+            )
+        }
+        BoxWithConstraints(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+        ) {
+            val topPad = (maxHeight * 0.25f).coerceAtLeast(16.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(top = topPad),
+                content = content,
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        footer()
+    }
+}
+
+@Composable
+private fun OnboardingPrimaryButton(
+    label: String,
+    onClick: () -> Unit,
+    testTag: String,
+    enabled: Boolean = true,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .testTag(testTag),
+        shape = AppButtonShape,
+    ) {
+        ButtonLabel(label, style = MaterialTheme.typography.titleMedium)
     }
 }

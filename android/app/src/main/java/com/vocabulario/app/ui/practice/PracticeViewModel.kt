@@ -16,6 +16,7 @@ import com.vocabulario.app.ui.home.listNameConflictMessage
 import com.vocabulario.app.ui.card.CorrectionResultItem
 import com.vocabulario.app.ui.card.CorrectionResultsState
 import com.vocabulario.app.ui.card.HomeUiStateSelfEditActive
+import com.vocabulario.app.ui.components.isImportPreserveContent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -75,6 +76,7 @@ data class PracticeUiState(
     val showExampleSentences: Boolean = true,
     val showSynonyms: Boolean = true,
     val showAntonyms: Boolean = true,
+    val showWordFamily: Boolean = true,
     val showPeriphrases: Boolean = true,
     val showConjugation: Boolean = true,
     val conjugationExpandedDefault: Boolean = false,
@@ -168,6 +170,7 @@ class PracticeViewModel @Inject constructor(
                     showExampleSentences = settings.show_example_sentences,
                     showSynonyms = settings.show_synonyms_antonyms && settings.show_synonyms,
                     showAntonyms = settings.show_synonyms_antonyms && settings.show_antonyms,
+                    showWordFamily = settings.show_word_family,
                     showPeriphrases = settings.show_periphrases,
                     showConjugation = settings.show_conjugation,
                     conjugationExpandedDefault = settings.conjugation_expanded_default,
@@ -178,7 +181,7 @@ class PracticeViewModel @Inject constructor(
             }.onFailure {
                 _state.value = _state.value.copy(
                     loading = false,
-                    error = it.userMessage(strings.get(R.string.err_load_queue)),
+                    error = it.userMessage(strings, R.string.err_load_queue),
                 )
             }
         }
@@ -190,10 +193,16 @@ class PracticeViewModel @Inject constructor(
     private fun currentDirection(): String =
         currentItem()?.direction ?: "l2_to_l1"
 
-    private fun resolveAnswerMode(): AnswerMode = when (inputPref) {
-        "type" -> AnswerMode.TYPE
-        "flashcard" -> AnswerMode.FLASHCARD
-        else -> AnswerMode.CHOICE
+    private fun resolveAnswerMode(): AnswerMode {
+        val item = currentItem()
+        if (item != null && isImportPreserveContent(item.content)) {
+            return AnswerMode.FLASHCARD
+        }
+        return when (inputPref) {
+            "type" -> AnswerMode.TYPE
+            "flashcard" -> AnswerMode.FLASHCARD
+            else -> AnswerMode.CHOICE
+        }
     }
 
     private fun prepareCard() {
@@ -256,7 +265,7 @@ class PracticeViewModel @Inject constructor(
                 .onFailure {
                     _state.value = _state.value.copy(
                         loadingChoices = false,
-                        error = it.userMessage(strings.get(R.string.err_load_options)),
+                        error = it.userMessage(strings, R.string.err_load_options),
                     )
                 }
         }
@@ -332,7 +341,7 @@ class PracticeViewModel @Inject constructor(
                 }
             }.onFailure {
                 _state.value = _state.value.copy(
-                    error = it.userMessage(strings.get(R.string.err_check)),
+                    error = it.userMessage(strings, R.string.err_check),
                 )
             }
         }
@@ -368,7 +377,7 @@ class PracticeViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_add)),
+                        error = it.userMessage(strings, R.string.err_add),
                     )
                 }
         }
@@ -413,7 +422,7 @@ class PracticeViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_lists)),
+                        error = it.userMessage(strings, R.string.err_lists),
                     )
                 }
         }
@@ -452,7 +461,7 @@ class PracticeViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_add)),
+                        error = it.userMessage(strings, R.string.err_add),
                     )
                 }
         }
@@ -466,7 +475,7 @@ class PracticeViewModel @Inject constructor(
                 repository.addWordToList(listId, word.lemma, word.pos, word.glossL1, null)
             }.onFailure {
                 _state.value = _state.value.copy(
-                    error = it.userMessage(strings.get(R.string.err_add)),
+                    error = it.userMessage(strings, R.string.err_add),
                 )
             }
         }
@@ -487,7 +496,7 @@ class PracticeViewModel @Inject constructor(
                 repository.addWordToList(list.id, word.lemma, word.pos, word.glossL1, null)
             }.onFailure {
                 _state.value = _state.value.copy(
-                    error = it.userMessage(strings.get(R.string.err_create_list)),
+                    error = it.userMessage(strings, R.string.err_create_list),
                 )
             }
         }
@@ -540,7 +549,7 @@ class PracticeViewModel @Inject constructor(
             }.onFailure {
                 _state.value = _state.value.copy(
                     grading = false,
-                    error = it.userMessage(strings.get(R.string.err_save_grade)),
+                    error = it.userMessage(strings, R.string.err_save_grade),
                 )
             }
         }
@@ -572,7 +581,7 @@ class PracticeViewModel @Inject constructor(
             }.onFailure {
                 _state.value = _state.value.copy(
                     grading = false,
-                    error = it.userMessage(strings.get(R.string.err_save_grade)),
+                    error = it.userMessage(strings, R.string.err_save_grade),
                 )
             }
         }
@@ -631,14 +640,9 @@ class PracticeViewModel @Inject constructor(
                     maybeStartActivityPoll()
                 }
                 .onFailure {
-                    val limitMsg = strings.get(R.string.correction_daily_limit)
                     _state.value = _state.value.copy(
                         correctionSubmitting = false,
-                        error = if (it.message?.contains("429") == true || it.message?.contains("correction_daily_limit") == true) {
-                            limitMsg
-                        } else {
-                            it.userMessage(strings.get(R.string.err_save))
-                        },
+                        error = it.userMessage(strings, R.string.err_save),
                     )
                 }
         }
@@ -767,7 +771,7 @@ class PracticeViewModel @Inject constructor(
                 .onFailure {
                     _state.value = _state.value.copy(
                         selfEditValidating = false,
-                        error = it.userMessage(strings.get(R.string.err_save)),
+                        error = it.userMessage(strings, R.string.err_save),
                     )
                 }
         }
@@ -819,7 +823,7 @@ class PracticeViewModel @Inject constructor(
                 _state.value = _state.value.copy(
                     selfEditSaving = false,
                     selfEditValidating = false,
-                    error = it.userMessage(strings.get(R.string.err_save)),
+                    error = it.userMessage(strings, R.string.err_save),
                 )
                 maybeShowNextCorrectionResult()
             }
@@ -841,7 +845,7 @@ class PracticeViewModel @Inject constructor(
                     _state.value = _state.value.copy(
                         historyOpen = false,
                         historyLoading = false,
-                        error = it.userMessage(strings.get(R.string.err_load_cards)),
+                        error = it.userMessage(strings, R.string.err_load_cards),
                     )
                 }
         }
@@ -868,7 +872,7 @@ class PracticeViewModel @Inject constructor(
                 .onFailure {
                     _state.value = _state.value.copy(
                         historyRestoring = false,
-                        error = it.userMessage(strings.get(R.string.err_save)),
+                        error = it.userMessage(strings, R.string.err_save),
                     )
                 }
         }

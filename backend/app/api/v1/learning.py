@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, normalize_text
+from app.core.http_errors import api_error
 from app.db.session import get_db
 from app.models import CardCorrection, CardHistoryEvent, LanguageProfile, LearningCard, LexicalEntry, ReviewLog, SrsState, User, UserSettings, WordList
 from app.schemas import (
@@ -111,7 +112,7 @@ async def _active_profile(db: AsyncSession, user_id: UUID, profile_id: UUID | No
     )
     profile = result.scalar_one_or_none()
     if profile is None:
-        raise HTTPException(status_code=400, detail="No active language profile")
+        raise api_error(400, "no_active_profile", "No active language profile")
     return profile
 
 
@@ -198,10 +199,7 @@ async def ingest_import_text(
     try:
         if mode == "preserve":
             if url:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Tryb „zachowaj fiszki” działa z wklejką/plikiem, nie z URL.",
-                )
+                raise api_error(400, "import_preserve_no_url", "Preserve-cards mode works with paste/file, not a URL.")
             profile = await service.get_profile(user.id, body.profile_id)
             deck = load_text_import(body.text)
             result = await resolve_import_display_cards(
@@ -215,12 +213,7 @@ async def ingest_import_text(
         if url:
             words = await fetch_words_from_url(url)
             if not words:
-                raise HTTPException(status_code=400, detail="Brak słów do zaimportowania")
-            if len(words) > 2000:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Za dużo haseł ({len(words)}). Podziel talię (max 2000).",
-                )
+                raise api_error(400, "import_empty", "No words to import")
             valid_raw, invalid = await service.validate_import_words(
                 user, body.profile_id, words
             )
@@ -233,12 +226,7 @@ async def ingest_import_text(
                 learning_lang=profile.learning_lang,
             )
             if not valid_raw and not invalid:
-                raise HTTPException(status_code=400, detail="Brak słów do zaimportowania")
-            if len(valid_raw) + len(invalid) > 2000:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Za dużo pozycji. Podziel talię (max 2000).",
-                )
+                raise api_error(400, "import_empty", "No words to import")
     except ImportPackageError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except ImportUrlError as exc:
@@ -279,12 +267,7 @@ async def ingest_import_file(
             learning_lang=profile.learning_lang,
         )
         if not valid_raw and not invalid:
-            raise HTTPException(status_code=400, detail="Brak słów do zaimportowania")
-        if len(valid_raw) > 2000:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Za dużo haseł ({len(valid_raw)}). Podziel talię (max 2000).",
-            )
+            raise api_error(400, "import_empty", "No words to import")
     except ImportPackageError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except ValueError as exc:
@@ -311,7 +294,7 @@ async def commit_import_display(
     )
     wl = result.scalar_one_or_none()
     if wl is None:
-        raise HTTPException(status_code=404, detail="Lista nie znaleziona")
+        raise api_error(404, "list_not_found", "List not found")
 
     created = 0
     skipped = 0
@@ -399,7 +382,7 @@ async def create_card(
 
     existing = await find_card_anywhere(db, user.id, profile.id, body.lemma, body.pos)
     if existing is not None:
-        raise HTTPException(status_code=409, detail="To słowo jest już na liście")
+        raise api_error(409, "word_already_on_list", "This word is already on the list")
 
     card = LearningCard(
         user_id=user.id,
@@ -451,6 +434,20 @@ def _resolve_direction(settings: UserSettings) -> str:
     return pref
 
 
+def _card_queue_direction(settings: UserSettings, content: dict | None) -> str:
+    """Preserve cards with bidirectional=false always practice L2→L1."""
+    display = (content or {}).get("display") if isinstance(content, dict) else None
+    if isinstance(display, dict) and display.get("bidirectional") is False:
+        return "l2_to_l1"
+    if (content or {}).get("schema_version") == "import_display.v1":
+        # Missing flag → treat as unidirectional.
+        if not isinstance(display, dict) or "bidirectional" not in display:
+            return "l2_to_l1"
+        if not display.get("bidirectional"):
+            return "l2_to_l1"
+    return _resolve_direction(settings)
+
+
 @router.get("/srs/queue", response_model=SrsQueueResponse)
 async def srs_queue(
     profile_id: UUID = Query(...),
@@ -484,11 +481,7 @@ async def srs_queue(
     direction = _resolve_direction(settings)
     items: list[SrsQueueItem] = []
     for card, state in due_result.all():
-        card_direction = (
-            random.choice(["l2_to_l1", "l1_to_l2"])
-            if settings.practice_direction == "random"
-            else direction
-        )
+        card_direction = _card_queue_direction(settings, card.content)
         items.append(
             SrsQueueItem(
                 card_id=card.id,
@@ -521,11 +514,7 @@ async def srs_queue(
     new_result = await db.execute(new_query)
     new_items = []
     for card, state in new_result.all():
-        card_direction = (
-            random.choice(["l2_to_l1", "l1_to_l2"])
-            if settings.practice_direction == "random"
-            else direction
-        )
+        card_direction = _card_queue_direction(settings, card.content)
         new_items.append(
             SrsQueueItem(
                 card_id=card.id,
@@ -558,7 +547,7 @@ async def srs_distractors(
     )
     card = result.scalar_one_or_none()
     if card is None:
-        raise HTTPException(status_code=404, detail="Card not found")
+        raise api_error(404, "card_not_found", "Card not found")
 
     profile_result = await db.execute(
         select(LanguageProfile).where(
@@ -568,7 +557,7 @@ async def srs_distractors(
     )
     profile = profile_result.scalar_one_or_none()
     if profile is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        raise api_error(404, "profile_not_found", "Profile not found")
 
     try:
         content = await ensure_similar_words(
@@ -617,7 +606,7 @@ async def srs_review(
     )
     row = result.one_or_none()
     if row is None:
-        raise HTTPException(status_code=404, detail="Card not found")
+        raise api_error(404, "card_not_found", "Card not found")
     card, state = row
 
     tolerance = "tolerate"
@@ -696,7 +685,7 @@ async def srs_undo(
     )
     row = result.one_or_none()
     if row is None:
-        raise HTTPException(status_code=404, detail="Card not found")
+        raise api_error(404, "card_not_found", "Card not found")
     card, state = row
 
     log_result = await db.execute(
@@ -733,7 +722,7 @@ async def check_typed_answer(
     )
     card = result.scalar_one_or_none()
     if card is None:
-        raise HTTPException(status_code=404, detail="Card not found")
+        raise api_error(404, "card_not_found", "Card not found")
 
     tolerance = "tolerate"
 
@@ -808,9 +797,9 @@ async def create_list(
     await ensure_system_list(db, user.id, profile.id)
     name = body.name.strip()
     if not name:
-        raise HTTPException(status_code=400, detail="Nazwa listy jest wymagana")
+        raise api_error(400, "empty_list_name", "List name is required")
     if name.lower() in RESERVED_LIST_NAMES:
-        raise HTTPException(status_code=400, detail="Ta nazwa jest zarezerwowana")
+        raise api_error(400, "list_name_reserved", "This name is reserved")
     existing = await db.execute(
         select(WordList).where(
             WordList.profile_id == profile.id,
@@ -819,7 +808,7 @@ async def create_list(
         )
     )
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="Lista o tej nazwie już istnieje")
+        raise api_error(409, "list_name_taken", "A list with this name already exists")
     wl = WordList(
         user_id=user.id,
         profile_id=profile.id,
@@ -859,14 +848,14 @@ async def rename_list(
     )
     wl = result.scalar_one_or_none()
     if wl is None:
-        raise HTTPException(status_code=404, detail="Lista nie znaleziona")
+        raise api_error(404, "list_not_found", "List not found")
     if wl.is_system:
-        raise HTTPException(status_code=400, detail="Tej listy nie można edytować")
+        raise api_error(400, "list_not_editable", "This list cannot be edited")
     name = body.name.strip()
     if not name:
-        raise HTTPException(status_code=400, detail="Nazwa listy jest wymagana")
+        raise api_error(400, "empty_list_name", "List name is required")
     if name.lower() in RESERVED_LIST_NAMES:
-        raise HTTPException(status_code=400, detail="Ta nazwa jest zarezerwowana")
+        raise api_error(400, "list_name_reserved", "This name is reserved")
     clash = await db.execute(
         select(WordList).where(
             WordList.profile_id == profile.id,
@@ -876,7 +865,7 @@ async def rename_list(
         )
     )
     if clash.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="Lista o tej nazwie już istnieje")
+        raise api_error(409, "list_name_taken", "A list with this name already exists")
     wl.name = name
     await db.commit()
     await db.refresh(wl)
@@ -921,9 +910,9 @@ async def delete_list(
         # Idempotent: already deleted → nothing to do (offline retry safe).
         return
     if wl.is_system or wl.is_pending_inbox:
-        raise HTTPException(status_code=400, detail="Tej listy nie można usunąć")
-    # Product decision: usunięcie listy NIE kasuje kart — wracają do „Uczę się” (deck_id=NULL),
-    # zgodnie z zachowaniem offline na kliencie. Soft-delete listy = tombstone dla /sync/pull.
+        raise api_error(400, "list_not_deletable", "This list cannot be deleted")
+    # Usunięcie listy soft-delete'uje też karty (nie wracają do „Uczę się”).
+    now = datetime.now(UTC)
     cards = (
         await db.execute(
             select(LearningCard).where(
@@ -935,13 +924,8 @@ async def delete_list(
         )
     ).scalars().all()
     for card in cards:
-        card.deck_id = None
-        srs_q = await db.execute(
-            select(SrsState).where(SrsState.card_id == card.id, SrsState.scope == "main")
-        )
-        if srs_q.scalar_one_or_none() is None:
-            db.add(SrsState(card_id=card.id, scope="main", status="new"))
-    wl.deleted_at = datetime.now(UTC)
+        card.deleted_at = now
+    wl.deleted_at = now
     await db.commit()
 
 
@@ -988,7 +972,7 @@ async def move_card(
     )
     card = result.scalar_one_or_none()
     if card is None:
-        raise HTTPException(status_code=404, detail="Karta nie znaleziona")
+        raise api_error(404, "card_not_found", "Card not found")
 
     target_q = await db.execute(
         select(WordList).where(
@@ -1000,7 +984,7 @@ async def move_card(
     )
     target = target_q.scalar_one_or_none()
     if target is None:
-        raise HTTPException(status_code=404, detail="Lista docelowa nie znaleziona")
+        raise api_error(404, "target_list_not_found", "Target list not found")
 
     if target.is_system:
         card.deck_id = None
@@ -1059,7 +1043,7 @@ async def list_words(
     )
     wl = result.scalar_one_or_none()
     if wl is None:
-        raise HTTPException(status_code=404, detail="Lista nie znaleziona")
+        raise api_error(404, "list_not_found", "List not found")
     if wl.is_system:
         cards_q = await db.execute(
             select(LearningCard)
@@ -1124,7 +1108,7 @@ async def add_word_to_list(
     )
     wl = result.scalar_one_or_none()
     if wl is None:
-        raise HTTPException(status_code=404, detail="Lista nie znaleziona")
+        raise api_error(404, "list_not_found", "List not found")
 
     lemma = body.lemma.strip()
     pos = body.pos
@@ -1146,7 +1130,7 @@ async def add_word_to_list(
 
     existing = await find_card_anywhere(db, user.id, profile.id, lemma, pos)
     if existing is not None:
-        raise HTTPException(status_code=409, detail="To słowo jest już na liście")
+        raise api_error(409, "word_already_on_list", "This word is already on the list")
 
     if wl.is_system:
         # Same as POST /cards
@@ -1410,7 +1394,7 @@ async def _user_card(
     )
     card = result.scalar_one_or_none()
     if card is None:
-        raise HTTPException(status_code=404, detail="Karta nie znaleziona")
+        raise api_error(404, "card_not_found", "Card not found")
     return card
 
 
@@ -1505,7 +1489,7 @@ async def validate_self_edit_card(
     card = await _user_card(db, user.id, card_id, profile_id)
     profile = await db.get(LanguageProfile, profile_id)
     if profile is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        raise api_error(404, "profile_not_found", "Profile not found")
     try:
         result = await validate_self_edit_before_save(
             card=card,

@@ -1,32 +1,32 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
     <string name="app_name">Vocabulario</string>
 
-    <string name="action_sort">Sort</string>
-    <string name="action_filter">Filter</string>
-    <string name="action_filter_active">Filter · %1$d</string>
-    <string name="action_clear_filters">Clear filters</string>
-    <string name="action_clear_all">Clear all</string>
-    <string name="action_apply">Apply</string>
-    <string name="list_words_meta">%1$d words</string>
-    <string name="list_filter_empty">No words match filters</string>
-    <string name="sort_title">Sort</string>
-    <string name="sort_lemma_asc">A → Z</string>
+        <string name="action_sort">排序</string>
+    <string name="action_filter">筛选</string>
+    <string name="action_filter_active">筛选 · %1$d</string>
+    <string name="action_clear_filters">清除筛选</string>
+    <string name="action_clear_all">全部清除</string>
+    <string name="action_apply">应用</string>
+    <string name="list_words_meta">%1$d 个词</string>
+    <string name="list_filter_empty">没有符合筛选条件的词</string>
+    <string name="sort_title">排序</string>
+<string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
-    <string name="sort_pos">Part of speech</string>
-    <string name="sort_newest">Newest first</string>
-    <string name="sort_oldest">Oldest first</string>
-    <string name="sort_status">Card state</string>
-    <string name="filter_title">Filter</string>
-    <string name="filter_section_pos">Part of speech</string>
-    <string name="filter_section_state">Card state</string>
-    <string name="filter_pos_unknown">No POS</string>
-    <string name="status_review">review</string>
-    <string name="action_undo">Undo</string>
-    <string name="cd_undo">Undo last grade</string>
-    <string name="action_cancel">取消</string>
+        <string name="sort_pos">词性</string>
+    <string name="sort_newest">最新优先</string>
+    <string name="sort_oldest">最旧优先</string>
+    <string name="sort_status">卡片状态</string>
+    <string name="filter_title">筛选</string>
+    <string name="filter_section_pos">词性</string>
+    <string name="filter_section_state">卡片状态</string>
+    <string name="filter_pos_unknown">无词性</string>
+    <string name="status_review">复习</string>
+    <string name="action_undo">撤销</string>
+    <string name="cd_undo">撤销上次评分</string>
+<string name="action_cancel">取消</string>
 
     <string name="action_ok">确定</string>
 
@@ -68,7 +68,7 @@
 
     <string name="tab_lists">列表</string>
 
-    <string name="auth_login_title">欢迎回来</string>
+    <string name="auth_login_title">登录</string>
 
     <string name="auth_register_title">创建账户</string>
 
@@ -78,44 +78,45 @@
 
     <string name="auth_google">使用 Google 继续</string>
 
+    <string name="auth_or_continue">或使用邮箱继续</string>
+
     <string name="auth_email">邮箱</string>
 
     <string name="auth_password">密码</string>
 
-    <string name="auth_tagline">按自己的节奏学习词汇</string>
 
-    <string name="auth_password_hint">至少 8 个字符</string>
 
     <string name="auth_have_account">已有账户</string>
 
-    <string name="onboarding_title">学习设置</string>
+    <string name="onboarding_app_setup">应用设置</string>
 
-    <string name="onboarding_subtitle">选择语言对、CEFR 等级和动词时态。</string>
+    <string name="onboarding_choose_language">选择你的语言</string>
 
-    <string name="onboarding_native">母语</string>
+    <string name="onboarding_continue">继续</string>
 
-    <string name="onboarding_learning">学习语言</string>
+    <string name="onboarding_want_to_learn">我想学习：</string>
 
     <string name="onboarding_start">开始</string>
 
-    <string name="onboarding_cefr">CEFR 等级</string>
+    <string name="onboarding_level">选择语言水平</string>
+
+    <string name="onboarding_level_unknown">不知道</string>
 
     <string name="onboarding_tenses">动词时态</string>
 
     <string name="settings_title">设置</string>
 
 
-    <string name="settings_native_lang">App language</string>
-    <string name="settings_tense_labels">时态标签</string>
+        <string name="settings_native_lang">应用语言</string>
+<string name="settings_tense_labels">时态标签</string>
     <string name="settings_tense_labels_app">应用语言</string>
     <string name="settings_tense_labels_learning">学习语言</string>
 
 
     <string name="settings_learning_lang">学习语言</string>
 
-    <string name="settings_langs_hint">App language is the language of the interface and card translations. Learning language is what you study.</string>
-
-    <string name="settings_theme">主题</string>
+        <string name="settings_langs_hint">应用语言是界面和卡片译文的语言。学习语言是你正在学的语言。</string>
+<string name="settings_theme">主题</string>
 
     <string name="settings_mode">学习模式</string>
 
@@ -128,6 +129,8 @@
     <string name="settings_mode_type">输入单词</string>
 
     <string name="settings_mode_flash">闪卡</string>
+
+    <string name="settings_mode_vocabulario_only">仅 Vocabulario 卡片</string>
 
     <string name="settings_tolerate_typos">允许轻微拼写错误</string>
 
@@ -143,13 +146,14 @@
 
     <string name="settings_card_layout_sub">答对后显示的内容</string>
 
-    <string name="settings_examples">例句</string>
+    <string name="settings_examples">句子</string>
 
-    <string name="settings_usages">用法示例</string>
+    <string name="settings_usages">短语</string>
 
     <string name="settings_periphrases">句式</string>
 
     <string name="settings_syn_ant">同义词与反义词</string>
+    <string name="settings_word_family">词族</string>
 
     <string name="settings_conjugation">动词变位</string>
 
@@ -221,16 +225,15 @@
     <string name="creating_card_failed">无法准备卡片</string>
 
     <string name="list_learning">学习中</string>
-    <string name="list_pending">Pending</string>
-    <string name="offline_banner_title">You’re offline</string>
-    <string name="offline_banner_body">Added words go to the "Pending" list and will be looked up when you’re back online.</string>
-    <string name="offline_search_hint">Enter a word</string>
-    <string name="import_online_only">Import is only available online.</string>
-    <string name="offline_lookup_queued">Added to "Pending" — lookup when you’re back online.</string>
-    <string name="offline_lookup_duplicate">That word is already waiting on "Pending".</string>
-    <string name="status_awaiting_network">Waiting for network</string>
-
-    <string name="list_other">其他列表</string>
+        <string name="list_pending">待处理</string>
+    <string name="offline_banner_title">你处于离线状态</string>
+    <string name="offline_banner_body">添加的词会进入「待处理」列表，恢复联网后再查询。</string>
+    <string name="offline_search_hint">输入一个词</string>
+    <string name="import_online_only">仅可在线导入。</string>
+    <string name="offline_lookup_queued">已加入「待处理」— 联网后查询。</string>
+    <string name="offline_lookup_duplicate">该词已在「待处理」中。</string>
+    <string name="status_awaiting_network">等待网络</string>
+<string name="list_other">其他列表</string>
 
     <string name="list_new">新列表</string>
 
@@ -303,8 +306,27 @@
     <string name="import_empty_hint">输入单词或导入列表（CSV/TXT/apkg）</string>
 
     <string name="import_file_label">文件：\'%1$s\'</string>
-
-    <string name="section_meanings">释义</string>
+    <!-- TODO: translate import UI strings -->
+    <string name="import_start_title">导入闪卡</string>
+    <string name="import_pick_list">目标列表</string>
+    <string name="import_action_start">导入</string>
+<string name="import_limit_exceeded">目前最多可导入 50 张 Vocabulario 卡片。</string>
+        <string name="import_status_analyzing">正在分析 %1$s…</string>
+    <string name="import_status_importing">正在从 %1$s 导入单词</string>
+    <string name="import_progress_count">已导入 %1$d/%2$d</string>
+    <string name="action_abort">中止</string>
+    <string name="import_abort_title">中止导入？</string>
+    <string name="import_abort_body">进度将被丢弃。</string>
+    <string name="import_result_title">导入完成</string>
+    <string name="import_result_body">已添加 %1$d，重复 %2$d</string>
+    <string name="import_result_body_failed">已添加 %1$d，重复 %2$d，错误 %3$d</string>
+    <string name="import_review_flagged">短语与结构</string>
+    <string name="action_show_list">显示列表</string>
+    <string name="import_paste_source">粘贴</string>
+    <string name="import_interrupted">导入已中断 — 请重试</string>
+    <string name="import_review_ready">可以导入</string>
+    <string name="import_new_list_option">+ 新列表</string>
+<string name="section_meanings">释义</string>
 
     <string name="section_synonyms">同义词</string>
 
@@ -318,7 +340,7 @@
 
     <string name="section_periphrases">句式</string>
 
-    <string name="section_usages">用法示例</string>
+    <string name="section_usages">短语</string>
 
     <string name="home_search_hint">搜索单词…</string>
 
@@ -365,6 +387,8 @@
     <string name="status_new">新词</string>
 
     <string name="status_learning">学习中</string>
+
+    <string name="card_badge_import">导入</string>
 
     <string name="status_mastered">已掌握</string>
 
@@ -514,6 +538,11 @@
 
     <string name="err_login">登录失败</string>
 
+    <string name="err_login_email_unknown">没有使用该邮箱的账户</string>
+    <string name="err_login_wrong_password">密码不正确</string>
+    <string name="err_login_use_google">该账户使用 Google。请通过 Google 继续。</string>
+
+
     <string name="err_register">注册失败</string>
 
     <string name="err_google_login">Google 登录失败</string>
@@ -531,10 +560,11 @@
     <string name="section_synonyms_short">同义词</string>
 
     <string name="section_antonyms_short">反义词</string>
+    <string name="section_word_family">词族</string>
 
     <string name="section_conjugation_short">变位</string>
 
-    <string name="section_usages_short">用法</string>
+    <string name="section_usages_short">短语</string>
 
     <string name="cd_back">返回</string>
 
@@ -548,81 +578,149 @@
 
     <string name="cd_add_to_list">添加到列表</string>
 
-    <string name="list_clear_all">Delete all words</string>
-
-    <string name="list_clear_all_title">Delete all words?</string>
-
-    <string name="list_clear_all_body">You’ll remove every word from “%1$s”. The list itself stays.</string>
-
-    <string name="settings_level">Level</string>
-
-    <string name="settings_selected_tenses">Selected tenses</string>
-
-    <string name="action_edit">Edit</string>
-
-    <string name="import_cards_count">Imported cards (%1$d)</string>
-
-    <string name="import_flashcards_count">Flashcards: %1$d</string>
-
-    <string name="import_done_count">Imported: %1$d</string>
-
-    <string name="list_unnamed">list</string>
-
-    <string name="periphrase_n">Periphrase %1$d</string>
-
-    <string name="practice_well_done">Nice!</string>
-
-    <string name="cd_search">Search</string>
-
-
-    <string name="correction_fix_card">Fix card</string>
-    <string name="correction_report_title">Report a problem</string>
-    <string name="correction_section_lemma">Lemma</string>
-    <string name="correction_section_pos">Part of speech</string>
-    <string name="correction_section_gloss">Primary gloss</string>
-    <string name="correction_section_meanings">Meanings</string>
-    <string name="correction_section_examples">Examples</string>
-    <string name="correction_section_conjugation">Conjugation</string>
-    <string name="correction_section_similar">Similar words</string>
-    <string name="correction_section_pronunciation">Pronunciation</string>
-    <string name="correction_section_other">Other</string>
-    <string name="correction_note_label">Note</string>
-    <string name="correction_note_hint">Describe what is wrong…</string>
-    <string name="correction_validation">Select at least one section or write a note (min. 3 characters).</string>
-    <string name="correction_submit">Submit report</string>
-    <string name="correction_requires_online">Requires internet connection.</string>
-    <string name="correction_result_accepted_title">Report accepted — card updated.</string>
+        <string name="list_clear_all">删除全部单词</string>
+    <string name="list_clear_all_title">删除全部单词？</string>
+    <string name="list_clear_all_body">将从“%1$s”中移除所有单词。列表本身会保留。</string>
+    <string name="settings_level">水平</string>
+    <string name="settings_selected_tenses">已选时态</string>
+    <string name="action_edit">编辑</string>
+    <string name="import_cards_count">已导入卡片（%1$d）</string>
+    <string name="import_flashcards_count">闪卡：%1$d</string>
+    <string name="import_done_count">已导入：%1$d</string>
+    <string name="list_unnamed">列表</string>
+    <string name="periphrase_n">迂回说法 %1$d</string>
+    <string name="practice_well_done">很好！</string>
+    <string name="cd_search">搜索</string>
+    <string name="correction_fix_card">报告更正</string>
+<string name="correction_report_title">Report a problem</string>
+        <string name="correction_section_lemma">词目</string>
+    <string name="correction_section_pos">词性</string>
+    <string name="correction_section_gloss">主要释义</string>
+    <string name="correction_section_meanings">义项</string>
+<string name="correction_section_examples">句子</string>
+        <string name="correction_section_conjugation">变位</string>
+    <string name="correction_section_similar">相近词</string>
+    <string name="correction_section_pronunciation">发音</string>
+    <string name="correction_section_other">其他</string>
+    <string name="correction_note_label">备注</string>
+    <string name="correction_note_hint">描述问题…</string>
+    <string name="correction_validation">请至少选择一个栏目或填写备注（至少 3 个字符）。</string>
+<string name="correction_submit">Submit report</string>
+        <string name="correction_requires_online">需要互联网连接。</string>
+<string name="correction_result_accepted_title">Report accepted — card updated.</string>
     <string name="correction_result_rejected_title">Report not accepted.</string>
     <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
-    <string name="correction_edit_self">Edit myself</string>
-    <string name="correction_self_edit_title">Edit card</string>
-    <string name="correction_field_lemma">Lemma</string>
-    <string name="correction_field_pos">Part of speech</string>
-    <string name="correction_field_gloss">Primary gloss</string>
-    <string name="correction_field_extra_glosses">Extra glosses (one per line)</string>
-    <string name="review_status_reported">Correction reported</string>
-    <string name="review_status_accepted">Updated</string>
-    <string name="review_status_rejected">Report rejected</string>
-    <string name="review_status_user_edited">Edited manually</string>
-    <string name="cd_voice_search">Voice search</string>
-    <string name="voice_listening">Listening…</string>
-    <string name="voice_listening_hint">Speak now</string>
-    <string name="voice_tap_to_start">Tap Start to speak</string>
-    <string name="voice_start">Start</string>
+        <string name="correction_edit_self">编辑</string>
+        <string name="correction_history_button">更改历史</string>
+    <string name="correction_self_edit_title">编辑卡片</string>
+    <string name="correction_field_lemma">词目</string>
+    <string name="correction_field_pos">词性</string>
+    <string name="correction_field_gloss">主要释义</string>
+    <string name="correction_field_extra_glosses">额外释义（每行一个）</string>
+    <string name="cd_voice_search">语音搜索</string>
+    <string name="voice_listening">正在听…</string>
+    <string name="voice_listening_hint">请开始说</string>
+    <string name="voice_tap_to_start">点按开始以说话</string>
+<string name="voice_start">Start</string>
     <string name="voice_stop">Stop</string>
-    <string name="voice_permission_denied">Microphone permission denied.</string>
-    <string name="voice_unavailable">Speech recognition unavailable on this device.</string>
-    <string name="settings_notifications">Notifications</string>
-    <string name="settings_notifications_summary">Study reminders and card readiness</string>
-    <string name="settings_notif_study">Study reminders</string>
-    <string name="settings_notif_cards">Cards ready</string>
-    <string name="settings_reminder_hour">Reminder hour (0–23)</string>
-    <string name="notif_channel_study">Study</string>
-    <string name="notif_channel_cards">Cards</string>
-    <string name="notif_study_title">Time to review</string>
-    <string name="notif_study_body">%1$d cards due</string>
-    <string name="notif_cards_ready_title">Cards ready</string>
-    <string name="notif_cards_ready_body">%1$d word(s) ready to study</string>
+        <string name="voice_permission_denied">麦克风权限被拒绝。</string>
+    <string name="voice_unavailable">此设备不支持语音识别。</string>
+    <string name="settings_notifications">通知</string>
+    <string name="settings_notifications_summary">学习提醒与卡片就绪</string>
+    <string name="settings_notif_study">学习提醒</string>
+    <string name="settings_notif_cards">卡片已就绪</string>
+    <string name="settings_reminder_hour">提醒时刻（0–23）</string>
+    <string name="notif_channel_study">学习</string>
+    <string name="notif_channel_cards">卡片</string>
+    <string name="notif_study_title">该复习了</string>
+    <string name="notif_study_body">%1$d 张卡片待复习</string>
+    <string name="notif_cards_ready_title">卡片已就绪</string>
+    <string name="notif_cards_ready_body">%1$d 个词可以学习</string>
+    <string name="status_needs_review">需要核对</string>
+    <string name="review_title">该词需要核对</string>
+    <string name="review_no_match">未找到与“%1$s”匹配的结果。</string>
+    <string name="review_did_you_mean">你是不是指：</string>
+    <string name="review_reject">拒绝</string>
+    <string name="review_search_again">搜索</string>
+    <string name="review_confirm">确认</string>
+    <string name="review_close">关闭</string>
+    <string name="list_delete">删除列表</string>
+    <string name="err_word_on_list">该词已在你的学习列表中。</string>
+    <string name="correction_report_subtitle">我们会核对整张卡片。你的勾选和备注仅作参考。</string>
+    <string name="correction_daily_limit">每天最多可提交 20 条报告。</string>
+    <string name="correction_field_ipa">IPA 发音</string>
+    <string name="correction_field_notes">备注</string>
+    <string name="correction_field_synonyms_l1">同义词（L1，每行一个）</string>
+    <string name="correction_field_examples">例句</string>
+    <string name="correction_field_usages">短语</string>
+    <string name="correction_field_l2">句子（L2）</string>
+    <string name="correction_field_l1">翻译（L1）</string>
+    <string name="correction_field_similar">相近词</string>
+    <string name="correction_field_conjugation_json">变位（JSON）</string>
+    <string name="correction_section_meaning">义项 %1$d</string>
+    <string name="correction_add_meaning">添加义项</string>
+    <string name="correction_add_row">添加一行</string>
+    <string name="correction_empty_rows_hint">还没有行 — 点按添加一行。</string>
+    <string name="correction_self_edit_link">点此自行编辑卡片</string>
+    <string name="correction_processing">正在分析报告…</string>
+    <string name="self_edit_processing">正在保存并核对你的修改…</string>
+    <string name="self_edit_validating">正在检查修改…</string>
+    <string name="self_edit_warning_title">确认这些更改？</string>
+    <string name="self_edit_warning_body">我们检测到你对卡片“%1$s”的修改可能不正确。保存前请再确认。</string>
+    <string name="self_edit_warning_confirm">确认修改</string>
+    <string name="self_edit_warning_revert">撤销修改</string>
+    <string name="correction_result_accepted_body">卡片“%1$s”已更新。</string>
+    <string name="correction_code_accepted">报告已接受 — 卡片已更新。</string>
+    <string name="correction_code_unfounded">此卡片未发现错误。</string>
+    <string name="correction_code_insufficient">此卡片未发现错误。</string>
+    <string name="correction_code_not_applicable">此栏目不适用于该词类。</string>
+    <string name="correction_code_failed">无法处理该报告。请重试。</string>
+    <string name="card_history_title">卡片历史</string>
+    <string name="card_history_empty">还没有报告或更改。</string>
+    <string name="card_history_restore">恢复原始版本</string>
+    <string name="card_history_restored">已恢复卡片的原始版本</string>
+    <string name="card_history_actor_you">你</string>
+    <string name="card_history_actor_system">系统</string>
+    <string name="card_history_event_report">已提交报告</string>
+    <string name="card_history_event_accepted">报告已接受 — 卡片已更新</string>
+    <string name="card_history_event_self_edit">手动编辑</string>
+    <string name="card_history_event_reviewed">编辑已核对</string>
+    <string name="card_history_summary_report">栏目：%1$s</string>
+    <string name="card_history_summary_restored">已恢复原始版本。</string>
+    <string name="card_history_diff_lemma">词目：%1$s → %2$s</string>
+    <string name="card_history_diff_pos">词性：%1$s → %2$s</string>
+    <string name="card_history_diff_gloss">释义：%1$s → %2$s</string>
+    <string name="card_history_diff_ipa">ipa: %1$s → %2$s</string>
+    <string name="card_history_diff_conjugation">已更新变位</string>
+    <string name="card_history_diff_meanings">已更新义项</string>
+    <string name="card_history_diff_similar">已更新相近词</string>
+    <string name="card_history_diff_content">已更新内容</string>
+    <string name="cd_card_history">卡片历史</string>
+    <string name="cd_view_card">查看完整卡片</string>
+    <string name="cd_list_word_actions">单词操作</string>
+    <string name="voice_searching">正在搜索…</string>
+    <string name="voice_either_lang_hint">可用两种语言中的任意一种说</string>
+    <string name="voice_no_match">无法识别 — 请重试。</string>
+    <string name="voice_network_required">语音输入需要互联网连接。</string>
+
+    <string name="pos_noun">名词</string>
+    <string name="pos_verb">动词</string>
+    <string name="pos_adj">形容词</string>
+    <string name="pos_adv">副词</string>
+    <string name="pos_prep">介词</string>
+    <string name="pos_conj">连词</string>
+    <string name="pos_pron">代词</string>
+    <string name="pos_det">限定词</string>
+    <string name="pos_interj">感叹词</string>
+    <string name="err_empty_list_name">请输入列表名称</string>
+    <string name="err_list_not_editable">无法编辑此列表</string>
+    <string name="err_list_not_deletable">无法删除此列表</string>
+    <string name="err_pending_inbox_not_deletable">无法删除待处理列表</string>
+    <string name="err_pending_inbox_clear">未能清除全部待处理单词</string>
+    <string name="err_offline">您处于离线状态</string>
+    <string name="err_offline_card">此卡片在离线时不可用</string>
+    <string name="err_no_inbox">无法打开待处理列表</string>
+    <string name="err_email_taken">该邮箱已被注册</string>
 
 </resources>
 

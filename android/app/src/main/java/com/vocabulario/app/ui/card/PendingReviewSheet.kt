@@ -36,6 +36,8 @@ import com.vocabulario.app.R
 import com.vocabulario.app.data.api.LookupCandidate
 import com.vocabulario.app.i18n.localizedPosLabel
 import com.vocabulario.app.ui.TestTags
+import com.vocabulario.app.ui.components.AppCardShape
+import com.vocabulario.app.ui.components.LemmaActionRow
 import com.vocabulario.app.ui.components.TagChip
 
 /**
@@ -148,7 +150,7 @@ fun PendingReviewSheet(
                             secondaryText = stringResource(R.string.review_search_again),
                             onSecondary = onSearchAgain,
                             secondaryModifier = Modifier.testTag(TestTags.BTN_REVIEW_SEARCH_AGAIN),
-                            primaryText = stringResource(R.string.review_confirm),
+                            primaryText = stringResource(R.string.action_ok),
                             onPrimary = onConfirm,
                             primaryEnabled = selectedIndex != null && !submitting,
                             primaryModifier = Modifier.testTag(TestTags.BTN_REVIEW_CONFIRM),
@@ -182,43 +184,20 @@ private fun SuggestionTile(
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val tileColor = if (selected) scheme.primary.copy(alpha = 0.12f) else scheme.surfaceVariant
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (selected) Modifier.border(2.dp, scheme.primary, RoundedCornerShape(16.dp))
-                else Modifier,
-            )
-            .clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        color = tileColor,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    candidate.lemma.ifBlank { "—" },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = scheme.onSurface,
-                )
-                if (candidate.gloss.isNotBlank()) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        candidate.gloss,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = scheme.onSurfaceVariant,
-                    )
-                }
-                candidate.pos?.takeIf { it.isNotBlank() }?.let { pos ->
-                    Spacer(Modifier.height(8.dp))
-                    TagChip(localizedPosLabel(pos).ifBlank { pos })
-                }
+    LemmaActionRow(
+        lemma = candidate.lemma.ifBlank { "—" },
+        gloss = candidate.gloss.takeIf { it.isNotBlank() },
+        modifier = modifier.then(
+            if (selected) Modifier.border(2.dp, scheme.primary, AppCardShape) else Modifier,
+        ),
+        onClick = if (enabled) onClick else null,
+        belowGloss = {
+            candidate.pos?.takeIf { it.isNotBlank() }?.let { pos ->
+                Spacer(Modifier.height(8.dp))
+                TagChip(localizedPosLabel(pos).ifBlank { pos })
             }
+        },
+        trailing = {
             if (selected) {
                 Icon(
                     Icons.Default.Check,
@@ -227,6 +206,6 @@ private fun SuggestionTile(
                     modifier = Modifier.size(22.dp),
                 )
             }
-        }
-    }
+        },
+    )
 }

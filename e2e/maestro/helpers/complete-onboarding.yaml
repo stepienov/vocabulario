@@ -1,0 +1,21 @@
+appId: com.vocabulario.app
+---
+# Finish the two-step onboarding (app language already preselected).
+- tapOn:
+    id: onboarding_continue
+- extendedWaitUntil:
+    visible:
+      id: onboarding_learning_lang
+    timeout: 20000
+- tapOn:
+    id: onboarding_learning_lang
+- tapOn: "Español|English"
+- tapOn:
+    id: onboarding_level
+- tapOn: "A2"
+- tapOn:
+    id: onboarding_start
+- extendedWaitUntil:
+    visible:
+      id: tab_dashboard
+    timeout: 45000

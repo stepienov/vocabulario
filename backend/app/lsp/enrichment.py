@@ -15,7 +15,7 @@ from app.services.enrichment import (
     _normalize_related_words,
     _normalize_usages,
     _resolve_pos,
-    examples_complete,
+    examples_unique_across_meanings,
     strip_prepositional_construction_meanings,
 )
 from app.services.llm import LLMService
@@ -57,6 +57,12 @@ async def enrich_card_content_lsp(
     core["antonyms_l2"] = _normalize_related_words(
         core.get("antonyms_l2"), fallback_pos=pos_for_related
     )
+    # Rodzina wyrazów — POS z LLM (często inna niż lemat); bez fallbacku POS.
+    family = _normalize_related_words(core.get("word_family_l2"), fallback_pos=None)
+    lemma_key = lemma_final.casefold().strip()
+    core["word_family_l2"] = [
+        w for w in family if (w.get("lemma") or "").casefold().strip() != lemma_key
+    ][:10]
     glosses = [m["gloss_l1"] for m in core["meanings"] if m.get("gloss_l1")]
 
     async def fetch_examples() -> dict:
@@ -69,9 +75,7 @@ async def enrich_card_content_lsp(
             native=app_lang,
             learning=profile.learning_lang,
         )
-        first = (data.get("meanings") or [{}])[0] if data.get("meanings") else {}
-        first_examples = first.get("examples") if isinstance(first, dict) else []
-        if isinstance(first_examples, list) and not examples_complete(first_examples):
+        if not examples_unique_across_meanings(data, expected=len(glosses)):
             data = await llm.generate_examples(
                 lemma=lemma_final,
                 pos=pos_final,
@@ -132,6 +136,7 @@ async def enrich_card_content_lsp(
         "meanings": core["meanings"],
         "synonyms_l2": core.get("synonyms_l2") or [],
         "antonyms_l2": core.get("antonyms_l2") or [],
+        "word_family_l2": core.get("word_family_l2") or [],
         "similar_words": similar,
         "inflection": inflection,
         "conjugation": conjugation,

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -67,6 +68,9 @@ import com.vocabulario.app.R
 import com.vocabulario.app.data.api.LookupCandidate
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppDialogShape
+import com.vocabulario.app.ui.components.AppDialogWindowChrome
+import com.vocabulario.app.ui.components.LemmaActionRow
+import com.vocabulario.app.ui.components.LemmaAddButton
 import java.util.Locale
 
 @Composable
@@ -277,10 +281,10 @@ fun VoiceSearchSheet(
             usePlatformDefaultWidth = false,
         ),
     ) {
+        AppDialogWindowChrome(dimAlpha = 0.52f)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.52f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -419,38 +423,15 @@ private fun VoiceCandidateRow(
     onAdd: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppDialogShape,
-        color = scheme.surfaceVariant,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    candidate.lemma,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    candidate.gloss,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+    LemmaActionRow(
+        lemma = candidate.lemma,
+        gloss = candidate.gloss,
+        trailing = {
             when {
                 candidate.isCreating -> {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(28.dp),
+                        strokeWidth = 3.dp,
                         color = scheme.primary,
                     )
                 }
@@ -459,19 +440,16 @@ private fun VoiceCandidateRow(
                         Icons.Default.CheckCircle,
                         contentDescription = null,
                         tint = scheme.primary,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(26.dp),
                     )
                 }
                 else -> {
-                    IconButton(onClick = onAdd) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = stringResource(R.string.action_add),
-                            tint = scheme.primary,
-                        )
-                    }
+                    LemmaAddButton(
+                        onClick = onAdd,
+                        contentDescription = stringResource(R.string.action_add),
+                    )
                 }
             }
-        }
-    }
+        },
+    )
 }

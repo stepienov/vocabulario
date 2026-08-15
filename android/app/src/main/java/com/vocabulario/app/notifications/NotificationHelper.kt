@@ -34,7 +34,7 @@ object NotificationHelper {
     fun showStudyReminder(context: Context, dueCount: Int) {
         ensureChannels(context)
         val notification = NotificationCompat.Builder(context, CHANNEL_STUDY)
-            .setSmallIcon(R.drawable.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_notification)
             .setContentTitle(context.getString(R.string.notif_study_title))
             .setContentText(context.getString(R.string.notif_study_body, dueCount))
             .setAutoCancel(true)
@@ -45,7 +45,7 @@ object NotificationHelper {
     fun showCardsReady(context: Context, count: Int) {
         ensureChannels(context)
         val notification = NotificationCompat.Builder(context, CHANNEL_CARDS)
-            .setSmallIcon(R.drawable.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_notification)
             .setContentTitle(context.getString(R.string.notif_cards_ready_title))
             .setContentText(context.getString(R.string.notif_cards_ready_body, count))
             .setAutoCancel(true)

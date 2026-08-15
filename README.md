@@ -41,7 +41,11 @@ Dokumentacja: http://localhost:8000/docs
 3. Uruchom emulator (np. Galaxy_S24)
 4. Run ▶
 
-Emulator łączy się z API przez `http://10.0.2.2:8000` (już skonfigurowane).
+API wybierane automatycznie:
+- **emulator** → `http://10.0.2.2:8000`
+- **fizyczny telefon** → IP z `android/local.properties` (`api.device.host=…`)
+
+Szablon: `android/local.properties.example`. Po zmianie hosta zrób Gradle Sync + reinstall appki.
 
 ### Konfiguracja
 

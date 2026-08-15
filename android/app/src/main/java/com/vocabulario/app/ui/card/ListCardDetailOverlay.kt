@@ -32,6 +32,8 @@ import com.vocabulario.app.data.asJsonString
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.ui.TestTags
+import com.vocabulario.app.ui.components.ImportDisplayFlip
+import com.vocabulario.app.ui.components.parseImportDisplayFromContent
 
 @Composable
 fun ListCardDetailOverlay(
@@ -82,20 +84,30 @@ fun ListCardDetailOverlay(
                         .padding(horizontal = 20.dp)
                         .padding(bottom = 40.dp),
                 ) {
-                    CardDetailContent(
-                        content = card.content,
-                        lemmaFallback = card.lemma_l2,
-                        languageCode = card.content["language"].asJsonString()
-                            ?: profile?.learning_lang,
-                        compact = false,
-                        fullDetail = true,
-                        scrollable = false,
-                        userTenses = emptyList(),
-                        userCefr = profile?.cefr_level ?: "C2",
-                        enrichmentStatus = card.enrichment_status,
-                        enrichmentError = card.enrichment_error,
-                        profile = profile,
-                    )
+                    val importDisplay = parseImportDisplayFromContent(card.content)
+                    if (importDisplay != null) {
+                        ImportDisplayFlip(
+                            display = importDisplay,
+                            enableTts = true,
+                            learningLang = profile?.learning_lang
+                                ?: card.content["language"].asJsonString(),
+                        )
+                    } else {
+                        CardDetailContent(
+                            content = card.content,
+                            lemmaFallback = card.lemma_l2,
+                            languageCode = card.content["language"].asJsonString()
+                                ?: profile?.learning_lang,
+                            compact = false,
+                            fullDetail = true,
+                            scrollable = false,
+                            userTenses = emptyList(),
+                            userCefr = profile?.cefr_level ?: "C2",
+                            enrichmentStatus = card.enrichment_status,
+                            enrichmentError = card.enrichment_error,
+                            profile = profile,
+                        )
+                    }
                 }
             }
         }

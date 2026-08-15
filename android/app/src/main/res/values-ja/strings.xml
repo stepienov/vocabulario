@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -90,7 +90,7 @@
 
     <string name="tab_lists">リスト</string>
 
-    <string name="auth_login_title">お帰りなさい</string>
+    <string name="auth_login_title">ログイン</string>
 
     <string name="auth_register_title">アカウントを作成</string>
 
@@ -100,27 +100,29 @@
 
     <string name="auth_google">Googleで続行</string>
 
+    <string name="auth_or_continue">またはメールで続ける</string>
+
     <string name="auth_email">メール</string>
 
     <string name="auth_password">パスワード</string>
 
-    <string name="auth_tagline">自分のペースで語彙を学ぶ</string>
 
-    <string name="auth_password_hint">8文字以上</string>
 
     <string name="auth_have_account">すでにアカウントを持っています</string>
 
-    <string name="onboarding_title">学習設定</string>
+    <string name="onboarding_app_setup">アプリの設定</string>
 
-    <string name="onboarding_subtitle">言語ペア、CEFRレベル、動詞の時制を選択してください。</string>
+    <string name="onboarding_choose_language">言語を選択</string>
 
-    <string name="onboarding_native">アプリ言語</string>
+    <string name="onboarding_continue">次へ</string>
 
-    <string name="onboarding_learning">学習言語</string>
+    <string name="onboarding_want_to_learn">学びたい言語:</string>
 
     <string name="onboarding_start">開始</string>
 
-    <string name="onboarding_cefr">CEFRレベル</string>
+    <string name="onboarding_level">言語レベルを選択</string>
+
+    <string name="onboarding_level_unknown">わからない</string>
 
     <string name="onboarding_tenses">動詞の時制</string>
 
@@ -151,6 +153,8 @@
 
     <string name="settings_mode_flash">フラッシュカード</string>
 
+    <string name="settings_mode_vocabulario_only">Vocabularioカードのみ</string>
+
     <string name="settings_tolerate_typos">軽微な誤字を許可</string>
 
     <string name="settings_tolerate_typos_sub">スペルとダイアクリティクス</string>
@@ -165,13 +169,14 @@
 
     <string name="settings_card_layout_sub">回答後に表示される内容</string>
 
-    <string name="settings_examples">例文</string>
+    <string name="settings_examples">文</string>
 
-    <string name="settings_usages">使用例</string>
+    <string name="settings_usages">フレーズ</string>
 
     <string name="settings_periphrases">言い回し</string>
 
     <string name="settings_syn_ant">同義語と反義語</string>
+    <string name="settings_word_family">語族</string>
 
     <string name="settings_conjugation">活用</string>
 
@@ -333,8 +338,27 @@
     <string name="import_empty_hint">単語を入力するか、リストをインポートしてください (CSV/TXT/apkg)</string>
 
     <string name="import_file_label">ファイル: \'%1$s\'</string>
-
-    <string name="section_meanings">意味</string>
+    <!-- TODO: translate import UI strings -->
+    <string name="import_start_title">カードをインポート</string>
+    <string name="import_pick_list">保存先リスト</string>
+    <string name="import_action_start">インポート</string>
+<string name="import_limit_exceeded">現時点では Vocabulario カードを最大 50 枚までインポートできます。</string>
+        <string name="import_status_analyzing">%1$s を分析中…</string>
+    <string name="import_status_importing">%1$s から単語をインポート中</string>
+    <string name="import_progress_count">インポート済み %1$d/%2$d</string>
+    <string name="action_abort">中止</string>
+    <string name="import_abort_title">インポートを中止しますか？</string>
+    <string name="import_abort_body">進捗は破棄されます。</string>
+    <string name="import_result_title">インポート完了</string>
+    <string name="import_result_body">追加 %1$d、重複 %2$d</string>
+    <string name="import_result_body_failed">追加 %1$d、重複 %2$d、エラー %3$d</string>
+    <string name="import_review_flagged">句と構文</string>
+    <string name="action_show_list">リストを表示</string>
+    <string name="import_paste_source">貼り付け</string>
+    <string name="import_interrupted">インポートが中断されました。もう一度お試しください</string>
+    <string name="import_review_ready">インポートの準備完了</string>
+    <string name="import_new_list_option">+ 新しいリスト</string>
+<string name="section_meanings">意味</string>
 
     <string name="section_synonyms">同義語</string>
 
@@ -348,7 +372,7 @@
 
     <string name="section_periphrases">パターン</string>
 
-    <string name="section_usages">使用例</string>
+    <string name="section_usages">フレーズ</string>
 
     <string name="home_search_hint">単語を検索…</string>
 
@@ -395,6 +419,8 @@
     <string name="status_new">新しい</string>
 
     <string name="status_learning">学習中</string>
+
+    <string name="card_badge_import">インポート</string>
 
     <string name="status_mastered">習得済み</string>
 
@@ -544,6 +570,11 @@
 
     <string name="err_login">ログインに失敗しました</string>
 
+    <string name="err_login_email_unknown">このメールアドレスのアカウントはありません</string>
+    <string name="err_login_wrong_password">パスワードが違います</string>
+    <string name="err_login_use_google">このアカウントはGoogleを使います。Googleで続行してください。</string>
+
+
     <string name="err_register">登録に失敗しました</string>
 
     <string name="err_google_login">Googleサインインに失敗しました</string>
@@ -561,10 +592,11 @@
     <string name="section_synonyms_short">同義語</string>
 
     <string name="section_antonyms_short">反義語</string>
+    <string name="section_word_family">語族</string>
 
     <string name="section_conjugation_short">活用</string>
 
-    <string name="section_usages_short">用法</string>
+    <string name="section_usages_short">フレーズ</string>
 
     <string name="cd_back">戻る</string>
 
@@ -604,7 +636,7 @@
 
     <string name="cd_search">検索</string>
 
-    <string name="correction_fix_card">カードを修正</string>
+    <string name="correction_fix_card">修正を報告</string>
 
     <string name="correction_report_title">問題を報告</string>
 
@@ -616,7 +648,7 @@
 
     <string name="correction_section_meanings">意味</string>
 
-    <string name="correction_section_examples">例</string>
+    <string name="correction_section_examples">文</string>
 
     <string name="correction_section_conjugation">活用</string>
 
@@ -642,7 +674,8 @@
 
     <string name="correction_result_rejected_body">カードを自分で編集できます — 自己責任で。これにより、あなたのプライベートコピーが作成されます。</string>
 
-    <string name="correction_edit_self">自分を編集</string>
+    <string name="correction_edit_self">編集</string>
+    <string name="correction_history_button">変更履歴</string>
 
     <string name="correction_self_edit_title">カードを編集</string>
 
@@ -653,14 +686,6 @@
     <string name="correction_field_gloss">主な意味</string>
 
     <string name="correction_field_extra_glosses">追加の意味（1行ごと）</string>
-
-    <string name="review_status_reported">修正が報告されました</string>
-
-    <string name="review_status_accepted">更新されました</string>
-
-    <string name="review_status_rejected">報告が却下されました</string>
-
-    <string name="review_status_user_edited">手動で編集されました</string>
 
     <string name="cd_voice_search">音声検索</string>
 
@@ -699,5 +724,91 @@
     <string name="notif_cards_ready_title">カードの準備完了</string>
 
     <string name="notif_cards_ready_body">%1$d 語が学習の準備ができました</string>
+
+    <string name="status_needs_review">確認が必要</string>
+    <string name="review_title">この語は確認が必要です</string>
+    <string name="review_no_match">「%1$s」に一致するものがありません。</string>
+    <string name="review_did_you_mean">もしかして：</string>
+    <string name="review_reject">却下</string>
+    <string name="review_search_again">検索</string>
+    <string name="review_confirm">確定</string>
+    <string name="review_close">閉じる</string>
+    <string name="list_delete">リストを削除</string>
+    <string name="err_word_on_list">この語はすでに学習リストにあります。</string>
+    <string name="correction_report_subtitle">カード全体を確認します。選択とメモは手がかりになります。</string>
+    <string name="correction_daily_limit">報告は1日20件までです。</string>
+    <string name="correction_field_ipa">IPA発音</string>
+    <string name="correction_field_notes">メモ</string>
+    <string name="correction_field_synonyms_l1">類義語（L1、1行に1つ）</string>
+    <string name="correction_field_examples">例文</string>
+    <string name="correction_field_usages">慣用句</string>
+    <string name="correction_field_l2">文（L2）</string>
+    <string name="correction_field_l1">訳（L1）</string>
+    <string name="correction_field_similar">類似語</string>
+    <string name="correction_field_conjugation_json">活用（JSON）</string>
+    <string name="correction_section_meaning">意味 %1$d</string>
+    <string name="correction_add_meaning">意味を追加</string>
+    <string name="correction_add_row">行を追加</string>
+    <string name="correction_empty_rows_hint">行がありません。行を追加をタップ。</string>
+    <string name="correction_self_edit_link">自分でカードを編集するにはここをタップ</string>
+    <string name="correction_processing">報告を分析中…</string>
+    <string name="self_edit_processing">編集を保存して確認しています…</string>
+    <string name="self_edit_validating">編集内容を確認中…</string>
+    <string name="self_edit_warning_title">この変更を確定しますか？</string>
+    <string name="self_edit_warning_body">カード「%1$s」への変更が正しくない可能性があります。保存前に確認してください。</string>
+    <string name="self_edit_warning_confirm">変更を確定</string>
+    <string name="self_edit_warning_revert">変更を取り消す</string>
+    <string name="correction_result_accepted_body">カード「%1$s」を更新しました。</string>
+    <string name="correction_code_accepted">報告を承認し、カードを更新しました。</string>
+    <string name="correction_code_unfounded">このカードに誤りは見つかりませんでした。</string>
+    <string name="correction_code_insufficient">このカードに誤りは見つかりませんでした。</string>
+    <string name="correction_code_not_applicable">このセクションはこの語の種類には当てはまりません。</string>
+    <string name="correction_code_failed">報告を処理できませんでした。もう一度お試しください。</string>
+    <string name="card_history_title">カード履歴</string>
+    <string name="card_history_empty">報告や変更はまだありません。</string>
+    <string name="card_history_restore">元の版に戻す</string>
+    <string name="card_history_restored">カードの元の版を復元しました</string>
+    <string name="card_history_actor_you">あなた</string>
+    <string name="card_history_actor_system">システム</string>
+    <string name="card_history_event_report">報告を送信</string>
+    <string name="card_history_event_accepted">報告を承認 — カードを更新</string>
+    <string name="card_history_event_self_edit">手動編集</string>
+    <string name="card_history_event_reviewed">編集を確認済み</string>
+    <string name="card_history_summary_report">セクション: %1$s</string>
+    <string name="card_history_summary_restored">元の版を復元しました。</string>
+    <string name="card_history_diff_lemma">見出し語: %1$s → %2$s</string>
+    <string name="card_history_diff_pos">品詞: %1$s → %2$s</string>
+    <string name="card_history_diff_gloss">訳: %1$s → %2$s</string>
+    <string name="card_history_diff_ipa">ipa: %1$s → %2$s</string>
+    <string name="card_history_diff_conjugation">活用を更新</string>
+    <string name="card_history_diff_meanings">意味を更新</string>
+    <string name="card_history_diff_similar">類似語を更新</string>
+    <string name="card_history_diff_content">内容を更新</string>
+    <string name="cd_card_history">カード履歴</string>
+    <string name="cd_view_card">カード全体を見る</string>
+    <string name="cd_list_word_actions">語の操作</string>
+    <string name="voice_searching">検索中…</string>
+    <string name="voice_either_lang_hint">どちらの言語でも話せます</string>
+    <string name="voice_no_match">聞き取れませんでした。もう一度どうぞ。</string>
+    <string name="voice_network_required">音声入力にはインターネット接続が必要です。</string>
+
+    <string name="pos_noun">名詞</string>
+    <string name="pos_verb">動詞</string>
+    <string name="pos_adj">形容詞</string>
+    <string name="pos_adv">副詞</string>
+    <string name="pos_prep">前置詞</string>
+    <string name="pos_conj">接続詞</string>
+    <string name="pos_pron">代名詞</string>
+    <string name="pos_det">限定詞</string>
+    <string name="pos_interj">感動詞</string>
+    <string name="err_empty_list_name">リスト名を入力してください</string>
+    <string name="err_list_not_editable">このリストは編集できません</string>
+    <string name="err_list_not_deletable">このリストは削除できません</string>
+    <string name="err_pending_inbox_not_deletable">保留リストは削除できません</string>
+    <string name="err_pending_inbox_clear">保留中の単語をすべて削除できませんでした</string>
+    <string name="err_offline">オフラインです</string>
+    <string name="err_offline_card">このカードはオフラインでは利用できません</string>
+    <string name="err_no_inbox">保留リストを開けませんでした</string>
+    <string name="err_email_taken">このメールアドレスは既に登録されています</string>
 
 </resources>

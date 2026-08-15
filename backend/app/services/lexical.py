@@ -102,11 +102,15 @@ class LexicalService:
             select(LearningCard).where(
                 LearningCard.user_id == user_id,
                 LearningCard.profile_id == profile_id,
+                LearningCard.deleted_at.is_(None),
             )
         )
         cards = list(cards_result.scalars().all())
         lists_result = await self.db.execute(
-            select(WordList).where(WordList.profile_id == profile_id)
+            select(WordList).where(
+                WordList.profile_id == profile_id,
+                WordList.deleted_at.is_(None),
+            )
         )
         lists_by_id = {wl.id: wl for wl in lists_result.scalars().all()}
 
@@ -132,8 +136,12 @@ class LexicalService:
                     list_name = system.name if system else "Uczę się"
                 else:
                     wl = lists_by_id.get(learning_card.deck_id)
-                    list_id = str(learning_card.deck_id)
-                    list_name = wl.name if wl else "Lista"
+                    if wl is not None:
+                        list_id = str(learning_card.deck_id)
+                        list_name = wl.name
+                    else:
+                        # Lista usunięta / niedostępna — nie pokazuj starego chipa.
+                        learning_card = None
             annotated.append(
                 {
                     "lemma": c["lemma"],

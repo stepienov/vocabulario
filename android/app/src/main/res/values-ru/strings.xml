@@ -1,32 +1,32 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
     <string name="app_name">Vocabulario</string>
 
-    <string name="action_sort">Sort</string>
-    <string name="action_filter">Filter</string>
-    <string name="action_filter_active">Filter · %1$d</string>
-    <string name="action_clear_filters">Clear filters</string>
-    <string name="action_clear_all">Clear all</string>
-    <string name="action_apply">Apply</string>
-    <string name="list_words_meta">%1$d words</string>
-    <string name="list_filter_empty">No words match filters</string>
-    <string name="sort_title">Sort</string>
-    <string name="sort_lemma_asc">A → Z</string>
+        <string name="action_sort">Сортировка</string>
+    <string name="action_filter">Фильтр</string>
+    <string name="action_filter_active">Фильтр · %1$d</string>
+    <string name="action_clear_filters">Сбросить фильтры</string>
+    <string name="action_clear_all">Очистить всё</string>
+    <string name="action_apply">Применить</string>
+    <string name="list_words_meta">%1$d слов</string>
+    <string name="list_filter_empty">Нет слов, подходящих под фильтры</string>
+    <string name="sort_title">Сортировка</string>
+<string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
-    <string name="sort_pos">Part of speech</string>
-    <string name="sort_newest">Newest first</string>
-    <string name="sort_oldest">Oldest first</string>
-    <string name="sort_status">Card state</string>
-    <string name="filter_title">Filter</string>
-    <string name="filter_section_pos">Part of speech</string>
-    <string name="filter_section_state">Card state</string>
-    <string name="filter_pos_unknown">No POS</string>
-    <string name="status_review">review</string>
-    <string name="action_undo">Undo</string>
-    <string name="cd_undo">Undo last grade</string>
-    <string name="action_cancel">Отмена</string>
+        <string name="sort_pos">Часть речи</string>
+    <string name="sort_newest">Сначала новые</string>
+    <string name="sort_oldest">Сначала старые</string>
+    <string name="sort_status">Состояние карточки</string>
+    <string name="filter_title">Фильтр</string>
+    <string name="filter_section_pos">Часть речи</string>
+    <string name="filter_section_state">Состояние карточки</string>
+    <string name="filter_pos_unknown">Без части речи</string>
+    <string name="status_review">повтор</string>
+    <string name="action_undo">Отменить</string>
+    <string name="cd_undo">Отменить последнюю оценку</string>
+<string name="action_cancel">Отмена</string>
 
     <string name="action_ok">OK</string>
 
@@ -68,7 +68,7 @@
 
     <string name="tab_lists">списки</string>
 
-    <string name="auth_login_title">С возвращением</string>
+    <string name="auth_login_title">Вход</string>
 
     <string name="auth_register_title">Создать аккаунт</string>
 
@@ -78,44 +78,45 @@
 
     <string name="auth_google">Продолжить с Google</string>
 
+    <string name="auth_or_continue">Или продолжить с эл. почтой</string>
+
     <string name="auth_email">Эл. почта</string>
 
     <string name="auth_password">Пароль</string>
 
-    <string name="auth_tagline">Учите слова в своём темпе</string>
 
-    <string name="auth_password_hint">Не менее 8 символов</string>
 
     <string name="auth_have_account">У меня уже есть аккаунт</string>
 
-    <string name="onboarding_title">Настройка обучения</string>
+    <string name="onboarding_app_setup">Настройка приложения</string>
 
-    <string name="onboarding_subtitle">Выберите языковую пару, уровень CEFR и времена глаголов.</string>
+    <string name="onboarding_choose_language">Выберите язык</string>
 
-    <string name="onboarding_native">Родной язык</string>
+    <string name="onboarding_continue">Далее</string>
 
-    <string name="onboarding_learning">Изучаемый язык</string>
+    <string name="onboarding_want_to_learn">Я хочу учить:</string>
 
     <string name="onboarding_start">Начать</string>
 
-    <string name="onboarding_cefr">Уровень CEFR</string>
+    <string name="onboarding_level">Выберите уровень языка</string>
+
+    <string name="onboarding_level_unknown">Не знаю</string>
 
     <string name="onboarding_tenses">Времена глаголов</string>
 
     <string name="settings_title">Настройки</string>
 
 
-    <string name="settings_native_lang">App language</string>
-    <string name="settings_tense_labels">Названия времён</string>
+        <string name="settings_native_lang">Язык приложения</string>
+<string name="settings_tense_labels">Названия времён</string>
     <string name="settings_tense_labels_app">На языке приложения</string>
     <string name="settings_tense_labels_learning">На языке изучения</string>
 
 
     <string name="settings_learning_lang">Изучаемый язык</string>
 
-    <string name="settings_langs_hint">App language is the language of the interface and card translations. Learning language is what you study.</string>
-
-    <string name="settings_theme">Тема</string>
+        <string name="settings_langs_hint">Язык приложения — язык интерфейса и переводов на карточках. Язык изучения — тот, который вы учите.</string>
+<string name="settings_theme">Тема</string>
 
     <string name="settings_mode">Режим учёбы</string>
 
@@ -128,6 +129,8 @@
     <string name="settings_mode_type">Ввести слово</string>
 
     <string name="settings_mode_flash">Карточки</string>
+
+    <string name="settings_mode_vocabulario_only">только карточки Vocabulario</string>
 
     <string name="settings_tolerate_typos">Допускать мелкие опечатки</string>
 
@@ -143,13 +146,14 @@
 
     <string name="settings_card_layout_sub">Что видно после ответа</string>
 
-    <string name="settings_examples">Примеры предложений</string>
+    <string name="settings_examples">Предложения</string>
 
-    <string name="settings_usages">Примеры употребления</string>
+    <string name="settings_usages">Выражения</string>
 
     <string name="settings_periphrases">Конструкции</string>
 
     <string name="settings_syn_ant">Синонимы и антонимы</string>
+    <string name="settings_word_family">Родственные слова</string>
 
     <string name="settings_conjugation">Спряжение</string>
 
@@ -221,16 +225,15 @@
     <string name="creating_card_failed">Не удалось подготовить карточку</string>
 
     <string name="list_learning">Изучаю</string>
-    <string name="list_pending">Pending</string>
-    <string name="offline_banner_title">You’re offline</string>
-    <string name="offline_banner_body">Added words go to the "Pending" list and will be looked up when you’re back online.</string>
-    <string name="offline_search_hint">Enter a word</string>
-    <string name="import_online_only">Import is only available online.</string>
-    <string name="offline_lookup_queued">Added to "Pending" — lookup when you’re back online.</string>
-    <string name="offline_lookup_duplicate">That word is already waiting on "Pending".</string>
-    <string name="status_awaiting_network">Waiting for network</string>
-
-    <string name="list_other">Другой список</string>
+        <string name="list_pending">Ожидание</string>
+    <string name="offline_banner_title">Вы офлайн</string>
+    <string name="offline_banner_body">Добавленные слова попадут в список «Ожидание» и будут найдены, когда вы снова будете онлайн.</string>
+    <string name="offline_search_hint">Введите слово</string>
+    <string name="import_online_only">Импорт доступен только онлайн.</string>
+    <string name="offline_lookup_queued">Добавлено в «Ожидание» — поиск после подключения.</string>
+    <string name="offline_lookup_duplicate">Это слово уже в списке «Ожидание».</string>
+    <string name="status_awaiting_network">Ожидание сети</string>
+<string name="list_other">Другой список</string>
 
     <string name="list_new">Новый список</string>
 
@@ -303,8 +306,27 @@
     <string name="import_empty_hint">Введите слово или импортируйте список (CSV/TXT/apkg)</string>
 
     <string name="import_file_label">Файл: \'%1$s\'</string>
-
-    <string name="section_meanings">ЗНАЧЕНИЯ</string>
+    <!-- TODO: translate import UI strings -->
+    <string name="import_start_title">Импорт карточек</string>
+    <string name="import_pick_list">Целевой список</string>
+    <string name="import_action_start">Импортировать</string>
+<string name="import_limit_exceeded">Пока можно импортировать не более 50 карточек Vocabulario.</string>
+        <string name="import_status_analyzing">Анализ %1$s…</string>
+    <string name="import_status_importing">Импорт слов из %1$s</string>
+    <string name="import_progress_count">Импортировано %1$d/%2$d</string>
+    <string name="action_abort">Прервать</string>
+    <string name="import_abort_title">Прервать импорт?</string>
+    <string name="import_abort_body">Прогресс будет потерян.</string>
+    <string name="import_result_title">Импорт завершён</string>
+    <string name="import_result_body">Добавлено %1$d, дубликатов %2$d</string>
+    <string name="import_result_body_failed">Добавлено %1$d, дубликатов %2$d, ошибок %3$d</string>
+    <string name="import_review_flagged">Выражения и конструкции</string>
+    <string name="action_show_list">Показать список</string>
+    <string name="import_paste_source">Вставка</string>
+    <string name="import_interrupted">Импорт прерван — попробуйте снова</string>
+    <string name="import_review_ready">Готово к импорту</string>
+    <string name="import_new_list_option">+ Новый список</string>
+<string name="section_meanings">ЗНАЧЕНИЯ</string>
 
     <string name="section_synonyms">СИНОНИМЫ</string>
 
@@ -318,7 +340,7 @@
 
     <string name="section_periphrases">КОНСТРУКЦИИ</string>
 
-    <string name="section_usages">примеры употребления</string>
+    <string name="section_usages">выражения</string>
 
     <string name="home_search_hint">Искать слово…</string>
 
@@ -365,6 +387,8 @@
     <string name="status_new">новое</string>
 
     <string name="status_learning">изучается</string>
+
+    <string name="card_badge_import">Импорт</string>
 
     <string name="status_mastered">выучено</string>
 
@@ -514,6 +538,11 @@
 
     <string name="err_login">Ошибка входа</string>
 
+    <string name="err_login_email_unknown">Нет аккаунта с этим email</string>
+    <string name="err_login_wrong_password">Неверный пароль</string>
+    <string name="err_login_use_google">Этот аккаунт через Google. Войдите через Google.</string>
+
+
     <string name="err_register">Ошибка регистрации</string>
 
     <string name="err_google_login">Ошибка входа через Google</string>
@@ -531,10 +560,11 @@
     <string name="section_synonyms_short">Синонимы</string>
 
     <string name="section_antonyms_short">Антонимы</string>
+    <string name="section_word_family">Родственные слова</string>
 
     <string name="section_conjugation_short">Спряжение</string>
 
-    <string name="section_usages_short">Употребление</string>
+    <string name="section_usages_short">Выражения</string>
 
     <string name="cd_back">Назад</string>
 
@@ -548,81 +578,149 @@
 
     <string name="cd_add_to_list">Добавить в список</string>
 
-    <string name="list_clear_all">Delete all words</string>
-
-    <string name="list_clear_all_title">Delete all words?</string>
-
-    <string name="list_clear_all_body">You’ll remove every word from “%1$s”. The list itself stays.</string>
-
-    <string name="settings_level">Level</string>
-
-    <string name="settings_selected_tenses">Selected tenses</string>
-
-    <string name="action_edit">Edit</string>
-
-    <string name="import_cards_count">Imported cards (%1$d)</string>
-
-    <string name="import_flashcards_count">Flashcards: %1$d</string>
-
-    <string name="import_done_count">Imported: %1$d</string>
-
-    <string name="list_unnamed">list</string>
-
-    <string name="periphrase_n">Periphrase %1$d</string>
-
-    <string name="practice_well_done">Nice!</string>
-
-    <string name="cd_search">Search</string>
-
-
-    <string name="correction_fix_card">Fix card</string>
-    <string name="correction_report_title">Report a problem</string>
-    <string name="correction_section_lemma">Lemma</string>
-    <string name="correction_section_pos">Part of speech</string>
-    <string name="correction_section_gloss">Primary gloss</string>
-    <string name="correction_section_meanings">Meanings</string>
-    <string name="correction_section_examples">Examples</string>
-    <string name="correction_section_conjugation">Conjugation</string>
-    <string name="correction_section_similar">Similar words</string>
-    <string name="correction_section_pronunciation">Pronunciation</string>
-    <string name="correction_section_other">Other</string>
-    <string name="correction_note_label">Note</string>
-    <string name="correction_note_hint">Describe what is wrong…</string>
-    <string name="correction_validation">Select at least one section or write a note (min. 3 characters).</string>
-    <string name="correction_submit">Submit report</string>
-    <string name="correction_requires_online">Requires internet connection.</string>
-    <string name="correction_result_accepted_title">Report accepted — card updated.</string>
+        <string name="list_clear_all">Удалить все слова</string>
+    <string name="list_clear_all_title">Удалить все слова?</string>
+    <string name="list_clear_all_body">Вы удалите все слова из «%1$s». Сам список останется.</string>
+    <string name="settings_level">Уровень</string>
+    <string name="settings_selected_tenses">Выбранные времена</string>
+    <string name="action_edit">Изменить</string>
+    <string name="import_cards_count">Импортированные карточки (%1$d)</string>
+    <string name="import_flashcards_count">Карточки: %1$d</string>
+    <string name="import_done_count">Импортировано: %1$d</string>
+    <string name="list_unnamed">список</string>
+    <string name="periphrase_n">Перифраза %1$d</string>
+    <string name="practice_well_done">Отлично!</string>
+    <string name="cd_search">Поиск</string>
+    <string name="correction_fix_card">Сообщить об исправлении</string>
+<string name="correction_report_title">Report a problem</string>
+        <string name="correction_section_lemma">Лемма</string>
+    <string name="correction_section_pos">Часть речи</string>
+    <string name="correction_section_gloss">Основной перевод</string>
+    <string name="correction_section_meanings">Значения</string>
+<string name="correction_section_examples">Предложения</string>
+        <string name="correction_section_conjugation">Спряжение</string>
+    <string name="correction_section_similar">Похожие слова</string>
+    <string name="correction_section_pronunciation">Произношение</string>
+    <string name="correction_section_other">Другое</string>
+    <string name="correction_note_label">Заметка</string>
+    <string name="correction_note_hint">Опишите ошибку…</string>
+    <string name="correction_validation">Выберите хотя бы один раздел или напишите заметку (мин. 3 символа).</string>
+<string name="correction_submit">Submit report</string>
+        <string name="correction_requires_online">Требуется подключение к интернету.</string>
+<string name="correction_result_accepted_title">Report accepted — card updated.</string>
     <string name="correction_result_rejected_title">Report not accepted.</string>
     <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
-    <string name="correction_edit_self">Edit myself</string>
-    <string name="correction_self_edit_title">Edit card</string>
-    <string name="correction_field_lemma">Lemma</string>
-    <string name="correction_field_pos">Part of speech</string>
-    <string name="correction_field_gloss">Primary gloss</string>
-    <string name="correction_field_extra_glosses">Extra glosses (one per line)</string>
-    <string name="review_status_reported">Correction reported</string>
-    <string name="review_status_accepted">Updated</string>
-    <string name="review_status_rejected">Report rejected</string>
-    <string name="review_status_user_edited">Edited manually</string>
-    <string name="cd_voice_search">Voice search</string>
-    <string name="voice_listening">Listening…</string>
-    <string name="voice_listening_hint">Speak now</string>
-    <string name="voice_tap_to_start">Tap Start to speak</string>
-    <string name="voice_start">Start</string>
+        <string name="correction_edit_self">Изменить</string>
+        <string name="correction_history_button">История изменений</string>
+    <string name="correction_self_edit_title">Изменить карточку</string>
+    <string name="correction_field_lemma">Лемма</string>
+    <string name="correction_field_pos">Часть речи</string>
+    <string name="correction_field_gloss">Основной перевод</string>
+    <string name="correction_field_extra_glosses">Дополнительные переводы (по одному в строке)</string>
+    <string name="cd_voice_search">Голосовой поиск</string>
+    <string name="voice_listening">Слушаю…</string>
+    <string name="voice_listening_hint">Говорите сейчас</string>
+    <string name="voice_tap_to_start">Нажмите «Старт», чтобы говорить</string>
+<string name="voice_start">Start</string>
     <string name="voice_stop">Stop</string>
-    <string name="voice_permission_denied">Microphone permission denied.</string>
-    <string name="voice_unavailable">Speech recognition unavailable on this device.</string>
-    <string name="settings_notifications">Notifications</string>
-    <string name="settings_notifications_summary">Study reminders and card readiness</string>
-    <string name="settings_notif_study">Study reminders</string>
-    <string name="settings_notif_cards">Cards ready</string>
-    <string name="settings_reminder_hour">Reminder hour (0–23)</string>
-    <string name="notif_channel_study">Study</string>
-    <string name="notif_channel_cards">Cards</string>
-    <string name="notif_study_title">Time to review</string>
-    <string name="notif_study_body">%1$d cards due</string>
-    <string name="notif_cards_ready_title">Cards ready</string>
-    <string name="notif_cards_ready_body">%1$d word(s) ready to study</string>
+        <string name="voice_permission_denied">Нет доступа к микрофону.</string>
+    <string name="voice_unavailable">Распознавание речи недоступно на этом устройстве.</string>
+    <string name="settings_notifications">Уведомления</string>
+    <string name="settings_notifications_summary">Напоминания об учёбе и готовые карточки</string>
+    <string name="settings_notif_study">Напоминания об учёбе</string>
+    <string name="settings_notif_cards">Карточки готовы</string>
+    <string name="settings_reminder_hour">Час напоминания (0–23)</string>
+    <string name="notif_channel_study">Учёба</string>
+    <string name="notif_channel_cards">Карточки</string>
+    <string name="notif_study_title">Пора повторять</string>
+    <string name="notif_study_body">%1$d карточек к повторению</string>
+    <string name="notif_cards_ready_title">Карточки готовы</string>
+    <string name="notif_cards_ready_body">%1$d слов готово к изучению</string>
+    <string name="status_needs_review">Нужна проверка</string>
+    <string name="review_title">Слово нужно проверить</string>
+    <string name="review_no_match">Совпадений для «%1$s» не найдено.</string>
+    <string name="review_did_you_mean">Вы имели в виду:</string>
+    <string name="review_reject">Отклонить</string>
+    <string name="review_search_again">Искать</string>
+    <string name="review_confirm">Подтвердить</string>
+    <string name="review_close">Закрыть</string>
+    <string name="list_delete">Удалить список</string>
+    <string name="err_word_on_list">Это слово уже есть в вашем списке изучения.</string>
+    <string name="correction_report_subtitle">Мы проверяем всю карточку. Отметки и заметка только направляют проверку.</string>
+    <string name="correction_daily_limit">Можно отправить до 20 жалоб в день.</string>
+    <string name="correction_field_ipa">Произношение IPA</string>
+    <string name="correction_field_notes">Заметки</string>
+    <string name="correction_field_synonyms_l1">Синонимы (L1, по одному в строке)</string>
+    <string name="correction_field_examples">Предложения</string>
+    <string name="correction_field_usages">Выражения</string>
+    <string name="correction_field_l2">Предложение (L2)</string>
+    <string name="correction_field_l1">Перевод (L1)</string>
+    <string name="correction_field_similar">Похожие слова</string>
+    <string name="correction_field_conjugation_json">Спряжение (JSON)</string>
+    <string name="correction_section_meaning">Значение %1$d</string>
+    <string name="correction_add_meaning">Добавить значение</string>
+    <string name="correction_add_row">Добавить строку</string>
+    <string name="correction_empty_rows_hint">Пока нет строк — нажмите «Добавить строку».</string>
+    <string name="correction_self_edit_link">Нажмите здесь, чтобы изменить карточку самостоятельно</string>
+    <string name="correction_processing">Анализ жалобы…</string>
+    <string name="self_edit_processing">Сохранение и проверка правки…</string>
+    <string name="self_edit_validating">Проверка ваших правок…</string>
+    <string name="self_edit_warning_title">Подтвердить изменения?</string>
+    <string name="self_edit_warning_body">Мы обнаружили, что ваши изменения карточки «%1$s» могут быть неверными. Проверьте перед сохранением.</string>
+    <string name="self_edit_warning_confirm">Подтвердить изменения</string>
+    <string name="self_edit_warning_revert">Отменить изменения</string>
+    <string name="correction_result_accepted_body">Карточка «%1$s» обновлена.</string>
+    <string name="correction_code_accepted">Жалоба принята — карточка обновлена.</string>
+    <string name="correction_code_unfounded">На этой карточке ошибок не найдено.</string>
+    <string name="correction_code_insufficient">На этой карточке ошибок не найдено.</string>
+    <string name="correction_code_not_applicable">Этот раздел не относится к данному типу слова.</string>
+    <string name="correction_code_failed">Не удалось обработать жалобу. Попробуйте снова.</string>
+    <string name="card_history_title">История карточки</string>
+    <string name="card_history_empty">Пока нет жалоб и изменений.</string>
+    <string name="card_history_restore">Восстановить исходную версию</string>
+    <string name="card_history_restored">Исходная версия карточки восстановлена</string>
+    <string name="card_history_actor_you">Вы</string>
+    <string name="card_history_actor_system">Система</string>
+    <string name="card_history_event_report">Жалоба отправлена</string>
+    <string name="card_history_event_accepted">Жалоба принята — карточка обновлена</string>
+    <string name="card_history_event_self_edit">Ручная правка</string>
+    <string name="card_history_event_reviewed">Правка проверена</string>
+    <string name="card_history_summary_report">Разделы: %1$s</string>
+    <string name="card_history_summary_restored">Исходная версия восстановлена.</string>
+    <string name="card_history_diff_lemma">лемма: %1$s → %2$s</string>
+    <string name="card_history_diff_pos">часть речи: %1$s → %2$s</string>
+    <string name="card_history_diff_gloss">перевод: %1$s → %2$s</string>
+    <string name="card_history_diff_ipa">ipa: %1$s → %2$s</string>
+    <string name="card_history_diff_conjugation">спряжение обновлено</string>
+    <string name="card_history_diff_meanings">значения обновлены</string>
+    <string name="card_history_diff_similar">похожие слова обновлены</string>
+    <string name="card_history_diff_content">содержание обновлено</string>
+    <string name="cd_card_history">История карточки</string>
+    <string name="cd_view_card">Открыть полную карточку</string>
+    <string name="cd_list_word_actions">Действия со словом</string>
+    <string name="voice_searching">Поиск…</string>
+    <string name="voice_either_lang_hint">Говорите на любом из двух языков</string>
+    <string name="voice_no_match">Не распознано — попробуйте снова.</string>
+    <string name="voice_network_required">Голосовой ввод требует подключения к интернету.</string>
+
+    <string name="pos_noun">существительное</string>
+    <string name="pos_verb">глагол</string>
+    <string name="pos_adj">прилагательное</string>
+    <string name="pos_adv">наречие</string>
+    <string name="pos_prep">предлог</string>
+    <string name="pos_conj">союз</string>
+    <string name="pos_pron">местоимение</string>
+    <string name="pos_det">артикль</string>
+    <string name="pos_interj">междометие</string>
+    <string name="err_empty_list_name">Введите название списка</string>
+    <string name="err_list_not_editable">Этот список нельзя изменить</string>
+    <string name="err_list_not_deletable">Этот список нельзя удалить</string>
+    <string name="err_pending_inbox_not_deletable">Список ожидания нельзя удалить</string>
+    <string name="err_pending_inbox_clear">Не удалось очистить все ожидающие слова</string>
+    <string name="err_offline">Нет подключения к сети</string>
+    <string name="err_offline_card">Эта карточка недоступна офлайн</string>
+    <string name="err_no_inbox">Не удалось открыть список ожидания</string>
+    <string name="err_email_taken">Этот email уже зарегистрирован</string>
 
 </resources>
 

@@ -1,7 +1,6 @@
 package com.vocabulario.app.ui.card
 
 import android.speech.tts.TextToSpeech
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.unit.Dp
@@ -42,13 +40,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.res.stringResource
@@ -60,10 +55,13 @@ import com.vocabulario.app.data.asJsonArray
 import com.vocabulario.app.data.asJsonObject
 import com.vocabulario.app.data.asJsonString
 import com.vocabulario.app.data.examplesForUserLevel
-import com.vocabulario.app.data.tenseLabelForProfile
 import com.vocabulario.app.data.resolveVisibleTenseKeys
 import com.vocabulario.app.i18n.localizedPosLabel
 import com.vocabulario.app.ui.components.AppCard
+import com.vocabulario.app.ui.components.AppDialogShape
+import com.vocabulario.app.ui.components.AppDialogWindowChrome
+import com.vocabulario.app.ui.components.LemmaActionRow
+import com.vocabulario.app.ui.components.LemmaAddButton
 import com.vocabulario.app.ui.components.SpeakIconButton
 import com.vocabulario.app.ui.components.TagChip
 import kotlinx.serialization.json.JsonArray
@@ -72,74 +70,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import java.util.Locale
-
-private fun esPersonOrder() = listOf("yo", "tú", "él", "nosotros", "vosotros", "ellos")
-
-private fun conjugationUiMeta(conjugation: JsonObject?): JsonObject? =
-    conjugation?.get("ui_meta").asJsonObject()
-
-private fun personOrderFrom(conjugation: JsonObject?, learningLang: String): List<String> {
-    val meta = conjugationUiMeta(conjugation)
-    val order = meta?.get("person_order").asJsonArray()
-        ?.mapNotNull { it.asJsonString()?.takeIf { s -> s.isNotBlank() } }
-        .orEmpty()
-    if (order.isNotEmpty()) return order
-    return if (learningLang.equals("es", ignoreCase = true)) esPersonOrder() else emptyList()
-}
-
-private fun tenseLabel(
-    key: String,
-    profile: LanguageProfileResponse?,
-    conjugation: JsonObject? = null,
-): String = tenseLabelForProfile(profile, key, conjugation)
-
-private fun personLabel(key: String, conjugation: JsonObject?): String {
-    val labels = conjugationUiMeta(conjugation)?.get("person_labels").asJsonObject()
-    return labels?.get(key).asJsonString()?.takeIf { it.isNotBlank() } ?: key
-}
-
-private fun isPlaceholderForm(value: String?): Boolean {
-    val v = value?.trim().orEmpty()
-    return v.isEmpty() || v == "—" || v == "-" || v == "–" || v.equals("n/a", ignoreCase = true)
-}
-
-/** Resolve person form; supports flat keys (ja_m) and nested (ja -> m/ż). */
-private fun resolvePersonForm(forms: JsonObject, personKey: String): String? {
-    forms[personKey].asJsonString()?.let { return it }
-    val parts = personKey.split("_", limit = 2)
-    if (parts.size != 2) return null
-    val base = parts[0]
-    val variant = parts[1].trim().lowercase().trimEnd('.')
-    val nested = forms[base].asJsonObject() ?: return null
-    val aliases = when (variant) {
-        "m", "masc", "masculine", "meski", "męski" -> listOf("m", "m.", "masc", "masculine", "męski", "meski")
-        "z", "ż", "f", "fem", "feminine", "zenski", "żeński", "zenska" ->
-            listOf("ż", "ż.", "z", "z.", "f", "f.", "fem", "feminine", "żeński", "żeńska")
-        else -> listOf(variant, parts[1])
-    }
-    for (alias in aliases) {
-        nested[alias].asJsonString()?.let { return it }
-    }
-    return null
-}
-
-private fun orderedPersons(
-    forms: JsonObject,
-    conjugation: JsonObject? = null,
-    learningLang: String = "en",
-): List<Pair<String, String>> {
-    val order = personOrderFrom(conjugation, learningLang)
-    val known = order.mapNotNull { person ->
-        val form = resolvePersonForm(forms, person) ?: forms[person].asJsonString()
-        form?.let { personLabel(person, conjugation) to it }
-    }
-    val rest = forms.entries
-        .filter { it.key !in order }
-        .mapNotNull { (key, value) ->
-            value.asJsonString()?.let { personLabel(key, conjugation) to it }
-        }
-    return known + rest
-}
 
 @Composable
 fun FlashcardBackContent(
@@ -151,6 +81,7 @@ fun FlashcardBackContent(
     showExampleSentences: Boolean = true,
     showSynonyms: Boolean = true,
     showAntonyms: Boolean = true,
+    showWordFamily: Boolean = true,
     showPeriphrases: Boolean = true,
     showConjugation: Boolean = true,
     conjugationExpandedDefault: Boolean = false,
@@ -168,6 +99,7 @@ fun FlashcardBackContent(
     val meanings = content["meanings"].asJsonArray() ?: JsonArray(emptyList())
     val synonymsL2 = parseFlashRelatedWords(content["synonyms_l2"].asJsonArray())
     val antonymsL2 = parseFlashRelatedWords(content["antonyms_l2"].asJsonArray())
+    val wordFamilyL2 = parseFlashRelatedWords(content["word_family_l2"].asJsonArray())
     val conjugation = conjugationFromContent(content)
     val tenseMap = conjugation?.get("tenses").asJsonObject()
     val nonFinite = conjugation?.get("non_finite").asJsonObject()
@@ -207,11 +139,7 @@ fun FlashcardBackContent(
     var usagesModal by remember { mutableStateOf<List<Pair<String, String>>?>(null) }
     var synExpanded by remember(relatedWordsExpandedDefault) { mutableStateOf(relatedWordsExpandedDefault) }
     var antExpanded by remember(relatedWordsExpandedDefault) { mutableStateOf(relatedWordsExpandedDefault) }
-    val expandedTenses = remember(conjugationExpandedDefault, finiteKeys, nonFiniteKeys) {
-        mutableStateMapOf<String, Boolean>().apply {
-            (finiteKeys + nonFiniteKeys).forEach { put(it, conjugationExpandedDefault) }
-        }
-    }
+    var familyExpanded by remember(relatedWordsExpandedDefault) { mutableStateOf(relatedWordsExpandedDefault) }
     val expandedPeri = remember(periphrases) {
         mutableStateMapOf<String, Boolean>().apply {
             periphrases?.forEachIndexed { i, _ -> put("p$i", false) }
@@ -244,7 +172,7 @@ fun FlashcardBackContent(
                     textAlign = TextAlign.Center,
                 )
             }
-            if (!pos.isNullOrBlank()) {
+            if (!pos.isNullOrBlank() && !pos.equals("imported", ignoreCase = true)) {
                 Spacer(Modifier.height(10.dp))
                 TagChip(localizedPosLabel(pos).ifBlank { pos })
             }
@@ -413,6 +341,16 @@ fun FlashcardBackContent(
             }
         }
 
+        if (showWordFamily && wordFamilyL2.isNotEmpty()) {
+            CollapsibleSection(
+                title = stringResource(R.string.section_word_family),
+                expanded = familyExpanded,
+                onToggle = { familyExpanded = !familyExpanded },
+            ) {
+                RelatedWordsList(wordFamilyL2, onAddRelated, learningLemmas)
+            }
+        }
+
         if (showPeriphrases && !periphrases.isNullOrEmpty()) {
             SectionLabel(stringResource(R.string.section_periphrases))
             periphrases.forEachIndexed { index, item ->
@@ -465,39 +403,17 @@ fun FlashcardBackContent(
             }
         }
 
-        if (conjugationEnabled && (finiteKeys.isNotEmpty() || nonFiniteKeys.isNotEmpty())) {
-            SectionLabel(stringResource(R.string.section_conjugation))
-            nonFiniteKeys.forEach { key ->
-                val form = nonFinite?.get(key).asJsonString().orEmpty()
-                if (form.isNotBlank()) {
-                    CollapsibleSection(
-                        title = tenseLabel(key, profile, conjugation),
-                        expanded = expandedTenses[key] == true,
-                        onToggle = { expandedTenses[key] = expandedTenses[key] != true },
-                    ) {
-                        Text(
-                            form,
-                            fontWeight = FontWeight.SemiBold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-            }
-            finiteKeys.forEach { key ->
-                val forms = tenseMap?.get(key).asJsonObject() ?: return@forEach
-                val rows = orderedPersons(forms, conjugation, lang)
-                if (rows.isNotEmpty() && rows.all { isPlaceholderForm(it.second) }) {
-                    return@forEach
-                }
-                CollapsibleSection(
-                    title = tenseLabel(key, profile, conjugation),
-                    expanded = expandedTenses[key] == true,
-                    onToggle = { expandedTenses[key] = expandedTenses[key] != true },
-                ) {
-                    ConjugationTable(rows)
-                }
-            }
+        if (conjugationEnabled) {
+            ConjugationTenseAccordions(
+                finiteKeys = finiteKeys,
+                nonFiniteKeys = nonFiniteKeys,
+                tenseMap = tenseMap,
+                nonFinite = nonFinite,
+                conjugation = conjugation,
+                lang = lang,
+                profile = profile,
+                expandedDefault = conjugationExpandedDefault,
+            )
         }
     }
 
@@ -506,6 +422,7 @@ fun FlashcardBackContent(
             onDismissRequest = { usagesModal = null },
             properties = DialogProperties(usePlatformDefaultWidth = false),
         ) {
+            AppDialogWindowChrome()
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -514,7 +431,7 @@ fun FlashcardBackContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = AppDialogShape,
                     color = MaterialTheme.colorScheme.surface,
                     tonalElevation = 6.dp,
                     modifier = Modifier.fillMaxWidth(),
@@ -561,170 +478,31 @@ fun FlashcardBackContent(
 }
 
 @Composable
-private fun SectionLabel(title: String) {
-    Text(
-        title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp),
-    )
-}
-
-@Composable
-private fun CollapsibleSection(
-    title: String,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-    content: @Composable () -> Unit,
-) {
-    AppCard {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
-                letterSpacing = 0.6.sp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onToggle)
-                    .padding(vertical = 14.dp),
-            )
-            if (expanded) {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.28f),
-                )
-                Spacer(Modifier.height(14.dp))
-                content()
-                Spacer(Modifier.height(12.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun ConjugationTable(rows: List<Pair<String, String>>) {
-    val scheme = MaterialTheme.colorScheme
-    val personStyle = MaterialTheme.typography.bodyMedium
-    val formStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
-    val textMeasurer = rememberTextMeasurer()
-    val density = LocalDensity.current
-    val personColumnWidth = remember(rows, personStyle, density) {
-        val maxPx = rows.maxOfOrNull { (person, _) ->
-            textMeasurer.measure(text = person, style = personStyle).size.width
-        } ?: 0
-        with(density) { maxPx.toDp() + 2.dp }
-    }
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = scheme.surfaceVariant.copy(alpha = 0.55f),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-            rows.forEach { (person, form) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        person,
-                        modifier = Modifier.width(personColumnWidth),
-                        textAlign = TextAlign.End,
-                        style = personStyle,
-                        color = scheme.onSurfaceVariant,
-                        maxLines = 1,
-                        softWrap = false,
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(18.dp)
-                            .background(scheme.outline.copy(alpha = 0.5f)),
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    ConjugationFormText(
-                        text = form,
-                        style = formStyle,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ConjugationFormText(
-    text: String,
-    style: androidx.compose.ui.text.TextStyle,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        modifier = modifier,
-        textAlign = TextAlign.Start,
-        style = style,
-        softWrap = true,
-        overflow = TextOverflow.Clip,
-    )
-}
-
-@Composable
 private fun RelatedWordsList(
     words: List<RelatedWord>,
     onAdd: ((RelatedWord) -> Unit)?,
     learningLemmas: Set<String> = emptySet(),
 ) {
-    words.forEachIndexed { index, word ->
-        if (index > 0) {
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 10.dp),
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    word.lemma,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                word.glossL1?.takeIf { it.isNotBlank() }?.let {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            if (onAdd != null && !learningLemmas.contains(word.lemma.trim().lowercase())) {
-                val scheme = MaterialTheme.colorScheme
-                Surface(
-                    onClick = { onAdd(word) },
-                    shape = CircleShape,
-                    color = scheme.primary,
-                    contentColor = scheme.onPrimary,
-                    modifier = Modifier.size(40.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                        Icon(
-                            Icons.Default.Add,
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        words.forEach { word ->
+            LemmaActionRow(
+                lemma = word.lemma,
+                gloss = word.glossL1,
+                belowGloss = {
+                    word.pos?.takeIf { it.isNotBlank() }?.let { pos ->
+                        Spacer(Modifier.height(8.dp))
+                        TagChip(localizedPosLabel(pos).ifBlank { pos })
+                    }
+                },
+                trailing = {
+                    if (onAdd != null && !learningLemmas.contains(word.lemma.trim().lowercase())) {
+                        LemmaAddButton(
+                            onClick = { onAdd(word) },
                             contentDescription = stringResource(R.string.action_add),
-                            modifier = Modifier.size(22.dp),
                         )
                     }
-                }
-            }
+                },
+            )
         }
     }
 }

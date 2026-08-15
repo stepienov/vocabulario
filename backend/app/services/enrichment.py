@@ -32,28 +32,67 @@ def examples_complete(examples: list[dict]) -> bool:
     return all(counts[level] >= 1 for level in EXAMPLE_CEFR_LEVELS)
 
 
+def _norm_example_l2(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return " ".join(value.casefold().split())
+
+
+def examples_unique_across_meanings(examples_payload: dict, *, expected: int) -> bool:
+    """True gdy każde znaczenie ma komplet CEFR i żadne l2 nie powtarza się między sensami."""
+    meanings = examples_payload.get("meanings") or []
+    if not isinstance(meanings, list) or len(meanings) < expected:
+        return False
+    seen: set[str] = set()
+    for meaning in meanings[:expected]:
+        if not isinstance(meaning, dict):
+            return False
+        examples = meaning.get("examples")
+        if not isinstance(examples, list) or not examples_complete(examples):
+            return False
+        for item in examples:
+            if not isinstance(item, dict):
+                return False
+            key = _norm_example_l2(item.get("l2"))
+            if not key or key in seen:
+                return False
+            seen.add(key)
+    return True
+
+
 def _merge_examples_into_meanings(core: dict, examples_payload: dict) -> None:
+    """Przypina examples do meanings.
+
+    Najpierw po indeksie (ta sama kolejność co w prompcie) — krytyczne gdy dwa
+    sensy mają identyczny/podobny gloss_l1 (wcześniej oba brały pierwszy match).
+    Dopiero potem unikalny match po gloss_l1.
+    """
     core_meanings = core.get("meanings") or []
     ex_meanings = examples_payload.get("meanings") or []
-    if not isinstance(core_meanings, list):
+    if not isinstance(core_meanings, list) or not isinstance(ex_meanings, list):
         return
 
+    used_ex: set[int] = set()
     for idx, meaning in enumerate(core_meanings):
         if not isinstance(meaning, dict):
             continue
         source = None
-        gloss = meaning.get("gloss_l1")
-        if gloss and isinstance(ex_meanings, list):
-            source = next(
-                (
-                    m
-                    for m in ex_meanings
-                    if isinstance(m, dict) and m.get("gloss_l1") == gloss
-                ),
-                None,
-            )
-        if source is None and isinstance(ex_meanings, list) and idx < len(ex_meanings):
-            source = ex_meanings[idx] if isinstance(ex_meanings[idx], dict) else None
+        if idx < len(ex_meanings) and isinstance(ex_meanings[idx], dict):
+            source = ex_meanings[idx]
+            used_ex.add(idx)
+        else:
+            gloss = meaning.get("gloss_l1")
+            if gloss:
+                matches = [
+                    (j, m)
+                    for j, m in enumerate(ex_meanings)
+                    if j not in used_ex
+                    and isinstance(m, dict)
+                    and m.get("gloss_l1") == gloss
+                ]
+                if len(matches) == 1:
+                    j, source = matches[0]
+                    used_ex.add(j)
         if source and isinstance(source.get("examples"), list):
             meaning["examples"] = source["examples"]
 
@@ -291,6 +330,7 @@ async def enrich_adaptive_card_content(
         "meanings": meanings[:MAX_MEANINGS],
         "synonyms_l2": [],
         "antonyms_l2": [],
+        "word_family_l2": [],
         "similar_words": [],
         "conjugation": None,
         "notes": data.get("notes"),

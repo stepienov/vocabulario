@@ -50,6 +50,7 @@ def build_pending_content(
         "meanings": meanings,
         "synonyms_l2": [],
         "antonyms_l2": [],
+        "word_family_l2": [],
         "similar_words": [],
         "inflection": None,
         "conjugation": None,
@@ -74,24 +75,65 @@ def build_import_display_content(
     display: dict,
 ) -> dict:
     """Treść fiszki zachowanej z importu — gotowa do renderu bloków, bez enrichmentu."""
+    lemma_from_sem, gloss_from_sem, has_both_semantics = _extract_semantic_l2_l1(display)
+    lemma_out = (lemma_from_sem or lemma or "").strip() or lemma
+    gloss_out = ((gloss_from_sem or gloss or "").strip() or None)
+    display_out = dict(display or {})
+    # Dwustronność tylko gdy AI pewnie otagowało L2/L1 (semantic) — inaczej false.
+    flag = display_out.get("bidirectional")
+    display_out["bidirectional"] = bool(
+        has_both_semantics and (True if flag is None else bool(flag))
+    )
+
     return {
         "schema_version": "import_display.v1",
         "card_kind": "imported",
-        "lemma": lemma,
+        "lemma": lemma_out,
+        "lemma_l2": lemma_out,
+        "gloss_primary": gloss_out,
         "language": learning_lang,
         "pos": "imported",
         "ipa": None,
         "meanings": (
-            [{"gloss_l1": gloss, "synonyms_l1": [], "examples": [], "usages": []}]
-            if gloss
+            [{"gloss_l1": gloss_out, "synonyms_l1": [], "examples": [], "usages": []}]
+            if gloss_out
             else []
         ),
         "synonyms_l2": [],
         "antonyms_l2": [],
+        "word_family_l2": [],
         "similar_words": [],
         "conjugation": None,
-        "display": display,
+        "display": display_out,
     }
+
+
+def _extract_semantic_l2_l1(display: dict | None) -> tuple[str | None, str | None, bool]:
+    """Pull lemma (headword) and gloss (translation) from display blocks."""
+    if not isinstance(display, dict):
+        return None, None, False
+    blocks: list[dict] = []
+    for side in ("prompt", "answer"):
+        side_obj = display.get(side) or {}
+        if isinstance(side_obj, dict):
+            for b in side_obj.get("blocks") or []:
+                if isinstance(b, dict):
+                    blocks.append(b)
+                    for ch in b.get("children") or []:
+                        if isinstance(ch, dict):
+                            blocks.append(ch)
+    headword = None
+    translation = None
+    for b in blocks:
+        sem = (b.get("semantic") or "").strip()
+        text = (b.get("text") or "").strip()
+        if not text:
+            continue
+        if sem == "headword" and not headword:
+            headword = text
+        elif sem == "translation" and not translation:
+            translation = text
+    return headword, translation, bool(headword and translation)
 
 
 def content_is_complete(content: dict | None) -> bool:

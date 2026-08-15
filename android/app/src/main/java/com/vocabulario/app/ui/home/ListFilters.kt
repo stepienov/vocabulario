@@ -49,22 +49,54 @@ fun applyListFilterSort(
         posOk && stateOk
     }
     return when (sort) {
-        ListSortOrder.LemmaAsc -> filtered.sortedBy { it.lemma_l2.lowercase() }
-        ListSortOrder.LemmaDesc -> filtered.sortedByDescending { it.lemma_l2.lowercase() }
+        ListSortOrder.LemmaAsc -> filtered.sortedBy { lemmaSortKey(it) }
+        ListSortOrder.LemmaDesc -> filtered.sortedByDescending { lemmaSortKey(it) }
         ListSortOrder.PosAsc -> filtered.sortedWith(
             compareBy<CardResponse> {
                 val key = normalizePosKey(it.pos)
                 if (key == "unknown") "\uFFFF" else key
-            }.thenBy { it.lemma_l2.lowercase() },
+            }.thenBy { lemmaSortKey(it) },
         )
         ListSortOrder.Newest -> filtered.sortedByDescending { it.created_at }
         ListSortOrder.Oldest -> filtered.sortedBy { it.created_at }
         ListSortOrder.Status -> filtered.sortedWith(
             compareBy<CardResponse> { cardStateFilterOf(it).ordinal }
-                .thenBy { it.lemma_l2.lowercase() },
+                .thenBy { lemmaSortKey(it) },
         )
     }
 }
+
+/**
+ * Alphabetical key: nouns with a leading article (el/la, le/la, der/die/das, …)
+ * sort by the headword, not the article.
+ */
+internal fun lemmaSortKey(card: CardResponse): String {
+    val raw = card.lemma_l2.trim().lowercase()
+    val pos = normalizePosKey(card.pos)
+    if (pos != "noun" && pos != "unknown") return raw
+    val words = raw.split(Regex("\\s+")).filter { it.isNotEmpty() }
+    if (words.size >= 2 && words[0].trimEnd('\'') in NOUN_SORT_ARTICLES) {
+        return words.drop(1).joinToString(" ")
+    }
+    NOUN_SORT_ARTICLES.forEach { art ->
+        val prefix = "$art'"
+        if (raw.startsWith(prefix) && raw.length > prefix.length) {
+            return raw.substring(prefix.length)
+        }
+    }
+    return raw
+}
+
+/** Definite (and common indefinite) articles used in L2 noun lemmas. */
+private val NOUN_SORT_ARTICLES = setOf(
+    "el", "la", "los", "las",
+    "le", "les", "un", "une",
+    "der", "die", "das", "ein", "eine",
+    "il", "lo", "i", "gli", "l",
+    "o", "os", "as",
+    "the", "a", "an",
+    "het", "de",
+)
 
 /** Canonical POS keys used by list filters (9 + unknown). */
 val LIST_FILTER_POS_KEYS = listOf(

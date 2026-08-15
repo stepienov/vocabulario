@@ -26,17 +26,11 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
@@ -70,7 +64,11 @@ import com.vocabulario.app.data.langDisplayName
 import com.vocabulario.app.data.verbTensesFor
 import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.AppCard
+import com.vocabulario.app.ui.components.AppDialogButtonRow
 import com.vocabulario.app.ui.components.AppDialogShape
+import com.vocabulario.app.ui.components.AppDialogWindowChrome
+import com.vocabulario.app.ui.components.AppGrayField
+import com.vocabulario.app.ui.components.AppPillDropdown
 import com.vocabulario.app.ui.components.AppScreenScaffold
 import com.vocabulario.app.ui.components.SettingsCheckRow
 import com.vocabulario.app.ui.components.SettingsRadioRow
@@ -127,12 +125,14 @@ fun SettingsScreen(
                 )
                 SettingsRadioRow(
                     stringResource(R.string.settings_mode_choice),
+                    subtitle = stringResource(R.string.settings_mode_vocabulario_only),
                     selected = state.practiceInputPref == "choice",
                     onSelect = { viewModel.setInputPref("choice") },
                     testTag = TestTags.SETTINGS_MODE_CHOICE,
                 )
                 SettingsRadioRow(
                     stringResource(R.string.settings_mode_type),
+                    subtitle = stringResource(R.string.settings_mode_vocabulario_only),
                     selected = state.practiceInputPref == "type",
                     onSelect = { viewModel.setInputPref("type") },
                     showDivider = false,
@@ -202,6 +202,12 @@ fun SettingsScreen(
                     testTag = TestTags.SETTINGS_CHECK_SYN_ANT,
                 )
                 SettingsCheckRow(
+                    label = stringResource(R.string.settings_word_family),
+                    checked = state.showWordFamily,
+                    onCheckedChange = viewModel::setShowWordFamily,
+                    testTag = TestTags.SETTINGS_CHECK_WORD_FAMILY,
+                )
+                SettingsCheckRow(
                     label = stringResource(R.string.settings_conjugation),
                     checked = state.showConjugation,
                     onCheckedChange = viewModel::setShowConjugation,
@@ -237,16 +243,13 @@ fun SettingsScreen(
                 var text by remember(state.newCardsPerDay) { mutableStateOf(state.newCardsPerDay.toString()) }
                 val draft = text.toIntOrNull()
                 val canConfirm = draft != null && draft != state.newCardsPerDay && draft in 1..200
-                OutlinedTextField(
+                AppGrayField(
                     value = text,
                     onValueChange = { raw -> text = raw.filter { it.isDigit() }.take(3) },
-                    label = { Text(stringResource(R.string.settings_new_limit)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    placeholder = stringResource(R.string.settings_new_limit),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = AppButtonShape,
                 )
                 Button(
                     onClick = { draft?.let(viewModel::setNewCardsPerDay) },
@@ -260,7 +263,7 @@ fun SettingsScreen(
                         containerColor = MaterialTheme.colorScheme.tertiary,
                         contentColor = MaterialTheme.colorScheme.onTertiary,
                     ),
-                ) { Text(stringResource(R.string.action_confirm)) }
+                ) { Text(stringResource(R.string.action_ok)) }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -307,13 +310,12 @@ fun SettingsScreen(
                     onCheckedChange = viewModel::setStudyReminderEnabled,
                     testTag = TestTags.SETTINGS_NOTIF_STUDY,
                 )
-                OutlinedTextField(
+                AppGrayField(
                     value = state.reminderHour.toString(),
                     onValueChange = { raw ->
                         raw.toIntOrNull()?.let(viewModel::setReminderHour)
                     },
-                    label = { Text(stringResource(R.string.settings_reminder_hour)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = stringResource(R.string.settings_reminder_hour),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                 )
@@ -378,16 +380,16 @@ fun SettingsScreen(
 
             AccordionSection(
                 title = stringResource(R.string.settings_level),
-                subtitle = state.cefrLevel,
                 expanded = state.expanded == SettingsSection.CEFR,
                 onHeaderClick = { viewModel.toggleSection(SettingsSection.CEFR) },
                 testTag = TestTags.SETTINGS_SECTION_CEFR,
+                showDivider = false,
             ) {
-                SettingsDropdown(
-                    label = stringResource(R.string.settings_cefr_known),
+                AppPillDropdown(
                     options = CEFR_LEVELS.map { it to it },
                     selectedCode = state.cefrLevel,
                     onSelect = viewModel::setCefr,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
 
@@ -491,6 +493,7 @@ private fun TensePickerDialog(
         onDismissRequest = onBack,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
+        AppDialogWindowChrome()
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
@@ -537,26 +540,13 @@ private fun TensePickerDialog(
                         .height(1.dp)
                         .background(scheme.outlineVariant),
                 )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                ) {
-                    OutlinedButton(onClick = onBack, shape = AppButtonShape) {
-                        Text(stringResource(R.string.action_cancel), color = scheme.error)
-                    }
-                    Button(
-                        onClick = onConfirm,
-                        shape = AppButtonShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = scheme.tertiary,
-                            contentColor = scheme.onTertiary,
-                        ),
-                    ) {
-                        Text(stringResource(R.string.action_confirm))
-                    }
-                }
+                AppDialogButtonRow(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    secondaryText = stringResource(R.string.action_cancel),
+                    onSecondary = onBack,
+                    primaryText = stringResource(R.string.action_ok),
+                    onPrimary = onConfirm,
+                )
             }
         }
     }
@@ -565,10 +555,11 @@ private fun TensePickerDialog(
 @Composable
 private fun AccordionSection(
     title: String,
-    subtitle: String,
     expanded: Boolean,
     onHeaderClick: () -> Unit,
     testTag: String? = null,
+    subtitle: String? = null,
+    showDivider: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     AppCard {
@@ -583,8 +574,10 @@ private fun AccordionSection(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(2.dp))
-                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (subtitle != null) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -602,13 +595,15 @@ private fun AccordionSection(
                         .fillMaxWidth()
                         .padding(bottom = 4.dp),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .height(1.dp)
-                            .background(MaterialTheme.colorScheme.outlineVariant),
-                    )
+                    if (showDivider) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .height(1.dp)
+                                .background(MaterialTheme.colorScheme.outlineVariant),
+                        )
+                    }
                     content()
                 }
             }
@@ -616,7 +611,6 @@ private fun AccordionSection(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsDropdown(
     label: String,
@@ -625,43 +619,14 @@ private fun SettingsDropdown(
     onSelect: (String) -> Unit,
     testTag: String? = null,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedLabel = options.firstOrNull { it.first.equals(selectedCode, true) }?.second ?: selectedCode
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
-    ) {
-        OutlinedTextField(
-            value = selectedLabel,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                .fillMaxWidth(),
-            shape = AppButtonShape,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            ),
-        )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { (code, name) ->
-                DropdownMenuItem(
-                    text = { Text(name) },
-                    onClick = {
-                        expanded = false
-                        onSelect(code)
-                    },
-                )
-            }
-        }
-    }
+    AppPillDropdown(
+        options = options,
+        selectedCode = selectedCode,
+        onSelect = onSelect,
+        label = label,
+        testTag = testTag,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
 }
 
 @Composable
@@ -673,8 +638,8 @@ private fun modeSummary(pref: String): String = when (pref) {
 
 @Composable
 private fun directionSummary(dir: String, native: String?, learning: String?): String {
-    val n = native?.let { langDisplayName(it) } ?: "L1"
-    val l = learning?.let { langDisplayName(it) } ?: "L2"
+    val n = native?.let { langDisplayName(it) } ?: stringResource(R.string.settings_native_lang)
+    val l = learning?.let { langDisplayName(it) } ?: stringResource(R.string.settings_learning_lang)
     return when (dir) {
         "l1_to_l2" -> stringResource(R.string.settings_direction_first, n)
         "l2_to_l1" -> stringResource(R.string.settings_direction_first, l)

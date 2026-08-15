@@ -1,16 +1,9 @@
 package com.vocabulario.app.ui.card
 
 import android.speech.tts.TextToSpeech
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,25 +17,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -57,13 +38,11 @@ import com.vocabulario.app.data.asJsonObject
 import com.vocabulario.app.data.asJsonString
 import com.vocabulario.app.data.examplesForUserLevel
 import com.vocabulario.app.data.api.LanguageProfileResponse
-import com.vocabulario.app.data.tenseLabelForProfile
 import com.vocabulario.app.data.resolveVisibleTenseKeys
 import com.vocabulario.app.i18n.localizedPosLabel
 import com.vocabulario.app.ui.components.AppCard
 import com.vocabulario.app.ui.components.SpeakIconButton
 import com.vocabulario.app.ui.components.TagChip
-import kotlinx.coroutines.delay
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -98,7 +77,6 @@ private fun parseRelatedWords(raw: JsonArray?): List<RelatedWord> {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun CardDetailContent(
     content: JsonObject,
@@ -132,6 +110,7 @@ fun CardDetailContent(
     }
     val synonymsL2 = parseRelatedWords(content["synonyms_l2"].asJsonArray())
     val antonymsL2 = parseRelatedWords(content["antonyms_l2"].asJsonArray())
+    val wordFamilyL2 = parseRelatedWords(content["word_family_l2"].asJsonArray())
     val conjugation = conjugationFromContent(content)
     val tenseMap = conjugation?.get("tenses").asJsonObject()
     val nonFinite = conjugation?.get("non_finite").asJsonObject()
@@ -156,36 +135,6 @@ fun CardDetailContent(
     val visibleNonFinite = (nonFinite?.keys?.toList().orEmpty())
         .ifEmpty { LanguagePacks.get(lang).nonFinite.map { it.key } }
         .filter { nonFinite?.containsKey(it) == true }
-    val conjugationTabs = visibleFinite + visibleNonFinite
-    fun tenseLabel(key: String): String =
-        tenseLabelForProfile(profile, key, conjugation)
-    fun personOrder(): List<String> {
-        val order = uiMeta?.get("person_order").asJsonArray()
-            ?.mapNotNull { it.asJsonString()?.takeIf { s -> s.isNotBlank() } }
-            .orEmpty()
-        if (order.isNotEmpty()) return order
-        return if (lang.equals("es", ignoreCase = true)) {
-            listOf("yo", "tú", "él", "nosotros", "vosotros", "ellos")
-        } else {
-            emptyList()
-        }
-    }
-    fun personLabel(key: String): String =
-        uiMeta?.get("person_labels").asJsonObject()?.get(key).asJsonString()
-            ?.takeIf { it.isNotBlank() } ?: key
-    var conjugationExpanded by remember { mutableStateOf(!compact) }
-    var selectedTenseIndex by remember { mutableIntStateOf(0) }
-    val conjugationBringIntoView = remember { BringIntoViewRequester() }
-    val conjugationBottomBringIntoView = remember { BringIntoViewRequester() }
-
-    LaunchedEffect(selectedTenseIndex, conjugationExpanded) {
-        if ((!compact || conjugationExpanded) && conjugationTabs.isNotEmpty()) {
-            delay(80)
-            conjugationBringIntoView.bringIntoView()
-            delay(50)
-            conjugationBottomBringIntoView.bringIntoView()
-        }
-    }
 
     Column(
         modifier = when {
@@ -274,9 +223,12 @@ fun CardDetailContent(
                     textAlign = TextAlign.Center,
                 )
             }
-            if (pos != null) {
-                Spacer(modifier = Modifier.height(10.dp))
-                TagChip(localizedPosLabel(pos))
+            if (pos != null && !pos.equals("imported", ignoreCase = true)) {
+                val label = localizedPosLabel(pos)
+                if (label.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    TagChip(label)
+                }
             }
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(
@@ -329,154 +281,68 @@ fun CardDetailContent(
             )
         }
 
-        if (showConjHint && (conjugationTabs.isNotEmpty() || periphrases != null)) {
-            AppCard {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(stringResource(R.string.section_conjugation_short), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        if (compact) {
-                            IconButton(onClick = { conjugationExpanded = !conjugationExpanded }) {
-                                Icon(
-                                    if (conjugationExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription = null,
-                                )
-                            }
+        if ((!compact || fullDetail) && wordFamilyL2.isNotEmpty()) {
+            RelatedWordsSection(
+                title = stringResource(R.string.section_word_family),
+                words = wordFamilyL2,
+                onAdd = onAddRelated,
+            )
+        }
+
+        if (showConjHint) {
+            ConjugationTenseAccordions(
+                finiteKeys = visibleFinite,
+                nonFiniteKeys = visibleNonFinite,
+                tenseMap = tenseMap,
+                nonFinite = nonFinite,
+                conjugation = conjugation,
+                lang = lang,
+                profile = profile,
+            )
+            periphrases?.forEach { item ->
+                val p = item.asJsonObject() ?: return@forEach
+                AppCard {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            p["formula_l2"].asJsonString() ?: "",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        p["gloss_l1"].asJsonString()?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                    }
-                    if (!compact || conjugationExpanded) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .bringIntoViewRequester(conjugationBringIntoView),
-                        ) {
-                        if (conjugationTabs.isNotEmpty()) {
+                        p["examples"].asJsonArray()?.forEachIndexed { exIndex, ex ->
+                            val exObj = ex.asJsonObject() ?: return@forEachIndexed
+                            val periL2 = exObj["l2"].asJsonString().orEmpty()
                             Spacer(Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                             ) {
-                                conjugationTabs.forEachIndexed { index, name ->
-                                    FilterChip(
-                                        selected = index == selectedTenseIndex,
-                                        onClick = { selectedTenseIndex = index },
-                                        label = { Text(tenseLabel(name), style = MaterialTheme.typography.labelMedium) },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                        ),
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.Top,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        Text(
+                                            periL2,
+                                            fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        if (periL2.isNotBlank()) {
+                                            SpeakIconButton(
+                                                onClick = { tts.speak(periL2, "peri-$exIndex") },
+                                                compact = true,
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        exObj["l1"].asJsonString() ?: "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
-                            Spacer(Modifier.height(12.dp))
-                            val selectedKey = conjugationTabs.getOrNull(selectedTenseIndex)
-                            val nonFiniteForm = selectedKey?.let { nonFinite?.get(it).asJsonString() }
-                            if (nonFiniteForm != null && tenseMap?.containsKey(selectedKey) != true) {
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                ) {
-                                    Text(nonFiniteForm, modifier = Modifier.padding(12.dp), fontWeight = FontWeight.Medium)
-                                }
-                            } else {
-                                val forms = selectedKey?.let { tenseMap?.get(it).asJsonObject() }
-                                val ordered = run {
-                                    val order = personOrder()
-                                    val known = order.mapNotNull { person ->
-                                        forms?.get(person)?.let { person to it }
-                                    }
-                                    val rest = forms?.entries
-                                        ?.filter { it.key !in order }
-                                        ?.map { it.key to it.value }
-                                        .orEmpty()
-                                    known + rest
-                                }
-                                ordered.chunked(2).forEach { row ->
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    ) {
-                                        row.forEach { (person, form) ->
-                                            Surface(
-                                                modifier = Modifier.weight(1f),
-                                                shape = RoundedCornerShape(12.dp),
-                                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                            ) {
-                                                Column(modifier = Modifier.padding(10.dp)) {
-                                                    Text(
-                                                        personLabel(person),
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                    Text(
-                                                        form.asJsonString().orEmpty(),
-                                                        fontWeight = FontWeight.Medium,
-                                                        softWrap = true,
-                                                    )
-                                                }
-                                            }
-                                        }
-                                        if (row.size == 1) Spacer(Modifier.weight(1f))
-                                    }
-                                    Spacer(Modifier.height(8.dp))
-                                }
-                            }
-                        }
-                        periphrases?.forEach { item ->
-                            val p = item.asJsonObject() ?: return@forEach
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                p["formula_l2"].asJsonString() ?: "",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            p["gloss_l1"].asJsonString()?.let {
-                                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            p["examples"].asJsonArray()?.forEachIndexed { exIndex, ex ->
-                                val exObj = ex.asJsonObject() ?: return@forEachIndexed
-                                val periL2 = exObj["l2"].asJsonString().orEmpty()
-                                Spacer(Modifier.height(8.dp))
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                ) {
-                                    Column(modifier = Modifier.padding(10.dp)) {
-                                        Row(
-                                            verticalAlignment = Alignment.Top,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        ) {
-                                            Text(
-                                                periL2,
-                                                fontWeight = FontWeight.Medium,
-                                                modifier = Modifier.weight(1f),
-                                            )
-                                            if (periL2.isNotBlank()) {
-                                                SpeakIconButton(
-                                                    onClick = { tts.speak(periL2, "peri-$exIndex") },
-                                                    compact = true,
-                                                )
-                                            }
-                                        }
-                                        Text(
-                                            exObj["l1"].asJsonString() ?: "",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        Spacer(
-                            Modifier
-                                .height(1.dp)
-                                .bringIntoViewRequester(conjugationBottomBringIntoView),
-                        )
                         }
                     }
                 }
@@ -744,7 +610,19 @@ private fun RelatedWordsSection(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(word.lemma, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                word.lemma,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            word.pos?.takeIf { it.isNotBlank() }?.let { pos ->
+                                TagChip(localizedPosLabel(pos).ifBlank { pos })
+                            }
+                        }
                         word.glossL1?.takeIf { it.isNotBlank() }?.let {
                             Spacer(Modifier.height(4.dp))
                             Text(

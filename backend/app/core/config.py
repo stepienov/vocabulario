@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     llm_provider: str = "openai"
     llm_lookup_model: str = "gpt-5.6-terra"
     llm_enrichment_model: str = "gpt-5.6-terra"
+    # Per-task override for preserve layout analysis (empty → llm_lookup_model).
+    llm_import_layout_model: str = ""
+    llm_import_provider: str = "openai"  # openai | anthropic
+    anthropic_api_key: str = ""
     llm_mock: bool = False
     llm_rate_limit_per_minute: int = 20
     llm_max_retries: int = 2

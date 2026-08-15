@@ -1,32 +1,32 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
     <string name="app_name">Vocabulario</string>
 
-    <string name="action_sort">Sort</string>
-    <string name="action_filter">Filter</string>
-    <string name="action_filter_active">Filter · %1$d</string>
-    <string name="action_clear_filters">Clear filters</string>
-    <string name="action_clear_all">Clear all</string>
-    <string name="action_apply">Apply</string>
-    <string name="list_words_meta">%1$d words</string>
-    <string name="list_filter_empty">No words match filters</string>
-    <string name="sort_title">Sort</string>
-    <string name="sort_lemma_asc">A → Z</string>
+        <string name="action_sort">ترتيب</string>
+    <string name="action_filter">تصفية</string>
+    <string name="action_filter_active">تصفية · %1$d</string>
+    <string name="action_clear_filters">مسح عوامل التصفية</string>
+    <string name="action_clear_all">مسح الكل</string>
+    <string name="action_apply">تطبيق</string>
+    <string name="list_words_meta">%1$d كلمة</string>
+    <string name="list_filter_empty">لا كلمات تطابق عوامل التصفية</string>
+    <string name="sort_title">ترتيب</string>
+<string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
-    <string name="sort_pos">Part of speech</string>
-    <string name="sort_newest">Newest first</string>
-    <string name="sort_oldest">Oldest first</string>
-    <string name="sort_status">Card state</string>
-    <string name="filter_title">Filter</string>
-    <string name="filter_section_pos">Part of speech</string>
-    <string name="filter_section_state">Card state</string>
-    <string name="filter_pos_unknown">No POS</string>
-    <string name="status_review">review</string>
-    <string name="action_undo">Undo</string>
-    <string name="cd_undo">Undo last grade</string>
-    <string name="action_cancel">إلغاء</string>
+        <string name="sort_pos">قسم الكلام</string>
+    <string name="sort_newest">الأحدث أولاً</string>
+    <string name="sort_oldest">الأقدم أولاً</string>
+    <string name="sort_status">حالة البطاقة</string>
+    <string name="filter_title">تصفية</string>
+    <string name="filter_section_pos">قسم الكلام</string>
+    <string name="filter_section_state">حالة البطاقة</string>
+    <string name="filter_pos_unknown">بدون قسم</string>
+    <string name="status_review">مراجعة</string>
+    <string name="action_undo">تراجع</string>
+    <string name="cd_undo">التراجع عن آخر تقييم</string>
+<string name="action_cancel">إلغاء</string>
 
     <string name="action_ok">موافق</string>
 
@@ -68,7 +68,7 @@
 
     <string name="tab_lists">قوائم</string>
 
-    <string name="auth_login_title">مرحبًا بعودتك</string>
+    <string name="auth_login_title">تسجيل الدخول</string>
 
     <string name="auth_register_title">إنشاء حساب</string>
 
@@ -78,44 +78,45 @@
 
     <string name="auth_google">المتابعة مع Google</string>
 
+    <string name="auth_or_continue">أو المتابعة بالبريد الإلكتروني</string>
+
     <string name="auth_email">البريد الإلكتروني</string>
 
     <string name="auth_password">كلمة المرور</string>
 
-    <string name="auth_tagline">تعلّم المفردات بوتيرتك</string>
 
-    <string name="auth_password_hint">8 أحرف على الأقل</string>
 
     <string name="auth_have_account">لديّ حساب بالفعل</string>
 
-    <string name="onboarding_title">إعداد التعلّم</string>
+    <string name="onboarding_app_setup">إعداد التطبيق</string>
 
-    <string name="onboarding_subtitle">اختر زوج اللغات ومستوى CEFR وأزمنة الأفعال.</string>
+    <string name="onboarding_choose_language">اختر لغتك</string>
 
-    <string name="onboarding_native">اللغة الأم</string>
+    <string name="onboarding_continue">متابعة</string>
 
-    <string name="onboarding_learning">لغة التعلّم</string>
+    <string name="onboarding_want_to_learn">أريد أن أتعلم:</string>
 
     <string name="onboarding_start">ابدأ</string>
 
-    <string name="onboarding_cefr">مستوى CEFR</string>
+    <string name="onboarding_level">اختر مستوى اللغة</string>
+
+    <string name="onboarding_level_unknown">لا أعرف</string>
 
     <string name="onboarding_tenses">أزمنة الأفعال</string>
 
     <string name="settings_title">الإعدادات</string>
 
 
-    <string name="settings_native_lang">App language</string>
-    <string name="settings_tense_labels">تسميات الأزمنة</string>
+        <string name="settings_native_lang">لغة التطبيق</string>
+<string name="settings_tense_labels">تسميات الأزمنة</string>
     <string name="settings_tense_labels_app">بلغة التطبيق</string>
     <string name="settings_tense_labels_learning">بلغة التعلّم</string>
 
 
     <string name="settings_learning_lang">لغة التعلّم</string>
 
-    <string name="settings_langs_hint">App language is the language of the interface and card translations. Learning language is what you study.</string>
-
-    <string name="settings_theme">المظهر</string>
+        <string name="settings_langs_hint">لغة التطبيق هي لغة الواجهة وترجمات البطاقات. لغة التعلّم هي اللغة التي تدرسها.</string>
+<string name="settings_theme">المظهر</string>
 
     <string name="settings_mode">وضع الدراسة</string>
 
@@ -128,6 +129,8 @@
     <string name="settings_mode_type">اكتب الكلمة</string>
 
     <string name="settings_mode_flash">بطاقات</string>
+
+    <string name="settings_mode_vocabulario_only">بطاقات Vocabulario فقط</string>
 
     <string name="settings_tolerate_typos">السماح بالأخطاء البسيطة</string>
 
@@ -143,13 +146,14 @@
 
     <string name="settings_card_layout_sub">ما تراه بعد الإجابة</string>
 
-    <string name="settings_examples">جمل أمثلة</string>
+    <string name="settings_examples">جمل</string>
 
-    <string name="settings_usages">أمثلة الاستخدام</string>
+    <string name="settings_usages">عبارات</string>
 
     <string name="settings_periphrases">أنماط</string>
 
     <string name="settings_syn_ant">مرادفات وأضداد</string>
+    <string name="settings_word_family">عائلة الكلمات</string>
 
     <string name="settings_conjugation">التصريف</string>
 
@@ -221,16 +225,15 @@
     <string name="creating_card_failed">تعذّر تجهيز البطاقة</string>
 
     <string name="list_learning">أتعلّم</string>
-    <string name="list_pending">Pending</string>
-    <string name="offline_banner_title">You’re offline</string>
-    <string name="offline_banner_body">Added words go to the "Pending" list and will be looked up when you’re back online.</string>
-    <string name="offline_search_hint">Enter a word</string>
-    <string name="import_online_only">Import is only available online.</string>
-    <string name="offline_lookup_queued">Added to "Pending" — lookup when you’re back online.</string>
-    <string name="offline_lookup_duplicate">That word is already waiting on "Pending".</string>
-    <string name="status_awaiting_network">Waiting for network</string>
-
-    <string name="list_other">قائمة أخرى</string>
+        <string name="list_pending">قيد الانتظار</string>
+    <string name="offline_banner_title">أنت غير متصل</string>
+    <string name="offline_banner_body">الكلمات المضافة تذهب إلى قائمة «قيد الانتظار» وتُبحث عند العودة للاتصال.</string>
+    <string name="offline_search_hint">أدخل كلمة</string>
+    <string name="import_online_only">الاستيراد متاح عبر الإنترنت فقط.</string>
+    <string name="offline_lookup_queued">أُضيفت إلى «قيد الانتظار» — البحث عند العودة للاتصال.</string>
+    <string name="offline_lookup_duplicate">هذه الكلمة موجودة أصلاً في «قيد الانتظار».</string>
+    <string name="status_awaiting_network">بانتظار الشبكة</string>
+<string name="list_other">قائمة أخرى</string>
 
     <string name="list_new">قائمة جديدة</string>
 
@@ -303,8 +306,27 @@
     <string name="import_empty_hint">اكتب كلمة أو استورد قائمة (CSV/TXT/apkg)</string>
 
     <string name="import_file_label">الملف: \'%1$s\'</string>
-
-    <string name="section_meanings">المعاني</string>
+    <!-- TODO: translate import UI strings -->
+    <string name="import_start_title">استيراد البطاقات</string>
+    <string name="import_pick_list">القائمة المستهدفة</string>
+    <string name="import_action_start">استيراد</string>
+<string name="import_limit_exceeded">يمكنك حالياً استيراد 50 بطاقة Vocabulario كحد أقصى.</string>
+        <string name="import_status_analyzing">جارٍ تحليل %1$s…</string>
+    <string name="import_status_importing">جارٍ استيراد الكلمات من %1$s</string>
+    <string name="import_progress_count">تم استيراد %1$d/%2$d</string>
+    <string name="action_abort">إيقاف</string>
+    <string name="import_abort_title">إيقاف الاستيراد؟</string>
+    <string name="import_abort_body">سيتم تجاهل التقدّم.</string>
+    <string name="import_result_title">اكتمل الاستيراد</string>
+    <string name="import_result_body">أُضيف %1$d، مكررات %2$d</string>
+    <string name="import_result_body_failed">أُضيف %1$d، مكررات %2$d، أخطاء %3$d</string>
+    <string name="import_review_flagged">عبارات وتراكيب</string>
+    <string name="action_show_list">عرض القائمة</string>
+    <string name="import_paste_source">لصق</string>
+    <string name="import_interrupted">توقّف الاستيراد — حاول مرة أخرى</string>
+    <string name="import_review_ready">جاهز للاستيراد</string>
+    <string name="import_new_list_option">+ قائمة جديدة</string>
+<string name="section_meanings">المعاني</string>
 
     <string name="section_synonyms">المرادفات</string>
 
@@ -318,7 +340,7 @@
 
     <string name="section_periphrases">الأنماط</string>
 
-    <string name="section_usages">أمثلة الاستخدام</string>
+    <string name="section_usages">عبارات</string>
 
     <string name="home_search_hint">ابحث عن كلمة…</string>
 
@@ -365,6 +387,8 @@
     <string name="status_new">جديدة</string>
 
     <string name="status_learning">قيد التعلّم</string>
+
+    <string name="card_badge_import">مستوردة</string>
 
     <string name="status_mastered">مُتقنة</string>
 
@@ -514,6 +538,11 @@
 
     <string name="err_login">فشل تسجيل الدخول</string>
 
+    <string name="err_login_email_unknown">لا يوجد حساب بهذا البريد</string>
+    <string name="err_login_wrong_password">كلمة المرور غير صحيحة</string>
+    <string name="err_login_use_google">هذا الحساب يستخدم Google. تابِع عبر Google.</string>
+
+
     <string name="err_register">فشل إنشاء الحساب</string>
 
     <string name="err_google_login">فشل تسجيل الدخول عبر Google</string>
@@ -531,10 +560,11 @@
     <string name="section_synonyms_short">مرادفات</string>
 
     <string name="section_antonyms_short">أضداد</string>
+    <string name="section_word_family">عائلة الكلمات</string>
 
     <string name="section_conjugation_short">تصريف</string>
 
-    <string name="section_usages_short">استخدامات</string>
+    <string name="section_usages_short">عبارات</string>
 
     <string name="cd_back">رجوع</string>
 
@@ -548,81 +578,149 @@
 
     <string name="cd_add_to_list">إضافة إلى القائمة</string>
 
-    <string name="list_clear_all">Delete all words</string>
-
-    <string name="list_clear_all_title">Delete all words?</string>
-
-    <string name="list_clear_all_body">You’ll remove every word from “%1$s”. The list itself stays.</string>
-
-    <string name="settings_level">Level</string>
-
-    <string name="settings_selected_tenses">Selected tenses</string>
-
-    <string name="action_edit">Edit</string>
-
-    <string name="import_cards_count">Imported cards (%1$d)</string>
-
-    <string name="import_flashcards_count">Flashcards: %1$d</string>
-
-    <string name="import_done_count">Imported: %1$d</string>
-
-    <string name="list_unnamed">list</string>
-
-    <string name="periphrase_n">Periphrase %1$d</string>
-
-    <string name="practice_well_done">Nice!</string>
-
-    <string name="cd_search">Search</string>
-
-
-    <string name="correction_fix_card">Fix card</string>
-    <string name="correction_report_title">Report a problem</string>
-    <string name="correction_section_lemma">Lemma</string>
-    <string name="correction_section_pos">Part of speech</string>
-    <string name="correction_section_gloss">Primary gloss</string>
-    <string name="correction_section_meanings">Meanings</string>
-    <string name="correction_section_examples">Examples</string>
-    <string name="correction_section_conjugation">Conjugation</string>
-    <string name="correction_section_similar">Similar words</string>
-    <string name="correction_section_pronunciation">Pronunciation</string>
-    <string name="correction_section_other">Other</string>
-    <string name="correction_note_label">Note</string>
-    <string name="correction_note_hint">Describe what is wrong…</string>
-    <string name="correction_validation">Select at least one section or write a note (min. 3 characters).</string>
-    <string name="correction_submit">Submit report</string>
-    <string name="correction_requires_online">Requires internet connection.</string>
-    <string name="correction_result_accepted_title">Report accepted — card updated.</string>
+        <string name="list_clear_all">حذف كل الكلمات</string>
+    <string name="list_clear_all_title">حذف كل الكلمات؟</string>
+    <string name="list_clear_all_body">ستزيل كل الكلمات من «%1$s». القائمة نفسها تبقى.</string>
+    <string name="settings_level">المستوى</string>
+    <string name="settings_selected_tenses">الأزمنة المحددة</string>
+    <string name="action_edit">تعديل</string>
+    <string name="import_cards_count">بطاقات مستوردة (%1$d)</string>
+    <string name="import_flashcards_count">بطاقات: %1$d</string>
+    <string name="import_done_count">تم الاستيراد: %1$d</string>
+    <string name="list_unnamed">قائمة</string>
+    <string name="periphrase_n">تعبير %1$d</string>
+    <string name="practice_well_done">أحسنت!</string>
+    <string name="cd_search">بحث</string>
+    <string name="correction_fix_card">الإبلاغ عن تصحيح</string>
+<string name="correction_report_title">Report a problem</string>
+        <string name="correction_section_lemma">الجذر</string>
+    <string name="correction_section_pos">قسم الكلام</string>
+    <string name="correction_section_gloss">الترجمة الرئيسية</string>
+    <string name="correction_section_meanings">المعاني</string>
+<string name="correction_section_examples">جمل</string>
+        <string name="correction_section_conjugation">التصريف</string>
+    <string name="correction_section_similar">كلمات مشابهة</string>
+    <string name="correction_section_pronunciation">النطق</string>
+    <string name="correction_section_other">أخرى</string>
+    <string name="correction_note_label">ملاحظة</string>
+    <string name="correction_note_hint">صف الخطأ…</string>
+    <string name="correction_validation">اختر قسماً واحداً على الأقل أو اكتب ملاحظة (3 أحرف كحد أدنى).</string>
+<string name="correction_submit">Submit report</string>
+        <string name="correction_requires_online">يتطلب اتصالاً بالإنترنت.</string>
+<string name="correction_result_accepted_title">Report accepted — card updated.</string>
     <string name="correction_result_rejected_title">Report not accepted.</string>
     <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
-    <string name="correction_edit_self">Edit myself</string>
-    <string name="correction_self_edit_title">Edit card</string>
-    <string name="correction_field_lemma">Lemma</string>
-    <string name="correction_field_pos">Part of speech</string>
-    <string name="correction_field_gloss">Primary gloss</string>
-    <string name="correction_field_extra_glosses">Extra glosses (one per line)</string>
-    <string name="review_status_reported">Correction reported</string>
-    <string name="review_status_accepted">Updated</string>
-    <string name="review_status_rejected">Report rejected</string>
-    <string name="review_status_user_edited">Edited manually</string>
-    <string name="cd_voice_search">Voice search</string>
-    <string name="voice_listening">Listening…</string>
-    <string name="voice_listening_hint">Speak now</string>
-    <string name="voice_tap_to_start">Tap Start to speak</string>
-    <string name="voice_start">Start</string>
+        <string name="correction_edit_self">تعديل</string>
+        <string name="correction_history_button">سجل التغييرات</string>
+    <string name="correction_self_edit_title">تعديل البطاقة</string>
+    <string name="correction_field_lemma">الجذر</string>
+    <string name="correction_field_pos">قسم الكلام</string>
+    <string name="correction_field_gloss">الترجمة الرئيسية</string>
+    <string name="correction_field_extra_glosses">ترجمات إضافية (واحدة في كل سطر)</string>
+    <string name="cd_voice_search">بحث صوتي</string>
+    <string name="voice_listening">جارٍ الاستماع…</string>
+    <string name="voice_listening_hint">تحدّث الآن</string>
+    <string name="voice_tap_to_start">اضغط بدء للتحدث</string>
+<string name="voice_start">Start</string>
     <string name="voice_stop">Stop</string>
-    <string name="voice_permission_denied">Microphone permission denied.</string>
-    <string name="voice_unavailable">Speech recognition unavailable on this device.</string>
-    <string name="settings_notifications">Notifications</string>
-    <string name="settings_notifications_summary">Study reminders and card readiness</string>
-    <string name="settings_notif_study">Study reminders</string>
-    <string name="settings_notif_cards">Cards ready</string>
-    <string name="settings_reminder_hour">Reminder hour (0–23)</string>
-    <string name="notif_channel_study">Study</string>
-    <string name="notif_channel_cards">Cards</string>
-    <string name="notif_study_title">Time to review</string>
-    <string name="notif_study_body">%1$d cards due</string>
-    <string name="notif_cards_ready_title">Cards ready</string>
-    <string name="notif_cards_ready_body">%1$d word(s) ready to study</string>
+        <string name="voice_permission_denied">رُفض إذن الميكروفون.</string>
+    <string name="voice_unavailable">التعرّف على الكلام غير متاح على هذا الجهاز.</string>
+    <string name="settings_notifications">الإشعارات</string>
+    <string name="settings_notifications_summary">تذكيرات الدراسة والبطاقات الجاهزة</string>
+    <string name="settings_notif_study">تذكيرات الدراسة</string>
+    <string name="settings_notif_cards">البطاقات جاهزة</string>
+    <string name="settings_reminder_hour">ساعة التذكير (0–23)</string>
+    <string name="notif_channel_study">دراسة</string>
+    <string name="notif_channel_cards">بطاقات</string>
+    <string name="notif_study_title">حان وقت المراجعة</string>
+    <string name="notif_study_body">%1$d بطاقة مستحقة</string>
+    <string name="notif_cards_ready_title">البطاقات جاهزة</string>
+    <string name="notif_cards_ready_body">%1$d كلمة جاهزة للدراسة</string>
+    <string name="status_needs_review">يحتاج مراجعة</string>
+    <string name="review_title">الكلمة تحتاج مراجعة</string>
+    <string name="review_no_match">لا تطابق لـ «%1$s».</string>
+    <string name="review_did_you_mean">هل تقصد:</string>
+    <string name="review_reject">رفض</string>
+    <string name="review_search_again">بحث</string>
+    <string name="review_confirm">تأكيد</string>
+    <string name="review_close">إغلاق</string>
+    <string name="list_delete">حذف القائمة</string>
+    <string name="err_word_on_list">هذه الكلمة موجودة أصلاً في قائمة التعلّم.</string>
+    <string name="correction_report_subtitle">نراجع البطاقة كاملة. اختياراتك والملاحظة توجّه التحقق فقط.</string>
+    <string name="correction_daily_limit">يمكنك إرسال حتى 20 بلاغاً في اليوم.</string>
+    <string name="correction_field_ipa">النطق IPA</string>
+    <string name="correction_field_notes">ملاحظات</string>
+    <string name="correction_field_synonyms_l1">مرادفات (L1، واحد في كل سطر)</string>
+    <string name="correction_field_examples">جمل</string>
+    <string name="correction_field_usages">تعبيرات</string>
+    <string name="correction_field_l2">جملة (L2)</string>
+    <string name="correction_field_l1">ترجمة (L1)</string>
+    <string name="correction_field_similar">كلمات مشابهة</string>
+    <string name="correction_field_conjugation_json">التصريف (JSON)</string>
+    <string name="correction_section_meaning">معنى %1$d</string>
+    <string name="correction_add_meaning">إضافة معنى</string>
+    <string name="correction_add_row">إضافة صف</string>
+    <string name="correction_empty_rows_hint">لا صفوف بعد — اضغط إضافة صف.</string>
+    <string name="correction_self_edit_link">اضغط هنا لتعديل البطاقة بنفسك</string>
+    <string name="correction_processing">جارٍ تحليل البلاغ…</string>
+    <string name="self_edit_processing">جارٍ حفظ التعديل والتحقق منه…</string>
+    <string name="self_edit_validating">جارٍ فحص تعديلاتك…</string>
+    <string name="self_edit_warning_title">تأكيد هذه التغييرات؟</string>
+    <string name="self_edit_warning_body">اكتشفنا أن تغييراتك على البطاقة «%1$s» قد تكون غير صحيحة. تحقق قبل الحفظ.</string>
+    <string name="self_edit_warning_confirm">تأكيد التغييرات</string>
+    <string name="self_edit_warning_revert">التراجع عن التغييرات</string>
+    <string name="correction_result_accepted_body">تم تحديث البطاقة «%1$s».</string>
+    <string name="correction_code_accepted">قُبل البلاغ — حُدّثت البطاقة.</string>
+    <string name="correction_code_unfounded">لم يُعثر على أخطاء في هذه البطاقة.</string>
+    <string name="correction_code_insufficient">لم يُعثر على أخطاء في هذه البطاقة.</string>
+    <string name="correction_code_not_applicable">هذا القسم لا ينطبق على هذا النوع من الكلمات.</string>
+    <string name="correction_code_failed">تعذّر معالجة البلاغ. حاول مرة أخرى.</string>
+    <string name="card_history_title">سجل البطاقة</string>
+    <string name="card_history_empty">لا بلاغات أو تغييرات بعد.</string>
+    <string name="card_history_restore">استعادة النسخة الأصلية</string>
+    <string name="card_history_restored">تمت استعادة النسخة الأصلية للبطاقة</string>
+    <string name="card_history_actor_you">أنت</string>
+    <string name="card_history_actor_system">النظام</string>
+    <string name="card_history_event_report">أُرسل البلاغ</string>
+    <string name="card_history_event_accepted">قُبل البلاغ — حُدّثت البطاقة</string>
+    <string name="card_history_event_self_edit">تعديل يدوي</string>
+    <string name="card_history_event_reviewed">تم التحقق من التعديل</string>
+    <string name="card_history_summary_report">الأقسام: %1$s</string>
+    <string name="card_history_summary_restored">تمت استعادة النسخة الأصلية.</string>
+    <string name="card_history_diff_lemma">الجذر: %1$s → %2$s</string>
+    <string name="card_history_diff_pos">القسم: %1$s → %2$s</string>
+    <string name="card_history_diff_gloss">الترجمة: %1$s → %2$s</string>
+    <string name="card_history_diff_ipa">ipa: %1$s → %2$s</string>
+    <string name="card_history_diff_conjugation">تم تحديث التصريف</string>
+    <string name="card_history_diff_meanings">تم تحديث المعاني</string>
+    <string name="card_history_diff_similar">تم تحديث الكلمات المشابهة</string>
+    <string name="card_history_diff_content">تم تحديث المحتوى</string>
+    <string name="cd_card_history">سجل البطاقة</string>
+    <string name="cd_view_card">عرض البطاقة كاملة</string>
+    <string name="cd_list_word_actions">إجراءات الكلمة</string>
+    <string name="voice_searching">جارٍ البحث…</string>
+    <string name="voice_either_lang_hint">تحدّث بأي من اللغتين</string>
+    <string name="voice_no_match">لم يُفهم — حاول مرة أخرى.</string>
+    <string name="voice_network_required">الإدخال الصوتي يحتاج اتصالاً بالإنترنت.</string>
+
+    <string name="pos_noun">اسم</string>
+    <string name="pos_verb">فعل</string>
+    <string name="pos_adj">صفة</string>
+    <string name="pos_adv">ظرف</string>
+    <string name="pos_prep">حرف جر</string>
+    <string name="pos_conj">رابط</string>
+    <string name="pos_pron">ضمير</string>
+    <string name="pos_det">أداة</string>
+    <string name="pos_interj">تعجب</string>
+    <string name="err_empty_list_name">أدخل اسم القائمة</string>
+    <string name="err_list_not_editable">لا يمكن تعديل هذه القائمة</string>
+    <string name="err_list_not_deletable">لا يمكن حذف هذه القائمة</string>
+    <string name="err_pending_inbox_not_deletable">لا يمكن حذف قائمة الانتظار</string>
+    <string name="err_pending_inbox_clear">تعذر مسح كل الكلمات المعلقة</string>
+    <string name="err_offline">أنت غير متصل</string>
+    <string name="err_offline_card">هذه البطاقة غير متاحة دون اتصال</string>
+    <string name="err_no_inbox">تعذر فتح قائمة الانتظار</string>
+    <string name="err_email_taken">هذا البريد مسجّل بالفعل</string>
 
 </resources>
 

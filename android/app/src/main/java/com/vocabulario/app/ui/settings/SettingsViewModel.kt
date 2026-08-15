@@ -44,6 +44,7 @@ data class SettingsUiState(
     val showUsages: Boolean = true,
     val showSynonyms: Boolean = true,
     val showAntonyms: Boolean = true,
+    val showWordFamily: Boolean = true,
     val showPeriphrases: Boolean = true,
     val showConjugation: Boolean = true,
     /** Aktywne czasy w profilu; puste = tryb „wszystkie czasy”. */
@@ -93,6 +94,7 @@ class SettingsViewModel @Inject constructor(
                     showUsages = s.show_usages,
                     showSynonyms = showSyn,
                     showAntonyms = showAnt,
+                    showWordFamily = s.show_word_family,
                     showPeriphrases = s.show_periphrases,
                     showConjugation = s.show_conjugation,
                     studyReminderEnabled = s.study_reminder_enabled,
@@ -135,6 +137,7 @@ class SettingsViewModel @Inject constructor(
                     showUsages = s.show_usages,
                     showSynonyms = showSyn,
                     showAntonyms = showAnt,
+                    showWordFamily = s.show_word_family,
                     showPeriphrases = s.show_periphrases,
                     showConjugation = s.show_conjugation,
                     selectedTenses = selected,
@@ -156,7 +159,7 @@ class SettingsViewModel @Inject constructor(
             }.onFailure {
                 _state.value = _state.value.copy(
                     loading = false,
-                    error = it.userMessage(strings.get(R.string.err_load_settings)),
+                    error = it.userMessage(strings, R.string.err_load_settings),
                 )
             }
         }
@@ -184,7 +187,7 @@ class SettingsViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = previous.copy(
-                        error = it.userMessage(strings.get(R.string.err_save)),
+                        error = it.userMessage(strings, R.string.err_save),
                     )
                     previous.theme.let { theme ->
                         runCatching { tokenStore.saveTheme(theme) }
@@ -246,6 +249,9 @@ class SettingsViewModel @Inject constructor(
         ) { it.copy(showSynonyms = value, showAntonyms = value) }
     }
 
+    fun setShowWordFamily(value: Boolean) =
+        save(UserSettingsUpdate(show_word_family = value)) { it.copy(showWordFamily = value) }
+
     fun setShowPeriphrases(value: Boolean) =
         save(UserSettingsUpdate(show_periphrases = value)) { it.copy(showPeriphrases = value) }
 
@@ -305,7 +311,7 @@ class SettingsViewModel @Inject constructor(
                 )
             }.onFailure {
                 _state.value = _state.value.copy(
-                    error = it.userMessage(strings.get(R.string.err_save_tenses)),
+                    error = it.userMessage(strings, R.string.err_save_tenses),
                 )
             }
         }
@@ -342,7 +348,7 @@ class SettingsViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_save)),
+                        error = it.userMessage(strings, R.string.err_save),
                     )
                 }
         }
@@ -375,7 +381,7 @@ class SettingsViewModel @Inject constructor(
                 _state.value = _state.value.copy(expanded = SettingsSection.LANGUAGES)
             }.onFailure {
                 _state.value = _state.value.copy(
-                    error = it.userMessage(strings.get(R.string.err_learning_lang)),
+                    error = it.userMessage(strings, R.string.err_learning_lang),
                 )
             }
         }
@@ -392,7 +398,7 @@ class SettingsViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_cefr)),
+                        error = it.userMessage(strings, R.string.err_cefr),
                     )
                 }
         }

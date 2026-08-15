@@ -67,7 +67,7 @@ class LearningViewModel @Inject constructor(
                 .onFailure {
                     _state.value = _state.value.copy(
                         loading = false,
-                        error = it.userMessage(strings.get(R.string.err_load_cards)),
+                        error = it.userMessage(strings, R.string.err_load_cards),
                     )
                 }
         }
@@ -112,7 +112,7 @@ class LearningViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_lists)),
+                        error = it.userMessage(strings, R.string.err_lists),
                     )
                 }
         }
@@ -147,7 +147,7 @@ class LearningViewModel @Inject constructor(
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        error = it.userMessage(strings.get(R.string.err_add)),
+                        error = it.userMessage(strings, R.string.err_add),
                     )
                 }
         }
@@ -166,7 +166,7 @@ class LearningViewModel @Inject constructor(
                 load()
             }.onFailure {
                 _state.value = _state.value.copy(
-                    error = it.userMessage(strings.get(R.string.err_add)),
+                    error = it.userMessage(strings, R.string.err_add),
                 )
             }
         }
@@ -192,7 +192,7 @@ class LearningViewModel @Inject constructor(
                 load()
             }.onFailure {
                 _state.value = _state.value.copy(
-                    error = it.userMessage(strings.get(R.string.err_create_list)),
+                    error = it.userMessage(strings, R.string.err_create_list),
                 )
             }
         }

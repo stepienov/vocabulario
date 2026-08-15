@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -90,7 +90,7 @@
 
     <string name="tab_lists">목록</string>
 
-    <string name="auth_login_title">다시 오신 것을 환영합니다</string>
+    <string name="auth_login_title">로그인</string>
 
     <string name="auth_register_title">계정 만들기</string>
 
@@ -100,27 +100,29 @@
 
     <string name="auth_google">Google로 계속하기</string>
 
+    <string name="auth_or_continue">또는 이메일로 계속</string>
+
     <string name="auth_email">이메일</string>
 
     <string name="auth_password">비밀번호</string>
 
-    <string name="auth_tagline">자신의 속도로 어휘를 배우세요</string>
 
-    <string name="auth_password_hint">최소 8자 이상</string>
 
     <string name="auth_have_account">이미 계정이 있습니다</string>
 
-    <string name="onboarding_title">학습 설정</string>
+    <string name="onboarding_app_setup">앱 설정</string>
 
-    <string name="onboarding_subtitle">언어 쌍, CEFR 수준 및 동사 시제를 선택하세요.</string>
+    <string name="onboarding_choose_language">언어를 선택하세요</string>
 
-    <string name="onboarding_native">앱 언어</string>
+    <string name="onboarding_continue">계속</string>
 
-    <string name="onboarding_learning">학습 언어</string>
+    <string name="onboarding_want_to_learn">배우고 싶은 언어:</string>
 
     <string name="onboarding_start">시작</string>
 
-    <string name="onboarding_cefr">CEFR 수준</string>
+    <string name="onboarding_level">언어 수준을 선택하세요</string>
+
+    <string name="onboarding_level_unknown">모르겠어요</string>
 
     <string name="onboarding_tenses">동사 시제</string>
 
@@ -151,6 +153,8 @@
 
     <string name="settings_mode_flash">플래시카드</string>
 
+    <string name="settings_mode_vocabulario_only">Vocabulario 카드만</string>
+
     <string name="settings_tolerate_typos">경미한 오타 허용</string>
 
     <string name="settings_tolerate_typos_sub">철자 및 발음 기호</string>
@@ -165,13 +169,14 @@
 
     <string name="settings_card_layout_sub">정답 후에 보이는 내용</string>
 
-    <string name="settings_examples">예문</string>
+    <string name="settings_examples">문장</string>
 
-    <string name="settings_usages">용법 예시</string>
+    <string name="settings_usages">표현</string>
 
     <string name="settings_periphrases">패턴</string>
 
     <string name="settings_syn_ant">동의어 및 반의어</string>
+    <string name="settings_word_family">어족</string>
 
     <string name="settings_conjugation">활용</string>
 
@@ -333,8 +338,27 @@
     <string name="import_empty_hint">단어를 입력하거나 목록을 가져오세요 (CSV/TXT/apkg)</string>
 
     <string name="import_file_label">파일: \'%1$s\'</string>
-
-    <string name="section_meanings">의미</string>
+    <!-- TODO: translate import UI strings -->
+    <string name="import_start_title">플래시카드 가져오기</string>
+    <string name="import_pick_list">대상 목록</string>
+    <string name="import_action_start">가져오기</string>
+<string name="import_limit_exceeded">지금은 Vocabulario 카드를 최대 50장까지 가져올 수 있습니다.</string>
+        <string name="import_status_analyzing">%1$s 분석 중…</string>
+    <string name="import_status_importing">%1$s에서 단어 가져오는 중</string>
+    <string name="import_progress_count">가져옴 %1$d/%2$d</string>
+    <string name="action_abort">중단</string>
+    <string name="import_abort_title">가져오기를 중단할까요?</string>
+    <string name="import_abort_body">진행 상황이 삭제됩니다.</string>
+    <string name="import_result_title">가져오기 완료</string>
+    <string name="import_result_body">추가 %1$d, 중복 %2$d</string>
+    <string name="import_result_body_failed">추가 %1$d, 중복 %2$d, 오류 %3$d</string>
+    <string name="import_review_flagged">구와 구문</string>
+    <string name="action_show_list">목록 보기</string>
+    <string name="import_paste_source">붙여넣기</string>
+    <string name="import_interrupted">가져오기가 중단됨 — 다시 시도하세요</string>
+    <string name="import_review_ready">가져올 준비됨</string>
+    <string name="import_new_list_option">+ 새 목록</string>
+<string name="section_meanings">의미</string>
 
     <string name="section_synonyms">동의어</string>
 
@@ -348,7 +372,7 @@
 
     <string name="section_periphrases">패턴</string>
 
-    <string name="section_usages">사용 예시</string>
+    <string name="section_usages">표현</string>
 
     <string name="home_search_hint">단어 검색…</string>
 
@@ -395,6 +419,8 @@
     <string name="status_new">새로운</string>
 
     <string name="status_learning">학습 중</string>
+
+    <string name="card_badge_import">가져옴</string>
 
     <string name="status_mastered">완료</string>
 
@@ -544,6 +570,11 @@
 
     <string name="err_login">로그인 실패</string>
 
+    <string name="err_login_email_unknown">이 이메일로 된 계정이 없습니다</string>
+    <string name="err_login_wrong_password">비밀번호가 올바르지 않습니다</string>
+    <string name="err_login_use_google">이 계정은 Google을 사용합니다. Google로 계속하세요.</string>
+
+
     <string name="err_register">등록 실패</string>
 
     <string name="err_google_login">구글 로그인 실패</string>
@@ -561,10 +592,11 @@
     <string name="section_synonyms_short">동의어</string>
 
     <string name="section_antonyms_short">반의어</string>
+    <string name="section_word_family">어족</string>
 
     <string name="section_conjugation_short">활용</string>
 
-    <string name="section_usages_short">용법</string>
+    <string name="section_usages_short">표현</string>
 
     <string name="cd_back">뒤로</string>
 
@@ -604,7 +636,7 @@
 
     <string name="cd_search">검색</string>
 
-    <string name="correction_fix_card">카드 수정</string>
+    <string name="correction_fix_card">수정 신고</string>
 
     <string name="correction_report_title">문제 신고</string>
 
@@ -616,7 +648,7 @@
 
     <string name="correction_section_meanings">의미</string>
 
-    <string name="correction_section_examples">예시</string>
+    <string name="correction_section_examples">문장</string>
 
     <string name="correction_section_conjugation">활용</string>
 
@@ -642,7 +674,8 @@
 
     <string name="correction_result_rejected_body">카드를 직접 수정할 수 있습니다 — 본인의 책임 하에. 이는 개인 복사본을 생성합니다.</string>
 
-    <string name="correction_edit_self">내 정보 수정</string>
+    <string name="correction_edit_self">편집</string>
+    <string name="correction_history_button">변경 기록</string>
 
     <string name="correction_self_edit_title">카드 수정</string>
 
@@ -653,14 +686,6 @@
     <string name="correction_field_gloss">주요 의미</string>
 
     <string name="correction_field_extra_glosses">추가 의미 (한 줄에 하나씩)</string>
-
-    <string name="review_status_reported">수정 보고됨</string>
-
-    <string name="review_status_accepted">업데이트됨</string>
-
-    <string name="review_status_rejected">보고서 거부됨</string>
-
-    <string name="review_status_user_edited">수동으로 수정됨</string>
 
     <string name="cd_voice_search">음성 검색</string>
 
@@ -699,5 +724,91 @@
     <string name="notif_cards_ready_title">카드 준비 완료</string>
 
     <string name="notif_cards_ready_body">%1$d 단어가 학습 준비 완료</string>
+
+    <string name="status_needs_review">검토 필요</string>
+    <string name="review_title">단어를 검토해야 합니다</string>
+    <string name="review_no_match">“%1$s”에 대한 일치 항목이 없습니다.</string>
+    <string name="review_did_you_mean">이것을 찾으셨나요:</string>
+    <string name="review_reject">거부</string>
+    <string name="review_search_again">검색</string>
+    <string name="review_confirm">확인</string>
+    <string name="review_close">닫기</string>
+    <string name="list_delete">목록 삭제</string>
+    <string name="err_word_on_list">이 단어는 이미 학습 목록에 있습니다.</string>
+    <string name="correction_report_subtitle">카드 전체를 검토합니다. 선택과 메모는 확인을 도울 뿐입니다.</string>
+    <string name="correction_daily_limit">하루 최대 20건까지 신고할 수 있습니다.</string>
+    <string name="correction_field_ipa">IPA 발음</string>
+    <string name="correction_field_notes">메모</string>
+    <string name="correction_field_synonyms_l1">동의어 (L1, 줄당 하나)</string>
+    <string name="correction_field_examples">예문</string>
+    <string name="correction_field_usages">구</string>
+    <string name="correction_field_l2">문장 (L2)</string>
+    <string name="correction_field_l1">번역 (L1)</string>
+    <string name="correction_field_similar">비슷한 단어</string>
+    <string name="correction_field_conjugation_json">활용 (JSON)</string>
+    <string name="correction_section_meaning">의미 %1$d</string>
+    <string name="correction_add_meaning">의미 추가</string>
+    <string name="correction_add_row">행 추가</string>
+    <string name="correction_empty_rows_hint">행이 없습니다 — 행 추가를 탭하세요.</string>
+    <string name="correction_self_edit_link">카드를 직접 수정하려면 여기를 탭하세요</string>
+    <string name="correction_processing">신고를 분석하는 중…</string>
+    <string name="self_edit_processing">수정을 저장하고 확인하는 중…</string>
+    <string name="self_edit_validating">수정을 확인하는 중…</string>
+    <string name="self_edit_warning_title">이 변경을 확인하시겠습니까?</string>
+    <string name="self_edit_warning_body">카드 “%1$s”의 변경이 올바르지 않을 수 있습니다. 저장하기 전에 확인하세요.</string>
+    <string name="self_edit_warning_confirm">변경 확인</string>
+    <string name="self_edit_warning_revert">변경 되돌리기</string>
+    <string name="correction_result_accepted_body">카드 “%1$s”이(가) 업데이트되었습니다.</string>
+    <string name="correction_code_accepted">신고가 수락되어 카드가 업데이트되었습니다.</string>
+    <string name="correction_code_unfounded">이 카드에서 오류를 찾지 못했습니다.</string>
+    <string name="correction_code_insufficient">이 카드에서 오류를 찾지 못했습니다.</string>
+    <string name="correction_code_not_applicable">이 섹션은 해당 단어 유형에 적용되지 않습니다.</string>
+    <string name="correction_code_failed">신고를 처리하지 못했습니다. 다시 시도하세요.</string>
+    <string name="card_history_title">카드 기록</string>
+    <string name="card_history_empty">아직 신고나 변경이 없습니다.</string>
+    <string name="card_history_restore">원본 버전 복원</string>
+    <string name="card_history_restored">카드의 원본 버전을 복원했습니다</string>
+    <string name="card_history_actor_you">나</string>
+    <string name="card_history_actor_system">시스템</string>
+    <string name="card_history_event_report">신고 제출</string>
+    <string name="card_history_event_accepted">신고 수락 — 카드 업데이트</string>
+    <string name="card_history_event_self_edit">수동 편집</string>
+    <string name="card_history_event_reviewed">편집 확인됨</string>
+    <string name="card_history_summary_report">섹션: %1$s</string>
+    <string name="card_history_summary_restored">원본 버전을 복원했습니다.</string>
+    <string name="card_history_diff_lemma">표제어: %1$s → %2$s</string>
+    <string name="card_history_diff_pos">품사: %1$s → %2$s</string>
+    <string name="card_history_diff_gloss">뜻: %1$s → %2$s</string>
+    <string name="card_history_diff_ipa">ipa: %1$s → %2$s</string>
+    <string name="card_history_diff_conjugation">활용 업데이트됨</string>
+    <string name="card_history_diff_meanings">의미 업데이트됨</string>
+    <string name="card_history_diff_similar">비슷한 단어 업데이트됨</string>
+    <string name="card_history_diff_content">내용 업데이트됨</string>
+    <string name="cd_card_history">카드 기록</string>
+    <string name="cd_view_card">전체 카드 보기</string>
+    <string name="cd_list_word_actions">단어 작업</string>
+    <string name="voice_searching">검색 중…</string>
+    <string name="voice_either_lang_hint">두 언어 중 아무거나 말하세요</string>
+    <string name="voice_no_match">알아듣지 못했습니다. 다시 시도하세요.</string>
+    <string name="voice_network_required">음성 입력에는 인터넷 연결이 필요합니다.</string>
+
+    <string name="pos_noun">명사</string>
+    <string name="pos_verb">동사</string>
+    <string name="pos_adj">형용사</string>
+    <string name="pos_adv">부사</string>
+    <string name="pos_prep">전치사</string>
+    <string name="pos_conj">접속사</string>
+    <string name="pos_pron">대명사</string>
+    <string name="pos_det">한정사</string>
+    <string name="pos_interj">감탄사</string>
+    <string name="err_empty_list_name">목록 이름을 입력하세요</string>
+    <string name="err_list_not_editable">이 목록은 수정할 수 없습니다</string>
+    <string name="err_list_not_deletable">이 목록은 삭제할 수 없습니다</string>
+    <string name="err_pending_inbox_not_deletable">대기 목록은 삭제할 수 없습니다</string>
+    <string name="err_pending_inbox_clear">대기 중인 단어를 모두 지우지 못했습니다</string>
+    <string name="err_offline">오프라인 상태입니다</string>
+    <string name="err_offline_card">이 카드는 오프라인에서 사용할 수 없습니다</string>
+    <string name="err_no_inbox">대기 목록을 열 수 없습니다</string>
+    <string name="err_email_taken">이미 등록된 이메일입니다</string>
 
 </resources>

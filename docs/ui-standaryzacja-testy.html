@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vocabulario — testy standaryzacji UI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --page: #ece8e1;
+  --ink: #1c1917;
+  --stone: #78716c;
+  --line: #e7e5e4;
+  --primary: #407DC0;
+  --ok: #569252;
+  --teal: #74AEAB;
+  --error: #BF557F;
+  --pick: #1b4d18;
+  --bg: #F7F8FA;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: "DM Sans", system-ui, sans-serif;
+  background: var(--page);
+  color: var(--ink);
+}
+header.hero {
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  padding: 22px 28px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+header.hero h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: -0.3px; }
+.note { margin: 0 0 12px; color: var(--stone); font-size: 13.5px; max-width: 920px; line-height: 1.45; }
+.note strong { color: var(--ink); }
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px; }
+nav.toc a {
+  font-size: 12px; font-weight: 600; text-decoration: none;
+  background: var(--bg); border: 1px solid var(--line); color: var(--ink);
+  padding: 5px 10px; border-radius: 999px;
+}
+nav.toc a:hover { border-color: var(--primary); color: var(--primary); }
+.progress {
+  margin-top: 10px; font-size: 13px; color: var(--stone);
+}
+.progress b { color: var(--pick); }
+main { padding: 8px 20px 80px; max-width: 920px; margin: 0 auto; }
+section.cluster {
+  background: #fff; border: 1px solid var(--line); border-radius: 16px;
+  padding: 22px 22px 18px; margin: 18px 0;
+}
+section.cluster h2 { margin: 0 0 4px; font-size: 18px; letter-spacing: -0.2px; }
+.why { margin: 0 0 14px; font-size: 13px; color: var(--stone); line-height: 1.45; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 12px; font-size: 13px; background: var(--bg);
+}
+.swatch { width: 16px; height: 16px; border-radius: 4px; display: inline-block; }
+ol.steps { margin: 0; padding-left: 22px; }
+ol.steps > li { margin: 0 0 14px; line-height: 1.45; font-size: 14.5px; }
+ol.steps > li:last-child { margin-bottom: 0; }
+.expect {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  background: #f4faf3;
+  border-left: 3px solid var(--ok);
+  border-radius: 0 8px 8px 0;
+  font-size: 13.5px;
+}
+.fail {
+  background: #fdf6f8;
+  border-left-color: var(--error);
+}
+.opt { font-size: 12px; color: var(--stone); font-weight: 600; }
+label.check {
+  display: flex; gap: 8px; align-items: flex-start;
+  margin-top: 8px; font-size: 13.5px; cursor: pointer;
+}
+label.check input { margin-top: 3px; accent-color: var(--ok); }
+.done h2 { color: var(--ok); }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.toolbar button {
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  border: 1px solid var(--line); background: var(--bg);
+  border-radius: 999px; padding: 5px 12px; cursor: pointer;
+}
+.toolbar button:hover { border-color: var(--primary); }
+code { font-size: 12.5px; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<header class="hero">
+  <h1>Testy standaryzacji UI</h1>
+  <p class="note">
+    Odpal apkę (najlepiej UI po <strong>polsku</strong>). Idź po kolei. Przy każdym kroku zaznacz, czy wygląd się zgadza.
+    Porównaj z makietami: <a href="ui-ux-porownanie.html">ui-ux-porownanie.html</a>.
+    Blur tła wymaga <strong>Androida 12+</strong> (API 31); poniżej ma być przynajmniej przyciemnienie.
+  </p>
+  <nav class="toc">
+    <a href="#wzorzec">Wzorzec</a>
+    <a href="#auth">Auth</a>
+    <a href="#onboarding">Onboarding</a>
+    <a href="#dodaj">Dodaj</a>
+    <a href="#listy">Listy</a>
+    <a href="#settings">Settings</a>
+    <a href="#nauka">Nauka</a>
+    <a href="#korekta">Korekta</a>
+  </nav>
+  <p class="progress">Zaznaczone: <b id="count">0 / 0</b></p>
+  <div class="toolbar">
+    <button type="button" id="reset">Wyczyść zaznaczenia</button>
+  </div>
+</header>
+<main>
+
+<section class="cluster" id="wzorzec">
+  <h2>0. Wzorzec — sprawdzaj przy każdym oknie</h2>
+  <p class="why">To nie jest osobny ekran. Te 6 rzeczy mają być prawdą za każdym razem, gdy otworzy się dialog albo szuflada.</p>
+  <ol class="steps">
+    <li>
+      Tło za oknem jest <strong>przyciemnione</strong>; na Androidzie 12+ też <strong>rozmyte</strong>.
+    </li>
+    <li>
+      Karta dialogu na <strong>środku</strong> (~92% szerokości), rogi <strong>24 dp</strong>, przyciski <strong>małe</strong> (nie 48 dp jak stary CardBlocking).
+    </li>
+    <li>
+      Zatwierdzenie akcji = napis <strong>OK</strong>, kolor wypełnienia <strong>#569252</strong> (nie jasna zieleń Easy ze starych buildów).
+    </li>
+    <li>
+      Odrzucenie = <strong>Anuluj</strong> (nie Wróć / Wstecz). W dialogu decyzji Anuluj jest <strong>czerwone, outlined</strong>. W usuwaniu Anuluj jest <strong>bez koloru</strong>, a czerwone jest tylko Usuń / Przerwij.
+    </li>
+    <li>
+      Pole do wpisywania = <strong>szary prostokąt</strong>, zaokrąglenie 24 dp, bez ramki dopóki nie klikniesz. Dropdown języka / CEFR zostaje <strong>pillem</strong>.
+    </li>
+    <li>
+      W dialogu nie ma: Utwórz, Importuj, Zatwierdź N, Zastosuj, Zapisz, Dodaj jako confirm.
+    </li>
+  </ol>
+  <div class="chips">
+    <span class="chip"><span class="swatch" style="background:#569252"></span> OK / Easy #569252</span>
+    <span class="chip"><span class="swatch" style="background:#74AEAB"></span> Edytuj / Historia #74AEAB</span>
+    <span class="chip"><span class="swatch" style="background:#BF557F"></span> Anuluj (decyzja) / Usuń</span>
+  </div>
+</section>
+
+<section class="cluster" id="auth">
+  <h2>1. Auth — szare pola</h2>
+  <p class="why">Wyloguj (Settings → Wyloguj) albo świeża instalacja. Wyloguj <em>nie</em> ma modala potwierdzenia — to celowe.</p>
+  <ol class="steps">
+    <li>
+      Ekran logowania: email i hasło.
+      <div class="expect">Szare prostokąty 24 dp, nie pill z ramką. Przycisk Zaloguj / Zarejestruj zostaje jak był (to nie dialog).</div>
+      <label class="check"><input type="checkbox" data-k="a1"> Pola szare, 24 dp</label>
+    </li>
+  </ol>
+</section>
+
+<section class="cluster" id="onboarding">
+  <h2>2. Onboarding — dropdown języka</h2>
+  <p class="why">Tylko nowe konto albo profil bez języków. CEFR na onboardingu nadal jest listą radio — tak miało zostać.</p>
+  <ol class="steps">
+    <li>
+      Dropdown języka natywnego i języka nauki.
+      <div class="expect">Ten sam pill + surface co w Settings, nie goły OutlinedTextField.</div>
+      <label class="check"><input type="checkbox" data-k="o1"> Dropdowny pill jak Settings</label>
+    </li>
+  </ol>
+</section>
+
+<section class="cluster" id="dodaj">
+  <h2>3. Tab Dodaj — search, wiersz, głos, import, dodaj do listy</h2>
+  <p class="why">Home → tab <strong>dodaj</strong>.</p>
+  <ol class="steps">
+    <li>
+      Puste wyszukiwanie (nic nie wpisane).
+      <div class="expect">Jedna linia podpowiedzi, padding ~40–56 dp, bez drugiej linii hintu.</div>
+      <label class="check"><input type="checkbox" data-k="d0"> Pusty stan jednej linii</label>
+    </li>
+    <li>
+      Pole szukaj.
+      <div class="expect">Szary prostokąt 24 dp (nie pill).</div>
+      <label class="check"><input type="checkbox" data-k="d1"> Search = szary 24 dp</label>
+    </li>
+    <li>
+      Wpisz znane słowo (np. hiszpańskie, jeśli uczysz się ES). Kandydat na liście.
+      <div class="expect">Karta 18 dp, lemat + gloss, po prawej koło + 40 dp.</div>
+      <label class="check"><input type="checkbox" data-k="d2"> Wiersz jak CandidateRow</label>
+    </li>
+    <li>
+      Mikrofon → overlay głosu. Powiedz słowo albo zamknij X.
+      <div class="expect">Zostaje overlay (ciemny scrim + X), nie sheet. Tło przyciemnione + blur. Kandydaci: ta sama karta 18 dp i koło 40 dp.</div>
+      <label class="check"><input type="checkbox" data-k="d3"> Głos: overlay + blur + ten sam wiersz</label>
+    </li>
+    <li>
+      Na kandydacie naciśnij +. Sheet „Uczę się / Inna lista”.
+      <div class="expect">Szuflada z dołu; tło za nią przyciemnione/blur. To nie jest dialog OK/Anuluj.</div>
+      <label class="check"><input type="checkbox" data-k="d4"> Sheet AddToList + blur</label>
+    </li>
+    <li>
+      Inna lista → Nowa lista.
+      <div class="expect">Osobny <strong>dialog na środku</strong> (nie pole w szufladzie): szare pole nazwy, Anuluj czerwone + OK zielone. Szuflada może zostać pod spodem.</div>
+      <label class="check"><input type="checkbox" data-k="d5"> Nazwa listy = modal na środku, OK</label>
+    </li>
+    <li>
+      W pickerze list (Inna lista, bez nowej): przycisk na dole.
+      <div class="expect">Napis <strong>Anuluj</strong>, nie Wróć.</div>
+      <label class="check"><input type="checkbox" data-k="d6"> Picker: Anuluj</label>
+    </li>
+    <li>
+      Import z pliku albo Wklej. Dialog startu importu.
+      <div class="expect">Chrome jak wzorzec. Confirm = <strong>OK</strong> (nie Importuj). Pole wklejki / nowa lista = szary 24 dp. Dropdown listy = szare pole z caretą (nie pill Settings).</div>
+      <label class="check"><input type="checkbox" data-k="d7"> Start importu: OK + szare pola</label>
+    </li>
+    <li>
+      W starcie importu wybierz „Nowa lista” i wpisz nazwę.
+      <div class="expect">To samo szare pole; zatwierdzenie całego startu nadal OK.</div>
+      <label class="check"><input type="checkbox" data-k="d8"> Import + nowa lista spójne</label>
+    </li>
+    <li>
+      Odpal import i w trakcie naciśnij przerwanie (jeśli widać Anuluj/X na statusie).
+      <div class="expect">Dialog: tylko pytanie, <strong>bez opisu</strong>. Anuluj bez koloru + <strong>Przerwij</strong> czerwone.</div>
+      <label class="check"><input type="checkbox" data-k="d9"> Abort: pytanie + Przerwij</label>
+    </li>
+    <li>
+      Po recenzji słów zatwierdź import.
+      <div class="expect">Confirm = <strong>OK</strong>, nie „Zatwierdź N”. Wynik: OK zielone; „Pokaż listę” zostaje jako drugi, nijaki przycisk.</div>
+      <label class="check"><input type="checkbox" data-k="d10"> Review/wynik: OK</label>
+    </li>
+  </ol>
+</section>
+
+<section class="cluster" id="listy">
+  <h2>4. Tab Listy — tworzenie, przenoszenie, usuwanie, filtr</h2>
+  <p class="why">Home → tab <strong>listy</strong>. Chip <strong>+</strong> tworzy listę.</p>
+  <ol class="steps">
+    <li>
+      Pusta lista (albo lista bez słów).
+      <div class="expect">Sam tekst pustego stanu, padding ~40 dp, jedna linia, bez hintu pod spodem.</div>
+      <label class="check"><input type="checkbox" data-k="l0"> Pusty stan listy</label>
+    </li>
+    <li>
+      Chip + → nowa lista. Wpisz nazwę, zatwierdź, potem Anuluj na innym teście.
+      <div class="expect">Dialog na środku, blur, szare pole, Anuluj czerwone + OK zielone. Nie „Utwórz”.</div>
+      <label class="check"><input type="checkbox" data-k="l1"> Nowa lista = OK</label>
+    </li>
+    <li>
+      Menu chipa zwykłej listy → Zmień nazwę.
+      <div class="expect">Ten sam modal co nowa lista (szare pole, Anuluj + OK).</div>
+      <label class="check"><input type="checkbox" data-k="l2"> Rename = ten sam chrome</label>
+    </li>
+    <li>
+      Menu listy → Usuń listę (albo na słowie ⋮ → Usuń).
+      <div class="expect">Tylko pytanie. <strong>Bez akapitu opisu</strong>. Anuluj bez koloru + <strong>Usuń</strong> czerwone.</div>
+      <label class="check"><input type="checkbox" data-k="l3"> Destrukcja bez body</label>
+    </li>
+    <li>
+      Lista „Uczę się” → Wyczyść wszystkie (jeśli są słowa).
+      <div class="expect">Jak wyżej: pytanie + Anuluj nijaki + <strong>Usuń</strong> (nie „Wyczyść”).</div>
+      <label class="check"><input type="checkbox" data-k="l4"> Wyczyść = Usuń</label>
+    </li>
+    <li>
+      Na słowie ⋮ → Przenieś. Albo multi-select → przenieś. Albo menu listy → przenieś wszystkie.
+      <div class="expect">Jeden układ: <strong>dropdown</strong> (szare pole 24 dp, lista po tapnięciu). Na dole trzy przyciski: <strong>Anuluj</strong> (czerwony) | <strong>Nowa lista</strong> (zielony outlined) | <strong>OK</strong> (zielony filled). „Nowa lista” nie jest linkiem pod polem.</div>
+      <label class="check"><input type="checkbox" data-k="l5"> Picker 3 przyciski</label>
+    </li>
+    <li>
+      W pickerze Nowa lista → OK na nazwie.
+      <div class="expect">Wraca do dotychczasowego flow create-then-move (modal nazwy na środku, potem przeniesienie).</div>
+      <label class="check"><input type="checkbox" data-k="l6"> Nowa lista z pickera</label>
+    </li>
+    <li>
+      Filtr (ikona filtra) → zmień coś → przycisk po prawej.
+      <div class="expect">Napis <strong>OK</strong>, nie Zastosuj. Szuflada: tło przyciemnione/blur.</div>
+      <label class="check"><input type="checkbox" data-k="l7"> Filtr: OK + blur</label>
+    </li>
+    <li>
+      Sortowanie — otwórz i zamknij.
+      <div class="expect">Sheet, blur w tle. Wybór pozycji zamyka (bez pary Anuluj/OK — to lista opcji).</div>
+      <label class="check"><input type="checkbox" data-k="l8"> Sort + blur</label>
+    </li>
+    <li>
+      Słowo <code>needs_review</code> (jeśli masz) → dialog „Czy chodziło Ci o”.
+      <div class="expect">Małe przyciski. Confirm = <strong>OK</strong>, nie Zatwierdź. Kafelki propozycji: karta 18 dp jak wiersz słowa.</div>
+      <label class="check"><input type="checkbox" data-k="l9"> Review pending: OK</label>
+    </li>
+  </ol>
+</section>
+
+<section class="cluster" id="settings">
+  <h2>5. Settings — CEFR, czasy, języki, limit</h2>
+  <p class="why">Ikona koła zębatego w nagłówku Home.</p>
+  <ol class="steps">
+    <li>
+      Sekcja <strong>Poziom</strong>.
+      <div class="expect">Tylko tytuł „Poziom” — <strong>bez</strong> A1/A2 pod spodem, <strong>bez</strong> kreski, <strong>bez</strong> etykiety „Znajomość języka…”. Dropdown pill pokazuje aktualny poziom.</div>
+      <label class="check"><input type="checkbox" data-k="s1"> CEFR: samo Poziom + dropdown</label>
+    </li>
+    <li>
+      Języki — dropdowny.
+      <div class="expect">Pill + surface, wypełnia szerokość.</div>
+      <label class="check"><input type="checkbox" data-k="s2"> Dropdown języka pill</label>
+    </li>
+    <li>
+      Układ karty / czasy: radio Wszystkie / Wybrane → Edytuj.
+      <div class="expect">Modal 92%, małe Anuluj + OK (nie Zatwierdź), blur.</div>
+      <label class="check"><input type="checkbox" data-k="s3"> TensePicker: OK</label>
+    </li>
+    <li>
+      Limit nowych kart — pole liczby + przycisk.
+      <div class="expect">Szare pole 24 dp. Przycisk <strong>OK</strong> w zieleni #569252 (akordeon, nie modal).</div>
+      <label class="check"><input type="checkbox" data-k="s4"> Limit: szare pole + OK</label>
+    </li>
+    <li>
+      Godzina przypomnienia (powiadomienia).
+      <div class="expect">Szare pole 24 dp.</div>
+      <label class="check"><input type="checkbox" data-k="s5"> Reminder = szary field</label>
+    </li>
+  </ol>
+</section>
+
+<section class="cluster" id="nauka">
+  <h2>6. Nauka (Ucz się) — pusto, type, błąd, Easy, drzwi, zwroty</h2>
+  <p class="why">Przycisk <strong>Ucz się</strong> na dole Home. Potrzebujesz kart due albo pustej kolejki.</p>
+  <ol class="steps">
+    <li>
+      Pusta kolejka (albo naucz wszystko i wejdź znowu).
+      <div class="expect">Tylko <code>practice_empty</code> — bez drugiej linii hintu. Przycisk wstecz to nawigacja (<strong>Powrót</strong>), nie dialog.</div>
+      <label class="check"><input type="checkbox" data-k="p0"> Pusty practice bez hintu</label>
+    </li>
+    <li>
+      Settings → tryb wpisywania, potem fiszka type.
+      <div class="expect">Pole odpowiedzi = szary 24 dp.</div>
+      <label class="check"><input type="checkbox" data-k="p1"> Type-answer szary</label>
+    </li>
+    <li>
+      Choice: kliknij złą odpowiedź.
+      <div class="expect">Dialog błędu na środku, blur, jeden przycisk <strong>OK</strong> zielony (nie Powrót).</div>
+      <label class="check"><input type="checkbox" data-k="p2"> Wrong modal: OK</label>
+    </li>
+    <li>
+      Rewers + oceny. Porównaj Easy z OK z innego dialogu.
+      <div class="expect">Easy jest w <strong>tej samej zieleni #569252</strong> co OK (zmiana globalna).</div>
+      <label class="check"><input type="checkbox" data-k="p3"> Easy = #569252</label>
+    </li>
+    <li>
+      Rewers — rząd ocen.
+      <div class="expect">Tylko 4 przyciski SRS (Again / Hard / Good / Easy). Bez „Zgłoś poprawkę” i „Historia zmian” przy ocenach — korekta zostaje na liście (ikony).</div>
+      <label class="check"><input type="checkbox" data-k="p4"> Przy ocenach tylko 4 SRS</label>
+    </li>
+    <li>
+      Słowa pokrewne na rewersie (+ jeśli jest).
+      <div class="expect">Ta sama karta 18 dp i koło 40 dp co na Dodaj, nie lista z kreskami.</div>
+      <label class="check"><input type="checkbox" data-k="p5"> Pokrewne = CandidateRow</label>
+    </li>
+    <li>
+      Zwroty / usages — tap, żeby otworzyć podgląd.
+      <div class="expect">Rogi 24 dp, tap w tło zamyka, brak Anuluj/OK. Blur.</div>
+      <label class="check"><input type="checkbox" data-k="p6"> Usages 24 dp + blur</label>
+    </li>
+    <li>
+      Historia zmian (teal button albo ikona na liście).
+      <div class="expect">Sheet, blur w tle. Tytuł sheetu może zostać „Historia karty” — to nie ten sam string co przycisk.</div>
+      <label class="check"><input type="checkbox" data-k="p7"> Historia sheet + blur</label>
+    </li>
+  </ol>
+</section>
+
+<section class="cluster" id="korekta">
+  <h2>7. Korekta i self-edit</h2>
+  <p class="why">Z rewersu fiszki albo z kafelka na liście (ołówek / ⋮).</p>
+  <ol class="steps">
+    <li>
+      Zgłoś poprawkę — sheet zgłoszenia.
+      <div class="expect">Blur za szufladą. Pole notatki = szary 24 dp. „Wyślij zgłoszenie” zostaje (to nie dialog OK).</div>
+      <label class="check"><input type="checkbox" data-k="c1"> Sheet zgłoszenia + szara notatka</label>
+    </li>
+    <li>
+      Wejście w edycję karty (self-edit). Pola + POS.
+      <div class="expect">Pola wpisywane szare 24 dp. POS = pill dropdown. Przycisk na dole = <strong>OK</strong>, nie Zapisz. Anuluj zostaje. Blur za sheetem.</div>
+      <label class="check"><input type="checkbox" data-k="c2"> Self-edit: szare pola, confirm OK</label>
+    </li>
+    <li>
+      Zmień coś i zapisz tak, żeby API zwróciło ostrzeżenie (albo niepoprawne pole).
+      <div class="expect">Tytuł <strong>Potwierdzasz zmiany?</strong> + <strong>ikona ostrzeżenia</strong>. Opis czerwony. Anuluj czerwone + OK zielone, małe. Anuluj wycofuje, OK stosuje.</div>
+      <label class="check"><input type="checkbox" data-k="c3"> Warning: ikona + czerwony opis</label>
+    </li>
+    <li>
+      <span class="opt">Jeśli backend odrzuci zgłoszenie</span> — dialog odrzucenia.
+      <div class="expect">Dwa przyciski, <strong>bez OK</strong>: Anuluj czerwone outlined + <strong>Edytuj</strong> (nie „Edytuj samodzielnie”) w #74AEAB. Nagłówek blisko opisu, nie jako osobna półka.</div>
+      <label class="check"><input type="checkbox" data-k="c4"> Odrzucenie: Anuluj + Edytuj teal</label>
+    </li>
+    <li>
+      Zaakceptowana korekta (jeśli trafi).
+      <div class="expect">Jedno małe zielone <strong>OK</strong>.</div>
+      <label class="check"><input type="checkbox" data-k="c5"> Accepted: jedno OK</label>
+    </li>
+  </ol>
+</section>
+
+<section class="cluster">
+  <h2>Szybki fail</h2>
+  <p class="why">Jeśli zobaczysz którekolwiek z tego — to regresja względem Twoich uwag.</p>
+  <div class="expect fail">
+    Wróć / Utwórz / Importuj / Zatwierdź / Zastosuj / Zapisz / Dodaj jako confirm dialogu;
+    jasna zieleń #6DCF65 na OK albo Easy;
+    duże przyciski 48 dp w dialogu decyzji;
+    ramka 16 dp na zwrotach;
+    „Edytuj samodzielnie”;
+    „Popraw kartę” / „Historia karty” jako nagi TextButton na practice;
+    A1 pod tytułem Poziom;
+    nazwa nowej listy wpisywana w szufladzie AddToList zamiast na środku;
+    modal bez przyciemnienia tła.
+  </div>
+</section>
+
+</main>
+<script>
+const KEY = "vocab-ui-qa-v1";
+const boxes = [...document.querySelectorAll("input[data-k]")];
+const saved = JSON.parse(localStorage.getItem(KEY) || "{}");
+function render() {
+  let n = 0;
+  boxes.forEach((el) => {
+    el.checked = !!saved[el.dataset.k];
+    if (el.checked) n++;
+    el.closest("section")?.classList.toggle("done",
+      [...el.closest("section").querySelectorAll("input[data-k]")].every((x) => x.checked));
+  });
+  document.getElementById("count").textContent = n + " / " + boxes.length;
+}
+boxes.forEach((el) => {
+  el.addEventListener("change", () => {
+    saved[el.dataset.k] = el.checked;
+    localStorage.setItem(KEY, JSON.stringify(saved));
+    render();
+  });
+});
+document.getElementById("reset").addEventListener("click", () => {
+  boxes.forEach((el) => { saved[el.dataset.k] = false; });
+  localStorage.setItem(KEY, JSON.stringify(saved));
+  render();
+});
+render();
+</script>
+</body>
+</html>
