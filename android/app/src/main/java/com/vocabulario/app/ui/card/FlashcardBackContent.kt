@@ -50,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import com.vocabulario.app.R
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.LanguagePacks
+import com.vocabulario.app.data.containsLemma
 import com.vocabulario.app.data.conjugationFromContent
 import com.vocabulario.app.data.asJsonArray
 import com.vocabulario.app.data.asJsonObject
@@ -495,7 +496,7 @@ private fun RelatedWordsList(
                     }
                 },
                 trailing = {
-                    if (onAdd != null && !learningLemmas.contains(word.lemma.trim().lowercase())) {
+                    if (onAdd != null && !learningLemmas.containsLemma(word.lemma)) {
                         LemmaAddButton(
                             onClick = { onAdd(word) },
                             contentDescription = stringResource(R.string.action_add),

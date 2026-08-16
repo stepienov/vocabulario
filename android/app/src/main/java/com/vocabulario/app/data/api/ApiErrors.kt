@@ -109,6 +109,9 @@ fun Throwable.userMessage(default: String, strings: UiStrings): String {
     return if (mapped != null) strings.get(mapped) else default
 }
 
+fun Throwable.isWordAlreadyOnList(): Boolean =
+    mappedErrorRes() == R.string.err_word_on_list
+
 fun Throwable.mappedErrorRes(): Int? {
     val parsed = if (this is HttpException) readApiError() else null
     val code = resolveErrorCode(

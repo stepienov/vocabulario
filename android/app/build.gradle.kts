@@ -16,6 +16,12 @@ val localProps = Properties().apply {
 val apiEmulatorHost = localProps.getProperty("api.emulator.host", "10.0.2.2").trim()
 val apiDeviceHost = localProps.getProperty("api.device.host", "").trim()
 val apiPort = localProps.getProperty("api.port", "8000").trim()
+// Pełny URL (Railway) — tylko gdy podasz -Papi.base.url=... albo api.base.url w local.properties.
+// Puste = lokalny BE (Android Studio / emulator / telefon w LAN).
+val apiBaseUrl = (
+    (project.findProperty("api.base.url") as String?)
+        ?: localProps.getProperty("api.base.url", "")
+).trim().replace("\"", "")
 
 android {
     namespace = "com.vocabulario.app"
@@ -31,6 +37,7 @@ android {
         buildConfigField("String", "API_EMULATOR_HOST", "\"$apiEmulatorHost\"")
         buildConfigField("String", "API_DEVICE_HOST", "\"$apiDeviceHost\"")
         buildConfigField("String", "API_PORT", "\"$apiPort\"")
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
         buildConfigField(
             "String",
             "GOOGLE_WEB_CLIENT_ID",

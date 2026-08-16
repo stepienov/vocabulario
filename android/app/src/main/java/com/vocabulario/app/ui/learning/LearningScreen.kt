@@ -85,6 +85,7 @@ fun LearningScreen(
                         enrichmentError = card.enrichment_error,
                         profile = state.activeProfile,
                         onAddRelated = viewModel::openAddRelated,
+                        learningLemmas = state.learningLemmas,
                     )
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = viewModel::clearSelection) {

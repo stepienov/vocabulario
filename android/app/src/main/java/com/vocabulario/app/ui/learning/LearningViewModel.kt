@@ -6,7 +6,10 @@ import com.vocabulario.app.R
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.WordListResponse
+import com.vocabulario.app.data.api.isWordAlreadyOnList
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.containsLemma
+import com.vocabulario.app.data.lemmaKeys
 import com.vocabulario.app.data.normalizeTenseKeys
 import com.vocabulario.app.i18n.UiStrings
 import com.vocabulario.app.ui.card.RelatedWord
@@ -31,6 +34,7 @@ data class LearningUiState(
     val loading: Boolean = false,
     val error: String? = null,
     val message: String? = null,
+    val learningLemmas: Set<String> = emptySet(),
     val addTarget: RelatedWord? = null,
     val lists: List<WordListResponse> = emptyList(),
     val pickListOpen: Boolean = false,
@@ -49,7 +53,10 @@ class LearningViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(loading = true, error = null)
+            val hadCards = _state.value.cards.isNotEmpty()
+            if (!hadCards) {
+                _state.value = _state.value.copy(loading = true, error = null)
+            }
             val profile = runCatching { repository.getActiveProfile() }.getOrNull()
             runCatching { repository.listCards() }
                 .onSuccess { cards ->
@@ -61,6 +68,8 @@ class LearningViewModel @Inject constructor(
                         userCefr = profile?.cefr_level ?: "A2",
                         learningLang = profile?.learning_lang ?: "en",
                         activeProfile = profile,
+                        learningLemmas = cards.flatMap { lemmaKeys(it.lemma_l2) }.toSet() +
+                            _state.value.learningLemmas,
                     )
                     startPollingIfNeeded(cards)
                 }
@@ -82,6 +91,10 @@ class LearningViewModel @Inject constructor(
     }
 
     fun openAddRelated(word: RelatedWord) {
+        if (_state.value.learningLemmas.containsLemma(word.lemma)) {
+            markLemmaAdded(word.lemma)
+            return
+        }
         _state.value = _state.value.copy(
             addTarget = word,
             pickListOpen = false,
@@ -137,20 +150,33 @@ class LearningViewModel @Inject constructor(
     fun addRelatedToLearning() {
         val word = _state.value.addTarget ?: return
         dismissAddSheet()
+        markLemmaAdded(word.lemma)
         viewModelScope.launch {
             runCatching { repository.createCard(word.lemma, word.pos, word.glossL1, null) }
-                .onSuccess {
+                .onSuccess { created ->
+                    markLemmaAdded(created.lemma_l2.ifBlank { word.lemma })
                     _state.value = _state.value.copy(
                         message = strings.get(R.string.msg_added_learning, word.lemma),
                     )
                     load()
                 }
-                .onFailure {
-                    _state.value = _state.value.copy(
-                        error = it.userMessage(strings, R.string.err_add),
-                    )
+                .onFailure { e ->
+                    if (e.isWordAlreadyOnList()) {
+                        markLemmaAdded(word.lemma)
+                    } else {
+                        _state.value = _state.value.copy(
+                            learningLemmas = _state.value.learningLemmas - lemmaKeys(word.lemma),
+                            error = e.userMessage(strings, R.string.err_add),
+                        )
+                    }
                 }
         }
+    }
+
+    private fun markLemmaAdded(lemma: String) {
+        val keys = lemmaKeys(lemma)
+        if (keys.isEmpty()) return
+        _state.value = _state.value.copy(learningLemmas = _state.value.learningLemmas + keys)
     }
 
     fun addRelatedToList(listId: String) {
@@ -201,16 +227,22 @@ class LearningViewModel @Inject constructor(
     private fun startPollingIfNeeded(cards: List<CardResponse>) {
         pollJob?.cancel()
         if (cards.none { it.enrichment_status == "pending" }) return
+        repository.requestBackgroundSync()
         pollJob = viewModelScope.launch {
+            var iterations = 0
             while (isActive) {
                 delay(3_000)
+                if (++iterations > 20) break
                 val refreshed = runCatching { repository.listCards() }.getOrNull() ?: continue
                 val current = _state.value
                 _state.value = current.copy(
                     cards = refreshed,
                     selectedCard = syncSelected(refreshed, current.selectedCard),
+                    learningLemmas = refreshed.flatMap { lemmaKeys(it.lemma_l2) }.toSet() +
+                        current.learningLemmas,
                 )
                 if (refreshed.none { it.enrichment_status == "pending" }) break
+                if (iterations % 3 == 0) repository.requestBackgroundSync()
             }
         }
     }

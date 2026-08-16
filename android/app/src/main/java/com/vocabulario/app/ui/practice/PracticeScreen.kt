@@ -54,6 +54,7 @@ import com.vocabulario.app.ui.card.CardSelfEditWarningDialog
 import com.vocabulario.app.ui.card.CorrectionActivityColor
 import com.vocabulario.app.ui.card.cardActivityStatusLabel
 import com.vocabulario.app.ui.TestTags
+import com.vocabulario.app.data.containsLemma
 import com.vocabulario.app.data.langDisplayName
 import com.vocabulario.app.ui.card.FlashcardBackContent
 import com.vocabulario.app.ui.components.ImportDisplayFlip
@@ -251,9 +252,11 @@ fun PracticeScreen(
                                                     ?: if (direction == "l2_to_l1") choice.text else null
                                                 val displayText = if (disabled) tileLemma else choice.text
                                                 val displayGloss = if (disabled) tileGloss else null
+                                                val addLemma = choice.lemma_l2?.trim().orEmpty()
                                                 val showAdd = disabled &&
+                                                    addLemma.isNotEmpty() &&
                                                     !choice.in_learning &&
-                                                    !state.learningLemmas.contains(tileLemma.trim().lowercase())
+                                                    !state.learningLemmas.containsLemma(addLemma)
                                                 ChoiceTile(
                                                     text = displayText,
                                                     selected = false,

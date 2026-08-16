@@ -88,6 +88,8 @@ class LexicalEntry(Base):
     lang_pair: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
     lemma_l2: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     lemma_l1_primary: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    lemma_key_l2: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    lemma_key_l1: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     pos: Mapped[str | None] = mapped_column(String(32), nullable=True)
     cefr: Mapped[str | None] = mapped_column(String(8), nullable=True)
     content: Mapped[dict] = mapped_column(JSONB, nullable=False)
@@ -141,6 +143,12 @@ class LearningCard(Base):
     )
     # Soft-delete tombstone: NULL = live, non-NULL = deleted (propagated via /sync/pull).
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    import_job_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("import_jobs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     user: Mapped["User"] = relationship(back_populates="cards")
     profile: Mapped["LanguageProfile"] = relationship(back_populates="cards")
@@ -285,3 +293,146 @@ class AppliedSyncMove(Base):
     card_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("learning_cards.id", ondelete="CASCADE"))
     moved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+ACTIVE_IMPORT_STATUSES = (
+    "queued",
+    "analyzing",
+    "review",
+    "committing",
+    "cancelling",
+)
+
+
+class ImportJob(Base):
+    __tablename__ = "import_jobs"
+    __table_args__ = (
+        Index(
+            "uq_import_jobs_one_active",
+            "user_id",
+            "profile_id",
+            unique=True,
+            postgresql_where=text(
+                "status IN ('queued','analyzing','review','committing','cancelling')"
+            ),
+        ),
+        Index("ix_import_jobs_user_created", "user_id", "created_at"),
+        Index("ix_import_jobs_status", "status"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("language_profiles.id", ondelete="CASCADE")
+    )
+    list_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("word_lists.id", ondelete="CASCADE"))
+    phase: Mapped[str] = mapped_column(String(16), default="analyze")
+    status: Mapped[str] = mapped_column(String(16), default="queued")
+    stage: Mapped[str] = mapped_column(String(16), default="queued")
+    source_kind: Mapped[str] = mapped_column(String(16), default="paste")
+    source_name: Mapped[str] = mapped_column(String(255), default="")
+    mode: Mapped[str] = mapped_column(String(16), default="vocabulario")
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False)
+    processed: Mapped[int] = mapped_column(Integer, default=0)
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    current_ordinal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    current_label: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    current_attempt: Mapped[int] = mapped_column(Integer, default=0)
+    ready_count: Mapped[int] = mapped_column(Integer, default=0)
+    duplicate_count: Mapped[int] = mapped_column(Integer, default=0)
+    failed_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    input_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    input_meta: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+    items: Mapped[list["ImportJobItem"]] = relationship(
+        back_populates="job", cascade="all, delete-orphan"
+    )
+    events: Mapped[list["ImportJobEvent"]] = relationship(
+        back_populates="job", cascade="all, delete-orphan"
+    )
+
+
+class ImportJobItem(Base):
+    __tablename__ = "import_job_items"
+    __table_args__ = (UniqueConstraint("job_id", "ordinal"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("import_jobs.id", ondelete="CASCADE"))
+    ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    raw_note: Mapped[list] = mapped_column(JSONB, default=list)
+    input_label: Mapped[str] = mapped_column(String(500), default="")
+    verdict: Mapped[str] = mapped_column(String(16), default="pending")
+    verdict_phase: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reason_detail: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    lemma: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    pos: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    gloss: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    entry_kind: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    lexical_entry_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    display: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    existing_card_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    created_card_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    attempt: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+
+    job: Mapped["ImportJob"] = relationship(back_populates="items")
+
+
+class ImportJobEvent(Base):
+    __tablename__ = "import_job_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("import_jobs.id", ondelete="CASCADE"))
+    item_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    level: Mapped[str] = mapped_column(String(8), default="info")
+    event: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    job: Mapped["ImportJob"] = relationship(back_populates="events")
+
+
+class AppLog(Base):
+    """Trwały dziennik operacji i błędów — niezależny od stanu encji."""
+
+    __tablename__ = "app_logs"
+    __table_args__ = (
+        Index("ix_app_logs_created_at", "created_at"),
+        Index("ix_app_logs_level_created", "level", "created_at"),
+        Index("ix_app_logs_category_created", "category", "created_at"),
+        Index("ix_app_logs_event_created", "event", "created_at"),
+        Index("ix_app_logs_user_created", "user_id", "created_at"),
+        Index("ix_app_logs_request_id", "request_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    level: Mapped[str] = mapped_column(String(16), nullable=False, default="info")
+    category: Mapped[str] = mapped_column(String(32), nullable=False, default="http")
+    event: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="ok")
+    request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    profile_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    http_method: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    http_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    entity_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    entity_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    message: Mapped[str | None] = mapped_column(String(4000), nullable=True)
+    error_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(4000), nullable=True)
+    traceback: Mapped[str | None] = mapped_column(String, nullable=True)
+    payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

@@ -37,6 +37,12 @@ async def get_current_user(
     return user
 
 
+async def get_admin_user(user: User = Depends(get_current_user)) -> User:
+    if (user.role or "").strip().lower() != "admin":
+        raise api_error(status.HTTP_403_FORBIDDEN, "forbidden", "Admin only")
+    return user
+
+
 def normalize_text(text: str) -> str:
     text = text.strip().lower()
     text = re.sub(r"\s+", " ", text)

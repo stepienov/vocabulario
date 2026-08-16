@@ -317,6 +317,8 @@
     <string name="action_abort">中止</string>
     <string name="import_abort_title">中止导入？</string>
     <string name="import_abort_body">进度将被丢弃。</string>
+    <string name="import_discard_title">放弃此次导入？</string>
+    <string name="import_discard_body">分析结果将被丢弃。不会添加任何内容。</string>
     <string name="import_result_title">导入完成</string>
     <string name="import_result_body">已添加 %1$d，重复 %2$d</string>
     <string name="import_result_body_failed">已添加 %1$d，重复 %2$d，错误 %3$d</string>
@@ -326,6 +328,33 @@
     <string name="import_interrupted">导入已中断 — 请重试</string>
     <string name="import_review_ready">可以导入</string>
     <string name="import_new_list_option">+ 新列表</string>
+
+    <string name="import_section_ready">将导入（%d）</string>
+    <string name="import_section_duplicates">重复（%d）</string>
+    <string name="import_section_failed">错误（%d）</string>
+    <string name="import_copy_errors">复制出错的词</string>
+    <string name="import_errors_copied">已复制 %d 个词</string>
+    <string name="import_reason_already_on_list">这个词已经在你的列表里。</string>
+    <string name="import_reason_in_file_duplicate">这个词在本次导入中重复出现。</string>
+    <string name="import_reason_no_lemma">这更像短语或句子，无法做成词典卡片。</string>
+    <string name="import_reason_llm_invalid">未能识别为要学习的词。请确认它是你正在学习的语言。</string>
+    <string name="import_reason_unknown">暂时无法导入这个词。</string>
+    <string name="import_ready_hint">这些词会加入你的列表。</string>
+    <string name="import_review_loading">正在加载词表…</string>
+    <string name="import_errors_hint">这些词不会加入你的列表。</string>
+    <string name="import_item_untitled">未知词</string>
+    <string name="import_reason_write_failed">尝试 3 次后仍无法保存这个词。</string>
+    <string name="import_cancelled">已取消。没有添加任何内容。</string>
+    <string name="import_stage_queued">排队中…</string>
+    <string name="import_stage_format">正在识别文件格式…</string>
+    <string name="import_stage_classify">正在分析单词…</string>
+    <string name="import_stage_layout">正在排版卡片…</string>
+    <string name="import_stage_dedup">正在检查重复</string>
+    <string name="import_stage_write">正在保存到列表</string>
+    <string name="import_stage_rollback">正在取消并撤销…</string>
+    <string name="import_progress_attempt">第 %1$d/3 次尝试</string>
+    <string name="import_progress_tally">成功 %1$d · 重复 %2$d · 错误 %3$d</string>
+
 <string name="section_meanings">释义</string>
 
     <string name="section_synonyms">同义词</string>

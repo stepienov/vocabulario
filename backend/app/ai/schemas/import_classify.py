@@ -76,6 +76,31 @@ def import_classify_schema() -> dict:
     }
 
 
+def import_verify_lemmas_schema() -> dict:
+    return {
+        "name": "import_verify_lemmas",
+        "schema": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "invalid": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "index": {"type": "integer"},
+                            "reason": {"type": "string"},
+                        },
+                        "required": ["index", "reason"],
+                    },
+                }
+            },
+            "required": ["invalid"],
+        },
+    }
+
+
 def import_adaptive_enrich_schema() -> dict:
     """Uproszczona bogata karta dla phrase/construction/sentence."""
     return {

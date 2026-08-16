@@ -318,15 +318,44 @@
     <string name="action_abort">Interrumpir</string>
     <string name="import_abort_title">¿Interrumpir la importación?</string>
     <string name="import_abort_body">Se descartará el progreso.</string>
+    <string name="import_discard_title">¿Anular la importación?</string>
+    <string name="import_discard_body">Se descartará el resultado. No se importará nada.</string>
     <string name="import_result_title">Importación finalizada</string>
     <string name="import_result_body">Añadidas %1$d, duplicados %2$d</string>
     <string name="import_result_body_failed">Añadidas %1$d, duplicados %2$d, errores %3$d</string>
     <string name="import_review_flagged">Frases y construcciones</string>
     <string name="action_show_list">Mostrar lista</string>
-    <string name="import_paste_source">Pegado</string>
+    <string name="import_paste_source">Texto pegado</string>
     <string name="import_interrupted">Importación interrumpida — inténtalo de nuevo</string>
     <string name="import_review_ready">Listo para importar</string>
     <string name="import_new_list_option">+ Lista nueva</string>
+
+    <string name="import_section_ready">Se importará (%d)</string>
+    <string name="import_section_duplicates">Duplicados (%d)</string>
+    <string name="import_section_failed">Errores (%d)</string>
+    <string name="import_copy_errors">Copiar palabras con error</string>
+    <string name="import_errors_copied">Se copiaron %d palabras</string>
+    <string name="import_reason_already_on_list">Esta palabra ya está en tus listas.</string>
+    <string name="import_reason_in_file_duplicate">Esta palabra se repite en esta importación.</string>
+    <string name="import_reason_no_lemma">Parece una frase o una oración: no se puede convertir en una ficha de diccionario.</string>
+    <string name="import_reason_llm_invalid">No se reconoció como una palabra para aprender. Comprueba que esté en el idioma que estás aprendiendo.</string>
+    <string name="import_reason_unknown">Esta palabra no se puede importar ahora.</string>
+    <string name="import_ready_hint">Estas palabras se añadirán a tu lista.</string>
+    <string name="import_review_loading">Cargando las palabras…</string>
+    <string name="import_errors_hint">Estas palabras no se añadirán a tu lista.</string>
+    <string name="import_item_untitled">Palabra desconocida</string>
+    <string name="import_reason_write_failed">No se pudo guardar esta palabra (tras 3 intentos).</string>
+    <string name="import_cancelled">Cancelado. No se añadió nada.</string>
+    <string name="import_stage_queued">En cola…</string>
+    <string name="import_stage_format">Leyendo el formato…</string>
+    <string name="import_stage_classify">Analizando palabras…</string>
+    <string name="import_stage_layout">Preparando tarjetas…</string>
+    <string name="import_stage_dedup">Buscando duplicados</string>
+    <string name="import_stage_write">Guardando en la lista</string>
+    <string name="import_stage_rollback">Cancelando y deshaciendo…</string>
+    <string name="import_progress_attempt">intento %1$d/3</string>
+    <string name="import_progress_tally">OK %1$d · duplicado %2$d · error %3$d</string>
+
 <string name="section_meanings">SIGNIFICADOS</string>
 
     <string name="section_synonyms">SINÓNIMOS</string>

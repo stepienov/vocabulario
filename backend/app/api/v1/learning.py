@@ -70,6 +70,7 @@ from app.services.card_jobs import (
     build_pending_content,
     content_is_complete,
     enrich_card,
+    hydrate_from_lexical_cache,
 )
 from app.services.distractors import generate_choice_options
 from app.services.import_ai import resolve_import_words
@@ -404,10 +405,12 @@ async def create_card(
     db.add(card)
     await db.flush()
     db.add(SrsState(card_id=card.id, scope="main", status="new"))
+    await hydrate_from_lexical_cache(db, card, profile)
     await db.commit()
     await db.refresh(card)
 
-    background.add_task(enrich_card, card.id)
+    if card.enrichment_status == STATUS_PENDING:
+        background.add_task(enrich_card, card.id)
     return card
 
 
@@ -1027,7 +1030,6 @@ def _card_response(card: LearningCard, srs: SrsState | None = None) -> CardRespo
 @router.get("/lists/{list_id}/words", response_model=list[CardResponse])
 async def list_words(
     list_id: UUID,
-    background: BackgroundTasks,
     profile_id: UUID = Query(...),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -1076,16 +1078,6 @@ async def list_words(
         )
     )
     srs_by_card = {s.card_id: s for s in srs_q.scalars().all()}
-    for card in cards:
-        if card.enrichment_status == STATUS_PENDING:
-            continue
-        # Nie re-kolejkuj enrich przy każdym GET listy — to powodowało lawinę zapytań LLM
-        # (polling Androida co 2,5 s). Ponowna próba tylko po explicit failed.
-        if card.enrichment_status == STATUS_FAILED:
-            card.enrichment_status = STATUS_PENDING
-            card.enrichment_error = None
-            background.add_task(enrich_card, card.id)
-    await db.commit()
     return [_card_response(c, srs_by_card.get(c.id)) for c in cards]
 
 
@@ -1176,9 +1168,11 @@ async def add_word_to_list(
         db.add(card)
         await db.flush()
 
+    await hydrate_from_lexical_cache(db, card, profile)
     await db.commit()
     await db.refresh(card)
-    background.add_task(enrich_card, card.id)
+    if card.enrichment_status == STATUS_PENDING:
+        background.add_task(enrich_card, card.id)
     return card
 
 

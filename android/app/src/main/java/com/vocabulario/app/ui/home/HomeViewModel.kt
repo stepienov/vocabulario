@@ -107,7 +107,6 @@ class HomeViewModel @Inject constructor(
     val connectivity: StateFlow<Boolean> = networkMonitor.isOnline
 
     private var pollJob: Job? = null
-    private var activityPollJob: Job? = null
     private var boundProfileId: String? = null
     private var listsObserverJob: Job? = null
     private var cardsObserverJob: Job? = null
@@ -143,17 +142,14 @@ class HomeViewModel @Inject constructor(
                 )
                 when {
                     online && wasOffline -> {
-                        // Powrót online: najpierw sync, potem jedno odświeżenie (bez podwójnego refreshAll).
                         viewModelScope.launch {
-                            runCatching { repository.syncNow() }
                             refreshAll()
+                            runCatching { repository.syncNow() }
                         }
                     }
                     !online && !wasOffline -> {
-                        // Offline: przelicz tylko liczniki list — nie przeładowuj słów z pełnego
-                        // cache sync-pull (inny zestaw niż ostatni widok z API).
                         viewModelScope.launch {
-                            runCatching { repository.listWordLists() }
+                            runCatching { repository.cachedWordLists() }
                                 .onSuccess { lists ->
                                     _state.value = _state.value.copy(lists = visibleLists(lists))
                                 }
@@ -190,14 +186,25 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** Jedno wspólne odświeżenie po zmianie Room — anuluje poprzednie oczekujące (debounce w repo + tu). */
+    /** Jedno wspólne odświeżenie po zmianie Room — tylko cache, bez GET /lists. */
     private fun scheduleRoomRefresh(profileId: String) {
         roomRefreshJob?.cancel()
         roomRefreshJob = viewModelScope.launch {
             delay(100)
             if (boundProfileId != profileId) return@launch
-            loadLists(_state.value.selectedListId)
-            loadStats()
+            val lists = runCatching { repository.cachedWordLists() }.getOrNull() ?: return@launch
+            val visible = visibleLists(lists)
+            val selected = _state.value.selectedListId
+                ?: visible.firstOrNull { it.is_system }?.id
+                ?: visible.firstOrNull()?.id
+            val words = selected?.let { runCatching { repository.cachedListWords(it) }.getOrNull() }
+            val stats = runCatching { repository.dashboardStats(7) }.getOrNull()
+            _state.value = _state.value.copy(
+                lists = visible,
+                selectedListId = selected ?: _state.value.selectedListId,
+                listWords = words ?: _state.value.listWords,
+                stats = stats ?: _state.value.stats,
+            )
         }
     }
 
@@ -221,6 +228,7 @@ class HomeViewModel @Inject constructor(
             loadStats()
             loadLists()
             pairSession.markDataReady()
+            repository.requestBackgroundSync()
         }
     }
     fun selectTab(tab: HomeTab) {
@@ -245,10 +253,15 @@ class HomeViewModel @Inject constructor(
 
     /** Odśwież dashboard przy powrocie na Home (np. z Ćwicz) — liczby mają być aktualne. */
     fun onHomeResumed() {
+        importController.onAppForeground()
         if (_state.value.tab == HomeTab.DASHBOARD) {
             loadStats()
         }
     }
+
+    fun expandImportSection(section: String?) = importController.expandSection(section)
+
+    fun onImportErrorsCopied() = importController.copiedErrorsNotice()
 
     fun loadStats() {
         viewModelScope.launch {
@@ -304,13 +317,11 @@ class HomeViewModel @Inject constructor(
     }
 
     fun selectList(listId: String) {
-        // Zmiana listy: wyczyść stare karty, żeby pod spinnerem nie mignęły kafelki z poprzedniej.
         val switching = _state.value.selectedListId != listId
         _state.value = _state.value.copy(
             selectedListId = listId,
             selectedWordIds = emptySet(),
-            listFilter = ListFilterState(),
-            listWords = if (switching) emptyList() else _state.value.listWords,
+            listFilter = if (switching) ListFilterState() else _state.value.listFilter,
         )
         loadListWords(listId)
     }
@@ -328,12 +339,10 @@ class HomeViewModel @Inject constructor(
     }
 
     fun openListTab(listId: String) {
-        val switching = _state.value.selectedListId != listId
         _state.value = _state.value.copy(
             tab = HomeTab.LISTS,
             selectedListId = listId,
             error = null,
-            listWords = if (switching) emptyList() else _state.value.listWords,
         )
         loadLists(listId)
     }
@@ -377,22 +386,13 @@ class HomeViewModel @Inject constructor(
      * Karty zostają na ekranie, a stan pojedynczej karty (np. „Tworzę kartę") pokazuje spinner
      * w samej karcie. Kluczowe przy powrocie online, żeby kafelki nie znikały pod jeden wielki spinner.
      */
+    @Suppress("UNUSED_PARAMETER")
     fun loadListWords(listId: String, background: Boolean = false) {
         viewModelScope.launch {
-            // Globalny spinner TYLKO gdy nie mamy nic do pokazania. Jeśli są już kafelki
-            // (np. stuby „Czeka na sieć"), zostają na ekranie — status pokazuje spinner w KARCIE.
-            if (!background && _state.value.listWords.isEmpty()) {
-                _state.value = _state.value.copy(loading = true)
-            }
-            val pendingInbox = _state.value.lists.find { it.id == listId }?.is_pending_inbox == true ||
-                listId.startsWith("local-pending-inbox-")
-
-            // 1. Szybki render: pokaż to, co jest teraz (stuby + karty z serwera/cache) BEZ czekania na flush.
-            runCatching { repository.listWords(listId) }
+            runCatching { repository.cachedListWords(listId) }
                 .onSuccess { words ->
                     _state.value = _state.value.copy(loading = false, listWords = words, error = null)
                     startPollingIfNeeded()
-                    maybeStartActivityPoll()
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
@@ -401,16 +401,15 @@ class HomeViewModel @Inject constructor(
                     )
                 }
 
-            // 2. Skrzynka Oczekujące online: flush + ponowne odświeżenie już W TLE (kafelki nie znikają).
+            val pendingInbox = _state.value.lists.find { it.id == listId }?.is_pending_inbox == true ||
+                listId.startsWith("local-pending-inbox-")
             if (pendingInbox && networkMonitor.isCurrentlyOnline() &&
                 runCatching { repository.hasQueuedLookups() }.getOrDefault(false)
             ) {
                 runCatching { repository.flushPendingLookupsIfNeeded() }
-                runCatching { repository.listWords(listId) }
+                runCatching { repository.cachedListWords(listId) }
                     .onSuccess { words ->
                         _state.value = _state.value.copy(listWords = words, error = null)
-                        startPollingIfNeeded()
-                        maybeStartActivityPoll()
                     }
             }
         }
@@ -430,7 +429,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun search() {
-        if (importController.state.value.busy) return
+        if (importController.state.value.blocksUi) return
         val text = _state.value.query.trim()
         if (text.isBlank()) return
         if (!networkMonitor.isCurrentlyOnline()) {
@@ -496,8 +495,6 @@ class HomeViewModel @Inject constructor(
     ) {
         importController.startFromPaste(text, mode, listId, listName)
     }
-
-    fun toggleImportItem(key: String) = importController.toggleItem(key)
 
     fun requestImportCancel() = importController.requestCancel()
 
@@ -975,16 +972,15 @@ class HomeViewModel @Inject constructor(
 
     fun moveWord(cardId: String, targetListId: String) {
         if (!isMovableCardId(cardId)) return
+        _state.value = _state.value.copy(
+            listWords = _state.value.listWords.filterNot { it.id == cardId },
+            selectedWordIds = _state.value.selectedWordIds - cardId,
+        )
         viewModelScope.launch {
             runCatching { repository.moveCard(cardId, targetListId) }
-                .onSuccess {
-                    _state.value = _state.value.copy(
-                        listWords = _state.value.listWords.filterNot { it.id == cardId },
-                        selectedWordIds = _state.value.selectedWordIds - cardId,
-                    )
-                    loadLists(_state.value.selectedListId)
-                }
+                .onSuccess { loadLists(_state.value.selectedListId) }
                 .onFailure {
+                    _state.value.selectedListId?.let { loadListWords(it, background = true) }
                     _state.value = _state.value.copy(
                         error = it.userMessage(strings, R.string.err_move),
                     )
@@ -1023,43 +1019,51 @@ class HomeViewModel @Inject constructor(
 
     private fun clearWordsByIds(ids: List<String>) {
         val sourceListId = _state.value.selectedListId
+        val leftover = _state.value.listWords.filterNot { it.id in ids.toSet() }
+        _state.value = _state.value.copy(
+            selectedWordIds = emptySet(),
+            listWords = leftover,
+            lists = _state.value.lists.map { list ->
+                if (list.id == sourceListId) list.copy(word_count = leftover.size) else list
+            },
+        )
         viewModelScope.launch {
-            var failed = 0
-            for (id in ids) {
-                runCatching { repository.deleteCard(id) }.onFailure { failed++ }
-            }
-            val idSet = ids.toSet()
-            _state.value = _state.value.copy(
-                selectedWordIds = emptySet(),
-                listWords = _state.value.listWords.filterNot { it.id in idSet },
-                error = if (failed > 0) strings.get(R.string.err_delete_partial, failed) else null,
-            )
+            runCatching { repository.deleteCards(ids) }
+                .onFailure {
+                    _state.value = _state.value.copy(
+                        error = strings.get(R.string.err_delete_partial, ids.size),
+                    )
+                    sourceListId?.let { loadListWords(it, background = true) }
+                }
             loadLists(sourceListId)
-            sourceListId?.let { loadListWords(it, background = true) }
         }
     }
 
     fun moveSelectedWords(targetListId: String) {
         val ids = _state.value.selectedWordIds.filter { isMovableCardId(it) }
         if (ids.isEmpty()) return
+        val nextListId = applyOptimisticMove(ids, targetListId)
         viewModelScope.launch {
-            var failed = 0
-            for (id in ids) {
-                runCatching { repository.moveCard(id, targetListId) }.onFailure { failed++ }
-            }
-            finishBulkMove(movedIds = ids, targetListId = targetListId, failed = failed)
+            runCatching { repository.moveCards(ids, targetListId) }
+                .onSuccess { loadLists(nextListId) }
+                .onFailure {
+                    _state.value = _state.value.copy(error = it.userMessage(strings, R.string.err_move))
+                    _state.value.selectedListId?.let { loadListWords(it, background = true) }
+                }
         }
     }
 
     fun moveAllWordsFromCurrentList(targetListId: String) {
         val ids = movableCardIds()
         if (ids.isEmpty()) return
+        val nextListId = applyOptimisticMove(ids, targetListId)
         viewModelScope.launch {
-            var failed = 0
-            for (id in ids) {
-                runCatching { repository.moveCard(id, targetListId) }.onFailure { failed++ }
-            }
-            finishBulkMove(movedIds = ids, targetListId = targetListId, failed = failed)
+            runCatching { repository.moveCards(ids, targetListId) }
+                .onSuccess { loadLists(nextListId) }
+                .onFailure {
+                    _state.value = _state.value.copy(error = it.userMessage(strings, R.string.err_move))
+                    _state.value.selectedListId?.let { loadListWords(it, background = true) }
+                }
         }
     }
 
@@ -1074,13 +1078,10 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 val list = repository.createWordList(trimmed)
-                var failed = 0
-                for (id in ids) {
-                    runCatching { repository.moveCard(id, list.id) }.onFailure { failed++ }
-                }
-                list to failed
-            }.onSuccess { (list, failed) ->
-                finishBulkMove(movedIds = ids, targetListId = list.id, failed = failed)
+                repository.moveCards(ids, list.id)
+                list
+            }.onSuccess { list ->
+                finishBulkMove(movedIds = ids, targetListId = list.id, failed = 0)
             }.onFailure {
                 _state.value = _state.value.copy(
                     error = it.userMessage(strings, R.string.err_create_list),
@@ -1100,13 +1101,10 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 val list = repository.createWordList(trimmed)
-                var failed = 0
-                for (id in ids) {
-                    runCatching { repository.moveCard(id, list.id) }.onFailure { failed++ }
-                }
-                list to failed
-            }.onSuccess { (list, failed) ->
-                finishBulkMove(movedIds = ids, targetListId = list.id, failed = failed)
+                repository.moveCards(ids, list.id)
+                list
+            }.onSuccess { list ->
+                finishBulkMove(movedIds = ids, targetListId = list.id, failed = 0)
             }.onFailure {
                 _state.value = _state.value.copy(
                     error = it.userMessage(strings, R.string.err_create_list),
@@ -1116,20 +1114,34 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun finishBulkMove(movedIds: List<String>, targetListId: String, failed: Int) {
+        val nextListId = applyOptimisticMove(movedIds, targetListId)
+        if (failed > 0) {
+            _state.value = _state.value.copy(error = strings.get(R.string.err_move_partial, failed))
+        }
+        loadLists(nextListId)
+    }
+
+    private fun applyOptimisticMove(movedIds: List<String>, targetListId: String): String? {
         val moved = movedIds.toSet()
         val leftover = _state.value.listWords.filterNot { it.id in moved }
         val sourceId = _state.value.selectedListId
         val sourceIsPending = _state.value.lists.any { it.id == sourceId && it.is_pending_inbox }
         val stayOnSource = sourceIsPending && leftover.any { !it.isReadyToMove() }
         val nextListId = if (stayOnSource) sourceId else targetListId
+        val n = moved.size
         _state.value = _state.value.copy(
             selectedWordIds = emptySet(),
             listWords = leftover,
             tab = HomeTab.LISTS,
-            error = if (failed > 0) strings.get(R.string.err_move_partial, failed) else null,
+            lists = _state.value.lists.map { list ->
+                when (list.id) {
+                    sourceId -> list.copy(word_count = (list.word_count - n).coerceAtLeast(0))
+                    targetListId -> list.copy(word_count = list.word_count + n)
+                    else -> list
+                }
+            },
         )
-        loadLists(nextListId)
-        if (stayOnSource) nextListId?.let { loadListWords(it, background = true) }
+        return nextListId
     }
 
     private fun isMovableCard(card: CardResponse): Boolean = card.isReadyToMove()
@@ -1236,60 +1248,38 @@ class HomeViewModel @Inject constructor(
     private fun startPollingIfNeeded() {
         val pendingCandidates = _state.value.candidates.any { it.enrichment_status == "pending" }
         val pendingWords = _state.value.listWords.any { it.enrichment_status == "pending" }
-        if (!pendingCandidates && !pendingWords) {
+        val hasActivity = _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
+        if (!pendingCandidates && !pendingWords && !hasActivity) {
             pollJob?.cancel()
             return
         }
+        repository.requestBackgroundSync()
         if (pollJob?.isActive == true) return
         pollJob = viewModelScope.launch {
             var iterations = 0
             while (isActive) {
                 delay(2_500)
-                // Twardy limit — nawet gdyby enrichment utknął, nie pollujemy w nieskończoność.
                 if (++iterations > 40) break
                 val listId = _state.value.selectedListId
                 if (listId != null) {
-                    runCatching { repository.listWords(listId) }
+                    runCatching { repository.cachedListWords(listId) }
                         .onSuccess { words ->
                             _state.value = _state.value.copy(listWords = words)
                             syncCandidatesFromWords(words)
                         }
-                } else {
-                    val query = _state.value.query.trim()
-                    if (query.isNotBlank()) {
-                        runCatching { repository.lookup(query) }
-                            .onSuccess { response ->
-                                _state.value = _state.value.copy(candidates = response.candidates)
-                            }
-                    }
                 }
                 val stillPending =
                     _state.value.candidates.any { it.enrichment_status == "pending" } ||
-                        _state.value.listWords.any { it.enrichment_status == "pending" }
+                        _state.value.listWords.any { it.enrichment_status == "pending" } ||
+                        _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
                 if (!stillPending) break
+                if (iterations % 4 == 0) repository.requestBackgroundSync()
             }
         }
-        maybeStartActivityPoll()
     }
 
     private fun maybeStartActivityPoll() {
-        val hasActivity = _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
-        if (!hasActivity) {
-            activityPollJob?.cancel()
-            return
-        }
-        if (activityPollJob?.isActive == true) return
-        activityPollJob = viewModelScope.launch {
-            while (isActive) {
-                delay(2_500)
-                val listId = _state.value.selectedListId ?: break
-                runCatching { repository.listWords(listId) }
-                    .onSuccess { words ->
-                        _state.value = _state.value.copy(listWords = words)
-                    }
-                if (_state.value.listWords.none { !it.card_activity_status.isNullOrBlank() }) break
-            }
-        }
+        startPollingIfNeeded()
     }
 
     private fun markCardActivity(cardId: String, status: String) {

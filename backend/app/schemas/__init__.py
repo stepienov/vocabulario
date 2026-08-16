@@ -278,6 +278,106 @@ class ImportIngestRequest(BaseModel):
     mode: str = Field(default="vocabulario", description="vocabulario | preserve")
 
 
+class ImportJobCreateRequest(BaseModel):
+    profile_id: UUID
+    list_id: UUID
+    mode: str = Field(default="vocabulario")
+    text: str = Field(min_length=1, max_length=500_000)
+
+
+class ImportJobCommitRequest(BaseModel):
+    item_ids: list[UUID] | None = None
+
+
+class ImportJobItemResponse(BaseModel):
+    id: UUID
+    ordinal: int
+    input_label: str
+    verdict: str
+    reason_code: str | None = None
+    reason_detail: str | None = None
+    lemma: str | None = None
+    gloss: str | None = None
+    pos: str | None = None
+    entry_kind: str | None = None
+    display: dict | None = None
+    existing_card_id: UUID | None = None
+    created_card_id: UUID | None = None
+    attempt: int = 0
+
+
+class ImportJobProgressResponse(BaseModel):
+    job_id: UUID
+    status: str
+    phase: str
+    stage: str
+    source_name: str = ""
+    mode: str = "vocabulario"
+    list_id: UUID
+    list_name: str | None = None
+    processed: int = 0
+    total: int = 0
+    current_ordinal: int | None = None
+    current_label: str | None = None
+    current_attempt: int = 0
+    ready_count: int = 0
+    duplicate_count: int = 0
+    failed_count: int = 0
+    created_count: int = 0
+    cancel_requested: bool = False
+    error_code: str | None = None
+    error_message: str | None = None
+    heartbeat_at: datetime | None = None
+
+
+class ImportJobDetailResponse(ImportJobProgressResponse):
+    items: list[ImportJobItemResponse] = Field(default_factory=list)
+
+
+class ImportJobAdminResponse(ImportJobProgressResponse):
+    user_id: UUID
+    profile_id: UUID
+    created_at: datetime | None = None
+    finished_at: datetime | None = None
+
+
+class ImportJobEventResponse(BaseModel):
+    id: UUID
+    job_id: UUID
+    item_id: UUID | None = None
+    at: datetime
+    level: str
+    event: str
+    payload: dict | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class AppLogResponse(BaseModel):
+    id: UUID
+    created_at: datetime
+    level: str
+    category: str
+    event: str
+    status: str
+    request_id: UUID | None = None
+    user_id: UUID | None = None
+    profile_id: UUID | None = None
+    http_method: str | None = None
+    http_path: str | None = None
+    http_status: int | None = None
+    entity_type: str | None = None
+    entity_id: str | None = None
+    duration_ms: int | None = None
+    message: str | None = None
+    error_type: str | None = None
+    error_message: str | None = None
+    traceback: str | None = None
+    payload: dict | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class WordListCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     profile_id: UUID

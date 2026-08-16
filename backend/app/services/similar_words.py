@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from app.ai.schemas.similar_words import FILL_POOL_SIZE, MIN_SIMILAR_WORDS
+from app.ai.schemas.similar_words import (
+    FILL_POOL_SIZE,
+    MIN_SIMILAR_FOR_QUIZ,
+    MIN_SIMILAR_WORDS,
+)
 from app.models import LanguageProfile
 from app.services.llm import LLMService
 
@@ -123,10 +127,10 @@ async def ensure_similar_words(
         return updated
 
     fetched = await fetch_similar_words(LLMService(), profile, lemma, pos)
-    if len(fetched) < MIN_SIMILAR_WORDS:
+    if len(fetched) < MIN_SIMILAR_FOR_QUIZ:
         raise ValueError(
             f"AI zwróciło za mało dystraktorów dla „{lemma}” "
-            f"({len(fetched)}/{MIN_SIMILAR_WORDS}). Spróbuj ponownie."
+            f"({len(fetched)}/{MIN_SIMILAR_FOR_QUIZ}). Spróbuj ponownie."
         )
 
     updated["similar_words"] = fetched

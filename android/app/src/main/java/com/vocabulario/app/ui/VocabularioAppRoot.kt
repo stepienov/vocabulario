@@ -20,13 +20,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.imports.ImportController
-import com.vocabulario.app.data.imports.ImportStatus
 import com.vocabulario.app.ui.auth.AuthScreen
 import com.vocabulario.app.ui.auth.AuthViewModel
 import com.vocabulario.app.ui.components.PairSwitchHost
 import com.vocabulario.app.ui.home.HomeScreen
-import com.vocabulario.app.ui.home.ImportErrorDialog
-import com.vocabulario.app.ui.home.ImportResultDialog
 import com.vocabulario.app.ui.learning.LearningScreen
 import com.vocabulario.app.ui.onboarding.OnboardingScreen
 import com.vocabulario.app.ui.packs.PacksScreen
@@ -68,8 +65,7 @@ fun VocabularioAppRoot(
 ) {
     val startRoute by appViewModel.startRoute.collectAsState()
     val pairSession = rememberPairSession()
-    val importController = rememberImportController()
-    val importState by importController.state.collectAsState()
+    rememberImportController()
     val pairBusy by pairSession.busy.collectAsState()
 
     LaunchedEffect(Unit) { appViewModel.bootstrap() }
@@ -152,30 +148,6 @@ fun VocabularioAppRoot(
                     }
                 }
             }
-        }
-
-        // Modal wyników / błędu nad każdą trasą (poza key(startRoute)).
-        when (importState.status) {
-            ImportStatus.Done -> {
-                val result = importState.result
-                if (result != null) {
-                    ImportResultDialog(
-                        result = result,
-                        onShowList = { importController.dismissResult(openList = true) },
-                        onOk = { importController.dismissResult() },
-                    )
-                }
-            }
-            ImportStatus.Error -> {
-                val msg = importState.error
-                if (!msg.isNullOrBlank()) {
-                    ImportErrorDialog(
-                        message = msg,
-                        onDismiss = { importController.dismissResult() },
-                    )
-                }
-            }
-            else -> Unit
         }
     }
 }

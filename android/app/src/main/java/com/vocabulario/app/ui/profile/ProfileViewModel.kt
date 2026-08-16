@@ -43,7 +43,10 @@ class ProfileViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(loading = true, error = null)
+            val hadData = _state.value.activeProfile != null
+            if (!hadData) {
+                _state.value = _state.value.copy(loading = true, error = null)
+            }
             runCatching {
                 val active = repository.getActiveProfile()
                 val profiles = runCatching { repository.listProfiles() }.getOrElse {
@@ -64,6 +67,18 @@ class ProfileViewModel @Inject constructor(
                     selectedTenses = normalizeTenseKeys(active?.selected_tenses.orEmpty()).toSet(),
                     cefrLevel = active?.cefr_level ?: "A2",
                 )
+                viewModelScope.launch {
+                    runCatching { repository.refreshProfilesFromNetwork() }
+                        .onSuccess { remote ->
+                            if (remote.isNotEmpty()) {
+                                val resolved = remote.firstOrNull { it.is_active } ?: remote.firstOrNull()
+                                _state.value = _state.value.copy(
+                                    profiles = remote,
+                                    activeProfile = resolved ?: _state.value.activeProfile,
+                                )
+                            }
+                        }
+                }
             }.onFailure {
                 _state.value = _state.value.copy(
                     loading = false,

@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import time
 from typing import Any
 
 import httpx
@@ -13,6 +14,8 @@ from app.ai.prompts.v1 import (
     IMPORT_ANSWER_STRUCTURE_SYSTEM_V1,
     IMPORT_CLASSIFY_PROMPT_V1,
     IMPORT_CLASSIFY_SYSTEM_V1,
+    IMPORT_VERIFY_LEMMAS_PROMPT_V1,
+    IMPORT_VERIFY_LEMMAS_SYSTEM_V1,
     IMPORT_DISPLAY_PROMPT_V1,
     IMPORT_DISPLAY_SYSTEM_V1,
     IMPORT_FORMAT_PROMPT_V1,
@@ -34,6 +37,7 @@ from app.ai.language_typology import lang_name_en, language_pair_guidance
 from app.ai.schemas.import_classify import (
     import_adaptive_enrich_schema,
     import_classify_schema,
+    import_verify_lemmas_schema,
 )
 from app.ai.schemas.import_display import (
     import_answer_structure_schema,
@@ -105,14 +109,73 @@ class LLMService:
         if self.mock:
             return self._mock_response(prompt)
         use_provider = (provider or "openai").strip().lower()
-        if use_provider == "anthropic" and self._anthropic is not None:
-            return await self._chat_json_anthropic(
-                model,
-                prompt,
-                system,
-                json_schema=json_schema,
-                max_tokens=max_tokens,
+        schema_name = (json_schema or {}).get("name") or "chat_json"
+        started = time.perf_counter()
+        try:
+            if use_provider == "anthropic" and self._anthropic is not None:
+                data = await self._chat_json_anthropic(
+                    model,
+                    prompt,
+                    system,
+                    json_schema=json_schema,
+                    max_tokens=max_tokens,
+                )
+            else:
+                data = await self._chat_json_openai(
+                    model,
+                    prompt,
+                    system,
+                    json_schema=json_schema,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+        except Exception as exc:
+            from app.services.app_log import log_event
+
+            await log_event(
+                level="error",
+                category="llm",
+                event="llm_call",
+                status="error",
+                duration_ms=int((time.perf_counter() - started) * 1000),
+                message=f"{use_provider}:{model} {schema_name} failed",
+                payload={
+                    "provider": use_provider,
+                    "model": model,
+                    "schema": schema_name,
+                    "prompt_chars": len(prompt or ""),
+                },
+                exc=exc,
             )
+            raise
+        from app.services.app_log import log_event
+
+        await log_event(
+            level="info",
+            category="llm",
+            event="llm_call",
+            status="ok",
+            duration_ms=int((time.perf_counter() - started) * 1000),
+            message=f"{use_provider}:{model} {schema_name}",
+            payload={
+                "provider": use_provider,
+                "model": model,
+                "schema": schema_name,
+                "prompt_chars": len(prompt or ""),
+            },
+        )
+        return data
+
+    async def _chat_json_openai(
+        self,
+        model: str,
+        prompt: str,
+        system: str | None,
+        *,
+        json_schema: dict | None = None,
+        max_tokens: int | None = None,
+        temperature: float = 0.2,
+    ) -> dict[str, Any]:
         assert self.client is not None
         system_content = system or (
             "Jesteś asystentem językowym. Zwracasz wyłącznie poprawny JSON "
@@ -637,6 +700,38 @@ class LLMService:
         )
         _log_import_llm(
             "IMPORT CLASSIFY ← RESPONSE",
+            json.dumps(result, ensure_ascii=False, indent=2),
+        )
+        return result
+
+    async def analyze_import_verify_lemmas(
+        self,
+        *,
+        learning: str,
+        lemmas: list[str],
+    ) -> dict:
+        prompt = IMPORT_VERIFY_LEMMAS_PROMPT_V1.format(
+            learning_name=lang_name_en(learning),
+            lemmas_json=json.dumps(
+                [{"index": i, "lemma": lemma} for i, lemma in enumerate(lemmas)],
+                ensure_ascii=False,
+                indent=2,
+            ),
+        )
+        _log_import_llm(
+            f"IMPORT VERIFY LEMMAS → PROMPT (model={self.lookup_model}, n={len(lemmas)})",
+            f"--- SYSTEM ---\n{IMPORT_VERIFY_LEMMAS_SYSTEM_V1}\n\n--- USER ---\n{prompt}",
+        )
+        result = await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=IMPORT_VERIFY_LEMMAS_SYSTEM_V1,
+            json_schema=import_verify_lemmas_schema(),
+            max_tokens=2000,
+            temperature=0,
+        )
+        _log_import_llm(
+            "IMPORT VERIFY LEMMAS ← RESPONSE",
             json.dumps(result, ensure_ascii=False, indent=2),
         )
         return result

@@ -13,7 +13,33 @@ from app.services.llm import LLMService
 
 logger = logging.getLogger(__name__)
 
-_BATCH = 50
+# Jedna paczka = cała talia (brak limitu kart; jeden call LLM).
+_BATCH = 10_000
+
+
+async def classify_notes_detailed(
+    notes: list[list[str]],
+    *,
+    app_lang: str,
+    learning_lang: str,
+    llm: LLMService | None = None,
+) -> list[dict[str, Any]]:
+    """Jedna pozycja na notatkę: lemma / invalid_reason, jeszcze bez dedupu list usera."""
+    service = llm or LLMService()
+    classified: list[dict[str, Any]] = []
+    for start in range(0, len(notes), _BATCH):
+        chunk = notes[start : start + _BATCH]
+        if service.mock:
+            batch = _mock_classify(chunk, offset=start, learning_lang=learning_lang)
+        else:
+            raw = await service.analyze_import_classify(
+                native=app_lang,
+                learning=learning_lang,
+                notes=chunk,
+            )
+            batch = _normalize_batch(raw, chunk, offset=start, learning_lang=learning_lang)
+        classified.extend(batch)
+    return classified
 
 
 async def resolve_import_vocabulario_entries(
@@ -35,20 +61,12 @@ async def resolve_import_vocabulario_entries(
         raise ImportPackageError("Brak notatek do zaimportowania.")
 
     notes = deck.notes
-    classified: list[dict[str, Any]] = []
-
-    for start in range(0, len(notes), _BATCH):
-        chunk = notes[start : start + _BATCH]
-        if service.mock:
-            batch = _mock_classify(chunk, offset=start, learning_lang=learning_lang)
-        else:
-            raw = await service.analyze_import_classify(
-                native=app_lang,
-                learning=learning_lang,
-                notes=chunk,
-            )
-            batch = _normalize_batch(raw, chunk, offset=start, learning_lang=learning_lang)
-        classified.extend(batch)
+    classified = await classify_notes_detailed(
+        notes,
+        app_lang=app_lang,
+        learning_lang=learning_lang,
+        llm=service,
+    )
 
     valid: list[dict[str, Any]] = []
     invalid: list[str] = []

@@ -10,23 +10,26 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,25 +39,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vocabulario.app.R
-import com.vocabulario.app.data.api.ImportDisplayCard
-import com.vocabulario.app.data.api.ImportValidWord
+import com.vocabulario.app.data.api.ImportJobItemResponse
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.imports.ImportJobState
 import com.vocabulario.app.data.imports.ImportResult
 import com.vocabulario.app.data.imports.ImportStatus
+import com.vocabulario.app.data.imports.isPasteImportSource
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppAlertDialog
 import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.AppDialogAction
 import com.vocabulario.app.ui.components.AppDialogButtonRow
 import com.vocabulario.app.ui.components.AppGrayField
-import com.vocabulario.app.ui.components.ImportDisplayFlip
+import com.vocabulario.app.ui.theme.LocalVocabExtraColors
 
 @Composable
 fun ImportStatusPanel(
@@ -63,7 +68,8 @@ fun ImportStatusPanel(
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val source = state.sourceName.orEmpty()
+    val source = localizedImportSource(state.sourceName).orEmpty()
+    val counted = state.stage in setOf("dedup", "write")
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -74,21 +80,46 @@ fun ImportStatusPanel(
     ) {
         CircularProgressIndicator(color = scheme.primary, strokeWidth = 3.dp)
         Text(
-            text = when (state.status) {
-                ImportStatus.Processing ->
-                    stringResource(R.string.import_status_analyzing, source)
-                ImportStatus.Committing ->
-                    stringResource(R.string.import_status_importing, source)
-                else -> stringResource(R.string.import_progress)
-            },
+            text = importStageTitle(state.stage, state.status),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = scheme.onSurface,
         )
-        if (state.status == ImportStatus.Committing && state.total > 0) {
+        if (source.isNotBlank()) {
+            Text(source, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+        }
+        if (counted && state.total > 0) {
+            LinearProgressIndicator(
+                progress = { (state.processed.toFloat() / state.total).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth(),
+            )
             Text(
                 stringResource(R.string.import_progress_count, state.processed, state.total),
                 style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+            )
+        } else {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+        state.currentLabel?.takeIf { it.isNotBlank() }?.let { label ->
+            Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        }
+        if (state.status == ImportStatus.Committing && state.currentAttempt > 1) {
+            Text(
+                stringResource(R.string.import_progress_attempt, state.currentAttempt),
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant,
+            )
+        }
+        if (state.readyCount + state.duplicateCount + state.failedCount > 0) {
+            Text(
+                stringResource(
+                    R.string.import_progress_tally,
+                    state.readyCount,
+                    state.duplicateCount,
+                    state.failedCount,
+                ),
+                style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant,
             )
         }
@@ -110,20 +141,341 @@ fun ImportStatusPanel(
 }
 
 @Composable
+private fun localizedImportSource(raw: String?): String? {
+    if (raw.isNullOrBlank()) return null
+    if (isPasteImportSource(raw)) return stringResource(R.string.import_paste_source)
+    return raw
+}
+
+@Composable
+private fun importStageTitle(stage: String, status: ImportStatus): String = when {
+    status == ImportStatus.Cancelling || stage == "rollback" ->
+        stringResource(R.string.import_stage_rollback)
+    stage == "queued" -> stringResource(R.string.import_stage_queued)
+    stage == "format" -> stringResource(R.string.import_stage_format)
+    stage == "classify" -> stringResource(R.string.import_stage_classify)
+    stage == "layout" -> stringResource(R.string.import_stage_layout)
+    stage == "dedup" -> stringResource(R.string.import_stage_dedup)
+    stage == "write" -> stringResource(R.string.import_stage_write)
+    else -> stringResource(R.string.import_progress)
+}
+
+@Composable
 fun ImportAbortConfirmDialog(
+    fromReview: Boolean,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     DestroyConfirmDialog(
         visible = true,
-        title = stringResource(R.string.import_abort_title),
-        confirmText = stringResource(R.string.action_abort),
+        title = stringResource(
+            if (fromReview) R.string.import_discard_title else R.string.import_abort_title,
+        ),
+        confirmText = stringResource(
+            if (fromReview) R.string.action_ok else R.string.action_abort,
+        ),
         onDismiss = onDismiss,
         onConfirm = onConfirm,
         confirmTag = TestTags.DIALOG_CONFIRM,
         cancelTag = TestTags.DIALOG_CANCEL,
         dialogTag = TestTags.IMPORT_ABORT_CONFIRM,
     )
+}
+
+@Composable
+fun ImportReviewAccordion(
+    state: ImportJobState,
+    onExpand: (String?) -> Unit,
+    onAbort: () -> Unit,
+    onCommit: () -> Unit,
+    onCopyErrors: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val clipboard = LocalClipboardManager.current
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
+    ) {
+        state.notice?.let {
+            Text(it, color = scheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+        }
+        AccordionSection(
+            title = stringResource(R.string.import_section_ready, state.readyCount),
+            expanded = state.expandedSection == "ready",
+            tag = TestTags.IMPORT_ACCORDION_READY,
+            items = state.readyItems,
+            hint = if (state.readyCount > 0) stringResource(R.string.import_ready_hint) else null,
+            emptyLabel = if (state.readyCount > 0 && state.readyItems.isEmpty()) {
+                stringResource(R.string.import_review_loading)
+            } else {
+                null
+            },
+            onClick = { onExpand("ready") },
+        )
+        AccordionSection(
+            title = stringResource(R.string.import_section_duplicates, state.duplicateCount),
+            expanded = state.expandedSection == "duplicate",
+            tag = TestTags.IMPORT_ACCORDION_DUP,
+            items = state.duplicateItems,
+            onClick = { onExpand("duplicate") },
+        )
+        AccordionSection(
+            title = stringResource(R.string.import_section_failed, state.failedCount),
+            expanded = state.expandedSection == "failed",
+            tag = TestTags.IMPORT_ACCORDION_FAIL,
+            items = state.failedItems,
+            hint = if (state.failedCount > 0) stringResource(R.string.import_errors_hint) else null,
+            onClick = { onExpand("failed") },
+            onCopy = if (state.failedCount > 0) {
+                {
+                    clipboard.setText(AnnotatedString(state.errorClipboard))
+                    onCopyErrors()
+                }
+            } else {
+                null
+            },
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            OutlinedButton(
+                onClick = onAbort,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp)
+                    .testTag(TestTags.BTN_IMPORT_CANCEL),
+                shape = AppButtonShape,
+            ) {
+                Text(stringResource(R.string.action_cancel))
+            }
+            Button(
+                onClick = onCommit,
+                enabled = state.readyCount > 0,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp)
+                    .testTag(TestTags.BTN_IMPORT_CONFIRM),
+                shape = AppButtonShape,
+            ) {
+                Text(stringResource(R.string.import_action_start) + " ${state.readyCount}")
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccordionSection(
+    title: String,
+    expanded: Boolean,
+    tag: String,
+    items: List<ImportJobItemResponse>,
+    onClick: () -> Unit,
+    hint: String? = null,
+    emptyLabel: String? = null,
+    onCopy: (() -> Unit)? = null,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .testTag(tag)
+                .clickable(onClick = onClick),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                if (expanded) "▾ $title" else "▸ $title",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = scheme.onSurface,
+            )
+            if (onCopy != null) {
+                IconButton(
+                    onClick = onCopy,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .testTag(TestTags.IMPORT_COPY_ERRORS),
+                ) {
+                    Icon(
+                        Icons.Outlined.ContentCopy,
+                        contentDescription = stringResource(R.string.import_copy_errors),
+                        modifier = Modifier.size(20.dp),
+                        tint = scheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        if (expanded && (hint != null || emptyLabel != null || items.isNotEmpty())) {
+            if (hint != null) {
+                Text(
+                    hint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 20.dp, end = 4.dp, bottom = 8.dp),
+                )
+            }
+            if (items.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 280.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items.forEach { item ->
+                        ImportJobItemRow(item)
+                    }
+                }
+            } else if (emptyLabel != null) {
+                Text(
+                    emptyLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 20.dp, end = 4.dp, bottom = 8.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImportJobItemRow(item: ImportJobItemResponse) {
+    val scheme = MaterialTheme.colorScheme
+    val untitled = stringResource(R.string.import_item_untitled)
+    val word = when (item.verdict) {
+        "failed", "duplicate" -> item.input_label.takeIf { it.isNotBlank() }
+            ?: item.lemma?.takeIf { it.isNotBlank() }
+            ?: untitled
+        else -> item.lemma?.takeIf { it.isNotBlank() }
+            ?: item.input_label.takeIf { it.isNotBlank() }
+            ?: untitled
+    }
+    val detail = when (item.verdict) {
+        "failed", "duplicate" -> reasonLabel(item.reason_code)
+        else -> item.gloss?.takeIf { it.isNotBlank() }
+    }
+    Column(modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp)) {
+        Text(
+            word,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = LocalVocabExtraColors.current.importLemma,
+        )
+        if (!detail.isNullOrBlank()) {
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun reasonLabel(code: String?): String = when (code) {
+    "already_on_list" -> stringResource(R.string.import_reason_already_on_list)
+    "in_file_duplicate" -> stringResource(R.string.import_reason_in_file_duplicate)
+    "no_lemma" -> stringResource(R.string.import_reason_no_lemma)
+    "llm_invalid" -> stringResource(R.string.import_reason_llm_invalid)
+    "write_failed" -> stringResource(R.string.import_reason_write_failed)
+    "deselected" -> stringResource(R.string.import_reason_unknown)
+    else -> stringResource(R.string.import_reason_unknown)
+}
+
+@Composable
+fun ImportOutcomePanel(
+    state: ImportJobState,
+    onOk: () -> Unit,
+    onShowList: () -> Unit,
+    onCopyErrors: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val clipboard = LocalClipboardManager.current
+    val created = state.result?.created ?: state.createdCount
+    val duplicates = state.result?.duplicates ?: state.duplicateCount
+    val failed = state.result?.failed ?: state.failedCount
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = AppButtonShape,
+        color = scheme.surfaceVariant,
+        contentColor = scheme.onSurface,
+    ) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            when (state.status) {
+                ImportStatus.Cancelled -> stringResource(R.string.import_cancelled)
+                ImportStatus.Failed, ImportStatus.Error ->
+                    state.error ?: stringResource(R.string.import_result_title)
+                else -> stringResource(R.string.import_result_title)
+            },
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = scheme.onSurface,
+        )
+        if (state.status == ImportStatus.Done || created + duplicates + failed > 0) {
+            Text(
+                if (failed > 0) {
+                    stringResource(
+                        R.string.import_result_body_failed,
+                        created,
+                        duplicates,
+                        failed,
+                    )
+                } else {
+                    stringResource(
+                        R.string.import_result_body,
+                        created,
+                        duplicates,
+                    )
+                },
+                style = MaterialTheme.typography.bodyLarge,
+                color = scheme.onSurface,
+            )
+        }
+        if (state.failedCount > 0 && state.errorClipboard.isNotBlank()) {
+            TextButton(
+                onClick = {
+                    clipboard.setText(AnnotatedString(state.errorClipboard))
+                    onCopyErrors()
+                },
+                modifier = Modifier.testTag(TestTags.IMPORT_COPY_ERRORS),
+            ) {
+                Text(stringResource(R.string.import_copy_errors))
+            }
+        }
+        state.notice?.let { Text(it, color = scheme.onSurfaceVariant) }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            if (state.status == ImportStatus.Done && !state.targetListId.isNullOrBlank()) {
+                OutlinedButton(
+                    onClick = onShowList,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = AppButtonShape,
+                ) {
+                    Text(stringResource(R.string.action_show_list))
+                }
+            }
+            Button(
+                onClick = onOk,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp)
+                    .testTag(TestTags.IMPORT_RESULT_OK),
+                shape = AppButtonShape,
+            ) {
+                Text(stringResource(R.string.action_ok))
+            }
+        }
+    }
+    }
 }
 
 @Composable
@@ -179,188 +531,6 @@ fun ImportErrorDialog(
             )
         },
     )
-}
-
-@Composable
-fun ImportReviewDialog(
-    state: ImportJobState,
-    onToggle: (String) -> Unit,
-    onCancel: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    val scheme = MaterialTheme.colorScheme
-    val flaggedKinds = setOf("construction", "phrase", "sentence")
-    val preserve = state.mode == "preserve"
-    val regularWords = if (!preserve) {
-        state.valid.filter { it.entry_kind.lowercase() !in flaggedKinds }
-    } else emptyList()
-    val flaggedWords = if (!preserve) {
-        state.valid.filter { it.entry_kind.lowercase() in flaggedKinds }
-    } else emptyList()
-    val regularCards = if (preserve) {
-        state.displayCards.filter { it.display.prompt_style !in setOf("phrase", "sentence") }
-    } else emptyList()
-    val flaggedCards = if (preserve) {
-        state.displayCards.filter { it.display.prompt_style in setOf("phrase", "sentence") }
-    } else emptyList()
-
-    AppAlertDialog(
-        onDismissRequest = onCancel,
-        modifier = Modifier.testTag(TestTags.IMPORT_REVIEW_MODAL),
-        title = stringResource(R.string.import_start_title),
-        text = {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 420.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (regularWords.isNotEmpty() || regularCards.isNotEmpty()) {
-                    item {
-                        Text(
-                            stringResource(R.string.import_review_ready),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                    items(regularCards, key = { it.key }) { card ->
-                        ImportReviewDisplayRow(
-                            card = card,
-                            checked = card.key !in state.deselectedKeys,
-                            onToggle = { onToggle(card.key) },
-                        )
-                    }
-                    items(regularWords, key = { it.input }) { word ->
-                        ImportReviewWordRow(
-                            word = word,
-                            checked = word.input !in state.deselectedKeys,
-                            onToggle = { onToggle(word.input) },
-                        )
-                    }
-                }
-                if (flaggedWords.isNotEmpty() || flaggedCards.isNotEmpty()) {
-                    item {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            stringResource(R.string.import_review_flagged),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = scheme.tertiary,
-                        )
-                    }
-                    items(flaggedCards, key = { "f-${it.key}" }) { card ->
-                        ImportReviewDisplayRow(
-                            card = card,
-                            checked = card.key !in state.deselectedKeys,
-                            onToggle = { onToggle(card.key) },
-                        )
-                    }
-                    items(flaggedWords, key = { "f-${it.input}" }) { word ->
-                        ImportReviewWordRow(
-                            word = word,
-                            checked = word.input !in state.deselectedKeys,
-                            onToggle = { onToggle(word.input) },
-                        )
-                    }
-                }
-                if (state.invalid.isNotEmpty()) {
-                    item {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            stringResource(R.string.import_invalid_title),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = scheme.error,
-                        )
-                    }
-                    items(state.invalid) { w ->
-                        Text("• $w", color = scheme.onSurfaceVariant)
-                    }
-                }
-            }
-        },
-        buttons = {
-            AppDialogButtonRow(
-                secondaryText = stringResource(R.string.action_cancel),
-                onSecondary = onCancel,
-                secondaryModifier = Modifier.testTag(TestTags.BTN_IMPORT_CANCEL),
-                primaryText = stringResource(R.string.action_ok),
-                onPrimary = onConfirm,
-                primaryEnabled = state.selectedCount > 0,
-                primaryModifier = Modifier.testTag(TestTags.BTN_IMPORT_CONFIRM),
-            )
-        },
-    )
-}
-
-@Composable
-private fun ImportReviewWordRow(
-    word: ImportValidWord,
-    checked: Boolean,
-    onToggle: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(TestTags.IMPORT_REVIEW_ITEM)
-            .clickable(onClick = onToggle),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(checked = checked, onCheckedChange = { onToggle() })
-        Column(modifier = Modifier.weight(1f)) {
-            Text(word.lemma, fontWeight = FontWeight.SemiBold, maxLines = 2)
-            val sub = listOfNotNull(
-                entryKindLabel(word.entry_kind),
-                word.gloss.takeIf { it.isNotBlank() },
-            ).joinToString(" · ")
-            if (sub.isNotBlank()) {
-                Text(sub, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ImportReviewDisplayRow(
-    card: ImportDisplayCard,
-    checked: Boolean,
-    onToggle: () -> Unit,
-) {
-    var expanded by remember(card.key) { mutableStateOf(false) }
-    Column(modifier = Modifier.fillMaxWidth().testTag(TestTags.IMPORT_REVIEW_ITEM)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggle),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Checkbox(checked = checked, onCheckedChange = { onToggle() })
-            Text(
-                card.lemma_l2,
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { expanded = !expanded },
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-            )
-        }
-        if (expanded) {
-            ImportDisplayFlip(
-                display = card.display,
-                modifier = Modifier.padding(start = 40.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun entryKindLabel(kind: String): String? = when (kind.lowercase()) {
-    "lemma" -> stringResource(R.string.kind_lemma)
-    "phrase" -> stringResource(R.string.kind_phrase)
-    "construction" -> stringResource(R.string.kind_construction)
-    "sentence" -> stringResource(R.string.kind_sentence)
-    "other" -> stringResource(R.string.kind_other)
-    else -> null
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -6,7 +6,29 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.lsp.lang_utils import articles_for
 from app.models import LanguageProfile, LearningCard
+
+
+def _lemma_key(raw: str | None, articles: frozenset[str]) -> str:
+    lower = (raw or "").strip().lower()
+    if not lower:
+        return ""
+    parts = lower.split()
+    rest = " ".join(parts[1:]) if len(parts) > 1 and parts[0] in articles else lower
+    return rest.removeprefix("l'").removeprefix("l’")
+
+
+def lemma_keys(raw: str | None, articles: frozenset[str]) -> set[str]:
+    exact = (raw or "").strip().lower()
+    if not exact:
+        return set()
+    return {key for key in (exact, _lemma_key(exact, articles)) if key}
+
+
+def in_learning_lemma(raw: str | None, learning_keys: set[str], articles: frozenset[str]) -> bool:
+    keys = lemma_keys(raw, articles)
+    return bool(keys and keys & learning_keys)
 
 
 def similar_words_from_content(content: dict) -> list[dict]:
@@ -44,6 +66,11 @@ async def generate_choice_options(
     )
     others = list(result.scalars().all())
     same_pos = [c for c in others if c.pos == card.pos] if card.pos else list(others)
+    articles = articles_for(profile.learning_lang)
+    learning_keys: set[str] = set()
+    for learned in others:
+        learning_keys |= lemma_keys(learned.lemma_l2, articles)
+    learning_keys |= lemma_keys(card.lemma_l2, articles)
 
     if direction == "l2_to_l1":
         correct_text = card.gloss_primary or ""
@@ -67,7 +94,7 @@ async def generate_choice_options(
                 "gloss": gloss,
                 "pos": s.get("pos") or card.pos,
                 "card_id": None,
-                "in_learning": False,
+                "in_learning": in_learning_lemma(lemma, learning_keys, articles),
             }
     else:
         correct_text = card.lemma_l2
@@ -90,7 +117,7 @@ async def generate_choice_options(
                 "gloss": s.get("gloss_l1"),
                 "pos": s.get("pos") or card.pos,
                 "card_id": None,
-                "in_learning": False,
+                "in_learning": in_learning_lemma(lemma, learning_keys, articles),
             }
 
     distractors: list[dict] = []

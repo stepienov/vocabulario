@@ -349,6 +349,8 @@
     <string name="action_abort">中止</string>
     <string name="import_abort_title">インポートを中止しますか？</string>
     <string name="import_abort_body">進捗は破棄されます。</string>
+    <string name="import_discard_title">このインポートを破棄しますか？</string>
+    <string name="import_discard_body">分析結果は破棄されます。何も追加されません。</string>
     <string name="import_result_title">インポート完了</string>
     <string name="import_result_body">追加 %1$d、重複 %2$d</string>
     <string name="import_result_body_failed">追加 %1$d、重複 %2$d、エラー %3$d</string>
@@ -358,6 +360,33 @@
     <string name="import_interrupted">インポートが中断されました。もう一度お試しください</string>
     <string name="import_review_ready">インポートの準備完了</string>
     <string name="import_new_list_option">+ 新しいリスト</string>
+
+    <string name="import_section_ready">インポート予定（%d）</string>
+    <string name="import_section_duplicates">重複（%d）</string>
+    <string name="import_section_failed">エラー（%d）</string>
+    <string name="import_copy_errors">エラーの語をコピー</string>
+    <string name="import_errors_copied">%d語をコピーしました</string>
+    <string name="import_reason_already_on_list">この語はすでにリストにあります。</string>
+    <string name="import_reason_in_file_duplicate">この語はこのインポート内で重複しています。</string>
+    <string name="import_reason_no_lemma">句や文のようで、辞書カードにできません。</string>
+    <string name="import_reason_llm_invalid">学習する語として認識できませんでした。学習中の言語か確認してください。</string>
+    <string name="import_reason_unknown">この語は今インポートできません。</string>
+    <string name="import_ready_hint">これらの語がリストに入ります。</string>
+    <string name="import_review_loading">語を読み込み中…</string>
+    <string name="import_errors_hint">これらの語はリストに入りません。</string>
+    <string name="import_item_untitled">不明な語</string>
+    <string name="import_reason_write_failed">3回試してもこの語を保存できませんでした。</string>
+    <string name="import_cancelled">中止しました。何も追加されていません。</string>
+    <string name="import_stage_queued">待機中…</string>
+    <string name="import_stage_format">ファイル形式を読み取り中…</string>
+    <string name="import_stage_classify">単語を分析中…</string>
+    <string name="import_stage_layout">カードを配置中…</string>
+    <string name="import_stage_dedup">重複を確認中</string>
+    <string name="import_stage_write">リストに保存中</string>
+    <string name="import_stage_rollback">中止して元に戻しています…</string>
+    <string name="import_progress_attempt">試行 %1$d/3</string>
+    <string name="import_progress_tally">OK %1$d · 重複 %2$d · エラー %3$d</string>
+
 <string name="section_meanings">意味</string>
 
     <string name="section_synonyms">同義語</string>

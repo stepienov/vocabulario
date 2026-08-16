@@ -605,7 +605,7 @@ IMPORT_CLASSIFY_SYSTEM_V1 = (
     "Dla każdej notatki ustalasz entry_kind i headword_l2 (język uczony). "
     "Cel: wyciągnąć LEMATY słownikowe do pełnych kart Vocabulario (jak lookup). "
     "Dla zwrotów/konstrukcji podaj base_lemma (goły lemat). "
-    "valid=false tylko przy pustce / śmieciach / braku treści L2. Tylko JSON."
+    "valid=false przy pustce, śmieciach (ppppp, xxx, liczby, symbole) i braku lematu. Tylko JSON."
 )
 
 IMPORT_CLASSIFY_PROMPT_V1 = """Użytkownik importuje fiszki do Vocabulario (tryb bogatych kart).
@@ -631,11 +631,37 @@ Dla KAŻDEJ notatki (po indeksie) zwróć wpis:
 - invalid_reason — gdy valid=false
 
 WAŻNE:
+- Jednopolowa notatka, która wygląda na prawdziwe słowo / article+noun / krótki zwrot = headword. valid=true nawet gdy tekst jest w L1, nie w L2 z profilu.
+- valid=false gdy to NIE jest lemat: puste, GUID, CSS/JS, same liczby, symbole, powtórzone litery (ppppppppp), bezsamogłoskowy stek, oczywisty śmieć. NIE dopisuj rodzaju (la/el) do śmieci.
 - „volver a hacer algo” = construction + base_lemma=\"volver\" (z tego powstanie karta lematu).
 - Zdania bez sensownego lematu: entry_kind=sentence; backend odrzuci je z trybu Vocabulario.
 - Pojedyncze słowa / article+noun = lemma.
 Zwróć entries dla wszystkich indeksów 0..N-1.
 rationale po polsku.
+"""
+
+IMPORT_VERIFY_LEMMAS_SYSTEM_V1 = (
+    "You check a list of flashcard headwords. "
+    "Return only indexes that are NOT real dictionary lemmas. JSON only."
+)
+
+IMPORT_VERIFY_LEMMAS_PROMPT_V1 = """These strings already passed mechanical filters. They will become vocabulary cards.
+
+Learning language: {learning_name}
+
+Headwords (index = position):
+{lemmas_json}
+
+Return invalid[] for strings that are NOT real dictionary lemmas in any language:
+- keyboard smash, repeated letters (ppppppppp), numbers, symbols, invented letter salad
+- article + junk (la ppppppppp, el 123456)
+
+Keep as valid (do NOT list them):
+- real words even if they are not in the learning language
+- article + real noun (el perro, la casa)
+- short real function words
+
+If unsure whether it is a real word, keep it valid.
 """
 
 IMPORT_ADAPTIVE_SYSTEM_V1 = (

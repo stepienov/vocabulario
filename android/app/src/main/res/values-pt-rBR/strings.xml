@@ -317,15 +317,44 @@
     <string name="action_abort">Interromper</string>
     <string name="import_abort_title">Interromper a importação?</string>
     <string name="import_abort_body">O progresso será descartado.</string>
+    <string name="import_discard_title">Anular a importação?</string>
+    <string name="import_discard_body">O resultado da análise será descartado. Nada será adicionado.</string>
     <string name="import_result_title">Importação concluída</string>
     <string name="import_result_body">Adicionadas %1$d, duplicatas %2$d</string>
     <string name="import_result_body_failed">Adicionadas %1$d, duplicatas %2$d, erros %3$d</string>
     <string name="import_review_flagged">Expressões e construções</string>
     <string name="action_show_list">Mostrar lista</string>
-    <string name="import_paste_source">Colado</string>
+    <string name="import_paste_source">Texto colado</string>
     <string name="import_interrupted">Importação interrompida — tente de novo</string>
     <string name="import_review_ready">Pronto para importar</string>
     <string name="import_new_list_option">+ Nova lista</string>
+
+    <string name="import_section_ready">Será importado (%d)</string>
+    <string name="import_section_duplicates">Duplicatas (%d)</string>
+    <string name="import_section_failed">Erros (%d)</string>
+    <string name="import_copy_errors">Copiar palavras com erro</string>
+    <string name="import_errors_copied">%d palavras copiadas</string>
+    <string name="import_reason_already_on_list">Esta palavra já está nas suas listas.</string>
+    <string name="import_reason_in_file_duplicate">Esta palavra se repete nesta importação.</string>
+    <string name="import_reason_no_lemma">Parece uma expressão ou frase — não dá para virar um cartão de dicionário.</string>
+    <string name="import_reason_llm_invalid">Não foi reconhecida como palavra para aprender. Confira se está no idioma que você está aprendendo.</string>
+    <string name="import_reason_unknown">Esta palavra não pode ser importada agora.</string>
+    <string name="import_ready_hint">Estas palavras serão adicionadas à sua lista.</string>
+    <string name="import_review_loading">Carregando as palavras…</string>
+    <string name="import_errors_hint">Estas palavras não serão adicionadas à sua lista.</string>
+    <string name="import_item_untitled">Palavra desconhecida</string>
+    <string name="import_reason_write_failed">Não foi possível salvar esta palavra (após 3 tentativas).</string>
+    <string name="import_cancelled">Cancelado. Nada foi adicionado.</string>
+    <string name="import_stage_queued">Na fila…</string>
+    <string name="import_stage_format">Lendo o formato…</string>
+    <string name="import_stage_classify">Analisando palavras…</string>
+    <string name="import_stage_layout">Montando os cards…</string>
+    <string name="import_stage_dedup">Verificando duplicatas</string>
+    <string name="import_stage_write">Salvando na lista</string>
+    <string name="import_stage_rollback">Cancelando e desfazendo…</string>
+    <string name="import_progress_attempt">tentativa %1$d/3</string>
+    <string name="import_progress_tally">OK %1$d · duplicata %2$d · erro %3$d</string>
+
 <string name="section_meanings">SIGNIFICADOS</string>
 
     <string name="section_synonyms">SINÔNIMOS</string>

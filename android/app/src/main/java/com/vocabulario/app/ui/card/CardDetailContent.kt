@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vocabulario.app.R
 import com.vocabulario.app.data.LanguagePacks
+import com.vocabulario.app.data.containsLemma
 import com.vocabulario.app.data.conjugationFromContent
 import com.vocabulario.app.data.asJsonArray
 import com.vocabulario.app.data.asJsonObject
@@ -91,6 +92,7 @@ fun CardDetailContent(
     enrichmentError: String? = null,
     profile: LanguageProfileResponse? = null,
     onAddRelated: ((RelatedWord) -> Unit)? = null,
+    learningLemmas: Set<String> = emptySet(),
     /** Gdy false — przewijanie obsługuje rodzic (np. pełny widok z listy). */
     scrollable: Boolean = true,
 ) {
@@ -157,7 +159,7 @@ fun CardDetailContent(
             "failed" -> {
                 AppCard {
                     Text(
-                        enrichmentError ?: stringResource(R.string.creating_card_failed),
+                        stringResource(R.string.creating_card_failed),
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
@@ -244,6 +246,7 @@ fun CardDetailContent(
                 title = stringResource(R.string.section_synonyms_short),
                 words = synonymsL2,
                 onAdd = onAddRelated,
+                learningLemmas = learningLemmas,
             )
         }
 
@@ -270,6 +273,7 @@ fun CardDetailContent(
                 title = stringResource(R.string.section_synonyms_short),
                 words = synonymsL2,
                 onAdd = onAddRelated,
+                learningLemmas = learningLemmas,
             )
         }
 
@@ -278,6 +282,7 @@ fun CardDetailContent(
                 title = stringResource(R.string.section_antonyms_short),
                 words = antonymsL2,
                 onAdd = onAddRelated,
+                learningLemmas = learningLemmas,
             )
         }
 
@@ -286,6 +291,7 @@ fun CardDetailContent(
                 title = stringResource(R.string.section_word_family),
                 words = wordFamilyL2,
                 onAdd = onAddRelated,
+                learningLemmas = learningLemmas,
             )
         }
 
@@ -592,6 +598,7 @@ private fun RelatedWordsSection(
     title: String,
     words: List<RelatedWord>,
     onAdd: ((RelatedWord) -> Unit)?,
+    learningLemmas: Set<String> = emptySet(),
 ) {
     AppCard {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -634,7 +641,7 @@ private fun RelatedWordsSection(
                             )
                         }
                     }
-                    if (onAdd != null) {
+                    if (onAdd != null && !learningLemmas.containsLemma(word.lemma)) {
                         val scheme = MaterialTheme.colorScheme
                         Surface(
                             onClick = { onAdd(word) },

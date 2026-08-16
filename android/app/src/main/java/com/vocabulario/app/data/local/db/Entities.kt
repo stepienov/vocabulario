@@ -2,9 +2,20 @@ package com.vocabulario.app.data.local.db
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "cached_cards")
+@Entity(
+    tableName = "cached_cards",
+    indices = [
+        Index(value = ["profileId"], name = "index_cached_cards_profileId"),
+        Index(value = ["profileId", "deckId"], name = "index_cached_cards_profileId_deckId"),
+        Index(
+            value = ["profileId", "enrichmentStatus", "status", "nextReviewAt"],
+            name = "index_cached_cards_queue",
+        ),
+    ],
+)
 data class CachedCardEntity(
     @PrimaryKey val id: String,
     val profileId: String,
@@ -32,7 +43,10 @@ data class CachedCardEntity(
     val updatedAt: Long = 0L,
 )
 
-@Entity(tableName = "cached_lists")
+@Entity(
+    tableName = "cached_lists",
+    indices = [Index(value = ["profileId"], name = "index_cached_lists_profileId")],
+)
 data class CachedListEntity(
     @PrimaryKey val id: String,
     val profileId: String,

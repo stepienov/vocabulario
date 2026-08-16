@@ -238,4 +238,7 @@ interface CachedProfileDao {
 
     @Query("SELECT * FROM cached_profile WHERE id = :id LIMIT 1")
     suspend fun byId(id: String): CachedProfileEntity?
+
+    @Query("SELECT * FROM cached_profile")
+    suspend fun all(): List<CachedProfileEntity>
 }

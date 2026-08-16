@@ -50,6 +50,14 @@ class AppViewModel @Inject constructor(
                 return@launch
             }
 
+            if (learningRepository.hasCachedProfile()) {
+                runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
+                runCatching { learningRepository.syncThemeFromSettings() }
+                _startRoute.value = AppStartRoute.HOME
+                syncInBackground()
+                return@launch
+            }
+
             val result = withTimeoutOrNull(8_000) {
                 runCatching {
                     authRepository.ensureActiveProfile()

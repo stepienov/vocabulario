@@ -318,15 +318,44 @@
     <string name="action_abort">Interrompre</string>
     <string name="import_abort_title">Interrompre l’import ?</string>
     <string name="import_abort_body">La progression sera perdue.</string>
+    <string name="import_discard_title">Annuler l’import ?</string>
+    <string name="import_discard_body">Le résultat de l’analyse sera ignoré. Rien ne sera ajouté.</string>
     <string name="import_result_title">Import terminé</string>
     <string name="import_result_body">Ajoutés %1$d, doublons %2$d</string>
     <string name="import_result_body_failed">Ajoutés %1$d, doublons %2$d, erreurs %3$d</string>
     <string name="import_review_flagged">Expressions et constructions</string>
     <string name="action_show_list">Afficher la liste</string>
-    <string name="import_paste_source">Collage</string>
+    <string name="import_paste_source">Texte collé</string>
     <string name="import_interrupted">Import interrompu — réessayez</string>
     <string name="import_review_ready">Prêt à importer</string>
     <string name="import_new_list_option">+ Nouvelle liste</string>
+
+    <string name="import_section_ready">Sera importé (%d)</string>
+    <string name="import_section_duplicates">Doublons (%d)</string>
+    <string name="import_section_failed">Erreurs (%d)</string>
+    <string name="import_copy_errors">Copier les mots en erreur</string>
+    <string name="import_errors_copied">%d mots copiés</string>
+    <string name="import_reason_already_on_list">Ce mot est déjà dans tes listes.</string>
+    <string name="import_reason_in_file_duplicate">Ce mot est répété dans cet import.</string>
+    <string name="import_reason_no_lemma">Cela ressemble à une locution ou une phrase — on ne peut pas en faire une fiche dictionnaire.</string>
+    <string name="import_reason_llm_invalid">Non reconnu comme un mot à apprendre. Vérifie que c’est dans la langue que tu apprends.</string>
+    <string name="import_reason_unknown">Ce mot ne peut pas être importé pour le moment.</string>
+    <string name="import_ready_hint">Ces mots seront ajoutés à ta liste.</string>
+    <string name="import_review_loading">Chargement des mots…</string>
+    <string name="import_errors_hint">Ces mots ne seront pas ajoutés à ta liste.</string>
+    <string name="import_item_untitled">Mot inconnu</string>
+    <string name="import_reason_write_failed">Impossible d’enregistrer ce mot (après 3 essais).</string>
+    <string name="import_cancelled">Annulé. Rien n’a été ajouté.</string>
+    <string name="import_stage_queued">En file…</string>
+    <string name="import_stage_format">Lecture de la mise en page…</string>
+    <string name="import_stage_classify">Analyse des mots…</string>
+    <string name="import_stage_layout">Préparation des cartes…</string>
+    <string name="import_stage_dedup">Vérification des doublons</string>
+    <string name="import_stage_write">Enregistrement dans la liste</string>
+    <string name="import_stage_rollback">Annulation et retour arrière…</string>
+    <string name="import_progress_attempt">essai %1$d/3</string>
+    <string name="import_progress_tally">OK %1$d · doublon %2$d · erreur %3$d</string>
+
 <string name="section_meanings">SENS</string>
 
     <string name="section_synonyms">SYNONYMES</string>

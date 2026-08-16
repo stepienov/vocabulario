@@ -317,6 +317,8 @@
     <string name="action_abort">Прервать</string>
     <string name="import_abort_title">Прервать импорт?</string>
     <string name="import_abort_body">Прогресс будет потерян.</string>
+    <string name="import_discard_title">Отменить импорт?</string>
+    <string name="import_discard_body">Результат анализа будет отброшен. Ничего не будет добавлено.</string>
     <string name="import_result_title">Импорт завершён</string>
     <string name="import_result_body">Добавлено %1$d, дубликатов %2$d</string>
     <string name="import_result_body_failed">Добавлено %1$d, дубликатов %2$d, ошибок %3$d</string>
@@ -326,6 +328,33 @@
     <string name="import_interrupted">Импорт прерван — попробуйте снова</string>
     <string name="import_review_ready">Готово к импорту</string>
     <string name="import_new_list_option">+ Новый список</string>
+
+    <string name="import_section_ready">Будет импортировано (%d)</string>
+    <string name="import_section_duplicates">Дубликаты (%d)</string>
+    <string name="import_section_failed">Ошибки (%d)</string>
+    <string name="import_copy_errors">Копировать слова с ошибкой</string>
+    <string name="import_errors_copied">Скопировано слов: %d</string>
+    <string name="import_reason_already_on_list">Это слово уже есть в ваших списках.</string>
+    <string name="import_reason_in_file_duplicate">Это слово повторяется в этом импорте.</string>
+    <string name="import_reason_no_lemma">Похоже на выражение или предложение — карточку словаря из этого не сделать.</string>
+    <string name="import_reason_llm_invalid">Не распознано как слово для изучения. Проверьте, что это язык, который вы учите.</string>
+    <string name="import_reason_unknown">Это слово сейчас нельзя импортировать.</string>
+    <string name="import_ready_hint">Эти слова будут добавлены в список.</string>
+    <string name="import_review_loading">Загрузка слов…</string>
+    <string name="import_errors_hint">Эти слова не попадут в список.</string>
+    <string name="import_item_untitled">Неизвестное слово</string>
+    <string name="import_reason_write_failed">Не удалось сохранить это слово (после 3 попыток).</string>
+    <string name="import_cancelled">Отменено. Ничего не добавлено.</string>
+    <string name="import_stage_queued">В очереди…</string>
+    <string name="import_stage_format">Читаю формат файла…</string>
+    <string name="import_stage_classify">Анализирую слова…</string>
+    <string name="import_stage_layout">Готовлю карточки…</string>
+    <string name="import_stage_dedup">Проверяю дубликаты</string>
+    <string name="import_stage_write">Сохраняю в список</string>
+    <string name="import_stage_rollback">Отмена и откат…</string>
+    <string name="import_progress_attempt">попытка %1$d/3</string>
+    <string name="import_progress_tally">OK %1$d · дубликат %2$d · ошибка %3$d</string>
+
 <string name="section_meanings">ЗНАЧЕНИЯ</string>
 
     <string name="section_synonyms">СИНОНИМЫ</string>

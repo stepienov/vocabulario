@@ -8,3 +8,8 @@ api.port=8000
 
 # Opcjonalnie (domyślnie 10.0.2.2):
 # api.emulator.host=10.0.2.2
+
+# NIE ustawiaj api.base.url na co dzień — Android Studio ma iść na lokalny BE.
+# APK dla testerów buduje się z:
+#   .\gradlew :app:assembleDebug "-Papi.base.url=https://vocabulario.up.railway.app/api/v1/"
+# api.base.url=https://vocabulario.up.railway.app/api/v1/

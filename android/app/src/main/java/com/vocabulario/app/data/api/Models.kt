@@ -2,6 +2,7 @@ package com.vocabulario.app.data.api
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNames
 import kotlinx.serialization.json.JsonObject
 
@@ -165,6 +166,63 @@ data class ImportIngestRequest(
     val text: String,
     val profile_id: String,
     val mode: String = "vocabulario",
+)
+
+@Serializable
+data class ImportJobCreateRequest(
+    val profile_id: String,
+    val list_id: String,
+    val mode: String = "vocabulario",
+    val text: String,
+)
+
+@Serializable
+data class ImportJobCommitRequest(
+    val item_ids: List<String>? = null,
+)
+
+@Serializable
+data class ImportJobItemResponse(
+    val id: String,
+    val ordinal: Int = 0,
+    val input_label: String = "",
+    val verdict: String = "pending",
+    val reason_code: String? = null,
+    val reason_detail: String? = null,
+    val lemma: String? = null,
+    val gloss: String? = null,
+    val pos: String? = null,
+    val entry_kind: String? = null,
+    val display: JsonElement? = null,
+    val existing_card_id: String? = null,
+    val created_card_id: String? = null,
+    val attempt: Int = 0,
+)
+
+@Serializable
+data class ImportJobProgressResponse(
+    val job_id: String,
+    val status: String,
+    val phase: String = "analyze",
+    val stage: String = "queued",
+    val source_name: String = "",
+    val mode: String = "vocabulario",
+    val list_id: String? = null,
+    val list_name: String? = null,
+    val processed: Int = 0,
+    val total: Int = 0,
+    val current_ordinal: Int? = null,
+    val current_label: String? = null,
+    val current_attempt: Int = 0,
+    val ready_count: Int = 0,
+    val duplicate_count: Int = 0,
+    val failed_count: Int = 0,
+    val created_count: Int = 0,
+    val cancel_requested: Boolean = false,
+    val error_code: String? = null,
+    val error_message: String? = null,
+    val heartbeat_at: String? = null,
+    val items: List<ImportJobItemResponse> = emptyList(),
 )
 
 @Serializable

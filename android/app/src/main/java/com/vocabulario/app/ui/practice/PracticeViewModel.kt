@@ -8,7 +8,10 @@ import com.vocabulario.app.data.api.ChoiceOption
 import com.vocabulario.app.data.api.SrsQueueItem
 import com.vocabulario.app.data.api.SyncSrsState
 import com.vocabulario.app.data.api.WordListResponse
+import com.vocabulario.app.data.api.isWordAlreadyOnList
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.containsLemma
+import com.vocabulario.app.data.lemmaKeys
 import com.vocabulario.app.data.normalizeTenseKeys
 import com.vocabulario.app.i18n.UiStrings
 import com.vocabulario.app.ui.card.RelatedWord
@@ -134,7 +137,8 @@ class PracticeViewModel @Inject constructor(
 
     fun loadQueue(append: Boolean = false) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(loading = !append, error = null)
+            val keepVisible = append || _state.value.queue.isNotEmpty()
+            _state.value = _state.value.copy(loading = !keepVisible, error = null)
             runCatching {
                 val settings = repository.getSettings()
                 val profile = repository.getActiveProfile()
@@ -145,7 +149,8 @@ class PracticeViewModel @Inject constructor(
                 Triple(settings, profile, repository.getQueue())
             }.onSuccess { (settings, profile, response) ->
                 val items = response.due + response.newCards
-                val learningLemmas = runCatching { repository.learningLemmaSet() }.getOrDefault(emptySet())
+                val learningLemmas = runCatching { repository.learningLemmaSet() }.getOrDefault(emptySet()) +
+                    _state.value.learningLemmas
                 if (items.isEmpty() && !append) {
                     _state.value = PracticeUiState(
                         loading = false,
@@ -223,41 +228,25 @@ class PracticeViewModel @Inject constructor(
     private fun prepareChoices() {
         val item = currentItem() ?: return
         val direction = currentDirection()
-        val online = networkMonitor.isCurrentlyOnline()
         viewModelScope.launch {
             _state.value = _state.value.copy(loadingChoices = true)
             runCatching { repository.getDistractors(item.card_id, direction) }
                 .onSuccess { response ->
-                    val minOptions = if (online) 8 else 4
-                    val options = response.options
+                    val options = response.options.withLearningFlags(_state.value.learningLemmas)
                     when {
-                        options.size >= minOptions -> {
+                        options.size >= 2 -> {
                             _state.value = _state.value.copy(
                                 loadingChoices = false,
                                 choices = options,
-                                error = null,
-                            )
-                        }
-                        !online && options.size >= 2 -> {
-                            _state.value = _state.value.copy(
-                                loadingChoices = false,
-                                choices = options,
-                                answerMode = AnswerMode.CHOICE,
-                                error = null,
-                            )
-                        }
-                        !online -> {
-                            _state.value = _state.value.copy(
-                                loadingChoices = false,
-                                answerMode = AnswerMode.FLASHCARD,
-                                choices = emptyList(),
                                 error = null,
                             )
                         }
                         else -> {
                             _state.value = _state.value.copy(
                                 loadingChoices = false,
-                                error = strings.get(R.string.err_options_count, options.size),
+                                answerMode = AnswerMode.FLASHCARD,
+                                choices = emptyList(),
+                                error = null,
                             )
                         }
                     }
@@ -354,9 +343,9 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun openAddWrongChoice(choice: ChoiceOption) {
-        val lemma = choice.lemma_l2 ?: return
-        if (choice.in_learning || _state.value.learningLemmas.contains(lemma.trim().lowercase())) {
-            _state.value = _state.value.copy(error = strings.get(R.string.err_word_on_list))
+        val lemma = choice.lemma_l2?.trim()?.takeIf { it.isNotEmpty() } ?: return
+        if (choice.in_learning || _state.value.learningLemmas.containsLemma(lemma)) {
+            markLemmaAdded(lemma)
             return
         }
         openAddRelated(RelatedWord(lemma, choice.gloss, choice.pos))
@@ -364,21 +353,26 @@ class PracticeViewModel @Inject constructor(
 
     fun addWrongToLearning(choice: ChoiceOption? = _state.value.selectedChoice) {
         val c = choice ?: return
-        val lemma = c.lemma_l2 ?: return
-        if (c.in_learning) return
+        val lemma = c.lemma_l2?.trim()?.takeIf { it.isNotEmpty() } ?: return
+        if (c.in_learning || _state.value.learningLemmas.containsLemma(lemma)) {
+            markLemmaAdded(lemma)
+            return
+        }
+        markLemmaAdded(lemma)
         viewModelScope.launch {
             runCatching { repository.createCard(lemma, c.pos, c.gloss, null) }
-                .onSuccess {
-                    _state.value = _state.value.copy(
-                        choices = _state.value.choices.map {
-                            if (it.text == c.text) it.copy(in_learning = true) else it
-                        },
-                    )
+                .onSuccess { created ->
+                    markLemmaAdded(created.lemma_l2.ifBlank { lemma })
                 }
-                .onFailure {
-                    _state.value = _state.value.copy(
-                        error = it.userMessage(strings, R.string.err_add),
-                    )
+                .onFailure { e ->
+                    if (e.isWordAlreadyOnList()) {
+                        markLemmaAdded(lemma)
+                    } else {
+                        unmarkLemma(lemma)
+                        _state.value = _state.value.copy(
+                            error = e.userMessage(strings, R.string.err_add),
+                        )
+                    }
                 }
         }
     }
@@ -388,8 +382,8 @@ class PracticeViewModel @Inject constructor(
             _state.value = _state.value.copy(error = strings.get(R.string.import_online_only))
             return
         }
-        if (_state.value.learningLemmas.contains(word.lemma.trim().lowercase())) {
-            _state.value = _state.value.copy(error = strings.get(R.string.err_word_on_list))
+        if (_state.value.learningLemmas.containsLemma(word.lemma)) {
+            markLemmaAdded(word.lemma)
             return
         }
         _state.value = _state.value.copy(
@@ -446,26 +440,61 @@ class PracticeViewModel @Inject constructor(
 
     fun addRelatedToLearning() {
         val word = _state.value.addTarget ?: return
-        if (_state.value.learningLemmas.contains(word.lemma.trim().lowercase())) {
-            dismissAddSheet()
-            _state.value = _state.value.copy(error = strings.get(R.string.err_word_on_list))
-            return
-        }
         dismissAddSheet()
+        markLemmaAdded(word.lemma)
         viewModelScope.launch {
             runCatching { repository.createCard(word.lemma, word.pos, word.glossL1, null) }
-                .onSuccess {
-                    _state.value = _state.value.copy(
-                        learningLemmas = _state.value.learningLemmas + word.lemma.trim().lowercase(),
-                    )
+                .onSuccess { created ->
+                    markLemmaAdded(created.lemma_l2.ifBlank { word.lemma })
                 }
-                .onFailure {
-                    _state.value = _state.value.copy(
-                        error = it.userMessage(strings, R.string.err_add),
-                    )
+                .onFailure { e ->
+                    if (e.isWordAlreadyOnList()) {
+                        markLemmaAdded(word.lemma)
+                    } else {
+                        unmarkLemma(word.lemma)
+                        _state.value = _state.value.copy(
+                            error = e.userMessage(strings, R.string.err_add),
+                        )
+                    }
                 }
         }
     }
+
+    private fun markLemmaAdded(lemma: String) {
+        applyLemmaLearning(lemma, added = true)
+    }
+
+    private fun unmarkLemma(lemma: String) {
+        applyLemmaLearning(lemma, added = false)
+    }
+
+    private fun applyLemmaLearning(lemma: String, added: Boolean) {
+        val keys = lemmaKeys(lemma)
+        if (keys.isEmpty()) return
+        _state.value = _state.value.copy(
+            learningLemmas = if (added) {
+                _state.value.learningLemmas + keys
+            } else {
+                _state.value.learningLemmas - keys
+            },
+            choices = _state.value.choices.map { choice ->
+                if (lemmaKeys(choice.lemma_l2).any { it in keys }) {
+                    choice.copy(in_learning = added)
+                } else {
+                    choice
+                }
+            },
+        )
+    }
+
+    private fun List<ChoiceOption>.withLearningFlags(lemmas: Set<String>): List<ChoiceOption> =
+        map { choice ->
+            if (choice.in_learning || lemmas.containsLemma(choice.lemma_l2)) {
+                choice.copy(in_learning = true)
+            } else {
+                choice
+            }
+        }
 
     fun addRelatedToList(listId: String) {
         val word = _state.value.addTarget ?: return

@@ -40,6 +40,10 @@ object TestTags {
     const val IMPORT_REVIEW_ITEM = "import_review_item"
     const val IMPORT_RESULT_MODAL = "import_result_modal"
     const val IMPORT_RESULT_OK = "import_result_ok"
+    const val IMPORT_ACCORDION_READY = "import_accordion_ready"
+    const val IMPORT_ACCORDION_DUP = "import_accordion_dup"
+    const val IMPORT_ACCORDION_FAIL = "import_accordion_fail"
+    const val IMPORT_COPY_ERRORS = "import_copy_errors"
     const val DIALOG_CONFIRM = "dialog_confirm"
     const val DIALOG_CANCEL = "dialog_cancel"
 

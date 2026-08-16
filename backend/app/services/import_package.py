@@ -42,7 +42,7 @@ class RawImportDeck:
     @property
     def needs_format_analysis(self) -> bool:
         """Czy przed mapowaniem pól trzeba zapytać LLM o segmentację raw tekstu."""
-        if self.kind in {"anki_package", "cards_html"}:
+        if self.kind in {"anki_package", "cards_html", "plain"}:
             return False
         if "guid column" in self.meta or "notetype column" in self.meta:
             return False
@@ -102,6 +102,9 @@ def load_text_import(text: str) -> RawImportDeck:
         break
 
     body = "\n".join(lines[body_start:])
+    plain = _try_plain_word_list(body)
+    if plain:
+        return RawImportDeck(kind="plain", notes=plain, meta=meta, raw_text=body)
     separator = "\t"
     if meta.get("separator", "").lower() in ("comma", ","):
         separator = ","
@@ -497,6 +500,41 @@ def _infer_notes_field_names(notes: list[list[str]]) -> list[str] | None:
     return None
 
 
+def _is_plain_token(value: str) -> bool:
+    text = (value or "").strip()
+    if not text or len(text) > 80 or "\n" in text or "\t" in text:
+        return False
+    return 1 <= len(text.split()) <= 6
+
+
+def _try_plain_word_list(body: str) -> list[list[str]] | None:
+    """Wklejka „a, b, c” / linie po jednej — bez LLM formatu i bez CSV-jako-jedna-notatka."""
+    text = (body or "").strip()
+    if not text or "\t" in text:
+        return None
+    lines = [
+        ln.strip()
+        for ln in text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+        if ln.strip() and not ln.strip().startswith("#")
+    ]
+    if not lines:
+        return None
+    if len(lines) >= 2:
+        if any("," in ln or ";" in ln for ln in lines):
+            return None
+        if all(_is_plain_token(ln) for ln in lines):
+            return [[ln] for ln in lines]
+        return None
+    line = lines[0]
+    if ";" in line and "," in line:
+        return None
+    if line.count(",") >= 1:
+        parts = [p.strip() for p in line.split(",") if p.strip()]
+        if len(parts) >= 2 and all(_is_plain_token(p) for p in parts):
+            return [[p] for p in parts]
+    return None
+
+
 def _parse_generic_table(body: str, separator: str | None) -> list[list[str]]:
     """Tymczasowy fallback (mock / awaria). Prawdziwa segmentacja = LLM + apply_import_format."""
     if not body.strip():
@@ -587,6 +625,9 @@ def _normalize_card_separator(fmt: dict) -> tuple[str, str | None]:
 
 
 def _split_into_cards(text: str, *, separator: str, value: str | None) -> list[str]:
+    if separator == "comma":
+        parts = [p.strip() for p in text.split(",")]
+        return [p for p in parts if p]
     if separator == "semicolon":
         parts = [p.strip() for p in text.split(";")]
         return [p for p in parts if p]

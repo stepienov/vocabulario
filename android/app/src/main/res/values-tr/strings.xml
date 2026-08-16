@@ -349,6 +349,8 @@
     <string name="action_abort">Durdur</string>
     <string name="import_abort_title">İçe aktarma durdurulsun mu?</string>
     <string name="import_abort_body">İlerleme silinecek.</string>
+    <string name="import_discard_title">Bu içe aktarma iptal edilsin mi?</string>
+    <string name="import_discard_body">Analiz sonucu silinecek. Hiçbir şey eklenmeyecek.</string>
     <string name="import_result_title">İçe aktarma bitti</string>
     <string name="import_result_body">Eklenen %1$d, yinelenen %2$d</string>
     <string name="import_result_body_failed">Eklenen %1$d, yinelenen %2$d, hata %3$d</string>
@@ -358,6 +360,33 @@
     <string name="import_interrupted">İçe aktarma kesildi — yeniden deneyin</string>
     <string name="import_review_ready">İçe aktarmaya hazır</string>
     <string name="import_new_list_option">+ Yeni liste</string>
+
+    <string name="import_section_ready">İçe aktarılacak (%d)</string>
+    <string name="import_section_duplicates">Kopyalar (%d)</string>
+    <string name="import_section_failed">Hatalar (%d)</string>
+    <string name="import_copy_errors">Hatalı kelimeleri kopyala</string>
+    <string name="import_errors_copied">%d kelime kopyalandı</string>
+    <string name="import_reason_already_on_list">Bu sözcük zaten listelerinde.</string>
+    <string name="import_reason_in_file_duplicate">Bu sözcük bu içe aktarmada tekrar ediyor.</string>
+    <string name="import_reason_no_lemma">Bu bir deyim veya cümle gibi — sözlük kartına çevrilemez.</string>
+    <string name="import_reason_llm_invalid">Öğrenilecek bir sözcük olarak tanınmadı. Öğrendiğin dilde olduğundan emin ol.</string>
+    <string name="import_reason_unknown">Bu sözcük şu anda içe aktarılamıyor.</string>
+    <string name="import_ready_hint">Bu sözcükler listene eklenecek.</string>
+    <string name="import_review_loading">Sözcükler yükleniyor…</string>
+    <string name="import_errors_hint">Bu sözcükler listene eklenmeyecek.</string>
+    <string name="import_item_untitled">Bilinmeyen sözcük</string>
+    <string name="import_reason_write_failed">Bu sözcük 3 denemeden sonra kaydedilemedi.</string>
+    <string name="import_cancelled">İptal edildi. Hiçbir şey eklenmedi.</string>
+    <string name="import_stage_queued">Sırada…</string>
+    <string name="import_stage_format">Dosya düzeni okunuyor…</string>
+    <string name="import_stage_classify">Kelimeler analiz ediliyor…</string>
+    <string name="import_stage_layout">Kartlar hazırlanıyor…</string>
+    <string name="import_stage_dedup">Kopyalar kontrol ediliyor</string>
+    <string name="import_stage_write">Listeye kaydediliyor</string>
+    <string name="import_stage_rollback">İptal edilip geri alınıyor…</string>
+    <string name="import_progress_attempt">deneme %1$d/3</string>
+    <string name="import_progress_tally">OK %1$d · kopya %2$d · hata %3$d</string>
+
 <string name="section_meanings">ANLAMLAR</string>
 
     <string name="section_synonyms">EŞ ANLAMLI KELİMELER</string>

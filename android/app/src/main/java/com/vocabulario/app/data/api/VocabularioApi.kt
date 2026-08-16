@@ -81,6 +81,39 @@ interface VocabularioApi {
     @POST("imports/commit-display")
     suspend fun commitImportDisplay(@Body body: ImportDisplayCommitRequest): ImportDisplayCommitResponse
 
+    @POST("imports/jobs")
+    suspend fun createImportJob(@Body body: ImportJobCreateRequest): ImportJobProgressResponse
+
+    @Multipart
+    @POST("imports/jobs/file")
+    suspend fun createImportJobFile(
+        @Part file: MultipartBody.Part,
+        @Part("profile_id") profileId: RequestBody,
+        @Part("list_id") listId: RequestBody,
+        @Part("mode") mode: RequestBody,
+    ): ImportJobProgressResponse
+
+    @GET("imports/jobs/active")
+    suspend fun getActiveImportJob(@Query("profile_id") profileId: String): ImportJobProgressResponse
+
+    @GET("imports/jobs/{job_id}/progress")
+    suspend fun getImportJobProgress(@Path("job_id") jobId: String): ImportJobProgressResponse
+
+    @GET("imports/jobs/{job_id}")
+    suspend fun getImportJob(
+        @Path("job_id") jobId: String,
+        @Query("include_items") includeItems: Boolean = true,
+    ): ImportJobProgressResponse
+
+    @POST("imports/jobs/{job_id}/commit")
+    suspend fun commitImportJob(
+        @Path("job_id") jobId: String,
+        @Body body: ImportJobCommitRequest = ImportJobCommitRequest(),
+    ): ImportJobProgressResponse
+
+    @POST("imports/jobs/{job_id}/cancel")
+    suspend fun cancelImportJob(@Path("job_id") jobId: String): ImportJobProgressResponse
+
     @POST("cards")
     suspend fun createCard(@Body body: CardCreateRequest): CardResponse
 

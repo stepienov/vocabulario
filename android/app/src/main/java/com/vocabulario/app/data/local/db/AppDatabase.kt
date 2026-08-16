@@ -18,7 +18,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CachedProfileEntity::class,
         OutboxOpEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -71,6 +71,28 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 db.execSQL(
                     "ALTER TABLE `pending_lookups` ADD COLUMN `suggestionsJson` TEXT",
+                )
+            }
+        }
+
+        /** v8 → v9: indeksy pod listy / kolejkę SRS przy dużym zbiorze kart. */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_cached_cards_profileId` " +
+                        "ON `cached_cards` (`profileId`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_cached_cards_profileId_deckId` " +
+                        "ON `cached_cards` (`profileId`, `deckId`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_cached_cards_queue` " +
+                        "ON `cached_cards` (`profileId`, `enrichmentStatus`, `status`, `nextReviewAt`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_cached_lists_profileId` " +
+                        "ON `cached_lists` (`profileId`)",
                 )
             }
         }

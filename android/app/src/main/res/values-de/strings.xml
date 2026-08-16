@@ -317,6 +317,8 @@
     <string name="action_abort">Abbrechen</string>
     <string name="import_abort_title">Import abbrechen?</string>
     <string name="import_abort_body">Der Fortschritt geht verloren.</string>
+    <string name="import_discard_title">Import verwerfen?</string>
+    <string name="import_discard_body">Das Analyseergebnis wird verworfen. Es wird nichts hinzugefügt.</string>
     <string name="import_result_title">Import abgeschlossen</string>
     <string name="import_result_body">Hinzugefügt %1$d, Duplikate %2$d</string>
     <string name="import_result_body_failed">Hinzugefügt %1$d, Duplikate %2$d, Fehler %3$d</string>
@@ -326,6 +328,33 @@
     <string name="import_interrupted">Import unterbrochen — bitte erneut versuchen</string>
     <string name="import_review_ready">Bereit zum Import</string>
     <string name="import_new_list_option">+ Neue Liste</string>
+
+    <string name="import_section_ready">Wird importiert (%d)</string>
+    <string name="import_section_duplicates">Duplikate (%d)</string>
+    <string name="import_section_failed">Fehler (%d)</string>
+    <string name="import_copy_errors">Fehlerhafte Wörter kopieren</string>
+    <string name="import_errors_copied">%d Wörter kopiert</string>
+    <string name="import_reason_already_on_list">Dieses Wort steht schon auf deinen Listen.</string>
+    <string name="import_reason_in_file_duplicate">Dieses Wort kommt in diesem Import mehrfach vor.</string>
+    <string name="import_reason_no_lemma">Das wirkt wie eine Wendung oder ein Satz — daraus wird keine Wörterbuchkarte.</string>
+    <string name="import_reason_llm_invalid">Nicht als Lernwort erkannt. Prüfe, ob es in deiner Lernsprache steht.</string>
+    <string name="import_reason_unknown">Dieses Wort kann gerade nicht importiert werden.</string>
+    <string name="import_ready_hint">Diese Wörter kommen auf deine Liste.</string>
+    <string name="import_review_loading">Wörter werden geladen…</string>
+    <string name="import_errors_hint">Diese Wörter kommen nicht auf deine Liste.</string>
+    <string name="import_item_untitled">Unbekanntes Wort</string>
+    <string name="import_reason_write_failed">Dieses Wort konnte nach 3 Versuchen nicht gespeichert werden.</string>
+    <string name="import_cancelled">Abgebrochen. Nichts wurde hinzugefügt.</string>
+    <string name="import_stage_queued">In der Warteschlange…</string>
+    <string name="import_stage_format">Dateilayout wird gelesen…</string>
+    <string name="import_stage_classify">Wörter werden analysiert…</string>
+    <string name="import_stage_layout">Karten werden vorbereitet…</string>
+    <string name="import_stage_dedup">Duplikate werden geprüft</string>
+    <string name="import_stage_write">Wird auf die Liste gespeichert</string>
+    <string name="import_stage_rollback">Wird abgebrochen und rückgängig gemacht…</string>
+    <string name="import_progress_attempt">Versuch %1$d/3</string>
+    <string name="import_progress_tally">OK %1$d · Duplikat %2$d · Fehler %3$d</string>
+
 <string name="section_meanings">BEDEUTUNGEN</string>
 
     <string name="section_synonyms">SYNONYME</string>

@@ -328,6 +328,8 @@
     <string name="action_abort">Abort</string>
     <string name="import_abort_title">Abort import?</string>
     <string name="import_abort_body">Progress will be discarded.</string>
+    <string name="import_discard_title">Discard this import?</string>
+    <string name="import_discard_body">The analysis will be discarded. Nothing will be added.</string>
     <string name="import_result_title">Import finished</string>
     <string name="import_result_body">Added %1$d, duplicates %2$d</string>
     <string name="import_result_body_failed">Added %1$d, duplicates %2$d, errors %3$d</string>
@@ -337,6 +339,33 @@
     <string name="import_interrupted">Import interrupted — try again</string>
     <string name="import_review_ready">Ready to import</string>
     <string name="import_new_list_option">+ New list</string>
+
+    <string name="import_section_ready">Will import (%d)</string>
+    <string name="import_section_duplicates">Duplicates (%d)</string>
+    <string name="import_section_failed">Errors (%d)</string>
+    <string name="import_copy_errors">Copy failed words</string>
+    <string name="import_errors_copied">Copied %d words</string>
+    <string name="import_reason_already_on_list">This word is already on your lists.</string>
+    <string name="import_reason_in_file_duplicate">This word is repeated in this import.</string>
+    <string name="import_reason_no_lemma">This looks like a phrase or sentence, not a single word we can turn into a card.</string>
+    <string name="import_reason_llm_invalid">This was not recognized as a word to learn. Check that it is in the language you are learning.</string>
+    <string name="import_reason_unknown">This word could not be imported.</string>
+    <string name="import_ready_hint">These words will be added to your list.</string>
+    <string name="import_review_loading">Loading the word list…</string>
+    <string name="import_errors_hint">These words will not be added to your list.</string>
+    <string name="import_item_untitled">Unknown word</string>
+    <string name="import_reason_write_failed">This word could not be saved after 3 tries.</string>
+    <string name="import_cancelled">Cancelled. Nothing was added.</string>
+    <string name="import_stage_queued">Queued…</string>
+    <string name="import_stage_format">Reading file layout…</string>
+    <string name="import_stage_classify">Analyzing words…</string>
+    <string name="import_stage_layout">Laying out cards…</string>
+    <string name="import_stage_dedup">Checking duplicates</string>
+    <string name="import_stage_write">Saving to list</string>
+    <string name="import_stage_rollback">Cancelling and undoing…</string>
+    <string name="import_progress_attempt">try %1$d/3</string>
+    <string name="import_progress_tally">OK %1$d · duplicate %2$d · error %3$d</string>
+
 
     <string name="section_meanings">MEANINGS</string>
 

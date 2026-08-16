@@ -20,6 +20,7 @@ def import_format_schema() -> dict:
                     "enum": [
                         "newline",
                         "blank_lines",
+                        "comma",
                         "semicolon",
                         "custom_string",
                         "none",
@@ -27,6 +28,7 @@ def import_format_schema() -> dict:
                     "description": (
                         "Jak dzielić tekst na OSOBNE FISZKI. "
                         "newline = każda linia; blank_lines = puste linie; "
+                        "comma = przecinek między hasłami (lista słów w jednej linii); "
                         "semicolon = znak ; między kartami (Quizlet „entre renglones”, "
                         "często CAŁY eksport w JEDNEJ linii); "
                         "custom_string = card_separator_value (np. === lub |); "

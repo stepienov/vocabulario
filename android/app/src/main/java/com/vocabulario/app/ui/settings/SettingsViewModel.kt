@@ -107,7 +107,10 @@ class SettingsViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(loading = true, error = null)
+            val hadData = _state.value.activeProfile != null
+            if (!hadData) {
+                _state.value = _state.value.copy(loading = true, error = null)
+            }
             runCatching {
                 val settings = repository.getSettings()
                 val active = repository.getActiveProfile()
@@ -155,6 +158,14 @@ class SettingsViewModel @Inject constructor(
                     tokenStore.saveActiveProfile(it.id)
                     tokenStore.saveAppLang(it.appLang)
                     AppLocale.apply(it.appLang)
+                }
+                viewModelScope.launch {
+                    runCatching { repository.refreshProfilesFromNetwork() }
+                        .onSuccess { remote ->
+                            if (remote.isNotEmpty()) {
+                                _state.value = _state.value.copy(profiles = remote)
+                            }
+                        }
                 }
             }.onFailure {
                 _state.value = _state.value.copy(

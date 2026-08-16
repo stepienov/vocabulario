@@ -1,10 +1,6 @@
 package com.vocabulario.app.data.imports
 
-import com.vocabulario.app.data.api.ImportDisplayCard
-import com.vocabulario.app.data.api.ImportDisplayPayload
-import com.vocabulario.app.data.api.ImportValidWord
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import com.vocabulario.app.data.api.ImportJobItemResponse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -12,114 +8,99 @@ import org.junit.Test
 
 class ImportJobStateTest {
 
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
-
     @Test
-    fun busy_only_processing_and_committing() {
+    fun busy_only_in_flight_statuses() {
         assertFalse(ImportJobState(status = ImportStatus.Idle).busy)
-        assertTrue(ImportJobState(status = ImportStatus.Processing).busy)
+        assertTrue(ImportJobState(status = ImportStatus.Queued).busy)
+        assertTrue(ImportJobState(status = ImportStatus.Analyzing).busy)
         assertFalse(ImportJobState(status = ImportStatus.Review).busy)
         assertTrue(ImportJobState(status = ImportStatus.Committing).busy)
+        assertTrue(ImportJobState(status = ImportStatus.Cancelling).busy)
         assertFalse(ImportJobState(status = ImportStatus.Done).busy)
         assertFalse(ImportJobState(status = ImportStatus.Error).busy)
     }
 
     @Test
-    fun selectedCount_respects_deselected_keys_vocab() {
+    fun blocksUi_only_while_job_in_progress() {
+        assertFalse(ImportJobState(status = ImportStatus.Idle).blocksUi)
+        assertTrue(ImportJobState(status = ImportStatus.Review).blocksUi)
+        assertTrue(ImportJobState(status = ImportStatus.Analyzing).blocksUi)
+        assertFalse(ImportJobState(status = ImportStatus.Done).blocksUi)
+        assertFalse(ImportJobState(status = ImportStatus.Cancelled).blocksUi)
+        assertTrue(ImportJobState(status = ImportStatus.Done).showOutcome)
+        assertTrue(ImportJobState(status = ImportStatus.Cancelled).showOutcome)
+    }
+
+    @Test
+    fun errorClipboard_joins_failed_lemmas() {
         val state = ImportJobState(
-            mode = "vocabulario",
-            valid = listOf(
-                ImportValidWord(input = "a", lemma = "a"),
-                ImportValidWord(input = "b", lemma = "b"),
-                ImportValidWord(input = "c", lemma = "c"),
+            items = listOf(
+                item(0, "ready", "casa", "casa | dom"),
+                item(2, "failed", "gamma", "g"),
+                item(1, "failed", null, "alpha"),
+                item(3, "failed", "delta", "d"),
             ),
-            deselectedKeys = setOf("b"),
         )
-        assertEquals(2, state.selectedCount)
-        assertEquals(listOf("a", "c"), state.selectedValid.map { it.input })
+        assertEquals("alpha; gamma; delta", state.errorClipboard)
     }
 
     @Test
-    fun selectedCount_respects_deselected_keys_preserve() {
-        val cards = listOf(
-            displayCard("1", "uno"),
-            displayCard("2", "dos"),
-        )
+    fun readyItems_sort_ignores_spanish_articles() {
         val state = ImportJobState(
-            mode = "preserve",
-            displayCards = cards,
-            deselectedKeys = setOf("1"),
-        )
-        assertEquals(1, state.selectedCount)
-        assertEquals(listOf("2"), state.selectedDisplayCards.map { it.key })
-    }
-
-    @Test
-    fun toggle_semantics_via_deselected_set() {
-        var state = ImportJobState(
-            status = ImportStatus.Review,
-            valid = listOf(ImportValidWord(input = "hola", lemma = "hola")),
-        )
-        state = state.copy(deselectedKeys = state.deselectedKeys + "hola")
-        assertEquals(0, state.selectedCount)
-        state = state.copy(deselectedKeys = state.deselectedKeys - "hola")
-        assertEquals(1, state.selectedCount)
-    }
-
-    @Test
-    fun snapshot_roundtrip_preserves_review_fields() {
-        val original = ImportJobState(
-            status = ImportStatus.Review,
-            sourceName = "quizlet1.txt",
-            mode = "vocabulario",
-            targetListId = "list-1",
-            targetListName = "Uczę się",
-            valid = listOf(
-                ImportValidWord(
-                    input = "casa",
-                    lemma = "casa",
-                    gloss = "house",
-                    entry_kind = "lemma",
-                ),
-            ),
-            invalid = listOf("???"),
-            deselectedKeys = setOf("casa"),
-            total = 1,
-            showAbortConfirm = true,
-        )
-        val encoded = json.encodeToString(original)
-        val decoded = json.decodeFromString<ImportJobState>(encoded)
-            .copy(showAbortConfirm = false)
-        assertEquals(ImportStatus.Review, decoded.status)
-        assertEquals("quizlet1.txt", decoded.sourceName)
-        assertEquals("list-1", decoded.targetListId)
-        assertEquals(1, decoded.valid.size)
-        assertEquals(setOf("casa"), decoded.deselectedKeys)
-        assertFalse(decoded.showAbortConfirm)
-    }
-
-    @Test
-    fun committing_snapshot_roundtrip() {
-        val original = ImportJobState(
-            status = ImportStatus.Committing,
-            mode = "vocabulario",
-            targetListId = "x",
-            processed = 3,
-            total = 10,
-            valid = listOf(
-                ImportValidWord(input = "a", lemma = "a"),
-                ImportValidWord(input = "b", lemma = "b"),
+            items = listOf(
+                item(0, "ready", "el resultado", "el resultado"),
+                item(1, "ready", "la fábrica", "la fábrica"),
+                item(2, "ready", "el medio ambiente", "el medio ambiente"),
+                item(3, "ready", "la asignatura", "la asignatura"),
             ),
         )
-        val decoded = json.decodeFromString<ImportJobState>(json.encodeToString(original))
-        assertEquals(ImportStatus.Committing, decoded.status)
-        assertEquals(3, decoded.processed)
-        assertEquals(10, decoded.total)
+        assertEquals(
+            listOf("la asignatura", "la fábrica", "el medio ambiente", "el resultado"),
+            state.readyItems.map { it.lemma },
+        )
     }
 
-    private fun displayCard(key: String, lemma: String) = ImportDisplayCard(
-        key = key,
-        lemma_l2 = lemma,
-        display = ImportDisplayPayload(),
+    @Test
+    fun normalizeImportSourceName_maps_legacy_polish() {
+        assertEquals("paste", normalizeImportSourceName("Wklejka"))
+        assertEquals("paste", normalizeImportSourceName("paste"))
+        assertEquals("lista.csv", normalizeImportSourceName("lista.csv"))
+    }
+
+    @Test
+    fun parseImportStatus_maps_backend() {
+        assertEquals(ImportStatus.Analyzing, parseImportStatus("analyzing"))
+        assertEquals(ImportStatus.Review, parseImportStatus("review"))
+        assertEquals(ImportStatus.Cancelled, parseImportStatus("cancelled"))
+    }
+
+    @Test
+    fun item_parses_when_display_is_not_a_card_tree() {
+        val json = kotlinx.serialization.json.Json {
+            ignoreUnknownKeys = true
+            coerceInputValues = true
+            isLenient = true
+        }
+        val raw = """
+            {"id":"a","ordinal":0,"input_label":"casa","verdict":"ready",
+             "lemma":"casa","gloss":"house","display":[]}
+        """.trimIndent()
+        val item = json.decodeFromString(ImportJobItemResponse.serializer(), raw)
+        assertEquals("casa", item.lemma)
+        assertEquals("house", item.gloss)
+        assertEquals("ready", item.verdict)
+    }
+
+    private fun item(
+        ordinal: Int,
+        verdict: String,
+        lemma: String?,
+        input: String,
+    ) = ImportJobItemResponse(
+        id = "id-$ordinal",
+        ordinal = ordinal,
+        input_label = input,
+        verdict = verdict,
+        lemma = lemma,
     )
 }

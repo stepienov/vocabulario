@@ -41,9 +41,16 @@ Dokumentacja: http://localhost:8000/docs
 3. Uruchom emulator (np. Galaxy_S24)
 4. Run ▶
 
-API wybierane automatycznie:
+API wybierane automatycznie (Android Studio / Run ▶ = lokalny BE):
 - **emulator** → `http://10.0.2.2:8000`
 - **fizyczny telefon** → IP z `android/local.properties` (`api.device.host=…`)
+
+APK dla testerów (Railway) — nie zmieniaj `local.properties`:
+
+```powershell
+cd android
+.\gradlew :app:assembleDebug "-Papi.base.url=https://vocabulario.up.railway.app/api/v1/"
+```
 
 Szablon: `android/local.properties.example`. Po zmianie hosta zrób Gradle Sync + reinstall appki.
 
@@ -79,6 +86,23 @@ vocabulario/
 └── backend/railway.toml  # konfiguracja deploy (Railway)
 ```
 
+
+## Diagnostyka importu (admin)
+
+Analiza i zapis fiszek żyją w PostgreSQL (`import_jobs`, `import_job_items`, `import_job_events`), nie na telefonie. `users.role = admin` może listować zadania:
+
+```
+GET /api/v1/imports/jobs?user_id=&status=&from=&to=
+GET /api/v1/imports/jobs/{id}/events
+```
+
+Albo SQL:
+
+```sql
+SELECT * FROM import_jobs ORDER BY created_at DESC LIMIT 50;
+SELECT * FROM import_job_items WHERE job_id = :id ORDER BY ordinal;
+SELECT * FROM import_job_events WHERE job_id = :id ORDER BY at;
+```
 
 ## Flow v0.1
 

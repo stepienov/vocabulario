@@ -387,34 +387,17 @@ class LexicalService:
         if not words_persistence_enabled():
             return None
         pair = lang_pair_key(profile.app_lang, profile.learning_lang)
-        norm = normalize_text(text)
-        result = await self.db.execute(
-            select(LexicalEntry).where(
-                LexicalEntry.lang_pair == pair,
-                or_(
-                    LexicalEntry.lemma_l2 == norm,
-                    LexicalEntry.lemma_l1_primary == norm,
-                ),
-            ).limit(1)
+        from app.services.card_jobs import find_ready_entry
+
+        cached = await find_ready_entry(
+            db=self.db,
+            lang_pair=pair,
+            lemma=text,
+            pos=None,
+            learning_lang=profile.learning_lang,
         )
-        entry = result.scalar_one_or_none()
-        if entry is not None:
-            return entry
-        # ilike exact ignoring case for stored mixed case
-        result = await self.db.execute(
-            select(LexicalEntry).where(
-                LexicalEntry.lang_pair == pair,
-                or_(
-                    LexicalEntry.lemma_l2.ilike(norm),
-                    LexicalEntry.lemma_l1_primary.ilike(norm),
-                ),
-            ).limit(5)
-        )
-        for row in result.scalars().all():
-            if normalize_text(row.lemma_l2) == norm or normalize_text(
-                row.lemma_l1_primary or ""
-            ) == norm:
-                return row
+        if cached is not None:
+            return cached
         return None
 
     async def _validate_one(
@@ -546,35 +529,19 @@ class LexicalService:
             entry = result.scalar_one_or_none()
             if entry:
                 entry.usage_count += 1
-                content = await ensure_similar_words(
-                    dict(entry.content or {}),
-                    profile,
-                    entry.lemma_l2,
-                    entry.pos,
-                )
-                if content != entry.content:
-                    entry.content = content
                 return entry
 
-        norm_lemma = normalize_text(lemma)
-        stmt = select(LexicalEntry).where(
-            LexicalEntry.lang_pair == pair,
-            LexicalEntry.lemma_l2.ilike(norm_lemma),
+        from app.services.card_jobs import apply_lexical_keys, find_ready_entry
+
+        existing = await find_ready_entry(
+            db=self.db,
+            lang_pair=pair,
+            lemma=lemma,
+            pos=pos,
+            learning_lang=profile.learning_lang,
         )
-        if pos:
-            stmt = stmt.where(LexicalEntry.pos == pos)
-        result = await self.db.execute(stmt)
-        existing = result.scalar_one_or_none()
         if existing:
             existing.usage_count += 1
-            content = await ensure_similar_words(
-                dict(existing.content or {}),
-                profile,
-                existing.lemma_l2,
-                existing.pos,
-            )
-            if content != existing.content:
-                existing.content = content
             return existing
 
         content = await enrich_card_content(profile, lemma, pos)
@@ -594,6 +561,7 @@ class LexicalService:
             created_by_user_id=user.id,
             usage_count=1,
         )
+        apply_lexical_keys(entry)
         self.db.add(entry)
         await self.db.flush()
         return entry

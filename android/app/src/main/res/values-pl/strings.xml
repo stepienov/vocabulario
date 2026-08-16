@@ -328,6 +328,8 @@
     <string name="action_abort">Przerwij</string>
     <string name="import_abort_title">Przerwać import?</string>
     <string name="import_abort_body">Postęp zostanie porzucony.</string>
+    <string name="import_discard_title">Anulować import?</string>
+    <string name="import_discard_body">Wynik analizy zostanie odrzucony. Nic nie zostanie dodane.</string>
     <string name="import_result_title">Import zakończony</string>
     <string name="import_result_body">Dodano %1$d, duplikaty %2$d</string>
     <string name="import_result_body_failed">Dodano %1$d, duplikaty %2$d, błędy %3$d</string>
@@ -337,6 +339,33 @@
     <string name="import_interrupted">Import przerwany — spróbuj ponownie</string>
     <string name="import_review_ready">Do zaimportowania</string>
     <string name="import_new_list_option">+ Nowa lista</string>
+
+    <string name="import_section_ready">Wejdzie (%d)</string>
+    <string name="import_section_duplicates">Duplikaty (%d)</string>
+    <string name="import_section_failed">Błędy (%d)</string>
+    <string name="import_copy_errors">Kopiuj błędne hasła</string>
+    <string name="import_errors_copied">Skopiowano %d haseł</string>
+    <string name="import_reason_already_on_list">To hasło już jest na Twoich listach.</string>
+    <string name="import_reason_in_file_duplicate">To samo hasło powtórzyło się w tym imporcie.</string>
+    <string name="import_reason_no_lemma">To wygląda na zwrot albo zdanie — nie da się z tego zrobić karty słownikowej.</string>
+    <string name="import_reason_llm_invalid">Nie rozpoznano jako hasła do nauki. Sprawdź, czy to słowo w języku, którego się uczysz.</string>
+    <string name="import_reason_unknown">Tego hasła nie da się teraz zaimportować.</string>
+    <string name="import_ready_hint">Te hasła wejdą na listę.</string>
+    <string name="import_review_loading">Wczytywanie haseł…</string>
+    <string name="import_errors_hint">Te hasła nie wejdą na listę.</string>
+    <string name="import_item_untitled">Nieznane hasło</string>
+    <string name="import_reason_write_failed">Nie udało się zapisać tego hasła (po 3 próbach).</string>
+    <string name="import_cancelled">Przerwano. Nic nie zostało dodane.</string>
+    <string name="import_stage_queued">W kolejce…</string>
+    <string name="import_stage_format">Rozpoznaję układ pliku…</string>
+    <string name="import_stage_classify">Analizuję słowa…</string>
+    <string name="import_stage_layout">Układam fiszki…</string>
+    <string name="import_stage_dedup">Sprawdzam duplikaty</string>
+    <string name="import_stage_write">Zapisuję na listę</string>
+    <string name="import_stage_rollback">Anulowanie i cofanie zmian…</string>
+    <string name="import_progress_attempt">próba %1$d/3</string>
+    <string name="import_progress_tally">OK %1$d · duplikat %2$d · błąd %3$d</string>
+
 
     <string name="section_meanings">ZNACZENIA</string>
 

@@ -100,7 +100,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import com.vocabulario.app.R
 import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.data.api.CardResponse
@@ -172,15 +171,6 @@ fun HomeScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Learning steps bywają w minutach — odświeżaj dashboard w tle.
-    LaunchedEffect(state.tab) {
-        if (state.tab != HomeTab.DASHBOARD) return@LaunchedEffect
-        while (isActive) {
-            delay(30_000)
-            viewModel.loadStats()
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -213,6 +203,11 @@ fun HomeScreen(
                     onStartImport = viewModel::startImportWithOptionalNewList,
                     onImportError = viewModel::setImportError,
                     onAbortImport = viewModel::requestImportCancel,
+                    onConfirmImport = viewModel::confirmImportCommit,
+                    onExpandImportSection = viewModel::expandImportSection,
+                    onCopyImportErrors = viewModel::onImportErrorsCopied,
+                    onDismissImport = { viewModel.dismissImportResult(false) },
+                    onShowImportList = { viewModel.dismissImportResult(true) },
                 )
                 HomeTab.LISTS -> ListsTab(
                     state = state,
@@ -273,17 +268,9 @@ fun HomeScreen(
 
     if (importState.showAbortConfirm) {
         ImportAbortConfirmDialog(
+            fromReview = importState.status == com.vocabulario.app.data.imports.ImportStatus.Review,
             onConfirm = viewModel::confirmImportCancel,
             onDismiss = viewModel::dismissImportAbortConfirm,
-        )
-    }
-
-    if (importState.status == com.vocabulario.app.data.imports.ImportStatus.Review) {
-        ImportReviewDialog(
-            state = importState,
-            onToggle = viewModel::toggleImportItem,
-            onCancel = viewModel::confirmImportCancel,
-            onConfirm = viewModel::confirmImportCommit,
         )
     }
 
@@ -718,6 +705,11 @@ private fun AddTab(
     onStartImport: (ByteArray?, String?, String?, String, String?, String?) -> Unit,
     onImportError: (String) -> Unit,
     onAbortImport: () -> Unit,
+    onConfirmImport: () -> Unit,
+    onExpandImportSection: (String?) -> Unit,
+    onCopyImportErrors: () -> Unit,
+    onDismissImport: () -> Unit,
+    onShowImportList: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val context = LocalContext.current
@@ -731,7 +723,8 @@ private fun AddTab(
     val speechAvailable = remember { android.speech.SpeechRecognizer.isRecognitionAvailable(context) }
     val nativeLang = state.activeProfile?.appLang ?: "pl"
     val learningLang = state.activeProfile?.learning_lang ?: "es"
-    val importBusy = importState.busy
+    val importBusy = importState.blocksUi
+    val showImportOutcome = importState.showOutcome
 
     val fileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -790,8 +783,28 @@ private fun AddTab(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (importBusy) {
-            ImportStatusPanel(state = importState, onAbort = onAbortImport)
+            when {
+                importState.busy ->
+                    ImportStatusPanel(state = importState, onAbort = onAbortImport)
+                else ->
+                    ImportReviewAccordion(
+                        state = importState,
+                        onExpand = onExpandImportSection,
+                        onAbort = onAbortImport,
+                        onCommit = onConfirmImport,
+                        onCopyErrors = onCopyImportErrors,
+                    )
+            }
         } else {
+            if (showImportOutcome) {
+                ImportOutcomePanel(
+                    state = importState,
+                    onOk = onDismissImport,
+                    onShowList = onShowImportList,
+                    onCopyErrors = onCopyImportErrors,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
             if (isOnline) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1205,10 +1218,12 @@ private fun ListsTab(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             items(state.lists) { list ->
+                val selected = list.id == state.selectedListId
                 ListChip(
                     list = list,
-                    selected = list.id == state.selectedListId,
-                    showMenu = list.id == state.selectedListId,
+                    wordCount = if (selected) state.listWords.size else list.word_count,
+                    selected = selected,
+                    showMenu = selected,
                     showSpinner = list.id == importTargetListId,
                     onClick = {
                         expandedId = null
@@ -2374,6 +2389,7 @@ private fun StatusChip(label: String, failed: Boolean = false, muted: Boolean = 
 @Composable
 private fun ListChip(
     list: WordListResponse,
+    wordCount: Int,
     selected: Boolean,
     showMenu: Boolean,
     showSpinner: Boolean = false,
@@ -2396,7 +2412,7 @@ private fun ListChip(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                "${listDisplayName(list)} (${list.word_count})",
+                "${listDisplayName(list)} ($wordCount)",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                 color = fg,

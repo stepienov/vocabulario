@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 MIN_SIMILAR_WORDS = 12
+# Quiz: 1 poprawna + 7 dystraktorów. Poniżej tego karta nie ma z czego ułożyć CHOICE.
+MIN_SIMILAR_FOR_QUIZ = 7
 
 # Awaryjne dopełnienie, gdy pierwsza odpowiedź nie da 12 unikatów: pula słów
 # z poziomu użytkownika, z której bierzemy tylko brakujące pozycje.

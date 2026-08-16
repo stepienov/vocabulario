@@ -20,7 +20,7 @@ from app.services.enrichment import (
 )
 from app.services.llm import LLMService
 from app.services.similar_words import fetch_similar_words
-from app.ai.schemas.similar_words import MIN_SIMILAR_WORDS
+from app.ai.schemas.similar_words import MIN_SIMILAR_FOR_QUIZ, MIN_SIMILAR_WORDS
 
 
 async def enrich_card_content_lsp(
@@ -108,10 +108,10 @@ async def enrich_card_content_lsp(
 
     apply_manifest_ui_labels(inflection, manifest, app_lang=app_lang)
 
-    if len(similar) < MIN_SIMILAR_WORDS:
+    if len(similar) < MIN_SIMILAR_FOR_QUIZ:
         raise ValueError(
             f"AI zwróciło za mało dystraktorów dla „{lemma_final}” "
-            f"({len(similar)}/{MIN_SIMILAR_WORDS})."
+            f"({len(similar)}/{MIN_SIMILAR_FOR_QUIZ})."
         )
 
     ui_hints = core.get("ui_hints") if isinstance(core.get("ui_hints"), dict) else {}

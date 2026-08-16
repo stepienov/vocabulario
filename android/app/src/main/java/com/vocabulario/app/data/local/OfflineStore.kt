@@ -3,6 +3,7 @@ package com.vocabulario.app.data.local
 import android.content.Context
 import androidx.room.Room
 import com.vocabulario.app.data.api.CardResponse
+import com.vocabulario.app.data.api.DashboardStatsResponse
 import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.api.SyncCardItem
@@ -39,7 +40,11 @@ class OfflineStore @Inject constructor(
     @ApplicationContext context: Context,
 ) {
     private val db = Room.databaseBuilder(context, AppDatabase::class.java, "vocabulario.db")
-        .addMigrations(AppDatabase.MIGRATION_6_7, AppDatabase.MIGRATION_7_8)
+        .addMigrations(
+            AppDatabase.MIGRATION_6_7,
+            AppDatabase.MIGRATION_7_8,
+            AppDatabase.MIGRATION_8_9,
+        )
         // Zachowaj dane (w tym niewysłany outbox) przy aktualizacji z v6.
         // Twardy reset tylko dla prehistorycznych wersji, których w praktyce nie ma w terenie.
         .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5)
@@ -144,6 +149,66 @@ class OfflineStore @Inject constructor(
         return runCatching { json.decodeFromString(LanguageProfileResponse.serializer(), raw) }.getOrNull()
     }
 
+    suspend fun cachedProfiles(): List<LanguageProfileResponse> =
+        profileDao.all().mapNotNull { entity ->
+            runCatching {
+                json.decodeFromString(LanguageProfileResponse.serializer(), entity.jsonBlob)
+            }.getOrNull()
+        }
+
+    suspend fun cacheProfiles(profiles: List<LanguageProfileResponse>) {
+        profiles.forEach { cacheProfile(it) }
+    }
+
+    suspend fun buildDashboardStats(profileId: String, newLimit: Int, days: Int = 7): DashboardStatsResponse =
+        LocalDashboard.build(
+            learningCards = cardDao.systemListCards(profileId),
+            newLimit = newLimit,
+            nowMs = System.currentTimeMillis(),
+            periodDays = days,
+        )
+
+    /**
+     * Dopisuje karty bez kasowania reszty decku. [cacheCardsFromList] robi replace
+     * i nie wolno go wołać z jedną kartą.
+     */
+    suspend fun upsertCards(
+        profileId: String,
+        cards: List<CardResponse>,
+        deckId: String? = null,
+    ) {
+        if (cards.isEmpty()) return
+        val entities = cards.map { card ->
+            val existing = cardDao.byId(card.id)
+            CachedCardEntity(
+                id = card.id,
+                profileId = profileId,
+                deckId = deckId ?: existing?.deckId,
+                lemmaL2 = card.lemma_l2,
+                glossPrimary = card.gloss_primary,
+                pos = card.pos,
+                contentJson = Json.encodeToString(JsonObject.serializer(), card.content),
+                enrichmentStatus = card.enrichment_status,
+                contentReviewStatus = card.content_review_status,
+                cardActivityStatus = card.card_activity_status,
+                hasContentChanges = card.has_content_changes,
+                status = card.srs_status?.takeIf { it.isNotBlank() } ?: existing?.status ?: "new",
+                nextReviewAt = existing?.nextReviewAt,
+                lastReviewedAt = existing?.lastReviewedAt,
+                intervalDays = card.srs_interval_days ?: existing?.intervalDays ?: 0.0,
+                ease = existing?.ease ?: 2.5,
+                repetitions = existing?.repetitions ?: 0,
+                lapses = existing?.lapses ?: 0,
+                stability = existing?.stability,
+                difficulty = existing?.difficulty,
+                fsrsStep = existing?.fsrsStep,
+                lastGrade = existing?.lastGrade,
+                updatedAt = System.currentTimeMillis(),
+            )
+        }
+        cardDao.upsertAll(entities)
+    }
+
     suspend fun localSettings(): LocalSettingsEntity? = settingsDao.get()
 
     suspend fun localUserSettings(): UserSettingsResponse? {
@@ -164,10 +229,12 @@ class OfflineStore @Inject constructor(
             }
         }
 
-    /** Sygnatura kart — tylko id+deckId (bez updatedAt, żeby cacheCardsFromList nie zapętlał Flow). */
+    /** Sygnatura kart — id+deck+enrichment+activity (bez content/updatedAt). */
     fun cardsSignature(profileId: String): Flow<String> =
         cardDao.observeForProfile(profileId).map { rows ->
-            rows.sortedBy { it.id }.joinToString(";") { "${it.id}|${it.deckId.orEmpty()}" }
+            rows.sortedBy { it.id }.joinToString(";") {
+                "${it.id}|${it.deckId.orEmpty()}|${it.enrichmentStatus}|${it.cardActivityStatus.orEmpty()}"
+            }
         }
 
     /** Liczba słów widocznych na liście — zgodna z [localWords] / [listWords]. */

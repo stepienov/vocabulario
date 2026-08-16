@@ -346,6 +346,8 @@
     <string name="action_abort">Interrompi</string>
     <string name="import_abort_title">Interrompere l’importazione?</string>
     <string name="import_abort_body">I progressi verranno scartati.</string>
+    <string name="import_discard_title">Annullare l’importazione?</string>
+    <string name="import_discard_body">Il risultato dell’analisi verrà scartato. Non verrà aggiunto nulla.</string>
     <string name="import_result_title">Importazione completata</string>
     <string name="import_result_body">Aggiunte %1$d, duplicati %2$d</string>
     <string name="import_result_body_failed">Aggiunte %1$d, duplicati %2$d, errori %3$d</string>
@@ -355,6 +357,33 @@
     <string name="import_interrupted">Importazione interrotta — riprova</string>
     <string name="import_review_ready">Pronto per l’importazione</string>
     <string name="import_new_list_option">+ Nuova lista</string>
+
+    <string name="import_section_ready">Verrà importato (%d)</string>
+    <string name="import_section_duplicates">Duplicati (%d)</string>
+    <string name="import_section_failed">Errori (%d)</string>
+    <string name="import_copy_errors">Copia le parole con errore</string>
+    <string name="import_errors_copied">Copiate %d parole</string>
+    <string name="import_reason_already_on_list">Questa parola è già nelle tue liste.</string>
+    <string name="import_reason_in_file_duplicate">Questa parola è ripetuta in questa importazione.</string>
+    <string name="import_reason_no_lemma">Sembra una locuzione o una frase: non si può farne una scheda dizionario.</string>
+    <string name="import_reason_llm_invalid">Non riconosciuta come parola da imparare. Controlla che sia nella lingua che stai imparando.</string>
+    <string name="import_reason_unknown">Questa parola non può essere importata ora.</string>
+    <string name="import_ready_hint">Queste parole verranno aggiunte alla lista.</string>
+    <string name="import_review_loading">Caricamento delle parole…</string>
+    <string name="import_errors_hint">Queste parole non verranno aggiunte alla lista.</string>
+    <string name="import_item_untitled">Parola sconosciuta</string>
+    <string name="import_reason_write_failed">Impossibile salvare questa parola (dopo 3 tentativi).</string>
+    <string name="import_cancelled">Annullato. Non è stato aggiunto nulla.</string>
+    <string name="import_stage_queued">In coda…</string>
+    <string name="import_stage_format">Lettura del formato…</string>
+    <string name="import_stage_classify">Analisi delle parole…</string>
+    <string name="import_stage_layout">Preparazione delle carte…</string>
+    <string name="import_stage_dedup">Controllo duplicati</string>
+    <string name="import_stage_write">Salvataggio nella lista</string>
+    <string name="import_stage_rollback">Annullamento e ripristino…</string>
+    <string name="import_progress_attempt">tentativo %1$d/3</string>
+    <string name="import_progress_tally">OK %1$d · duplicato %2$d · errore %3$d</string>
+
 <string name="section_meanings">SIGNIFICATI</string>
 
     <string name="section_synonyms">SINONIMI</string>

@@ -7,16 +7,21 @@ koniugację — dociąga zadanie w tle i przestawia status na `ready`.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.schemas.similar_words import MIN_SIMILAR_WORDS
+from app.ai.schemas.similar_words import MIN_SIMILAR_FOR_QUIZ
 from app.core.deps import lang_pair_key, normalize_text
+from app.core.lemma_keys import cache_lookup_keys, canonical_lemma
 from app.db.session import async_session_factory
+from app.lsp.lang_utils import articles_for
 from app.models import LanguageProfile, LearningCard, LexicalEntry, User
+from app.services.distractors import in_learning_lemma, lemma_keys
 from app.services.enrichment import enrich_adaptive_card_content, enrich_card_content
 from app.services.lexical import LexicalService
 from app.services.similar_words import ensure_similar_words
@@ -26,6 +31,17 @@ logger = logging.getLogger(__name__)
 STATUS_PENDING = "pending"
 STATUS_READY = "ready"
 STATUS_FAILED = "failed"
+
+# Max kart wzbogacanych naraz. 9× równolegle = ~36 calli reasoning-modelu i lawina.
+_ENRICH_CONCURRENCY = 3
+_enrich_gate: asyncio.Semaphore | None = None
+
+
+def _enrich_semaphore() -> asyncio.Semaphore:
+    global _enrich_gate
+    if _enrich_gate is None:
+        _enrich_gate = asyncio.Semaphore(_ENRICH_CONCURRENCY)
+    return _enrich_gate
 
 
 def build_pending_content(
@@ -156,8 +172,176 @@ def content_is_complete(content: dict | None) -> bool:
         )
         if content.get("pos") == "verb" and not has_inflection and not content.get("conjugation"):
             return False
-        return len(content.get("similar_words") or []) >= MIN_SIMILAR_WORDS
-    return len(content.get("similar_words") or []) >= MIN_SIMILAR_WORDS
+        return len(content.get("similar_words") or []) >= MIN_SIMILAR_FOR_QUIZ
+    return len(content.get("similar_words") or []) >= MIN_SIMILAR_FOR_QUIZ
+
+
+def lexical_lookup_variants(raw: str, learning_lang: str | None) -> set[str]:
+    """el negocio / negocio / le rêve — te same klucze do cache."""
+    articles = articles_for(learning_lang)
+    variants = {normalize_text(v) for v in lemma_keys(raw, articles)}
+    bare = ""
+    for key in list(variants):
+        parts = key.split()
+        if len(parts) > 1:
+            bare = " ".join(parts[1:])
+            variants.add(bare)
+        else:
+            bare = key
+    if bare:
+        for art in ("el", "la", "los", "las", "le", "la", "les", "the"):
+            variants.add(f"{art} {bare}")
+    key = canonical_lemma(raw)
+    if key:
+        variants.add(key)
+    return {v for v in variants if v}
+
+
+def apply_lexical_keys(entry: LexicalEntry) -> None:
+    entry.lemma_key_l2 = canonical_lemma(entry.lemma_l2) or None
+    entry.lemma_key_l1 = canonical_lemma(entry.lemma_l1_primary) or None
+
+
+def public_enrichment_error(exc: BaseException) -> str:
+    """Nigdy nie pokazuj userowi raw OpenAI / billingu."""
+    raw = str(exc)
+    lowered = raw.lower()
+    if any(
+        tok in lowered
+        for tok in (
+            "insufficient_quota",
+            "credit_balance",
+            "you have no credits",
+            "error code:",
+            "rate limit",
+            "429",
+            "openai",
+        )
+    ):
+        return "enrichment_unavailable"
+    return raw[:500]
+
+
+def _entry_has_paid_content(entry: LexicalEntry) -> bool:
+    content = entry.content or {}
+    return bool(content.get("meanings") or content.get("lemma") or content.get("similar_words"))
+
+
+async def find_ready_entry(
+    db: AsyncSession,
+    *,
+    lang_pair: str,
+    lemma: str,
+    pos: str | None,
+    learning_lang: str | None = None,
+    gloss: str | None = None,
+) -> LexicalEntry | None:
+    """Szuka po kanonicznym kluczu L2 albo L1. Trafienie = zero OpenAI."""
+    keys = cache_lookup_keys(lemma, gloss)
+    if not keys:
+        return None
+    match = or_(
+        LexicalEntry.lemma_key_l2.in_(keys),
+        LexicalEntry.lemma_key_l1.in_(keys),
+    )
+    stmt = select(LexicalEntry).where(LexicalEntry.lang_pair == lang_pair, match)
+    rows = [e for e in (await db.execute(stmt)).scalars().all() if _entry_has_paid_content(e)]
+    if not rows:
+        # Stare wiersze sprzed backfillu kluczy — ostatnia siatka, nadal bez LLM.
+        variants = lexical_lookup_variants(lemma, learning_lang)
+        if gloss:
+            variants |= lexical_lookup_variants(gloss, learning_lang)
+        variants |= keys
+        if variants:
+            legacy = or_(
+                func.lower(LexicalEntry.lemma_l2).in_(variants),
+                func.lower(LexicalEntry.lemma_l1_primary).in_(variants),
+            )
+            legacy_rows = list(
+                (
+                    await db.execute(
+                        select(LexicalEntry).where(LexicalEntry.lang_pair == lang_pair, legacy)
+                    )
+                ).scalars().all()
+            )
+            rows = [e for e in legacy_rows if _entry_has_paid_content(e)]
+    if not rows:
+        logger.info("lexical cache MISS pair=%s keys=%s lemma=%r gloss=%r", lang_pair, keys, lemma, gloss)
+        from app.services.app_log import log_event
+
+        await log_event(
+            level="info",
+            category="enrichment",
+            event="lexical_cache_miss",
+            status="ok",
+            message=f"cache miss {lemma!r}",
+            payload={"lang_pair": lang_pair, "keys": sorted(keys), "lemma": lemma, "gloss": gloss},
+        )
+        return None
+    complete = [e for e in rows if content_is_complete(e.content)]
+    pool = complete or rows
+    if pos:
+        for e in pool:
+            if (e.pos or "") == pos:
+                logger.info(
+                    "lexical cache HIT pair=%s query=%r → %r / %r",
+                    lang_pair,
+                    lemma,
+                    e.lemma_l2,
+                    e.lemma_l1_primary,
+                )
+                return e
+    hit = pool[0]
+    logger.info(
+        "lexical cache HIT pair=%s query=%r → %r / %r",
+        lang_pair,
+        lemma,
+        hit.lemma_l2,
+        hit.lemma_l1_primary,
+    )
+    return hit
+
+
+async def hydrate_from_lexical_cache(
+    db: AsyncSession,
+    card: LearningCard,
+    profile: LanguageProfile,
+) -> bool:
+    """Jeśli PG ma już gotową kartę — wstaw treść i READY. Zero LLM."""
+    pair = lang_pair_key(profile.app_lang, profile.learning_lang)
+    cached = await find_ready_entry(
+        db,
+        lang_pair=pair,
+        lemma=card.lemma_l2,
+        pos=card.pos,
+        learning_lang=profile.learning_lang,
+        gloss=card.gloss_primary,
+    )
+    if cached is None:
+        return False
+    _apply_entry_to_card(card, cached, profile)
+    cached.usage_count = (cached.usage_count or 0) + 1
+    return True
+
+
+def _apply_entry_to_card(
+    card: LearningCard,
+    entry: LexicalEntry,
+    profile: LanguageProfile,
+) -> None:
+    content = dict(entry.content or {})
+    card.content = content
+    card.lexical_entry_id = entry.id
+    card.pos = content.get("pos") or entry.pos or card.pos
+    meanings = content.get("meanings") or []
+    card.gloss_primary = (
+        meanings[0].get("gloss_l1") if meanings else None
+    ) or entry.lemma_l1_primary or card.gloss_primary
+    articles = articles_for(profile.learning_lang)
+    if not in_learning_lemma(card.lemma_l2, lemma_keys(entry.lemma_l2, articles), articles):
+        card.lemma_l2 = entry.lemma_l2
+    card.enrichment_status = STATUS_READY
+    card.enrichment_error = None
 
 
 async def _find_ready_entry(
@@ -166,15 +350,11 @@ async def _find_ready_entry(
     lang_pair: str,
     lemma: str,
     pos: str | None,
+    learning_lang: str | None = None,
 ) -> LexicalEntry | None:
-    stmt = select(LexicalEntry).where(
-        LexicalEntry.lang_pair == lang_pair,
-        LexicalEntry.lemma_l2.ilike(normalize_text(lemma)),
+    return await find_ready_entry(
+        db, lang_pair=lang_pair, lemma=lemma, pos=pos, learning_lang=learning_lang
     )
-    if pos:
-        stmt = stmt.where(LexicalEntry.pos == pos)
-    entry = (await db.execute(stmt)).scalars().first()
-    return entry if entry and content_is_complete(entry.content) else None
 
 
 async def _resolve_content(
@@ -188,9 +368,15 @@ async def _resolve_content(
     """Zwraca gotową treść — z bazy, jeśli ktoś już to słowo wzbogacił."""
     pair = lang_pair_key(profile.app_lang, profile.learning_lang)
 
-    cached = await _find_ready_entry(db, lang_pair=pair, lemma=lemma, pos=pos)
+    cached = await find_ready_entry(
+        db,
+        lang_pair=pair,
+        lemma=lemma,
+        pos=pos,
+        learning_lang=profile.learning_lang,
+    )
     if cached is not None:
-        cached.usage_count += 1
+        cached.usage_count = (cached.usage_count or 0) + 1
         return dict(cached.content), cached
 
     content = await enrich_card_content(profile, lemma, pos)
@@ -198,26 +384,58 @@ async def _resolve_content(
         content, profile, content.get("lemma") or lemma, content.get("pos") or pos
     )
 
+    final_lemma = content.get("lemma") or lemma
+    final_pos = content.get("pos") or pos
+    cached = await find_ready_entry(
+        db,
+        lang_pair=pair,
+        lemma=final_lemma,
+        pos=final_pos,
+        learning_lang=profile.learning_lang,
+    )
+    if cached is not None:
+        cached.usage_count = (cached.usage_count or 0) + 1
+        return dict(cached.content), cached
+
     meanings = content.get("meanings") or []
     gloss = meanings[0].get("gloss_l1", "") if meanings else ""
     entry = LexicalEntry(
         lang_pair=pair,
-        lemma_l2=content.get("lemma") or lemma,
+        lemma_l2=final_lemma,
         lemma_l1_primary=gloss,
-        pos=content.get("pos") or pos,
+        pos=final_pos,
         cefr=profile.cefr_level,
         content=content,
         source="ai",
         created_by_user_id=user_id,
         usage_count=1,
     )
-    db.add(entry)
-    await db.flush()
-    return content, entry
+    apply_lexical_keys(entry)
+    try:
+        async with db.begin_nested():
+            db.add(entry)
+            await db.flush()
+        return content, entry
+    except IntegrityError:
+        existing = await find_ready_entry(
+            db,
+            lang_pair=pair,
+            lemma=final_lemma,
+            pos=final_pos,
+            learning_lang=profile.learning_lang,
+        )
+        if existing is not None:
+            return dict(existing.content), existing
+        raise
 
 
 async def enrich_card(card_id: UUID) -> None:
     """Zadanie w tle dla karty dodanej do nauki."""
+    async with _enrich_semaphore():
+        await _enrich_card_unlocked(card_id)
+
+
+async def _enrich_card_unlocked(card_id: UUID) -> None:
     async with async_session_factory() as db:
         card = (
             await db.execute(select(LearningCard).where(LearningCard.id == card_id))
@@ -245,6 +463,13 @@ async def enrich_card(card_id: UUID) -> None:
         if profile is None:
             return
 
+        if await hydrate_from_lexical_cache(db, card, profile):
+            await db.commit()
+            from app.services.push import notify_cards_ready
+
+            await notify_cards_ready(db, card.user_id)
+            return
+
         if not (card.gloss_primary or "").strip():
             user = (
                 await db.execute(select(User).where(User.id == card.user_id))
@@ -253,8 +478,18 @@ async def enrich_card(card_id: UUID) -> None:
                 resolved = await LexicalService(db).best_lookup_candidate(
                     user, card.profile_id, card.lemma_l2
                 )
-                if resolved:
-                    card.lemma_l2 = resolved.get("lemma") or card.lemma_l2
+                resolved_lemma = (resolved or {}).get("lemma") if resolved else None
+                articles = articles_for(profile.learning_lang)
+                same_headword = bool(
+                    resolved_lemma
+                    and in_learning_lemma(
+                        resolved_lemma,
+                        lemma_keys(card.lemma_l2, articles),
+                        articles,
+                    )
+                )
+                if resolved and same_headword:
+                    card.lemma_l2 = resolved_lemma or card.lemma_l2
                     card.pos = resolved.get("pos") or card.pos
                     card.gloss_primary = resolved.get("gloss") or card.gloss_primary
                     if resolved.get("lexical_entry_id"):
@@ -293,8 +528,23 @@ async def enrich_card(card_id: UUID) -> None:
                 )
         except Exception as exc:
             logger.exception("Enrichment karty %s nie powiódł się", card_id)
+            from app.services.app_log import log_event
+
+            await log_event(
+                level="error",
+                category="enrichment",
+                event="enrichment_failed",
+                status="error",
+                user_id=card.user_id,
+                profile_id=card.profile_id,
+                entity_type="card",
+                entity_id=str(card_id),
+                message=f"enrichment failed {card.lemma_l2!r}",
+                payload={"lemma": card.lemma_l2, "pos": card.pos},
+                exc=exc,
+            )
             card.enrichment_status = STATUS_FAILED
-            card.enrichment_error = str(exc)[:500]
+            card.enrichment_error = public_enrichment_error(exc)
             await db.commit()
             return
 
@@ -312,3 +562,34 @@ async def enrich_card(card_id: UUID) -> None:
         from app.services.push import notify_cards_ready
 
         await notify_cards_ready(db, card.user_id)
+
+
+async def resume_pending_enrichment() -> None:
+    """Po restarcie procesu: raz, max N naraz. GET listy nie odpala LLM."""
+    try:
+        await _resume_pending_enrichment()
+    except asyncio.CancelledError:
+        logger.info("Resume enrichment przerwany (shutdown/reload)")
+        return
+
+
+async def _resume_pending_enrichment() -> None:
+    async with async_session_factory() as db:
+        rows = await db.execute(
+            select(LearningCard.id).where(
+                LearningCard.enrichment_status.in_([STATUS_PENDING, STATUS_FAILED]),
+                LearningCard.deleted_at.is_(None),
+            )
+        )
+        card_ids = [row[0] for row in rows.all()]
+    if not card_ids:
+        return
+    logger.info("Wznawiam enrichment %s kart po starcie (max %s naraz)", len(card_ids), _ENRICH_CONCURRENCY)
+
+    async def _one(card_id: UUID) -> None:
+        try:
+            await enrich_card(card_id)
+        except Exception:
+            logger.exception("Resume enrichment nie powiódł się dla %s", card_id)
+
+    await asyncio.gather(*(_one(card_id) for card_id in card_ids))

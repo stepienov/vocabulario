@@ -348,6 +348,8 @@
     <string name="action_abort">Hủy giữa chừng</string>
     <string name="import_abort_title">Hủy nhập?</string>
     <string name="import_abort_body">Tiến trình sẽ bị hủy.</string>
+    <string name="import_discard_title">Hủy lần nhập này?</string>
+    <string name="import_discard_body">Kết quả phân tích sẽ bị bỏ. Không thêm gì.</string>
     <string name="import_result_title">Đã nhập xong</string>
     <string name="import_result_body">Đã thêm %1$d, trùng %2$d</string>
     <string name="import_result_body_failed">Đã thêm %1$d, trùng %2$d, lỗi %3$d</string>
@@ -357,6 +359,33 @@
     <string name="import_interrupted">Nhập bị gián đoạn — thử lại</string>
     <string name="import_review_ready">Sẵn sàng nhập</string>
     <string name="import_new_list_option">+ Danh sách mới</string>
+
+    <string name="import_section_ready">Sẽ nhập (%d)</string>
+    <string name="import_section_duplicates">Trùng (%d)</string>
+    <string name="import_section_failed">Lỗi (%d)</string>
+    <string name="import_copy_errors">Sao chép từ bị lỗi</string>
+    <string name="import_errors_copied">Đã sao chép %d từ</string>
+    <string name="import_reason_already_on_list">Từ này đã có trong danh sách của bạn.</string>
+    <string name="import_reason_in_file_duplicate">Từ này bị lặp trong lần nhập này.</string>
+    <string name="import_reason_no_lemma">Đây giống cụm từ hoặc câu — không làm được thẻ từ điển.</string>
+    <string name="import_reason_llm_invalid">Không được nhận là từ để học. Hãy kiểm tra xem có đúng ngôn ngữ bạn đang học không.</string>
+    <string name="import_reason_unknown">Hiện không nhập được từ này.</string>
+    <string name="import_ready_hint">Những từ này sẽ được thêm vào danh sách.</string>
+    <string name="import_review_loading">Đang tải danh sách từ…</string>
+    <string name="import_errors_hint">Những từ này sẽ không được thêm vào danh sách.</string>
+    <string name="import_item_untitled">Từ không xác định</string>
+    <string name="import_reason_write_failed">Không lưu được từ này sau 3 lần thử.</string>
+    <string name="import_cancelled">Đã hủy. Không thêm gì.</string>
+    <string name="import_stage_queued">Đang chờ…</string>
+    <string name="import_stage_format">Đang đọc bố cục tệp…</string>
+    <string name="import_stage_classify">Đang phân tích từ…</string>
+    <string name="import_stage_layout">Đang xếp thẻ…</string>
+    <string name="import_stage_dedup">Đang kiểm tra trùng</string>
+    <string name="import_stage_write">Đang lưu vào danh sách</string>
+    <string name="import_stage_rollback">Đang hủy và hoàn tác…</string>
+    <string name="import_progress_attempt">lần %1$d/3</string>
+    <string name="import_progress_tally">OK %1$d · trùng %2$d · lỗi %3$d</string>
+
 <string name="section_meanings">NGHĨA</string>
 
     <string name="section_synonyms">ĐỒNG NGHĨA</string>

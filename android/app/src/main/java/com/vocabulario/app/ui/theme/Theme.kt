@@ -51,6 +51,7 @@ data class VocabExtraColors(
     val chipPosOnContainer: Color,
     val chipStatusContainer: Color,
     val chipStatusOnContainer: Color,
+    val importLemma: Color,
 )
 
 val LocalVocabExtraColors = staticCompositionLocalOf {
@@ -59,6 +60,7 @@ val LocalVocabExtraColors = staticCompositionLocalOf {
         chipPosOnContainer = BrandInk,
         chipStatusContainer = ChipStatusLight,
         chipStatusOnContainer = BrandInk,
+        importLemma = BrandBlueLight,
     )
 }
 
@@ -188,6 +190,7 @@ fun VocabularioTheme(
             chipPosOnContainer = BrandCream,
             chipStatusContainer = ChipStatusDark,
             chipStatusOnContainer = BrandCream,
+            importLemma = Color(0xFF9EC9F5),
         )
     } else {
         VocabExtraColors(
@@ -195,6 +198,7 @@ fun VocabularioTheme(
             chipPosOnContainer = BrandInk,
             chipStatusContainer = ChipStatusLight,
             chipStatusOnContainer = BrandInk,
+            importLemma = Color(0xFF2C5F94),
         )
     }
     val view = LocalView.current

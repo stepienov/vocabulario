@@ -317,6 +317,8 @@
     <string name="action_abort">إيقاف</string>
     <string name="import_abort_title">إيقاف الاستيراد؟</string>
     <string name="import_abort_body">سيتم تجاهل التقدّم.</string>
+    <string name="import_discard_title">إلغاء هذا الاستيراد؟</string>
+    <string name="import_discard_body">سيتم تجاهل نتيجة التحليل. لن يُضاف شيء.</string>
     <string name="import_result_title">اكتمل الاستيراد</string>
     <string name="import_result_body">أُضيف %1$d، مكررات %2$d</string>
     <string name="import_result_body_failed">أُضيف %1$d، مكررات %2$d، أخطاء %3$d</string>
@@ -326,6 +328,33 @@
     <string name="import_interrupted">توقّف الاستيراد — حاول مرة أخرى</string>
     <string name="import_review_ready">جاهز للاستيراد</string>
     <string name="import_new_list_option">+ قائمة جديدة</string>
+
+    <string name="import_section_ready">سيتم الاستيراد (%d)</string>
+    <string name="import_section_duplicates">مكررات (%d)</string>
+    <string name="import_section_failed">أخطاء (%d)</string>
+    <string name="import_copy_errors">نسخ الكلمات الخاطئة</string>
+    <string name="import_errors_copied">تم نسخ %d كلمة</string>
+    <string name="import_reason_already_on_list">هذه الكلمة موجودة أصلًا في قوائمك.</string>
+    <string name="import_reason_in_file_duplicate">هذه الكلمة مكررة في هذا الاستيراد.</string>
+    <string name="import_reason_no_lemma">يبدو هذا عبارة أو جملة، ولا يمكن تحويله إلى بطاقة قاموس.</string>
+    <string name="import_reason_llm_invalid">لم تُتعرَّف ككلمة للتعلّم. تحقق أنها باللغة التي تتعلمها.</string>
+    <string name="import_reason_unknown">لا يمكن استيراد هذه الكلمة الآن.</string>
+    <string name="import_ready_hint">ستُضاف هذه الكلمات إلى قائمتك.</string>
+    <string name="import_review_loading">جارٍ تحميل الكلمات…</string>
+    <string name="import_errors_hint">لن تُضاف هذه الكلمات إلى قائمتك.</string>
+    <string name="import_item_untitled">كلمة غير معروفة</string>
+    <string name="import_reason_write_failed">تعذّر حفظ هذه الكلمة بعد 3 محاولات.</string>
+    <string name="import_cancelled">أُلغي. لم يُضف شيء.</string>
+    <string name="import_stage_queued">في الانتظار…</string>
+    <string name="import_stage_format">قراءة تخطيط الملف…</string>
+    <string name="import_stage_classify">تحليل الكلمات…</string>
+    <string name="import_stage_layout">تجهيز البطاقات…</string>
+    <string name="import_stage_dedup">التحقق من التكرار</string>
+    <string name="import_stage_write">الحفظ في القائمة</string>
+    <string name="import_stage_rollback">إلغاء والتراجع…</string>
+    <string name="import_progress_attempt">المحاولة %1$d/3</string>
+    <string name="import_progress_tally">تم %1$d · مكرر %2$d · خطأ %3$d</string>
+
 <string name="section_meanings">المعاني</string>
 
     <string name="section_synonyms">المرادفات</string>
