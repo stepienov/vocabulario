@@ -109,12 +109,11 @@ class LearningCard(Base):
     # Uniqueness only among live cards — soft-deleted rows are tombstones for sync.
     __table_args__ = (
         Index(
-            "uq_learning_cards_active",
+            "uq_learning_cards_live_lemma_pos",
             "user_id",
             "profile_id",
             "lemma_l2",
             "pos",
-            "deck_id",
             unique=True,
             postgresql_where=text("deleted_at IS NULL"),
         ),

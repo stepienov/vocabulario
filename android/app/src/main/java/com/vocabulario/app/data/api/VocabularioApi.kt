@@ -94,7 +94,7 @@ interface VocabularioApi {
     ): ImportJobProgressResponse
 
     @GET("imports/jobs/active")
-    suspend fun getActiveImportJob(@Query("profile_id") profileId: String): ImportJobProgressResponse
+    suspend fun getActiveImportJob(@Query("profile_id") profileId: String): ImportJobProgressResponse?
 
     @GET("imports/jobs/{job_id}/progress")
     suspend fun getImportJobProgress(@Path("job_id") jobId: String): ImportJobProgressResponse

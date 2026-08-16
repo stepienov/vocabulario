@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,6 +37,9 @@ class TokenStore @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val cachedAccess = AtomicReference<String?>(null)
     private val cachedRefresh = AtomicReference<String?>(null)
+    private val cachedAppLang = AtomicReference<String?>(null)
+    private val reopenSettings = AtomicBoolean(false)
+    private val expandLanguages = AtomicBoolean(false)
 
     private val _ready = MutableStateFlow(false)
     val ready: StateFlow<Boolean> = _ready.asStateFlow()
@@ -59,6 +63,7 @@ class TokenStore @Inject constructor(
             cachedRefresh.set(refresh)
             _accessToken.value = access
             _activeProfileId.value = prefs[profileKey]
+            cachedAppLang.set(readAppLang(prefs))
             _ready.value = true
         }
         scope.launch {
@@ -121,23 +126,37 @@ class TokenStore @Inject constructor(
             ?: context.dataStore.data.first()[refreshKey]?.also { cachedRefresh.set(it) }
 
     suspend fun saveActiveProfile(profileId: String) {
+        if (_activeProfileId.value == profileId) return
         _activeProfileId.value = profileId
         context.dataStore.edit { it[profileKey] = profileId }
     }
 
     suspend fun saveTheme(value: String) {
+        val current = context.dataStore.data.first()[themeKey]
+        if (current == value) return
         context.dataStore.edit { it[themeKey] = value }
     }
 
     suspend fun saveAppLang(value: String) {
+        val normalized = value.trim().lowercase()
+        if (cachedAppLang.get() == normalized) return
+        cachedAppLang.set(normalized)
         context.dataStore.edit {
-            it[appLangKey] = value.trim().lowercase()
+            it[appLangKey] = normalized
             it.remove(legacyUiLangKey)
         }
     }
 
-    suspend fun peekAppLang(): String =
-        readAppLang(context.dataStore.data.first())
+    fun peekAppLang(): String = cachedAppLang.get().orEmpty()
+
+    fun markReopenSettings() {
+        reopenSettings.set(true)
+        expandLanguages.set(true)
+    }
+
+    fun consumeReopenSettings(): Boolean = reopenSettings.getAndSet(false)
+
+    fun consumeExpandLanguages(): Boolean = expandLanguages.getAndSet(false)
 
     suspend fun clear() {
         clearMemory()
@@ -150,6 +169,7 @@ class TokenStore @Inject constructor(
         cachedRefresh.set(null)
         _accessToken.value = null
         _activeProfileId.value = null
+        cachedAppLang.set(null)
         scope.launch {
             runCatching { context.dataStore.edit { it.clear() } }
         }

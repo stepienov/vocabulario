@@ -25,4 +25,13 @@ class MatchSupportedUiLangTest {
         assertNull(matchSupportedUiLang("xx"))
         assertEquals("en", matchSupportedUiLang("xx") ?: "en")
     }
+
+    @Test
+    fun languageDropdownsAreAlphabeticalByLabel() {
+        val labels = SUPPORTED_UI_LANGS.map { it.second }
+        val sorted = labels.sortedWith(java.text.Collator.getInstance(java.util.Locale.ROOT))
+        assertEquals(sorted, labels)
+        assertEquals("Polski", SUPPORTED_UI_LANGS.first { it.first == "pl" }.second)
+        assertEquals("pl", SUPPORTED_LEARNING_LANGS.first { it.second == "Polski" }.first)
+    }
 }

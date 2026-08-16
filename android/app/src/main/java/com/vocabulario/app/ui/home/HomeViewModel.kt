@@ -8,6 +8,7 @@ import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.SYSTEM_LIST_NAME
 import com.vocabulario.app.data.isReservedListName
+import com.vocabulario.app.data.normalizePosKey
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.DashboardStatsResponse
 import com.vocabulario.app.data.api.LanguageProfileResponse
@@ -21,11 +22,13 @@ import com.vocabulario.app.ui.card.CorrectionResultItem
 import com.vocabulario.app.ui.card.CorrectionResultsState
 import com.vocabulario.app.ui.card.HomeUiStateSelfEditActive
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -111,6 +114,8 @@ class HomeViewModel @Inject constructor(
     private var listsObserverJob: Job? = null
     private var cardsObserverJob: Job? = null
     private var roomRefreshJob: Job? = null
+    /** Podczas move/delete nie publikuj pośrednich liczników z Room. */
+    private var pauseRoomRefresh = false
 
     init {
         viewModelScope.launch { refreshAll() }
@@ -132,40 +137,33 @@ class HomeViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            networkMonitor.isOnline.collect { online ->
+            var firstEmission = true
+            @OptIn(FlowPreview::class)
+            networkMonitor.isOnline.debounce(800).collect { online ->
                 val wasOffline = !_state.value.isOnline
                 _state.value = _state.value.copy(
                     isOnline = online,
                     notice = if (online && wasOffline) null else _state.value.notice,
-                    // Błąd „Failed to connect…” nie ma sensu po przejściu w offline na zakładce dodaj.
                     error = if (!online && _state.value.tab == HomeTab.ADD) null else _state.value.error,
                 )
-                when {
-                    online && wasOffline -> {
-                        viewModelScope.launch {
-                            refreshAll()
-                            runCatching { repository.syncNow() }
-                        }
-                    }
-                    !online && !wasOffline -> {
-                        viewModelScope.launch {
-                            runCatching { repository.cachedWordLists() }
-                                .onSuccess { lists ->
-                                    _state.value = _state.value.copy(lists = visibleLists(lists))
-                                }
-                        }
-                    }
+                if (firstEmission) {
+                    firstEmission = false
+                    return@collect
+                }
+                if (online && wasOffline) {
+                    repository.requestBackgroundSync()
                 }
             }
         }
         viewModelScope.launch {
             tokenStore.activeProfileId.collect { profileId ->
-                    if (profileId.isNullOrBlank()) return@collect
-                    if (profileId == boundProfileId) return@collect
-                    boundProfileId = profileId
-                    onLanguagePairChanged()
-                    startRoomObservers(profileId)
-                }
+                if (profileId.isNullOrBlank()) return@collect
+                if (profileId == boundProfileId) return@collect
+                val firstBind = boundProfileId == null
+                boundProfileId = profileId
+                onLanguagePairChanged(wipeUi = !firstBind)
+                startRoomObservers(profileId)
+            }
         }
     }
 
@@ -188,32 +186,69 @@ class HomeViewModel @Inject constructor(
 
     /** Jedno wspólne odświeżenie po zmianie Room — tylko cache, bez GET /lists. */
     private fun scheduleRoomRefresh(profileId: String) {
+        if (pauseRoomRefresh) return
         roomRefreshJob?.cancel()
         roomRefreshJob = viewModelScope.launch {
-            delay(100)
-            if (boundProfileId != profileId) return@launch
-            val lists = runCatching { repository.cachedWordLists() }.getOrNull() ?: return@launch
-            val visible = visibleLists(lists)
-            val selected = _state.value.selectedListId
-                ?: visible.firstOrNull { it.is_system }?.id
-                ?: visible.firstOrNull()?.id
-            val words = selected?.let { runCatching { repository.cachedListWords(it) }.getOrNull() }
-            val stats = runCatching { repository.dashboardStats(7) }.getOrNull()
-            _state.value = _state.value.copy(
-                lists = visible,
-                selectedListId = selected ?: _state.value.selectedListId,
-                listWords = words ?: _state.value.listWords,
-                stats = stats ?: _state.value.stats,
-            )
+            delay(250)
+            if (pauseRoomRefresh || boundProfileId != profileId) return@launch
+            publishListsFromCache(_state.value.selectedListId)
         }
     }
 
+    private suspend fun withPausedRoomRefresh(block: suspend () -> Unit) {
+        pauseRoomRefresh = true
+        roomRefreshJob?.cancel()
+        try {
+            block()
+        } finally {
+            pauseRoomRefresh = false
+        }
+    }
+
+    /** Jedna publikacja list + słów + liczników z Room. */
+    private suspend fun publishListsFromCache(
+        selectId: String? = null,
+        clearSelection: Boolean = false,
+    ) {
+        val lists = runCatching { repository.cachedWordLists() }.getOrNull() ?: return
+        if (lists.isEmpty() && _state.value.lists.isNotEmpty()) return
+        val visible = visibleLists(lists)
+        val requested = selectId
+            ?: _state.value.selectedListId
+            ?: visible.firstOrNull { it.is_system }?.id
+            ?: visible.firstOrNull()?.id
+        var selected = visible.firstOrNull { it.id == requested }?.id
+            ?: visible.firstOrNull { it.is_system }?.id
+            ?: visible.firstOrNull()?.id
+        if (selected?.startsWith("local-pending-inbox-") == true) {
+            selected = visible.firstOrNull { it.is_pending_inbox }?.id ?: selected
+        } else if (
+            requested != null &&
+            requested.startsWith("local-pending-inbox-") &&
+            visible.any { it.is_pending_inbox }
+        ) {
+            selected = visible.firstOrNull { it.is_pending_inbox }?.id
+        }
+        val words = selected?.let { runCatching { repository.cachedListWords(it) }.getOrNull() }
+        val stats = runCatching { repository.dashboardStats(7) }.getOrNull()
+        _state.value = _state.value.copy(
+            loading = false,
+            lists = visible,
+            selectedListId = selected ?: _state.value.selectedListId,
+            listWords = words ?: _state.value.listWords,
+            selectedWordIds = if (clearSelection) emptySet() else _state.value.selectedWordIds,
+            stats = stats ?: _state.value.stats,
+        )
+    }
+
     /** Drop pair-scoped UI state immediately, then reload lists/cards/stats. */
-    private fun onLanguagePairChanged() {
+    private fun onLanguagePairChanged(wipeUi: Boolean = true) {
         pollJob?.cancel()
-        val keepTab = _state.value.tab
-        val online = networkMonitor.isCurrentlyOnline()
-        _state.value = HomeUiState(tab = keepTab, isOnline = online)
+        if (wipeUi) {
+            val keepTab = _state.value.tab
+            val online = networkMonitor.isCurrentlyOnline()
+            _state.value = HomeUiState(tab = keepTab, isOnline = online)
+        }
         refreshAll()
     }
 
@@ -228,7 +263,6 @@ class HomeViewModel @Inject constructor(
             loadStats()
             loadLists()
             pairSession.markDataReady()
-            repository.requestBackgroundSync()
         }
     }
     fun selectTab(tab: HomeTab) {
@@ -389,7 +423,7 @@ class HomeViewModel @Inject constructor(
     @Suppress("UNUSED_PARAMETER")
     fun loadListWords(listId: String, background: Boolean = false) {
         viewModelScope.launch {
-            runCatching { repository.cachedListWords(listId) }
+            runCatching { repository.hydrateListIfEmpty(listId) }
                 .onSuccess { words ->
                     _state.value = _state.value.copy(loading = false, listWords = words, error = null)
                     startPollingIfNeeded()
@@ -743,22 +777,7 @@ class HomeViewModel @Inject constructor(
             return
         }
         if (!isMovableCardId(cardId)) return
-        viewModelScope.launch {
-            runCatching {
-                val list = repository.createWordList(trimmed)
-                repository.moveCard(cardId, list.id)
-                list
-            }.onSuccess { list ->
-                _state.value = _state.value.copy(
-                    listWords = _state.value.listWords.filterNot { it.id == cardId },
-                )
-                loadLists(list.id)
-            }.onFailure {
-                _state.value = _state.value.copy(
-                    error = it.userMessage(strings, R.string.err_create_list),
-                )
-            }
-        }
+        createListAndMove(trimmed, listOf(cardId))
     }
 
     fun renameList(listId: String, name: String) {
@@ -816,47 +835,35 @@ class HomeViewModel @Inject constructor(
     }
 
     fun deleteWord(cardId: String) {
+        val sourceListId = _state.value.selectedListId
         viewModelScope.launch {
-            if (cardId.startsWith("pending-lookup-")) {
-                runCatching { repository.removePendingLookupStub(cardId) }
-                    .onSuccess {
-                        _state.value = _state.value.copy(
-                            listWords = _state.value.listWords.filterNot { it.id == cardId },
-                            selectedWordIds = _state.value.selectedWordIds - cardId,
-                        )
-                        loadLists(_state.value.selectedListId)
-                    }
-                    .onFailure {
-                        _state.value = _state.value.copy(
-                            error = it.userMessage(strings, R.string.err_delete_word),
-                        )
-                    }
-                return@launch
-            }
-            runCatching { repository.deleteCard(cardId) }
-                .onSuccess {
-                    _state.value = _state.value.copy(
-                        listWords = _state.value.listWords.filterNot { it.id == cardId },
-                        selectedWordIds = _state.value.selectedWordIds - cardId,
-                        candidates = _state.value.candidates.map { c ->
-                            if (c.learning_card_id == cardId) {
-                                c.copy(
-                                    in_learning = false,
-                                    learning_card_id = null,
-                                    list_id = null,
-                                    list_name = null,
-                                    enrichment_status = null,
-                                )
-                            } else c
-                        },
-                    )
-                    loadLists(_state.value.selectedListId)
+            withPausedRoomRefresh {
+                val result = if (cardId.startsWith("pending-lookup-")) {
+                    runCatching { repository.removePendingLookupStub(cardId) }
+                } else {
+                    runCatching { repository.deleteCard(cardId) }
                 }
-                .onFailure {
+                result.onFailure {
                     _state.value = _state.value.copy(
                         error = it.userMessage(strings, R.string.err_delete_word),
                     )
+                    return@withPausedRoomRefresh
                 }
+                _state.value = _state.value.copy(
+                    candidates = _state.value.candidates.map { c ->
+                        if (c.learning_card_id == cardId) {
+                            c.copy(
+                                in_learning = false,
+                                learning_card_id = null,
+                                list_id = null,
+                                list_name = null,
+                                enrichment_status = null,
+                            )
+                        } else c
+                    },
+                )
+                publishListsFromCache(sourceListId, clearSelection = true)
+            }
         }
     }
 
@@ -972,20 +979,7 @@ class HomeViewModel @Inject constructor(
 
     fun moveWord(cardId: String, targetListId: String) {
         if (!isMovableCardId(cardId)) return
-        _state.value = _state.value.copy(
-            listWords = _state.value.listWords.filterNot { it.id == cardId },
-            selectedWordIds = _state.value.selectedWordIds - cardId,
-        )
-        viewModelScope.launch {
-            runCatching { repository.moveCard(cardId, targetListId) }
-                .onSuccess { loadLists(_state.value.selectedListId) }
-                .onFailure {
-                    _state.value.selectedListId?.let { loadListWords(it, background = true) }
-                    _state.value = _state.value.copy(
-                        error = it.userMessage(strings, R.string.err_move),
-                    )
-                }
-        }
+        commitMove(listOf(cardId), targetListId, selectTarget = false)
     }
 
     fun clearWordSelection() {
@@ -1019,52 +1013,30 @@ class HomeViewModel @Inject constructor(
 
     private fun clearWordsByIds(ids: List<String>) {
         val sourceListId = _state.value.selectedListId
-        val leftover = _state.value.listWords.filterNot { it.id in ids.toSet() }
-        _state.value = _state.value.copy(
-            selectedWordIds = emptySet(),
-            listWords = leftover,
-            lists = _state.value.lists.map { list ->
-                if (list.id == sourceListId) list.copy(word_count = leftover.size) else list
-            },
-        )
+        _state.value = _state.value.copy(selectedWordIds = emptySet())
         viewModelScope.launch {
-            runCatching { repository.deleteCards(ids) }
-                .onFailure {
-                    _state.value = _state.value.copy(
-                        error = strings.get(R.string.err_delete_partial, ids.size),
-                    )
-                    sourceListId?.let { loadListWords(it, background = true) }
-                }
-            loadLists(sourceListId)
+            withPausedRoomRefresh {
+                runCatching { repository.deleteCards(ids) }
+                    .onFailure {
+                        _state.value = _state.value.copy(
+                            error = strings.get(R.string.err_delete_partial, ids.size),
+                        )
+                    }
+                publishListsFromCache(sourceListId, clearSelection = true)
+            }
         }
     }
 
     fun moveSelectedWords(targetListId: String) {
         val ids = _state.value.selectedWordIds.filter { isMovableCardId(it) }
         if (ids.isEmpty()) return
-        val nextListId = applyOptimisticMove(ids, targetListId)
-        viewModelScope.launch {
-            runCatching { repository.moveCards(ids, targetListId) }
-                .onSuccess { loadLists(nextListId) }
-                .onFailure {
-                    _state.value = _state.value.copy(error = it.userMessage(strings, R.string.err_move))
-                    _state.value.selectedListId?.let { loadListWords(it, background = true) }
-                }
-        }
+        commitMove(ids, targetListId)
     }
 
     fun moveAllWordsFromCurrentList(targetListId: String) {
         val ids = movableCardIds()
         if (ids.isEmpty()) return
-        val nextListId = applyOptimisticMove(ids, targetListId)
-        viewModelScope.launch {
-            runCatching { repository.moveCards(ids, targetListId) }
-                .onSuccess { loadLists(nextListId) }
-                .onFailure {
-                    _state.value = _state.value.copy(error = it.userMessage(strings, R.string.err_move))
-                    _state.value.selectedListId?.let { loadListWords(it, background = true) }
-                }
-        }
+        commitMove(ids, targetListId)
     }
 
     fun createListAndMoveSelected(name: String) {
@@ -1075,19 +1047,7 @@ class HomeViewModel @Inject constructor(
         }
         val ids = _state.value.selectedWordIds.filter { isMovableCardId(it) }
         if (ids.isEmpty()) return
-        viewModelScope.launch {
-            runCatching {
-                val list = repository.createWordList(trimmed)
-                repository.moveCards(ids, list.id)
-                list
-            }.onSuccess { list ->
-                finishBulkMove(movedIds = ids, targetListId = list.id, failed = 0)
-            }.onFailure {
-                _state.value = _state.value.copy(
-                    error = it.userMessage(strings, R.string.err_create_list),
-                )
-            }
-        }
+        createListAndMove(trimmed, ids)
     }
 
     fun createListAndMoveAll(name: String) {
@@ -1098,50 +1058,50 @@ class HomeViewModel @Inject constructor(
         }
         val ids = movableCardIds()
         if (ids.isEmpty()) return
+        createListAndMove(trimmed, ids)
+    }
+
+    private fun createListAndMove(name: String, ids: List<String>) {
         viewModelScope.launch {
-            runCatching {
-                val list = repository.createWordList(trimmed)
-                repository.moveCards(ids, list.id)
-                list
-            }.onSuccess { list ->
-                finishBulkMove(movedIds = ids, targetListId = list.id, failed = 0)
-            }.onFailure {
-                _state.value = _state.value.copy(
-                    error = it.userMessage(strings, R.string.err_create_list),
-                )
+            withPausedRoomRefresh {
+                runCatching {
+                    val list = repository.createWordList(name)
+                    repository.moveCards(ids, list.id)
+                    list
+                }.onSuccess { list ->
+                    publishListsFromCache(list.id, clearSelection = true)
+                }.onFailure {
+                    _state.value = _state.value.copy(
+                        error = it.userMessage(strings, R.string.err_create_list),
+                    )
+                }
             }
         }
     }
 
-    private fun finishBulkMove(movedIds: List<String>, targetListId: String, failed: Int) {
-        val nextListId = applyOptimisticMove(movedIds, targetListId)
-        if (failed > 0) {
-            _state.value = _state.value.copy(error = strings.get(R.string.err_move_partial, failed))
-        }
-        loadLists(nextListId)
-    }
-
-    private fun applyOptimisticMove(movedIds: List<String>, targetListId: String): String? {
-        val moved = movedIds.toSet()
-        val leftover = _state.value.listWords.filterNot { it.id in moved }
+    private fun commitMove(ids: List<String>, targetListId: String, selectTarget: Boolean = true) {
         val sourceId = _state.value.selectedListId
-        val sourceIsPending = _state.value.lists.any { it.id == sourceId && it.is_pending_inbox }
-        val stayOnSource = sourceIsPending && leftover.any { !it.isReadyToMove() }
-        val nextListId = if (stayOnSource) sourceId else targetListId
-        val n = moved.size
-        _state.value = _state.value.copy(
-            selectedWordIds = emptySet(),
-            listWords = leftover,
-            tab = HomeTab.LISTS,
-            lists = _state.value.lists.map { list ->
-                when (list.id) {
-                    sourceId -> list.copy(word_count = (list.word_count - n).coerceAtLeast(0))
-                    targetListId -> list.copy(word_count = list.word_count + n)
-                    else -> list
-                }
-            },
-        )
-        return nextListId
+        _state.value = _state.value.copy(selectedWordIds = emptySet())
+        viewModelScope.launch {
+            withPausedRoomRefresh {
+                runCatching { repository.moveCards(ids, targetListId) }
+                    .onFailure {
+                        _state.value = _state.value.copy(
+                            error = it.userMessage(strings, R.string.err_move),
+                        )
+                    }
+                val leftover = sourceId?.let {
+                    runCatching { repository.cachedListWords(it) }.getOrNull()
+                }.orEmpty()
+                val sourceIsPending = _state.value.lists.any { it.id == sourceId && it.is_pending_inbox }
+                val stayOnSource = !selectTarget ||
+                    (sourceIsPending && leftover.any { !it.isReadyToMove() })
+                publishListsFromCache(
+                    if (stayOnSource) sourceId else targetListId,
+                    clearSelection = true,
+                )
+            }
+        }
     }
 
     private fun isMovableCard(card: CardResponse): Boolean = card.isReadyToMove()
@@ -1166,18 +1126,19 @@ class HomeViewModel @Inject constructor(
     private fun beginCreating(candidate: LookupCandidate, listName: String, listId: String?) {
         dismissAddSheet()
         val optimistic = CardResponse(
-            id = "pending-${candidate.lemma}",
+            id = pendingCardId(candidate.lemma, candidate.pos),
             lemma_l2 = candidate.lemma,
             pos = candidate.pos,
             gloss_primary = candidate.gloss,
             content = kotlinx.serialization.json.JsonObject(emptyMap()),
+            lexical_entry_id = candidate.lexical_entry_id,
             created_at = "",
             enrichment_status = "pending",
         )
         val onCurrentList = listId == null || listId == _state.value.selectedListId
         _state.value = _state.value.copy(
             candidates = _state.value.candidates.map {
-                if (it.lemma == candidate.lemma && it.pos == candidate.pos) {
+                if (sameLemmaAndPos(it.lemma, it.pos, candidate.lemma, candidate.pos)) {
                     it.copy(
                         in_learning = isLearningListName(listName),
                         list_id = listId,
@@ -1188,7 +1149,7 @@ class HomeViewModel @Inject constructor(
             },
             listWords = if (onCurrentList) {
                 listOf(optimistic) + _state.value.listWords.filterNot {
-                    it.lemma_l2.equals(candidate.lemma, ignoreCase = true) && it.pos == candidate.pos
+                    sameLemmaAndPos(it.lemma_l2, it.pos, candidate.lemma, candidate.pos)
                 }
             } else {
                 _state.value.listWords
@@ -1199,7 +1160,7 @@ class HomeViewModel @Inject constructor(
     private fun revertCreating(candidate: LookupCandidate) {
         _state.value = _state.value.copy(
             candidates = _state.value.candidates.map {
-                if (it.lemma == candidate.lemma && it.pos == candidate.pos) {
+                if (sameLemmaAndPos(it.lemma, it.pos, candidate.lemma, candidate.pos)) {
                     it.copy(
                         in_learning = false,
                         learning_card_id = null,
@@ -1209,7 +1170,9 @@ class HomeViewModel @Inject constructor(
                     )
                 } else it
             },
-            listWords = _state.value.listWords.filterNot { it.id.startsWith("pending-") && it.lemma_l2 == candidate.lemma },
+            listWords = _state.value.listWords.filterNot {
+                it.id.startsWith("pending-") && sameLemmaAndPos(it.lemma_l2, it.pos, candidate.lemma, candidate.pos)
+            },
         )
     }
 
@@ -1222,7 +1185,7 @@ class HomeViewModel @Inject constructor(
     ) {
         _state.value = _state.value.copy(
             candidates = _state.value.candidates.map {
-                if (it.lemma == candidate.lemma && it.pos == candidate.pos) {
+                if (sameLemmaAndPos(it.lemma, it.pos, candidate.lemma, candidate.pos)) {
                     it.copy(
                         in_learning = isLearningListName(listName),
                         learning_card_id = cardId,
@@ -1233,7 +1196,9 @@ class HomeViewModel @Inject constructor(
                 } else it
             },
             listWords = _state.value.listWords.map {
-                if (it.id.startsWith("pending-") && it.lemma_l2.equals(candidate.lemma, ignoreCase = true)) {
+                if (it.id.startsWith("pending-") &&
+                    sameLemmaAndPos(it.lemma_l2, it.pos, candidate.lemma, candidate.pos)
+                ) {
                     it.copy(id = cardId, enrichment_status = enrichmentStatus)
                 } else it
             },
@@ -1253,8 +1218,8 @@ class HomeViewModel @Inject constructor(
             pollJob?.cancel()
             return
         }
-        repository.requestBackgroundSync()
         if (pollJob?.isActive == true) return
+        repository.requestBackgroundSync()
         pollJob = viewModelScope.launch {
             var iterations = 0
             while (isActive) {
@@ -1262,7 +1227,7 @@ class HomeViewModel @Inject constructor(
                 if (++iterations > 40) break
                 val listId = _state.value.selectedListId
                 if (listId != null) {
-                    runCatching { repository.cachedListWords(listId) }
+                    runCatching { repository.refreshListWordsFromServer(listId) }
                         .onSuccess { words ->
                             _state.value = _state.value.copy(listWords = words)
                             syncCandidatesFromWords(words)
@@ -1272,8 +1237,10 @@ class HomeViewModel @Inject constructor(
                     _state.value.candidates.any { it.enrichment_status == "pending" } ||
                         _state.value.listWords.any { it.enrichment_status == "pending" } ||
                         _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
-                if (!stillPending) break
-                if (iterations % 4 == 0) repository.requestBackgroundSync()
+                if (!stillPending) {
+                    runCatching { repository.evaluateReadyBatches() }
+                    break
+                }
             }
         }
     }
@@ -1567,12 +1534,10 @@ class HomeViewModel @Inject constructor(
 
     private fun syncCandidatesFromWords(words: List<CardResponse>) {
         if (_state.value.candidates.isEmpty()) return
-        val byLemma = words.associateBy { it.lemma_l2.lowercase() to it.pos }
         val learningLabel = strings.get(R.string.list_learning)
         _state.value = _state.value.copy(
             candidates = _state.value.candidates.map { c ->
-                val card = byLemma[c.lemma.lowercase() to c.pos]
-                    ?: byLemma.entries.firstOrNull { it.key.first == c.lemma.lowercase() }?.value
+                val card = words.firstOrNull { candidateMatchesCard(c, it) }
                 if (card == null) c else {
                     val rawName = c.list_name
                     val displayName = when {
@@ -1593,6 +1558,28 @@ class HomeViewModel @Inject constructor(
 
     private fun visibleLists(lists: List<WordListResponse>) =
         lists.filter { !it.is_pending_inbox || it.word_count > 0 }
+}
+
+internal fun pendingCardId(lemma: String, pos: String?): String =
+    "pending-${lemma.trim().lowercase()}-${normalizePosKey(pos)}"
+
+internal fun sameLemmaAndPos(
+    lemmaA: String?,
+    posA: String?,
+    lemmaB: String?,
+    posB: String?,
+): Boolean {
+    if (lemmaA.isNullOrBlank() || lemmaB.isNullOrBlank()) return false
+    if (!lemmaA.equals(lemmaB, ignoreCase = true)) return false
+    val a = normalizePosKey(posA)
+    val b = normalizePosKey(posB)
+    if (a == "unknown" || b == "unknown") return false
+    return a == b
+}
+
+/** Ten sam lemat w innym POS to inna karta — nie zlewaj play/verb z play/noun. */
+internal fun candidateMatchesCard(candidate: LookupCandidate, card: CardResponse): Boolean {
+    return sameLemmaAndPos(card.lemma_l2, card.pos, candidate.lemma, candidate.pos)
 }
 
 internal fun listNameConflictMessage(

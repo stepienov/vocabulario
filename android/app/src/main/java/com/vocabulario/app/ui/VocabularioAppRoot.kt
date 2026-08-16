@@ -91,6 +91,13 @@ fun VocabularioAppRoot(
             // Przebuduj graf przy zmianie trasy startowej (HOME ↔ AUTH ↔ ONBOARDING).
             key(startRoute) {
                 val navController = rememberNavController()
+                val restoreSettings by appViewModel.restoreSettings.collectAsState()
+                LaunchedEffect(startRoute, restoreSettings) {
+                    if (startRoute == AppStartRoute.HOME && restoreSettings) {
+                        navController.navigate(Routes.SETTINGS)
+                        appViewModel.onSettingsRestored()
+                    }
+                }
                 val graphStart = when (startRoute) {
                     AppStartRoute.AUTH -> Routes.AUTH
                     AppStartRoute.ONBOARDING -> Routes.ONBOARDING

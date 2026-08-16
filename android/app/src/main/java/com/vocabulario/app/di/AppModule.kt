@@ -2,6 +2,7 @@ package com.vocabulario.app.di
 
 import com.vocabulario.app.data.ApiBaseUrl
 import com.vocabulario.app.data.api.TokenAuthenticator
+import com.vocabulario.app.data.api.TokenRefresher
 import com.vocabulario.app.data.api.VocabularioApi
 import com.vocabulario.app.data.local.TokenStore
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -37,12 +38,18 @@ object AppModule {
   fun provideOkHttpClient(
     tokenStore: TokenStore,
     authenticator: TokenAuthenticator,
+    tokenRefresher: TokenRefresher,
   ): OkHttpClient {
     val authInterceptor = Interceptor { chain ->
-      val token = tokenStore.peekAccessToken()
+      val path = chain.request().url.encodedPath
+      val token = if (path.contains("/auth/")) {
+        tokenStore.peekAccessToken()
+      } else {
+        tokenRefresher.accessTokenForRequest()
+      }
       val request = if (!token.isNullOrBlank()) {
         chain.request().newBuilder()
-          .addHeader("Authorization", "Bearer $token")
+          .header("Authorization", "Bearer $token")
           .build()
       } else {
         chain.request()

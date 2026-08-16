@@ -44,14 +44,24 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun ensureActiveProfile() {
-        offlineStore.cachedActiveProfile()?.let {
-            tokenStore.saveActiveProfile(it.id)
+        val storedId = tokenStore.activeProfileId.value
+            ?: offlineStore.cachedActiveProfile()?.id
+        val profiles = runCatching { api.listProfiles() }.getOrNull()
+        if (profiles != null) {
+            offlineStore.cacheProfiles(profiles)
+            val chosen = resolveActiveProfile(storedId, profiles) ?: return
+            tokenStore.saveActiveProfile(chosen.id)
+            if (tokenStore.peekAppLang().isBlank()) {
+                tokenStore.saveAppLang(chosen.app_lang)
+            }
+            offlineStore.cacheProfile(overlayAppLang(chosen, tokenStore.peekAppLang()))
             return
         }
-        val profiles = runCatching { api.listProfiles() }.getOrElse { return }
-        offlineStore.cacheProfiles(profiles)
-        val active = profiles.firstOrNull { it.is_active } ?: profiles.firstOrNull() ?: return
-        tokenStore.saveActiveProfile(active.id)
-        offlineStore.cacheProfile(active)
+        offlineStore.cachedActiveProfile()?.let {
+            tokenStore.saveActiveProfile(it.id)
+            if (tokenStore.peekAppLang().isBlank()) {
+                tokenStore.saveAppLang(it.app_lang)
+            }
+        }
     }
 }

@@ -42,6 +42,24 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  en:
+    nastoyashchee: Present
+    proshedshee: Past
+    budushchee: Future
+    povelitelnoe: Imperative
+    infinitiv: Infinitive
+    deeprichastie: Adverbial participle
+  ru:
+    nastoyashchee: Настоящее
+    proshedshee: Прошедшее
+    budushchee: Будущее
+    povelitelnoe: Повелительное
+    infinitiv: Инфинитив
+    deeprichastie: Деепричастие
   pl:
     nastoyashchee: Czas teraźniejszy
     proshedshee: Czas przeszły
+    budushchee: Czas przyszły
+    povelitelnoe: Tryb rozkazujący
+    infinitiv: Bezokolicznik
+    deeprichastie: Imiesłów przysłówkowy

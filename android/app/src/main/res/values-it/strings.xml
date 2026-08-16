@@ -729,11 +729,17 @@
 
     <string name="settings_notifications">Notifiche</string>
 
-    <string name="settings_notifications_summary">Promemoria di studio e prontezza delle schede</string>
+    <string name="settings_notifications_summary">Promemoria di studio e stato delle schede</string>
 
     <string name="settings_notif_study">Promemoria di studio</string>
 
     <string name="settings_notif_cards">Schede pronte</string>
+    <string name="settings_notif_enabled">Voglio le notifiche</string>
+    <string name="settings_notif_study_at">ricordami di studiare:</string>
+    <string name="notif_offline_ready_title">Schede scaricate</string>
+    <string name="notif_offline_ready_body">Tutte le %1$d schede offline sono pronte</string>
+    <string name="notif_import_ready_title">Importazione completata</string>
+    <string name="notif_import_ready_body">Tutte le %1$d schede importate sono pronte</string>
 
     <string name="settings_reminder_hour">Ora del promemoria (0–23)</string>
 

@@ -32,7 +32,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -141,12 +140,6 @@ fun FlashcardBackContent(
     var synExpanded by remember(relatedWordsExpandedDefault) { mutableStateOf(relatedWordsExpandedDefault) }
     var antExpanded by remember(relatedWordsExpandedDefault) { mutableStateOf(relatedWordsExpandedDefault) }
     var familyExpanded by remember(relatedWordsExpandedDefault) { mutableStateOf(relatedWordsExpandedDefault) }
-    val expandedPeri = remember(periphrases) {
-        mutableStateMapOf<String, Boolean>().apply {
-            periphrases?.forEachIndexed { i, _ -> put("p$i", false) }
-        }
-    }
-
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -353,55 +346,7 @@ fun FlashcardBackContent(
         }
 
         if (showPeriphrases && !periphrases.isNullOrEmpty()) {
-            SectionLabel(stringResource(R.string.section_periphrases))
-            periphrases.forEachIndexed { index, item ->
-                val p = item.asJsonObject() ?: return@forEachIndexed
-                val key = "p$index"
-                val formula = p["formula_l2"].asJsonString().orEmpty()
-                CollapsibleSection(
-                    title = formula.ifBlank { stringResource(R.string.periphrase_n, index + 1) },
-                    expanded = expandedPeri[key] == true,
-                    onToggle = { expandedPeri[key] = expandedPeri[key] != true },
-                ) {
-                    p["gloss_l1"].asJsonString()?.let {
-                        Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(10.dp))
-                    }
-                    p["examples"].asJsonArray()?.firstOrNull().asJsonObject()?.let { ex ->
-                        val periL2 = ex["l2"].asJsonString().orEmpty()
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Row(
-                                    verticalAlignment = Alignment.Top,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Text(
-                                        periL2,
-                                        fontWeight = FontWeight.Medium,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    if (periL2.isNotBlank()) {
-                                        SpeakIconButton(
-                                            onClick = { tts.speak(periL2, "peri-$key") },
-                                            compact = true,
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    ex["l1"].asJsonString().orEmpty(),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontStyle = FontStyle.Italic,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            PeriphrasesSection(periphrases = periphrases, tts = tts)
         }
 
         if (conjugationEnabled) {

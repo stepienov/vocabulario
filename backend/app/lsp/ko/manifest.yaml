@@ -37,7 +37,21 @@ adjectives:
   full_declension: false
 
 ui_labels:
+  en:
+    present: Present
+    past: Past
+    future: Future
+    imperative: Imperative
+    base: Verb stem
+  ko:
+    present: 현재
+    past: 과거
+    future: 미래
+    imperative: 명령
+    base: 어간
   pl:
     present: Czas teraźniejszy
     past: Czas przeszły
     future: Czas przyszły
+    imperative: Tryb rozkazujący
+    base: Temat czasownika

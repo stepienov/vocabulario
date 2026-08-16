@@ -1,0 +1,33 @@
+Cómo instalar Vocabulario (Android)
+===================================
+
+Versión de prueba — se instala desde un archivo APK, no desde Play Store.
+
+
+1. Descarga el APK en el teléfono
+   Abre esta carpeta de Google Drive en el teléfono.
+   Entra en Vocabulario.apk y pulsa Descargar.
+
+   Si aparece un aviso de que el archivo puede ser dañino,
+   es normal. Elige “Descargar de todos modos”.
+
+
+2. Permite la instalación
+   Ajustes → Aplicaciones → Drive / Chrome / Archivos
+   → Permitir la instalación de apps desconocidas → ACTIVAR
+
+
+3. Instala
+   Abre el Vocabulario.apk descargado (Descargas o la notificación).
+   Pulsa Instalar y luego Abrir.
+
+
+4. Crea una cuenta
+   Regístrate con correo y contraseña.
+   El inicio de sesión con Google puede no funcionar en esta versión.
+
+
+Si la instalación está bloqueada, vuelve al paso 2.
+Necesitas Android 8.0 o superior e internet.
+
+Gracias por probar la app.

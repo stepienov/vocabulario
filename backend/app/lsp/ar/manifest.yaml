@@ -37,6 +37,18 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  en:
+    perfect: Past
+    imperfect: Present
+    imperative: Imperative
+    masdar: Verbal noun
+  ar:
+    perfect: الماضي
+    imperfect: المضارع
+    imperative: الأمر
+    masdar: المصدر
   pl:
     perfect: Czas przeszły
     imperfect: Czas teraźniejszy
+    imperative: Tryb rozkazujący
+    masdar: Rzeczownik odczasownikowy

@@ -1,5 +1,7 @@
 package com.vocabulario.app.data
 
+import java.text.Collator
+import java.util.Locale
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -19,27 +21,31 @@ fun isReservedListName(name: String, pendingDisplayName: String): Boolean {
         lower in PENDING_INBOX_CANONICAL_NAMES
 }
 
+private val LANG_LABEL_COLLATOR = Collator.getInstance(Locale.ROOT).apply {
+    strength = Collator.PRIMARY
+}
+
 /**
- * Języki interfejsu i nauki — 16 kodów LSP (endonimy).
+ * Języki interfejsu i nauki — 16 kodów LSP (endonimy), alfabetycznie po etykiecie.
  */
 val SUPPORTED_UI_LANGS = listOf(
+    "ar" to "العربية",
+    "de" to "Deutsch",
     "en" to "English",
     "es" to "Español",
     "fr" to "Français",
-    "de" to "Deutsch",
+    "hi" to "हिन्दी",
     "it" to "Italiano",
-    "pt-br" to "Português (Brasil)",
-    "pt-pt" to "Português (Portugal)",
-    "zh" to "中文",
     "ja" to "日本語",
     "ko" to "한국어",
-    "ar" to "العربية",
+    "pl" to "Polski",
+    "pt-br" to "Português (Brasil)",
+    "pt-pt" to "Português (Portugal)",
     "ru" to "Русский",
-    "hi" to "हिन्दी",
     "tr" to "Türkçe",
     "vi" to "Tiếng Việt",
-    "pl" to "Polski",
-)
+    "zh" to "中文",
+).sortedWith(compareBy(LANG_LABEL_COLLATOR) { it.second })
 
 /** Języki nauki — ta sama lista co UI (16 LSP). */
 val SUPPORTED_LEARNING_LANGS = SUPPORTED_UI_LANGS

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
@@ -187,7 +188,11 @@ async def create_profile(
         is_active=True,
     )
     db.add(profile)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise api_error(status.HTTP_409_CONFLICT, "profile_pair_exists", "A profile with this language pair already exists")
     await db.refresh(profile)
     return profile
 
@@ -213,7 +218,11 @@ async def update_profile(
         raise api_error(404, "profile_not_found", "Profile not found")
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(profile, field, value)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise api_error(status.HTTP_409_CONFLICT, "profile_pair_exists", "A profile with this language pair already exists")
     await db.refresh(profile)
     return profile
 

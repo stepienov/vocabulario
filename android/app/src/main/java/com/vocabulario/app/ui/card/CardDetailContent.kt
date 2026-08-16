@@ -295,6 +295,10 @@ fun CardDetailContent(
             )
         }
 
+        if ((!compact || fullDetail) && !periphrases.isNullOrEmpty()) {
+            PeriphrasesSection(periphrases = periphrases, tts = tts)
+        }
+
         if (showConjHint) {
             ConjugationTenseAccordions(
                 finiteKeys = visibleFinite,
@@ -305,54 +309,6 @@ fun CardDetailContent(
                 lang = lang,
                 profile = profile,
             )
-            periphrases?.forEach { item ->
-                val p = item.asJsonObject() ?: return@forEach
-                AppCard {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            p["formula_l2"].asJsonString() ?: "",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        p["gloss_l1"].asJsonString()?.let {
-                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        p["examples"].asJsonArray()?.forEachIndexed { exIndex, ex ->
-                            val exObj = ex.asJsonObject() ?: return@forEachIndexed
-                            val periL2 = exObj["l2"].asJsonString().orEmpty()
-                            Spacer(Modifier.height(8.dp))
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                            ) {
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Row(
-                                        verticalAlignment = Alignment.Top,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    ) {
-                                        Text(
-                                            periL2,
-                                            fontWeight = FontWeight.Medium,
-                                            modifier = Modifier.weight(1f),
-                                        )
-                                        if (periL2.isNotBlank()) {
-                                            SpeakIconButton(
-                                                onClick = { tts.speak(periL2, "peri-$exIndex") },
-                                                compact = true,
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        exObj["l1"].asJsonString() ?: "",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
         if (fullDetail) {
             Spacer(Modifier.height(8.dp))
@@ -587,6 +543,62 @@ private fun MeaningCompactCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun PeriphrasesSection(
+    periphrases: JsonArray,
+    tts: L2TtsSpeaker,
+) {
+    AppCard {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                stringResource(R.string.settings_periphrases),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            periphrases.forEachIndexed { index, item ->
+                val p = item.asJsonObject() ?: return@forEachIndexed
+                if (index > 0) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                    )
+                } else {
+                    Spacer(Modifier.height(12.dp))
+                }
+                val formula = p["formula_l2"].asJsonString().orEmpty()
+                val gloss = p["gloss_l1"].asJsonString().orEmpty()
+                val ex = p["examples"].asJsonArray()?.firstOrNull().asJsonObject()
+                val exL2 = ex?.get("l2").asJsonString().orEmpty()
+                val exL1 = ex?.get("l1").asJsonString().orEmpty()
+                val speak = exL2.ifBlank { formula }
+                Text(
+                    formula.ifBlank { stringResource(R.string.periphrase_n, index + 1) },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (gloss.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        gloss,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (exL2.isNotBlank() || speak.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    L2L1PairRow(
+                        l2 = exL2.ifBlank { formula },
+                        l1 = exL1,
+                        onSpeak = speak.takeIf { it.isNotBlank() }?.let {
+                            { tts.speak(it, "peri-$index") }
+                        },
+                    )
                 }
             }
         }

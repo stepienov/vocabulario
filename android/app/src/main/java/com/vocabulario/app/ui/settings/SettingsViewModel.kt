@@ -3,9 +3,8 @@ package com.vocabulario.app.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
-import com.vocabulario.app.data.LanguagePacks
 import com.vocabulario.app.data.LearningRepository
-import com.vocabulario.app.data.PairSession
+import com.vocabulario.app.data.overlayAppLang
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.data.api.UserSettingsUpdate
@@ -15,6 +14,8 @@ import com.vocabulario.app.data.normalizeTenseKeys
 import com.vocabulario.app.i18n.AppLocale
 import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,21 +61,27 @@ data class SettingsUiState(
     val studyReminderEnabled: Boolean = true,
     val cardsReadyPushEnabled: Boolean = true,
     val reminderHour: Int = 19,
-)
+    val reminderMinute: Int = 0,
+) {
+    val notificationsEnabled: Boolean get() = studyReminderEnabled || cardsReadyPushEnabled
+}
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repository: LearningRepository,
     private val tokenStore: TokenStore,
-    private val pairSession: PairSession,
     private val strings: UiStrings,
     private val notificationScheduler: com.vocabulario.app.notifications.NotificationScheduler,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsUiState())
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
+    private var reminderSaveJob: Job? = null
 
     init {
+        if (tokenStore.consumeExpandLanguages()) {
+            _state.value = _state.value.copy(expanded = SettingsSection.LANGUAGES)
+        }
         // Reaktywnie: zmiana ustawień w Room (lokalna lub dociągnięta z sync) aktualizuje UI.
         viewModelScope.launch {
             repository.observeSettings().collect { s ->
@@ -100,6 +107,7 @@ class SettingsViewModel @Inject constructor(
                     studyReminderEnabled = s.study_reminder_enabled,
                     cardsReadyPushEnabled = s.cards_ready_push_enabled,
                     reminderHour = s.reminder_hour,
+                    reminderMinute = notificationScheduler.reminderMinute(),
                 )
             }
         }
@@ -117,9 +125,16 @@ class SettingsViewModel @Inject constructor(
                 val profiles = runCatching { repository.listProfiles() }.getOrElse {
                     active?.let { listOf(it) } ?: emptyList()
                 }
-                val resolvedActive = active
-                    ?: profiles.firstOrNull { it.is_active }
-                    ?: profiles.firstOrNull()
+                val storedLang = tokenStore.peekAppLang()
+                val resolvedActive = (
+                    active
+                        ?: profiles.firstOrNull { it.is_active }
+                        ?: profiles.firstOrNull()
+                    )?.let { overlayAppLang(it, storedLang) }
+                resolvedActive?.let { tokenStore.saveActiveProfile(it.id) }
+                AppLocale.applyIfChanged(
+                    tokenStore.peekAppLang().ifBlank { resolvedActive?.appLang ?: "en" },
+                )
                 Triple(settings, profiles, resolvedActive)
             }.onSuccess { (s, profiles, active) ->
                 val showSyn = if (s.show_synonyms_antonyms) s.show_synonyms else false
@@ -152,19 +167,28 @@ class SettingsViewModel @Inject constructor(
                     studyReminderEnabled = s.study_reminder_enabled,
                     cardsReadyPushEnabled = s.cards_ready_push_enabled,
                     reminderHour = s.reminder_hour,
+                    reminderMinute = notificationScheduler.reminderMinute(),
                 )
-                notificationScheduler.scheduleStudyReminder(s.reminder_hour, s.study_reminder_enabled)
-                active?.let {
-                    tokenStore.saveActiveProfile(it.id)
-                    tokenStore.saveAppLang(it.appLang)
-                    AppLocale.apply(it.appLang)
-                }
+                notificationScheduler.scheduleStudyReminder(
+                    s.reminder_hour,
+                    s.study_reminder_enabled || s.cards_ready_push_enabled,
+                    notificationScheduler.reminderMinute(),
+                )
                 viewModelScope.launch {
                     runCatching { repository.refreshProfilesFromNetwork() }
                         .onSuccess { remote ->
-                            if (remote.isNotEmpty()) {
-                                _state.value = _state.value.copy(profiles = remote)
-                            }
+                            if (remote.isEmpty()) return@onSuccess
+                            val storedLang = tokenStore.peekAppLang()
+                            val resolved = (
+                                repository.getActiveProfile()
+                                    ?: remote.firstOrNull { it.is_active }
+                                    ?: remote.firstOrNull()
+                                )?.let { overlayAppLang(it, storedLang) }
+                            resolved?.let { tokenStore.saveActiveProfile(it.id) }
+                            _state.value = _state.value.copy(
+                                profiles = remote,
+                                activeProfile = resolved ?: _state.value.activeProfile,
+                            )
                         }
                 }
             }.onFailure {
@@ -226,21 +250,33 @@ class SettingsViewModel @Inject constructor(
     fun setTheme(value: String) =
         save(UserSettingsUpdate(theme = value)) { it.copy(theme = value) }
 
-    fun setStudyReminderEnabled(value: Boolean) {
-        save(UserSettingsUpdate(study_reminder_enabled = value)) {
-            notificationScheduler.scheduleStudyReminder(it.reminderHour, value)
-            it.copy(studyReminderEnabled = value)
+    fun setNotificationsEnabled(value: Boolean) {
+        save(
+            UserSettingsUpdate(
+                study_reminder_enabled = value,
+                cards_ready_push_enabled = value,
+            ),
+        ) {
+            notificationScheduler.scheduleStudyReminder(it.reminderHour, value, it.reminderMinute)
+            it.copy(studyReminderEnabled = value, cardsReadyPushEnabled = value)
         }
     }
 
-    fun setCardsReadyPushEnabled(value: Boolean) =
-        save(UserSettingsUpdate(cards_ready_push_enabled = value)) { it.copy(cardsReadyPushEnabled = value) }
-
-    fun setReminderHour(value: Int) {
-        val hour = value.coerceIn(0, 23)
-        save(UserSettingsUpdate(reminder_hour = hour)) {
-            notificationScheduler.scheduleStudyReminder(hour, it.studyReminderEnabled)
-            it.copy(reminderHour = hour)
+    fun setReminderTime(hour: Int, minute: Int) {
+        val safeHour = hour.coerceIn(0, 23)
+        val safeMinute = minute.coerceIn(0, 59)
+        _state.value = _state.value.copy(reminderHour = safeHour, reminderMinute = safeMinute)
+        notificationScheduler.scheduleStudyReminder(
+            safeHour,
+            _state.value.notificationsEnabled,
+            safeMinute,
+        )
+        reminderSaveJob?.cancel()
+        reminderSaveJob = viewModelScope.launch {
+            delay(450)
+            save(UserSettingsUpdate(reminder_hour = safeHour)) {
+                it.copy(reminderHour = safeHour, reminderMinute = safeMinute)
+            }
         }
     }
 
@@ -335,7 +371,18 @@ class SettingsViewModel @Inject constructor(
             _state.value = _state.value.copy(error = strings.get(R.string.err_langs_must_differ))
             return
         }
-        switchOrCreateProfile(appLang = code, learning = current.learning_lang, cefr = current.cefr_level)
+        tokenStore.markReopenSettings()
+        _state.value = _state.value.copy(
+            activeProfile = current.copy(app_lang = code, native_lang = code),
+            error = null,
+            expanded = SettingsSection.LANGUAGES,
+        )
+        viewModelScope.launch {
+            tokenStore.saveAppLang(code)
+            repository.cacheActiveProfileLang(code)
+            repository.persistAppLangAsync(code)
+            AppLocale.applyIfChanged(code)
+        }
     }
 
     fun setLearningLang(code: String) {
@@ -345,54 +392,30 @@ class SettingsViewModel @Inject constructor(
             _state.value = _state.value.copy(error = strings.get(R.string.err_langs_must_differ))
             return
         }
-        switchOrCreateProfile(appLang = current.appLang, learning = code, cefr = current.cefr_level)
-    }
-
-    fun setTenseLabelLang(value: String) {
-        if (value != "app_lang" && value != "learning_lang") return
-        val current = _state.value.activeProfile ?: return
-        if (current.tense_label_lang == value) return
-        viewModelScope.launch {
-            runCatching { repository.updateProfile(tenseLabelLang = value) }
-                .onSuccess { profile ->
-                    _state.value = _state.value.copy(activeProfile = profile, tenseLabelLang = value)
-                }
-                .onFailure {
-                    _state.value = _state.value.copy(
-                        error = it.userMessage(strings, R.string.err_save),
-                    )
-                }
-        }
-    }
-
-    private fun switchOrCreateProfile(appLang: String, learning: String, cefr: String) {
+        _state.value = _state.value.copy(
+            activeProfile = current.copy(learning_lang = code),
+            error = null,
+            expanded = SettingsSection.LANGUAGES,
+        )
         viewModelScope.launch {
             runCatching {
-                pairSession.withSwitch(awaitDataReload = true) {
-                    val existing = _state.value.profiles.firstOrNull {
-                        it.appLang.equals(appLang, true) && it.learning_lang.equals(learning, true)
-                    }
-                    if (existing != null) {
-                        repository.activateProfile(existing.id)
-                    } else {
-                        repository.createProfile(
-                            appLang = appLang,
-                            learning = learning,
-                            cefr = cefr,
-                            tenses = LanguagePacks.defaultSelectedTenses(learning),
-                        )
-                    }
-                    tokenStore.saveAppLang(appLang)
-                    AppLocale.apply(appLang)
-                    runCatching { repository.syncNow(fullReplace = true) }
-                }
-            }.onSuccess {
-                load()
-                pairSession.markDataReady()
-                _state.value = _state.value.copy(expanded = SettingsSection.LANGUAGES)
+                repository.switchToLangPair(
+                    appLang = current.appLang,
+                    learningLang = code,
+                    cefr = current.cefr_level,
+                )
+            }.onSuccess { profile ->
+                _state.value = _state.value.copy(
+                    activeProfile = profile,
+                    profiles = runCatching { repository.listProfiles() }.getOrElse { _state.value.profiles },
+                    expanded = SettingsSection.LANGUAGES,
+                    error = null,
+                )
             }.onFailure {
                 _state.value = _state.value.copy(
+                    activeProfile = current,
                     error = it.userMessage(strings, R.string.err_learning_lang),
+                    expanded = SettingsSection.LANGUAGES,
                 )
             }
         }

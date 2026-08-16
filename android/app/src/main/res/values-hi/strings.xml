@@ -655,9 +655,15 @@
         <string name="voice_permission_denied">माइक्रोफ़ोन अनुमति अस्वीकृत।</string>
     <string name="voice_unavailable">इस डिवाइस पर वाक् पहचान उपलब्ध नहीं।</string>
     <string name="settings_notifications">सूचनाएँ</string>
-    <string name="settings_notifications_summary">अध्ययन अनुस्मारक और तैयार कार्ड</string>
+    <string name="settings_notifications_summary">अध्ययन अनुस्मारक और कार्ड स्थिति</string>
     <string name="settings_notif_study">अध्ययन अनुस्मारक</string>
     <string name="settings_notif_cards">कार्ड तैयार</string>
+    <string name="settings_notif_enabled">मुझे सूचनाएँ चाहिए</string>
+    <string name="settings_notif_study_at">अध्ययन की याद दिलाएँ:</string>
+    <string name="notif_offline_ready_title">कार्ड डाउनलोड हो गए</string>
+    <string name="notif_offline_ready_body">सभी %1$d ऑफ़लाइन कार्ड तैयार हैं</string>
+    <string name="notif_import_ready_title">आयात पूरा</string>
+    <string name="notif_import_ready_body">सभी %1$d आयातित कार्ड तैयार हैं</string>
     <string name="settings_reminder_hour">अनुस्मारक घंटा (0–23)</string>
     <string name="notif_channel_study">अध्ययन</string>
     <string name="notif_channel_cards">कार्ड</string>

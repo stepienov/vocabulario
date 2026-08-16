@@ -40,6 +40,13 @@ class AppViewModel @Inject constructor(
     private val _startRoute = MutableStateFlow(AppStartRoute.LOADING)
     val startRoute: StateFlow<AppStartRoute> = _startRoute.asStateFlow()
 
+    private val _restoreSettings = MutableStateFlow(false)
+    val restoreSettings: StateFlow<Boolean> = _restoreSettings.asStateFlow()
+
+    fun onSettingsRestored() {
+        _restoreSettings.value = false
+    }
+
     fun bootstrap() {
         viewModelScope.launch {
             withTimeoutOrNull(1_500) { tokenStore.awaitReady() }
@@ -53,6 +60,7 @@ class AppViewModel @Inject constructor(
             if (learningRepository.hasCachedProfile()) {
                 runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
                 runCatching { learningRepository.syncThemeFromSettings() }
+                _restoreSettings.value = tokenStore.consumeReopenSettings()
                 _startRoute.value = AppStartRoute.HOME
                 syncInBackground()
                 return@launch
@@ -95,9 +103,6 @@ class AppViewModel @Inject constructor(
     private fun syncInBackground() {
         viewModelScope.launch {
             runCatching { authRepository.ensureActiveProfile() }
-            runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
-            runCatching { learningRepository.syncPendingReviews() }
-            runCatching { learningRepository.syncThemeFromSettings() }
             syncScheduler.schedulePeriodic()
             syncScheduler.requestNow()
         }

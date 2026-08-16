@@ -44,7 +44,39 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  en:
+    present: Present
+    passe_compose: Passé composé
+    imparfait: Imperfect
+    futur_simple: Simple future
+    conditionnel: Conditional
+    subjonctif_present: Present subjunctive
+    plus_que_parfait: Pluperfect
+    imperatif: Imperative
+    infinitif: Infinitive
+    participe_passe: Past participle
+    gerondif: Gerund
+  fr:
+    present: Présent
+    passe_compose: Passé composé
+    imparfait: Imparfait
+    futur_simple: Futur simple
+    conditionnel: Conditionnel
+    subjonctif_present: Subjonctif présent
+    plus_que_parfait: Plus-que-parfait
+    imperatif: Impératif
+    infinitif: Infinitif
+    participe_passe: Participe passé
+    gerondif: Gérondif
   pl:
     present: Czas teraźniejszy
     passe_compose: Czas przeszły złożony
     imparfait: Czas przeszły niedokonany
+    futur_simple: Czas przyszły
+    conditionnel: Tryb warunkowy
+    subjonctif_present: Tryb łączący — teraźniejszy
+    plus_que_parfait: Czas zaprzeszły
+    imperatif: Tryb rozkazujący
+    infinitif: Bezokolicznik
+    participe_passe: Imiesłów przeszły
+    gerondif: Gerundium

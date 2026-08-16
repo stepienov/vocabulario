@@ -205,7 +205,6 @@ fun ImportReviewAccordion(
             expanded = state.expandedSection == "ready",
             tag = TestTags.IMPORT_ACCORDION_READY,
             items = state.readyItems,
-            hint = if (state.readyCount > 0) stringResource(R.string.import_ready_hint) else null,
             emptyLabel = if (state.readyCount > 0 && state.readyItems.isEmpty()) {
                 stringResource(R.string.import_review_loading)
             } else {
@@ -225,7 +224,6 @@ fun ImportReviewAccordion(
             expanded = state.expandedSection == "failed",
             tag = TestTags.IMPORT_ACCORDION_FAIL,
             items = state.failedItems,
-            hint = if (state.failedCount > 0) stringResource(R.string.import_errors_hint) else null,
             onClick = { onExpand("failed") },
             onCopy = if (state.failedCount > 0) {
                 {
@@ -356,7 +354,12 @@ private fun ImportJobItemRow(item: ImportJobItemResponse) {
             ?: untitled
     }
     val detail = when (item.verdict) {
-        "failed", "duplicate" -> reasonLabel(item.reason_code)
+        "failed" -> reasonLabel(item.reason_code)
+        "duplicate" -> if (item.reason_code == "in_file_duplicate") {
+            null
+        } else {
+            reasonLabel(item.reason_code)
+        }
         else -> item.gloss?.takeIf { it.isNotBlank() }
     }
     Column(modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp)) {

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
+from app.core.text_repair import repair_strings
 from app.lsp.constants import CARD_SCHEMA_VERSION
 from app.lsp.prompts import build_inflection_prompt
 from app.lsp.registry import get_manifest
@@ -124,7 +125,7 @@ async def enrich_card_content_lsp(
 
     conjugation = inflection_to_legacy_conjugation(inflection)
 
-    return {
+    return repair_strings({
         "schema_version": CARD_SCHEMA_VERSION,
         "lsp_version": manifest.lsp_version,
         "lemma": lemma_final,
@@ -143,4 +144,4 @@ async def enrich_card_content_lsp(
         "language_specific": core.get("language_specific") or {},
         "notes": core.get("notes"),
         "confidence": core.get("confidence"),
-    }
+    })

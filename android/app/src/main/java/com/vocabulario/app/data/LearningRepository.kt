@@ -50,6 +50,8 @@ import com.vocabulario.app.data.local.OfflineStore
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.local.db.PendingReviewEntity
 import com.vocabulario.app.data.sync.SyncScheduler
+import com.vocabulario.app.notifications.NotificationScheduler
+import com.vocabulario.app.notifications.ReadyBatchTracker
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -57,16 +59,21 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import okhttp3.MediaType.Companion.toMediaType
+import retrofit2.HttpException
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.time.Instant
@@ -81,9 +88,13 @@ class LearningRepository @Inject constructor(
     private val offlineStore: OfflineStore,
     private val syncScheduler: SyncScheduler,
     private val networkMonitor: NetworkMonitor,
+    private val readyBatchTracker: ReadyBatchTracker,
+    private val notificationScheduler: NotificationScheduler,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val outboxMutex = Mutex()
+    private val persistScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val hydratedEmptyLists = mutableSetOf<String>()
 
     // Serializuje opróżnianie kolejki Oczekujących. Bez tego równoległe flushe (sync + wejście
     // na listę + polling) tworzyły wiele kart z jednego stuba i paliły tokeny LLM.
@@ -125,6 +136,35 @@ class LearningRepository @Inject constructor(
             ?: lists.find { it.is_pending_inbox && listId.startsWith("local-pending-inbox-") }
         val isSystem = meta?.is_system == true || listId == "local-system-learning"
         return offlineStore.localWords(profileId, listId, isSystem = isSystem)
+    }
+
+    /**
+     * Dociąga słowa listy z API i upsertuje enrichment/treść w Room.
+     * Tylko do polla pending → ready; nie czyści SRS.
+     */
+    suspend fun refreshListWordsFromServer(listId: String): List<CardResponse> {
+        if (!networkMonitor.isCurrentlyOnline() || isLocalOnlyListId(listId)) {
+            return cachedListWords(listId)
+        }
+        val profileId = activeProfileId()
+        val lists = offlineStore.localLists(profileId)
+        val meta = lists.find { it.id == listId }
+            ?: lists.find { it.is_pending_inbox && listId.startsWith("local-pending-inbox-") }
+        val isSystem = meta?.is_system == true || listId == "local-system-learning"
+        val serverListId = when {
+            isSystem -> lists.find { it.is_system && !isLocalOnlyListId(it.id) }?.id
+            else -> meta?.id?.takeUnless { isLocalOnlyListId(it) }
+        } ?: return cachedListWords(listId)
+        apiTry(timeoutMs = API_SYNC_TIMEOUT_MS) { api.listWords(serverListId, profileId) }
+            .getOrNull()
+            ?.let { words ->
+                offlineStore.upsertCards(
+                    profileId,
+                    words,
+                    deckId = if (isSystem) null else serverListId,
+                )
+            }
+        return cachedListWords(listId)
     }
 
     private suspend fun offlineWordLists(profileId: String): List<WordListResponse> {
@@ -250,9 +290,48 @@ class LearningRepository @Inject constructor(
 
     suspend fun commitImportDisplay(listId: String, cards: List<ImportDisplayCard>): ImportDisplayCommitResponse {
         val profileId = activeProfileId()
-        return api.commitImportDisplay(
+        val result = api.commitImportDisplay(
             ImportDisplayCommitRequest(profile_id = profileId, list_id = listId, cards = cards),
         )
+        runCatching { refreshLocalAfterImport(listId) }
+        return result
+    }
+
+    /**
+     * Import commit pisze karty na serwerze. UI czyta tylko Room — bez tego import
+     * wygląda jak pusta lista, a kolejna analiza zgłasza fałszywe duplikaty.
+     */
+    suspend fun refreshLocalAfterImport(listId: String?) {
+        if (!networkMonitor.isCurrentlyOnline()) return
+        val profileId = activeProfileId()
+        apiTry { api.listWordLists(profileId) }.getOrNull()?.let { remote ->
+            offlineStore.cacheLists(profileId, remote)
+        }
+        val lists = offlineStore.localLists(profileId)
+        for (id in importRefreshListIds(listId, lists)) {
+            val meta = lists.find { it.id == id } ?: continue
+            val deckId = if (meta.is_system) null else id
+            apiTry(timeoutMs = API_SYNC_TIMEOUT_MS) { api.listWords(id, profileId) }
+                .getOrNull()
+                ?.let { words ->
+                    offlineStore.cacheCardsFromList(profileId, words, deckId = deckId)
+                }
+        }
+        syncNow(fullReplace = false)
+    }
+
+    /**
+     * Odzyskanie po desyncu: pusta lista online = dociągnij raz z serwera.
+     * Nie rusza list lokalnych (`local-` / `local:`) i nie powtarza w tej sesji.
+     */
+    suspend fun hydrateListIfEmpty(listId: String): List<CardResponse> {
+        val local = cachedListWords(listId)
+        if (local.isNotEmpty()) return local
+        if (!networkMonitor.isCurrentlyOnline() || isLocalOnlyListId(listId)) return local
+        if (!hydratedEmptyLists.add(listId)) return local
+        val ok = runCatching { refreshLocalAfterImport(listId) }.isSuccess
+        if (!ok) hydratedEmptyLists.remove(listId)
+        return cachedListWords(listId)
     }
 
     suspend fun createCard(
@@ -272,6 +351,7 @@ class LearningRepository @Inject constructor(
             )
         )
         offlineStore.upsertCards(profileId, listOf(created), deckId = null)
+        watchOfflineIfPending(created)
         syncScheduler.requestNow()
         return created
     }
@@ -353,6 +433,7 @@ class LearningRepository @Inject constructor(
         val deckId = offlineStore.localLists(profileId).find { it.id == listId && it.is_system }?.let { null }
             ?: listId.takeUnless { it.startsWith("local-") }
         offlineStore.upsertCards(profileId, listOf(created), deckId = deckId)
+        watchOfflineIfPending(created)
         syncScheduler.requestNow()
         return created
     }
@@ -486,21 +567,22 @@ class LearningRepository @Inject constructor(
     suspend fun deleteCards(cardIds: List<String>) {
         if (cardIds.isEmpty()) return
         val profileId = activeProfileId()
-        for (cardId in cardIds) {
-            if (cardId.startsWith("pending-lookup-")) {
-                removePendingLookupStub(cardId)
-                continue
+        val stubs = cardIds.filter { it.startsWith("pending-lookup-") }
+        val realIds = cardIds.filterNot { it.startsWith("pending-") }
+        for (stub in stubs) removePendingLookupStub(stub)
+        if (realIds.isNotEmpty()) {
+            offlineStore.deleteCardsLocally(realIds)
+            for (cardId in realIds) {
+                offlineStore.enqueueOp(
+                    OP_CARD_DELETE,
+                    buildJsonObject {
+                        put("cardId", cardId)
+                        put("profileId", profileId)
+                    }.toString(),
+                )
             }
-            offlineStore.deleteCardLocally(cardId)
-            offlineStore.enqueueOp(
-                OP_CARD_DELETE,
-                buildJsonObject {
-                    put("cardId", cardId)
-                    put("profileId", profileId)
-                }.toString(),
-            )
         }
-        if (networkMonitor.isCurrentlyOnline()) runCatching { drainOutboxOps() } else syncScheduler.requestNow()
+        syncScheduler.requestNow()
     }
 
     suspend fun moveCard(cardId: String, targetListId: String): CardResponse {
@@ -516,20 +598,12 @@ class LearningRepository @Inject constructor(
             runCatching { listWordLists() }.getOrElse { offlineStore.localLists(profileId) }
         }
         val systemId = lists.find { it.is_system }?.id
-        for (cardId in ready) {
-            runCatching {
-                offlineStore.moveCardLocally(
-                    cardId = cardId,
-                    targetListId = targetListId,
-                    systemListId = systemId,
-                )
-            }
-        }
-        if (networkMonitor.isCurrentlyOnline()) {
-            runCatching { pushOutbox() }
-        } else {
-            syncScheduler.requestNow()
-        }
+        offlineStore.moveCardsLocally(
+            cardIds = ready,
+            targetListId = targetListId,
+            systemListId = systemId,
+        )
+        syncScheduler.requestNow()
     }
 
     private suspend fun localMovedCard(cardId: String): CardResponse {
@@ -761,25 +835,53 @@ class LearningRepository @Inject constructor(
      * Push moves + reviews, flush offline lookups, then pull.
      * Flush jest osobno i **pierwszy** — zatruty outbox nie może blokować opróżniania Oczekujących.
      */
+    private val syncMutex = Mutex()
+
     suspend fun syncNow(fullReplace: Boolean = false) {
         if (!networkMonitor.isCurrentlyOnline()) return
-        runCatching { withTimeout(FLUSH_LOOKUPS_TIMEOUT_MS) { flushPendingLookups() } }
-        runCatching { withTimeout(API_SYNC_TIMEOUT_MS) { pushOutbox() } }
-        runCatching {
-            withTimeout(API_SYNC_TIMEOUT_MS) {
-                val profileId = activeProfileId()
-                val lastPulled = offlineStore.lastPulledAt(profileId)
-                val doFull = fullReplace || lastPulled == null
-                val since = if (doFull) null else lastPulled
-                val pull = api.syncPull(profileId, since = since)
-                offlineStore.applyPull(profileId, pull, fullReplace = doFull)
-                tokenStore.saveTheme(pull.settings.theme)
-                runCatching { api.listProfiles() }.getOrNull()?.let { profiles ->
-                    offlineStore.cacheProfiles(profiles)
-                    (profiles.firstOrNull { it.is_active } ?: profiles.firstOrNull())
-                        ?.let { syncActiveProfileToLocal(it) }
+        if (!syncMutex.tryLock()) return
+        try {
+            runCatching { withTimeout(FLUSH_LOOKUPS_TIMEOUT_MS) { flushPendingLookups() } }
+            runCatching { withTimeout(API_SYNC_TIMEOUT_MS) { pushOutbox() } }
+            runCatching {
+                withTimeout(API_SYNC_TIMEOUT_MS) {
+                    val profileId = activeProfileId()
+                    val lastPulled = offlineStore.lastPulledAt(profileId)
+                    val doFull = fullReplace || lastPulled == null
+                    val since = if (doFull) null else lastPulled
+                    val pull = api.syncPull(profileId, since = since)
+                    offlineStore.applyPull(profileId, pull, fullReplace = doFull)
+                    tokenStore.saveTheme(pull.settings.theme)
+                    val needProfiles = doFull || offlineStore.cachedProfiles().isEmpty()
+                    if (needProfiles) {
+                        runCatching { api.listProfiles() }.getOrNull()?.let { applyRemoteProfiles(it) }
+                    }
                 }
             }
+            evaluateReadyBatches()
+        } finally {
+            syncMutex.unlock()
+        }
+    }
+
+    suspend fun evaluateReadyBatches() {
+        val settings = runCatching { getSettings() }.getOrNull() ?: return
+        val on = settings.study_reminder_enabled || settings.cards_ready_push_enabled
+        val profileId = runCatching { activeProfileId() }.getOrNull() ?: return
+        val statusById = offlineStore.allCards(profileId).associate { it.id to it.enrichmentStatus }
+        readyBatchTracker.evaluate(statusById, on)
+        if (readyBatchTracker.hasWatches()) notificationScheduler.scheduleEnrichmentSoon()
+    }
+
+    fun watchImportCards(ids: Collection<String>) {
+        readyBatchTracker.watchImport(ids)
+        if (ids.any { it.isNotBlank() }) notificationScheduler.scheduleEnrichmentSoon()
+    }
+
+    private fun watchOfflineIfPending(card: CardResponse) {
+        if (card.enrichment_status == "pending" || card.enrichment_status == "awaiting_network") {
+            readyBatchTracker.watchOffline(listOf(card.id))
+            notificationScheduler.scheduleEnrichmentSoon()
         }
     }
 
@@ -1031,6 +1133,7 @@ class LearningRepository @Inject constructor(
                     offlineStore.removePendingLookup(item.clientId)
                     added.getOrNull()?.let { card ->
                         offlineStore.upsertCards(profileId, listOf(card), deckId = inboxId)
+                        watchOfflineIfPending(card)
                     }
                     anyDone = true
                 }
@@ -1098,7 +1201,10 @@ class LearningRepository @Inject constructor(
         // Kasuj stub „needs_review" i od razu zcache'uj nową kartę (spinner „Tworzę kartę").
         offlineStore.removePendingLookup(clientId)
         val card = added.getOrNull()
-        card?.let { offlineStore.upsertCards(profileId, listOf(it), deckId = inbox.id) }
+        card?.let {
+            offlineStore.upsertCards(profileId, listOf(it), deckId = inbox.id)
+            watchOfflineIfPending(it)
+        }
         return card
     }
 
@@ -1169,28 +1275,45 @@ class LearningRepository @Inject constructor(
     suspend fun refreshProfilesFromNetwork(): List<LanguageProfileResponse> {
         if (!networkMonitor.isCurrentlyOnline()) return listProfiles()
         return apiTry { api.listProfiles() }
-            .onSuccess { offlineStore.cacheProfiles(it) }
+            .onSuccess { applyRemoteProfiles(it) }
             .getOrElse { listProfiles() }
     }
 
-    suspend fun getActiveProfile(): LanguageProfileResponse? {
-        val cached = offlineStore.cachedActiveProfile()
-        return cached?.also { syncActiveProfileToLocal(it) }
+    private suspend fun applyRemoteProfiles(profiles: List<LanguageProfileResponse>) {
+        offlineStore.cacheProfiles(profiles)
+        val chosen = resolveActiveProfile(tokenStore.activeProfileId.value, profiles) ?: return
+        syncActiveProfileToLocal(overlayAppLang(chosen, tokenStore.peekAppLang()))
     }
+
+    suspend fun getActiveProfile(): LanguageProfileResponse? =
+        offlineStore.cachedActiveProfile()?.let { overlayAppLang(it, tokenStore.peekAppLang()) }
 
     suspend fun hasCachedProfile(): Boolean = offlineStore.cachedActiveProfile() != null
 
-    private suspend fun syncActiveProfileToLocal(profile: LanguageProfileResponse) {
+    suspend fun cacheActiveProfileLang(appLang: String) {
+        val current = offlineStore.cachedActiveProfile() ?: return
+        offlineStore.cacheProfile(
+            current.copy(app_lang = appLang.trim().lowercase(), native_lang = appLang.trim().lowercase()),
+        )
+    }
+
+    private suspend fun syncActiveProfileToLocal(
+        profile: LanguageProfileResponse,
+        overwriteLang: Boolean = false,
+    ) {
         tokenStore.saveActiveProfile(profile.id)
-        tokenStore.saveAppLang(profile.app_lang)
+        if (overwriteLang || tokenStore.peekAppLang().isBlank()) {
+            tokenStore.saveAppLang(profile.app_lang)
+        }
         offlineStore.cacheProfile(profile)
     }
 
-    /** Apply UI locale from the active server profile before rendering authenticated screens. */
+    /** Apply UI locale. TokenStore is the source of truth (survives Activity recreate). */
     suspend fun applyAppLocaleFromActiveProfile(): String {
-        val active = offlineStore.cachedActiveProfile() ?: getActiveProfile()
-        val appLang = active?.app_lang?.trim()?.lowercase().orEmpty().ifBlank { "en" }
-        com.vocabulario.app.i18n.AppLocale.apply(appLang)
+        val stored = tokenStore.peekAppLang().trim().lowercase()
+        val fromProfile = offlineStore.cachedActiveProfile()?.app_lang?.trim()?.lowercase().orEmpty()
+        val appLang = stored.ifBlank { fromProfile }.ifBlank { "en" }
+        com.vocabulario.app.i18n.AppLocale.applyIfChanged(appLang)
         return appLang
     }
 
@@ -1211,13 +1334,14 @@ class LearningRepository @Inject constructor(
             )
         )
         tokenStore.saveActiveProfile(profile.id)
+        tokenStore.saveAppLang(profile.app_lang)
         offlineStore.cacheProfile(profile)
         return profile
     }
 
     suspend fun activateProfile(profileId: String): LanguageProfileResponse {
         val profile = api.activateProfile(profileId)
-        syncActiveProfileToLocal(profile)
+        syncActiveProfileToLocal(profile, overwriteLang = true)
         return profile
     }
 
@@ -1225,18 +1349,79 @@ class LearningRepository @Inject constructor(
         cefr: String? = null,
         tenses: List<String>? = null,
         tenseLabelLang: String? = null,
+        appLang: String? = null,
     ): LanguageProfileResponse {
-        val profileId = activeProfileId()
-        val profile = api.updateProfile(
-            profileId,
-            LanguageProfileUpdate(
-                cefr_level = cefr,
-                selected_tenses = tenses,
-                tense_label_lang = tenseLabelLang,
-            ),
+        val body = LanguageProfileUpdate(
+            cefr_level = cefr,
+            selected_tenses = tenses,
+            tense_label_lang = tenseLabelLang,
+            app_lang = appLang,
         )
-        syncActiveProfileToLocal(profile)
+        val profile = try {
+            api.updateProfile(activeProfileId(), body)
+        } catch (e: HttpException) {
+            if (e.code() != 404) throw e
+            applyRemoteProfiles(api.listProfiles())
+            api.updateProfile(activeProfileId(), body)
+        }
+        syncActiveProfileToLocal(profile, overwriteLang = true)
         return profile
+    }
+
+    fun persistAppLangAsync(appLang: String) {
+        persistScope.launch {
+            runCatching { persistAppLang(appLang) }
+        }
+    }
+
+    suspend fun persistAppLang(appLang: String): LanguageProfileResponse {
+        val current = offlineStore.cachedActiveProfile() ?: error("no_active_profile")
+        return switchToLangPair(appLang, current.learning_lang, current.cefr_level)
+    }
+
+    suspend fun switchToLangPair(
+        appLang: String,
+        learningLang: String,
+        cefr: String,
+    ): LanguageProfileResponse {
+        val app = appLang.trim().lowercase()
+        val learning = learningLang.trim().lowercase()
+        val remote = refreshProfilesFromNetwork()
+        val existing = findLangPair(remote, app, learning)
+        val profile = if (existing != null) {
+            if (existing.id == tokenStore.activeProfileId.value) {
+                if (!existing.app_lang.equals(app, ignoreCase = true)) {
+                    updateProfile(appLang = app)
+                } else {
+                    existing
+                }
+            } else {
+                activateProfile(existing.id)
+            }
+        } else {
+            try {
+                val sameLearning = tokenStore.activeProfileId.value
+                    ?.let { id -> remote.firstOrNull { it.id == id } }
+                    ?.takeIf { it.learning_lang.equals(learning, ignoreCase = true) }
+                if (sameLearning != null) {
+                    updateProfile(appLang = app)
+                } else {
+                    createProfile(
+                        appLang = app,
+                        learning = learning,
+                        cefr = cefr,
+                        tenses = LanguagePacks.defaultSelectedTenses(learning),
+                    )
+                }
+            } catch (e: HttpException) {
+                if (e.code() != 409) throw e
+                val again = refreshProfilesFromNetwork()
+                val found = findLangPair(again, app, learning) ?: throw e
+                activateProfile(found.id)
+            }
+        }
+        requestBackgroundSync()
+        return overlayAppLang(profile, app)
     }
 
     suspend fun getMe() = api.me()
@@ -1246,7 +1431,7 @@ class LearningRepository @Inject constructor(
         if (offlineStore.cachedProfiles().isNotEmpty()) return true
         if (!networkMonitor.isCurrentlyOnline()) return false
         return apiTry { api.listProfiles() }
-            .onSuccess { offlineStore.cacheProfiles(it) }
+            .onSuccess { applyRemoteProfiles(it) }
             .getOrElse { emptyList() }
             .isNotEmpty()
     }
@@ -1316,4 +1501,24 @@ class LearningRepository @Inject constructor(
     suspend fun unregisterDeviceToken(token: String) {
         runCatching { api.unregisterDevice(token) }
     }
+}
+
+internal fun isLocalOnlyListId(id: String): Boolean =
+    id.startsWith("local-") || id.startsWith("local:")
+
+/** Listy, które trzeba dociągnąć do Room po commicie importu (cel + system + inbox). */
+internal fun importRefreshListIds(
+    requestedListId: String?,
+    lists: List<WordListResponse>,
+): List<String> {
+    val targets = LinkedHashSet<String>()
+    requestedListId?.takeUnless { isLocalOnlyListId(it) }?.let { id ->
+        if (lists.any { it.id == id }) targets.add(id)
+    }
+    for (list in lists) {
+        if ((list.is_system || list.is_pending_inbox) && !isLocalOnlyListId(list.id)) {
+            targets.add(list.id)
+        }
+    }
+    return targets.toList()
 }

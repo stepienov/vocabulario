@@ -734,11 +734,24 @@
 
     <string name="settings_notifications">通知</string>
 
-    <string name="settings_notifications_summary">学習リマインダーとカードの準備状況</string>
+    <string name="settings_notifications_summary">学習リマインダーとカードの状態</string>
 
     <string name="settings_notif_study">学習リマインダー</string>
 
     <string name="settings_notif_cards">カードの準備完了</string>
+
+
+    <string name="settings_notif_enabled">通知を受け取る</string>
+
+    <string name="settings_notif_study_at">学習リマインダー：</string>
+
+    <string name="notif_offline_ready_title">カードをダウンロードしました</string>
+
+    <string name="notif_offline_ready_body">オフラインのカード %1$d 枚がすべて準備できました</string>
+
+    <string name="notif_import_ready_title">インポート完了</string>
+
+    <string name="notif_import_ready_body">インポートしたカード %1$d 枚がすべて準備できました</string>
 
     <string name="settings_reminder_hour">リマインダー時間（0～23）</string>
 

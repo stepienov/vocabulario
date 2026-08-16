@@ -148,7 +148,12 @@ class ImportController @Inject constructor(
         scope.launch {
             runCatching { repository.commitImportJob(jobId) }
                 .onSuccess {
-                    _state.value = it.toState(cur)
+                    val next = it.toState(cur)
+                    if (next.status == ImportStatus.Done) {
+                        runCatching { repository.refreshLocalAfterImport(next.targetListId) }
+                        watchImportedCards(next)
+                    }
+                    _state.value = next
                     startPoll()
                 }
                 .onFailure { e ->
@@ -212,6 +217,10 @@ class ImportController @Inject constructor(
                     persistence.saveJobId(null)
                     return
                 }
+                if (restored.status == ImportStatus.Done) {
+                    runCatching { repository.refreshLocalAfterImport(restored.targetListId) }
+                    watchImportedCards(restored)
+                }
                 _state.value = restored
                 startPoll()
                 return
@@ -257,7 +266,14 @@ class ImportController @Inject constructor(
                     } else {
                         progress
                     }
-                    _state.value = next.toState(_state.value, includeItems = true)
+                    val nextState = next.toState(_state.value, includeItems = true)
+                    val becameDone = nextState.status == ImportStatus.Done &&
+                        _state.value.status != ImportStatus.Done
+                    if (becameDone) {
+                        runCatching { repository.refreshLocalAfterImport(nextState.targetListId) }
+                        watchImportedCards(nextState)
+                    }
+                    _state.value = nextState
                     if (_state.value.status == ImportStatus.Cancelled) {
                         dismissResult()
                         break
@@ -282,5 +298,21 @@ class ImportController @Inject constructor(
 
     private fun publishLocalError(message: String) {
         _state.value = ImportJobState(status = ImportStatus.Error, error = message)
+    }
+
+    private suspend fun watchImportedCards(state: ImportJobState) {
+        var ids = state.items.mapNotNull { it.created_card_id?.trim()?.takeIf(String::isNotEmpty) }
+        if (ids.isEmpty()) {
+            val jobId = state.jobId ?: return
+            ids = runCatching { repository.getImportJob(jobId, includeItems = true) }
+                .getOrNull()
+                ?.items
+                ?.mapNotNull { it.created_card_id?.trim()?.takeIf(String::isNotEmpty) }
+                .orEmpty()
+        }
+        if (ids.isNotEmpty()) {
+            repository.watchImportCards(ids)
+            repository.evaluateReadyBatches()
+        }
     }
 }

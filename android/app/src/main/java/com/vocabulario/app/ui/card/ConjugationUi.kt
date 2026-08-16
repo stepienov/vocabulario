@@ -33,7 +33,7 @@ import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.asJsonArray
 import com.vocabulario.app.data.asJsonObject
 import com.vocabulario.app.data.asJsonString
-import com.vocabulario.app.data.tenseLabelForProfile
+import com.vocabulario.app.data.tenseHeadingForProfile
 import com.vocabulario.app.ui.components.AppCard
 import kotlinx.serialization.json.JsonObject
 
@@ -114,22 +114,40 @@ internal fun CollapsibleSection(
     title: String,
     expanded: Boolean,
     onToggle: () -> Unit,
+    subtitle: String? = null,
     content: @Composable () -> Unit,
 ) {
     AppCard {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
-                letterSpacing = 0.6.sp,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(onClick = onToggle)
                     .padding(vertical = 14.dp),
-            )
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                    letterSpacing = 0.6.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 2.dp),
+                    )
+                }
+            }
             if (expanded) {
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.28f),
@@ -163,8 +181,10 @@ internal fun ConjugationTenseAccordions(
     nonFiniteKeys.forEach { key ->
         val form = nonFinite?.get(key).asJsonString().orEmpty()
         if (form.isNotBlank()) {
+            val heading = tenseHeadingForProfile(profile, key, conjugation)
             CollapsibleSection(
-                title = tenseLabelForProfile(profile, key, conjugation),
+                title = heading.original,
+                subtitle = heading.translation,
                 expanded = expandedTenses[key] == true,
                 onToggle = { expandedTenses[key] = expandedTenses[key] != true },
             ) {
@@ -183,8 +203,10 @@ internal fun ConjugationTenseAccordions(
         if (rows.isNotEmpty() && rows.all { isPlaceholderForm(it.second) }) {
             return@forEach
         }
+        val heading = tenseHeadingForProfile(profile, key, conjugation)
         CollapsibleSection(
-            title = tenseLabelForProfile(profile, key, conjugation),
+            title = heading.original,
+            subtitle = heading.translation,
             expanded = expandedTenses[key] == true,
             onToggle = { expandedTenses[key] = expandedTenses[key] != true },
         ) {

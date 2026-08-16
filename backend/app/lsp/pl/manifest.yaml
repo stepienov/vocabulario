@@ -125,15 +125,6 @@ adjectives:
   full_declension: true
 
 ui_labels:
-  pl:
-    czas_terazniejszy: Czas teraźniejszy
-    czas_przeszly: Czas przeszły
-    czas_przyszly: Czas przyszły
-    tryb_rozkazujacy: Tryb rozkazujący
-    tryb_przypuszczajacy: Tryb przypuszczający
-    bezokolicznik: Bezokolicznik
-    imieslow_przeszly: Imiesłów przeszły
-    imieslow_przyszly: Imiesłów przyszły
   en:
     czas_terazniejszy: Present tense
     czas_przeszly: Past tense
@@ -143,3 +134,12 @@ ui_labels:
     bezokolicznik: Infinitive
     imieslow_przeszly: Past participle
     imieslow_przyszly: Future participle
+  pl:
+    czas_terazniejszy: Czas teraźniejszy
+    czas_przeszly: Czas przeszły
+    czas_przyszly: Czas przyszły
+    tryb_rozkazujacy: Tryb rozkazujący
+    tryb_przypuszczajacy: Tryb przypuszczający
+    bezokolicznik: Bezokolicznik
+    imieslow_przeszly: Imiesłów przeszły
+    imieslow_przyszly: Imiesłów przyszły

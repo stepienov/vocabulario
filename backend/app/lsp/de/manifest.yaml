@@ -42,7 +42,33 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  en:
+    prasens: Present
+    perfekt: Present perfect
+    prateritum: Simple past
+    futur_i: Future I
+    plusquamperfekt: Pluperfect
+    konjunktiv_ii: Subjunctive II
+    imperativ: Imperative
+    infinitiv: Infinitive
+    partizip_ii: Past participle
+  de:
+    prasens: Präsens
+    perfekt: Perfekt
+    prateritum: Präteritum
+    futur_i: Futur I
+    plusquamperfekt: Plusquamperfekt
+    konjunktiv_ii: Konjunktiv II
+    imperativ: Imperativ
+    infinitiv: Infinitiv
+    partizip_ii: Partizip II
   pl:
     prasens: Czas teraźniejszy
     perfekt: Czas przeszły złożony
     prateritum: Czas przeszły prosty
+    futur_i: Czas przyszły
+    plusquamperfekt: Czas zaprzeszły
+    konjunktiv_ii: Tryb przypuszczający
+    imperativ: Tryb rozkazujący
+    infinitiv: Bezokolicznik
+    partizip_ii: Imiesłów II

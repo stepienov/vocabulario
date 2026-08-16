@@ -55,11 +55,11 @@ class ProfileViewModel @Inject constructor(
                 val resolvedActive = active
                     ?: profiles.firstOrNull { it.is_active }
                     ?: profiles.firstOrNull()
+                AppLocale.applyIfChanged(
+                    tokenStore.peekAppLang().ifBlank { resolvedActive?.appLang ?: "en" },
+                )
                 profiles to resolvedActive
             }.onSuccess { (profiles, active) ->
-                val appLang = active?.appLang ?: "en"
-                tokenStore.saveAppLang(appLang)
-                AppLocale.apply(appLang)
                 _state.value = ProfileUiState(
                     loading = false,
                     profiles = profiles,
@@ -70,13 +70,15 @@ class ProfileViewModel @Inject constructor(
                 viewModelScope.launch {
                     runCatching { repository.refreshProfilesFromNetwork() }
                         .onSuccess { remote ->
-                            if (remote.isNotEmpty()) {
-                                val resolved = remote.firstOrNull { it.is_active } ?: remote.firstOrNull()
-                                _state.value = _state.value.copy(
-                                    profiles = remote,
-                                    activeProfile = resolved ?: _state.value.activeProfile,
-                                )
-                            }
+                            if (remote.isEmpty()) return@onSuccess
+                            val resolved = repository.getActiveProfile()
+                                ?: remote.firstOrNull { it.is_active }
+                                ?: remote.firstOrNull()
+                            resolved?.let { tokenStore.saveActiveProfile(it.id) }
+                            _state.value = _state.value.copy(
+                                profiles = remote,
+                                activeProfile = resolved ?: _state.value.activeProfile,
+                            )
                         }
                 }
             }.onFailure {
@@ -94,8 +96,8 @@ class ProfileViewModel @Inject constructor(
                 pairSession.withSwitch(awaitDataReload = true) {
                     val profile = repository.activateProfile(profileId)
                     tokenStore.saveAppLang(profile.appLang)
-                    AppLocale.apply(profile.appLang)
                     runCatching { repository.syncNow(fullReplace = true) }
+                    AppLocale.applyIfChanged(profile.appLang)
                     profile
                 }
             }.onSuccess {

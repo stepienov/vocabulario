@@ -37,6 +37,21 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  en:
+    present: Present
+    past: Past
+    future: Future
+    imperative: Imperative
+    infinitive: Infinitive
+  hi:
+    present: वर्तमान
+    past: भूत
+    future: भविष्य
+    imperative: आज्ञार्थ
+    infinitive: मूलधातु
   pl:
     present: Czas teraźniejszy
     past: Czas przeszły
+    future: Czas przyszły
+    imperative: Tryb rozkazujący
+    infinitive: Bezokolicznik

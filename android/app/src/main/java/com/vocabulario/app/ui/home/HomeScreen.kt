@@ -183,6 +183,7 @@ fun HomeScreen(
             selected = state.tab,
             onSelect = viewModel::selectTab,
             importBusy = importState.busy,
+            addAttention = state.tab != HomeTab.ADD && addTabHasWaitingContent(state, importState),
         )
         Box(
             modifier = Modifier
@@ -391,11 +392,21 @@ private fun HomeHeader(onSettings: () -> Unit) {
     }
 }
 
+private fun addTabHasWaitingContent(
+    state: HomeUiState,
+    importState: com.vocabulario.app.data.imports.ImportJobState,
+): Boolean =
+    importState.blocksUi ||
+        importState.showOutcome ||
+        !state.notice.isNullOrBlank() ||
+        state.candidates.isNotEmpty()
+
 @Composable
 private fun HomeTabs(
     selected: HomeTab,
     onSelect: (HomeTab) -> Unit,
     importBusy: Boolean = false,
+    addAttention: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
     val tabs = listOf(
@@ -411,6 +422,7 @@ private fun HomeTabs(
         ) {
             tabs.forEach { (tab, label) ->
                 val active = selected == tab
+                val emphasizeAdd = tab == HomeTab.ADD && addAttention
                 val tabTag = when (tab) {
                     HomeTab.DASHBOARD -> TestTags.TAB_DASHBOARD
                     HomeTab.ADD -> TestTags.TAB_ADD
@@ -431,14 +443,22 @@ private fun HomeTabs(
                         Text(
                             label,
                             style = MaterialTheme.typography.titleSmall,
-                            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                            color = if (active) scheme.onBackground else scheme.onSurfaceVariant,
+                            fontWeight = if (active || emphasizeAdd) FontWeight.Bold else FontWeight.Medium,
+                            color = if (active || emphasizeAdd) scheme.onBackground else scheme.onSurfaceVariant,
                         )
                         if (tab == HomeTab.ADD && importBusy) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(12.dp),
                                 strokeWidth = 1.5.dp,
                                 color = scheme.primary,
+                            )
+                        } else if (emphasizeAdd) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(scheme.primary)
+                                    .testTag(TestTags.TAB_ADD_BADGE),
                             )
                         }
                     }
@@ -1221,7 +1241,7 @@ private fun ListsTab(
                 val selected = list.id == state.selectedListId
                 ListChip(
                     list = list,
-                    wordCount = if (selected) state.listWords.size else list.word_count,
+                    wordCount = list.word_count,
                     selected = selected,
                     showMenu = selected,
                     showSpinner = list.id == importTargetListId,
@@ -1519,16 +1539,21 @@ private fun ListsTab(
                                 shape = AppButtonShape,
                                 enabled = state.hasMovableListWords,
                             ) { ButtonLabel(stringResource(R.string.list_move_all)) }
+                            val canClearAll = state.listWords.isNotEmpty()
                             OutlinedButton(
-                                onClick = { listDialog = ListEditDialog.ClearAllConfirm },
+                                onClick = {
+                                    if (!canClearAll) return@OutlinedButton
+                                    listDialog = ListEditDialog.ClearAllConfirm
+                                },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = AppButtonShape,
-                                enabled = state.listWords.isNotEmpty(),
+                                enabled = canClearAll,
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = scheme.error,
+                                    disabledContentColor = scheme.onSurface.copy(alpha = 0.38f),
+                                ),
                             ) {
-                                ButtonLabel(
-                                    stringResource(R.string.list_clear_all),
-                                    color = scheme.error,
-                                )
+                                ButtonLabel(stringResource(R.string.list_clear_all))
                             }
                         } else if (pendingInbox) {
                             Button(
@@ -2007,7 +2032,7 @@ private fun ListWordTile(
                     .fillMaxWidth()
                     .heightIn(min = tileHeaderHeight, max = tileHeaderHeight)
                     .combinedClickable(
-                        enabled = needsReview || (!pending && !activityProcessing),
+                        enabled = !card.isOptimisticCreatingTile(),
                         onClick = { if (needsReview) onReview() else onToggle() },
                         onLongClick = onLongPress,
                     ),
@@ -2113,18 +2138,19 @@ private fun ListWordTile(
             }
 
             AnimatedVisibility(
-                visible = expanded && !pending && !activityProcessing && !selectionMode,
+                visible = expanded && !card.isOptimisticCreatingTile() && !selectionMode,
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut(),
             ) {
                 Column(modifier = Modifier.padding(top = 4.dp)) {
-                    if (awaitingNetwork) {
+                    val compactActions = awaitingNetwork || pending || activityProcessing
+                    if (compactActions) {
                         Spacer(modifier = Modifier.height(8.dp))
                         HorizontalDivider(color = scheme.outline.copy(alpha = 0.5f))
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                         ) {
                             ListTileIconButton(
                                 onClick = onDelete,
@@ -2133,6 +2159,15 @@ private fun ListWordTile(
                                 containerColor = scheme.error.copy(alpha = 0.15f),
                                 contentColor = scheme.error,
                             )
+                            if (card.isReadyToMove()) {
+                                ListTileIconButton(
+                                    onClick = onMove,
+                                    icon = Icons.AutoMirrored.Outlined.DriveFileMove,
+                                    contentDescription = stringResource(R.string.cd_move),
+                                    containerColor = scheme.primaryContainer,
+                                    contentColor = scheme.onPrimaryContainer,
+                                )
+                            }
                         }
                     } else {
                     if (imported != null) {

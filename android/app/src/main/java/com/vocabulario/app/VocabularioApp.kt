@@ -3,6 +3,7 @@ package com.vocabulario.app
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.sync.SyncScheduler
 import com.vocabulario.app.i18n.AppLocale
@@ -23,6 +24,7 @@ class VocabularioApp : Application(), Configuration.Provider {
     @Inject lateinit var syncScheduler: SyncScheduler
     @Inject lateinit var notificationScheduler: NotificationScheduler
     @Inject lateinit var tokenStore: TokenStore
+    @Inject lateinit var learningRepository: LearningRepository
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -43,7 +45,15 @@ class VocabularioApp : Application(), Configuration.Provider {
         syncScheduler.schedulePeriodic()
         syncScheduler.requestNow()
         notificationScheduler.scheduleEnrichmentCheck()
-        notificationScheduler.scheduleStudyReminder(hour = 19, enabled = true)
+        appScope.launch {
+            runCatching {
+                val settings = learningRepository.getSettings()
+                notificationScheduler.scheduleStudyReminder(
+                    hour = settings.reminder_hour,
+                    enabled = settings.study_reminder_enabled || settings.cards_ready_push_enabled,
+                )
+            }
+        }
         appScope.launch {
             runCatching { AppLocale.apply(tokenStore.peekAppLang()) }
         }

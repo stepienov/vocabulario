@@ -281,6 +281,27 @@ _STATEMENTS = (
     "CREATE INDEX IF NOT EXISTS ix_app_logs_event_created ON app_logs (event, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_app_logs_user_created ON app_logs (user_id, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_app_logs_request_id ON app_logs (request_id)",
+    # Homographs (play/verb vs play/noun) are distinct cards. The old unique
+    # (…, deck_id) allowed two identical verbs on the system list because
+    # PostgreSQL treats NULL deck_id as distinct in unique indexes.
+    """
+    UPDATE learning_cards c
+    SET deleted_at = NOW()
+    FROM (
+        SELECT id, ROW_NUMBER() OVER (
+            PARTITION BY user_id, profile_id, lower(lemma_l2), lower(COALESCE(pos, ''))
+            ORDER BY created_at ASC, id ASC
+        ) AS rn
+        FROM learning_cards
+        WHERE deleted_at IS NULL
+    ) d
+    WHERE c.id = d.id AND d.rn > 1
+    """,
+    "DROP INDEX IF EXISTS uq_learning_cards_active",
+    "DROP INDEX IF EXISTS uq_learning_cards_live_lemma_pos",
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_learning_cards_live_lemma_pos "
+    "ON learning_cards (user_id, profile_id, lower(lemma_l2), lower(COALESCE(pos, ''))) "
+    "WHERE deleted_at IS NULL",
 )
 
 

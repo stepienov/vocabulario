@@ -32,6 +32,21 @@ adjectives:
   full_declension: false
 
 ui_labels:
+  en:
+    simdi_zaman: Present continuous
+    genis_zaman: Aorist
+    gecmis_zaman: Past
+    gelecek_zaman: Future
+    mastar: Infinitive
+  tr:
+    simdi_zaman: Şimdiki zaman
+    genis_zaman: Geniş zaman
+    gecmis_zaman: Geçmiş zaman
+    gelecek_zaman: Gelecek zaman
+    mastar: Mastar
   pl:
     simdi_zaman: Czas teraźniejszy ciągły
+    genis_zaman: Czas teraźniejszy ogólny
     gecmis_zaman: Czas przeszły
+    gelecek_zaman: Czas przyszły
+    mastar: Bezokolicznik

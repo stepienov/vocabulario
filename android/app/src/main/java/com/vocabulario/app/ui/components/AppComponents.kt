@@ -275,6 +275,10 @@ fun SettingsRadioRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(
+                    if (selected) MaterialTheme.colorScheme.primaryContainer
+                    else Color.Transparent,
+                )
                 .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
                 .clickable(onClick = onSelect)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -319,6 +323,10 @@ fun SettingsCheckRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(
+                    if (checked) MaterialTheme.colorScheme.primaryContainer
+                    else Color.Transparent,
+                )
                 .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
                 .clickable { onCheckedChange(!checked) }
                 .padding(horizontal = 16.dp, vertical = 8.dp),

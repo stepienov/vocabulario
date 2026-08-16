@@ -272,7 +272,7 @@ async def list_import_job_events(
     ]
 
 
-@router.get("/imports/jobs/active", response_model=ImportJobProgressResponse)
+@router.get("/imports/jobs/active", response_model=ImportJobProgressResponse | None)
 async def get_active_import_job(
     profile_id: UUID = Query(...),
     user: User = Depends(get_current_user),
@@ -280,7 +280,7 @@ async def get_active_import_job(
 ):
     job = await find_active_job(db, user.id, profile_id)
     if job is None:
-        raise api_error(404, "import_job_none", "No active import")
+        return None
     return _progress(job, await _list_name(db, job.list_id))
 
 

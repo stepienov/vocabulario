@@ -734,11 +734,17 @@
 
     <string name="settings_notifications">Bildirimler</string>
 
-    <string name="settings_notifications_summary">Çalışma hatırlatmaları ve kart hazır durumu</string>
+    <string name="settings_notifications_summary">Çalışma hatırlatmaları ve kart durumu</string>
 
     <string name="settings_notif_study">Çalışma hatırlatmaları</string>
 
     <string name="settings_notif_cards">Kartlar hazır</string>
+    <string name="settings_notif_enabled">Bildirim istiyorum</string>
+    <string name="settings_notif_study_at">çalışmayı hatırlat:</string>
+    <string name="notif_offline_ready_title">Kartlar indirildi</string>
+    <string name="notif_offline_ready_body">Çevrimdışı %1$d kartın tümü hazır</string>
+    <string name="notif_import_ready_title">İçe aktarma tamamlandı</string>
+    <string name="notif_import_ready_body">İçe aktarılan %1$d kartın tümü hazır</string>
 
     <string name="settings_reminder_hour">Hatırlatma saati (0–23)</string>
 

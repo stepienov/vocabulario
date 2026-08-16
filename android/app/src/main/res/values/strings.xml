@@ -738,9 +738,15 @@
     <string name="voice_no_match">Couldn’t understand — try again.</string>
     <string name="voice_network_required">Voice input needs an internet connection.</string>
     <string name="settings_notifications">Notifications</string>
-    <string name="settings_notifications_summary">Study reminders and card readiness</string>
+    <string name="settings_notifications_summary">Study reminders and card status</string>
     <string name="settings_notif_study">Study reminders</string>
     <string name="settings_notif_cards">Cards ready</string>
+    <string name="settings_notif_enabled">I want notifications</string>
+    <string name="settings_notif_study_at">Remind me to study:</string>
+    <string name="notif_offline_ready_title">Cards downloaded</string>
+    <string name="notif_offline_ready_body">All %1$d offline cards are ready</string>
+    <string name="notif_import_ready_title">Import complete</string>
+    <string name="notif_import_ready_body">All %1$d imported cards are ready</string>
     <string name="settings_reminder_hour">Reminder hour (0–23)</string>
     <string name="notif_channel_study">Study</string>
     <string name="notif_channel_cards">Cards</string>

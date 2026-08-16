@@ -36,7 +36,24 @@ adjectives:
   full_declension: false
 
 ui_labels:
+  en:
+    present: Present
+    past: Past
+    future: Future
+    progressive: Progressive
+    perfect: Perfect
+    base: Base form
+  zh:
+    present: 现在
+    past: 过去
+    future: 将来
+    progressive: 进行
+    perfect: 完成
+    base: 原形
   pl:
     present: Czas teraźniejszy
     past: Czas przeszły
     future: Czas przyszły
+    progressive: Aspekt ciągły
+    perfect: Aspekt dokonany
+    base: Forma podstawowa

@@ -241,4 +241,13 @@ interface CachedProfileDao {
 
     @Query("SELECT * FROM cached_profile")
     suspend fun all(): List<CachedProfileEntity>
+
+    @Query("UPDATE cached_profile SET isActive = 0 WHERE id != :keepId")
+    suspend fun deactivateOthers(keepId: String)
+
+    @Query("DELETE FROM cached_profile WHERE id NOT IN (:keepIds)")
+    suspend fun deleteNotIn(keepIds: List<String>)
+
+    @Query("DELETE FROM cached_profile")
+    suspend fun deleteAll()
 }

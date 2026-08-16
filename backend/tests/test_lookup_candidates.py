@@ -11,6 +11,7 @@ ranking surfaces the intended word first WITHOUT ever dropping the alternatives.
 import pytest
 
 from app.services.lookup_candidates import (
+    cached_lookup_covers_query,
     candidate_is_confident,
     dedupe_lookup_candidates,
     edit_distance,
@@ -350,3 +351,19 @@ def test_merge_candidates_dedupes_across_groups():
     out = merge_candidates(a, b, learning_lang="es")
     assert len(out) == 1
     assert out[0]["lemma"] == "el libro"
+
+
+def test_merge_keeps_same_lemma_different_pos():
+    verb = [{"lemma": "play", "pos": "verb", "gloss": "grać"}]
+    noun = [{"lemma": "play", "pos": "noun", "gloss": "sztuka"}]
+    out = merge_candidates(verb, noun, learning_lang="en")
+    pos = {c["pos"] for c in out}
+    assert pos == {"verb", "noun"}
+    assert len(out) == 2
+
+
+def test_cached_lookup_does_not_cover_single_pos_homograph():
+    verb_only = [{"lemma": "play", "pos": "verb", "gloss": "grać"}]
+    assert not cached_lookup_covers_query(verb_only, "play", learning_lang="en")
+    both = verb_only + [{"lemma": "play", "pos": "noun", "gloss": "sztuka"}]
+    assert cached_lookup_covers_query(both, "play", learning_lang="en")

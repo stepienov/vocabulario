@@ -669,9 +669,15 @@
         <string name="voice_permission_denied">Permiso de micrófono denegado.</string>
     <string name="voice_unavailable">El reconocimiento de voz no está disponible en este dispositivo.</string>
     <string name="settings_notifications">Notificaciones</string>
-    <string name="settings_notifications_summary">Recordatorios de estudio y tarjetas listas</string>
+    <string name="settings_notifications_summary">Recordatorios de estudio y estado de las tarjetas</string>
     <string name="settings_notif_study">Recordatorios de estudio</string>
     <string name="settings_notif_cards">Tarjetas listas</string>
+    <string name="settings_notif_enabled">Quiero notificaciones</string>
+    <string name="settings_notif_study_at">avísame para estudiar:</string>
+    <string name="notif_offline_ready_title">Tarjetas descargadas</string>
+    <string name="notif_offline_ready_body">Las %1$d tarjetas sin conexión ya están listas</string>
+    <string name="notif_import_ready_title">Importación completa</string>
+    <string name="notif_import_ready_body">Las %1$d tarjetas importadas ya están listas</string>
     <string name="settings_reminder_hour">Hora del recordatorio (0–23)</string>
     <string name="notif_channel_study">Estudio</string>
     <string name="notif_channel_cards">Tarjetas</string>

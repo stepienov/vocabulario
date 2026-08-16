@@ -655,9 +655,15 @@
         <string name="voice_permission_denied">麦克风权限被拒绝。</string>
     <string name="voice_unavailable">此设备不支持语音识别。</string>
     <string name="settings_notifications">通知</string>
-    <string name="settings_notifications_summary">学习提醒与卡片就绪</string>
+    <string name="settings_notifications_summary">学习提醒与卡片状态</string>
     <string name="settings_notif_study">学习提醒</string>
     <string name="settings_notif_cards">卡片已就绪</string>
+    <string name="settings_notif_enabled">我想接收通知</string>
+    <string name="settings_notif_study_at">学习提醒时间：</string>
+    <string name="notif_offline_ready_title">卡片已下载</string>
+    <string name="notif_offline_ready_body">全部 %1$d 张离线卡片已就绪</string>
+    <string name="notif_import_ready_title">导入完成</string>
+    <string name="notif_import_ready_body">全部 %1$d 张已导入卡片已就绪</string>
     <string name="settings_reminder_hour">提醒时刻（0–23）</string>
     <string name="notif_channel_study">学习</string>
     <string name="notif_channel_cards">卡片</string>

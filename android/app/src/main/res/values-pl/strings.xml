@@ -738,9 +738,15 @@
     <string name="voice_no_match">Nie zrozumiałem — spróbuj jeszcze raz.</string>
     <string name="voice_network_required">Wprowadzanie głosowe wymaga połączenia z internetem.</string>
     <string name="settings_notifications">Powiadomienia</string>
-    <string name="settings_notifications_summary">Przypomnienia o nauce i gotowość kart</string>
+    <string name="settings_notifications_summary">Przypomnienia o nauce i status kart</string>
     <string name="settings_notif_study">Przypomnienia o nauce</string>
     <string name="settings_notif_cards">Karty gotowe</string>
+    <string name="settings_notif_enabled">Chcę powiadomienia</string>
+    <string name="settings_notif_study_at">powiadamiaj o nauce:</string>
+    <string name="notif_offline_ready_title">Karty pobrane</string>
+    <string name="notif_offline_ready_body">Wszystkie %1$d kart offline jest gotowych</string>
+    <string name="notif_import_ready_title">Import zakończony</string>
+    <string name="notif_import_ready_body">Wszystkie %1$d zaimportowanych kart jest gotowych</string>
     <string name="settings_reminder_hour">Godzina przypomnienia (0–23)</string>
     <string name="notif_channel_study">Nauka</string>
     <string name="notif_channel_cards">Karty</string>

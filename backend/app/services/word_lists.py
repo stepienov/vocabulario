@@ -136,16 +136,28 @@ async def find_card_anywhere(
     lemma: str,
     pos: str | None = None,
 ) -> LearningCard | None:
+    from app.core.deps import normalize_text
+    from app.services.pos_normalize import normalize_pos_bucket
+
+    lemma_norm = normalize_text(lemma)
     q = select(LearningCard).where(
         LearningCard.user_id == user_id,
         LearningCard.profile_id == profile_id,
-        LearningCard.lemma_l2 == lemma,
         LearningCard.deleted_at.is_(None),
+        func.lower(LearningCard.lemma_l2) == lemma_norm,
     )
-    if pos:
-        q = q.where(LearningCard.pos == pos)
     result = await db.execute(q)
-    return result.scalars().first()
+    want = normalize_pos_bucket(pos)
+    for card in result.scalars().all():
+        if normalize_text(card.lemma_l2) != lemma_norm:
+            continue
+        if want == "unknown":
+            if normalize_pos_bucket(card.pos) == "unknown":
+                return card
+            continue
+        if normalize_pos_bucket(card.pos) == want:
+            return card
+    return None
 
 
 async def resolve_list_for_card(

@@ -654,9 +654,15 @@
         <string name="voice_permission_denied">Autorisation du micro refusée.</string>
     <string name="voice_unavailable">La reconnaissance vocale n’est pas disponible sur cet appareil.</string>
     <string name="settings_notifications">Notifications</string>
-    <string name="settings_notifications_summary">Rappels d’étude et cartes prêtes</string>
+    <string name="settings_notifications_summary">Rappels d’étude et statut des cartes</string>
     <string name="settings_notif_study">Rappels d’étude</string>
     <string name="settings_notif_cards">Cartes prêtes</string>
+    <string name="settings_notif_enabled">Je veux des notifications</string>
+    <string name="settings_notif_study_at">rappeler l’étude :</string>
+    <string name="notif_offline_ready_title">Cartes téléchargées</string>
+    <string name="notif_offline_ready_body">Les %1$d cartes hors ligne sont prêtes</string>
+    <string name="notif_import_ready_title">Importation terminée</string>
+    <string name="notif_import_ready_body">Les %1$d cartes importées sont prêtes</string>
     <string name="settings_reminder_hour">Heure du rappel (0–23)</string>
     <string name="notif_channel_study">Étude</string>
     <string name="notif_channel_cards">Cartes</string>

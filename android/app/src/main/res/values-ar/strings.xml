@@ -655,9 +655,15 @@
         <string name="voice_permission_denied">رُفض إذن الميكروفون.</string>
     <string name="voice_unavailable">التعرّف على الكلام غير متاح على هذا الجهاز.</string>
     <string name="settings_notifications">الإشعارات</string>
-    <string name="settings_notifications_summary">تذكيرات الدراسة والبطاقات الجاهزة</string>
+    <string name="settings_notifications_summary">تذكيرات الدراسة وحالة البطاقات</string>
     <string name="settings_notif_study">تذكيرات الدراسة</string>
     <string name="settings_notif_cards">البطاقات جاهزة</string>
+    <string name="settings_notif_enabled">أريد الإشعارات</string>
+    <string name="settings_notif_study_at">ذكّرني بالدراسة:</string>
+    <string name="notif_offline_ready_title">تم تنزيل البطاقات</string>
+    <string name="notif_offline_ready_body">جميع بطاقات دون اتصال وعددها %1$d جاهزة</string>
+    <string name="notif_import_ready_title">اكتمل الاستيراد</string>
+    <string name="notif_import_ready_body">جميع البطاقات المستوردة وعددها %1$d جاهزة</string>
     <string name="settings_reminder_hour">ساعة التذكير (0–23)</string>
     <string name="notif_channel_study">دراسة</string>
     <string name="notif_channel_cards">بطاقات</string>

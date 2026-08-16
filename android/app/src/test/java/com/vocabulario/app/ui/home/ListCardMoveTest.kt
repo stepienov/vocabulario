@@ -39,9 +39,10 @@ class ListCardMoveTest {
     }
 
     @Test
-    fun serverPending_cannotMove() {
+    fun serverPending_canMoveAndSelect() {
         val pending = card("srv-2", "pending")
-        assertFalse(pending.isReadyToMove())
-        assertFalse(pending.isSelectableOnList())
+        assertTrue(pending.isReadyToMove())
+        assertTrue(pending.isSelectableOnList())
+        assertFalse(pending.isOptimisticCreatingTile())
     }
 }

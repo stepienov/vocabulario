@@ -737,6 +737,12 @@
     <string name="settings_notif_study">Nhắc nhở học tập</string>
 
     <string name="settings_notif_cards">Thẻ đã sẵn sàng</string>
+    <string name="settings_notif_enabled">Tôi muốn nhận thông báo</string>
+    <string name="settings_notif_study_at">nhắc học tập:</string>
+    <string name="notif_offline_ready_title">Đã tải thẻ</string>
+    <string name="notif_offline_ready_body">Tất cả %1$d thẻ ngoại tuyến đã sẵn sàng</string>
+    <string name="notif_import_ready_title">Nhập xong</string>
+    <string name="notif_import_ready_body">Tất cả %1$d thẻ đã nhập đã sẵn sàng</string>
 
     <string name="settings_reminder_hour">Giờ nhắc nhở (0–23)</string>
 

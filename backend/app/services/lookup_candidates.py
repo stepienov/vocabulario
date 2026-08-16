@@ -405,6 +405,29 @@ def candidate_is_confident(
     ) or gloss_identifies_query(gloss, query)
 
 
+def cached_lookup_covers_query(
+    candidates: list[dict],
+    query: str,
+    *,
+    learning_lang: str | None = None,
+) -> bool:
+    """Skip AI only when this query already has 2+ distinct POS in cache.
+
+    One cached reading (play/verb) must not hide the other (play/noun).
+    """
+    if not has_confident_match(candidates, query, learning_lang=learning_lang):
+        return False
+    buckets: set[str] = set()
+    for c in candidates:
+        lemma = c.get("lemma") or ""
+        if not lemma_matches_query(lemma, query, learning_lang=learning_lang):
+            continue
+        bucket = normalize_pos_bucket(c.get("pos"))
+        if bucket != "unknown":
+            buckets.add(bucket)
+    return len(buckets) >= 2
+
+
 def has_confident_match(
     candidates: list[dict], query: str, *, learning_lang: str | None = None
 ) -> bool:

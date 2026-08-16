@@ -37,7 +37,21 @@ adjectives:
   full_declension: false
 
 ui_labels:
+  en:
+    present: Present
+    past: Past
+    future: Future
+    imperative: Imperative
+    infinitive: Infinitive
+  vi:
+    present: Hiện tại
+    past: Quá khứ
+    future: Tương lai
+    imperative: Mệnh lệnh
+    infinitive: Nguyên mẫu
   pl:
     present: Czas teraźniejszy
     past: Czas przeszły
     future: Czas przyszły
+    imperative: Tryb rozkazujący
+    infinitive: Bezokolicznik

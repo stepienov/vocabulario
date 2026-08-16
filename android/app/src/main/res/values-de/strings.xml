@@ -655,9 +655,15 @@
         <string name="voice_permission_denied">Mikrofonberechtigung verweigert.</string>
     <string name="voice_unavailable">Spracherkennung auf diesem Gerät nicht verfügbar.</string>
     <string name="settings_notifications">Benachrichtigungen</string>
-    <string name="settings_notifications_summary">Lern-Erinnerungen und bereite Karten</string>
+    <string name="settings_notifications_summary">Lern-Erinnerungen und Kartenstatus</string>
     <string name="settings_notif_study">Lern-Erinnerungen</string>
     <string name="settings_notif_cards">Karten bereit</string>
+    <string name="settings_notif_enabled">Ich möchte Benachrichtigungen</string>
+    <string name="settings_notif_study_at">an Lernen erinnern:</string>
+    <string name="notif_offline_ready_title">Karten heruntergeladen</string>
+    <string name="notif_offline_ready_body">Alle %1$d Offline-Karten sind bereit</string>
+    <string name="notif_import_ready_title">Import abgeschlossen</string>
+    <string name="notif_import_ready_body">Alle %1$d importierten Karten sind bereit</string>
     <string name="settings_reminder_hour">Erinnerungszeit (0–23)</string>
     <string name="notif_channel_study">Lernen</string>
     <string name="notif_channel_cards">Karten</string>

@@ -41,7 +41,33 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  en:
+    presente: Present
+    preterito_perfeito: Preterite
+    preterito_imperfeito: Imperfect
+    futuro: Future
+    condicional: Conditional
+    subjuntivo_presente: Present subjunctive
+    imperativo: Imperative
+    gerundio: Gerund
+    participio: Participle
+  pt-br:
+    presente: Presente
+    preterito_perfeito: Pretérito perfeito
+    preterito_imperfeito: Pretérito imperfeito
+    futuro: Futuro
+    condicional: Condicional
+    subjuntivo_presente: Subjuntivo presente
+    imperativo: Imperativo
+    gerundio: Gerúndio
+    participio: Particípio
   pl:
     presente: Czas teraźniejszy
     preterito_perfeito: Czas przeszły dokonany
     preterito_imperfeito: Czas przeszły niedokonany
+    futuro: Czas przyszły
+    condicional: Tryb warunkowy
+    subjuntivo_presente: Tryb łączący — teraźniejszy
+    imperativo: Tryb rozkazujący
+    gerundio: Gerundium
+    participio: Imiesłów

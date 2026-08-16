@@ -42,7 +42,27 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  en:
+    jisho: Dictionary form
+    masu: Polite form
+    te: Te-form
+    ta: Ta-form
+    nai: Negative form
+    potential: Potential form
+    imperative: Imperative
+  ja:
+    jisho: 辞書形
+    masu: ます形
+    te: て形
+    ta: た形
+    nai: ない形
+    potential: 可能形
+    imperative: 命令形
   pl:
     jisho: Forma słownikowa
     masu: Forma grzecznościowa
     te: Forma て
+    ta: Forma た
+    nai: Forma przecząca
+    potential: Forma potencjalna
+    imperative: Tryb rozkazujący

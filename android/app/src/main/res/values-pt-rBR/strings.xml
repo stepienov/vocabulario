@@ -655,9 +655,15 @@
         <string name="voice_permission_denied">Permissão do microfone negada.</string>
     <string name="voice_unavailable">Reconhecimento de voz indisponível neste dispositivo.</string>
     <string name="settings_notifications">Notificações</string>
-    <string name="settings_notifications_summary">Lembretes de estudo e cartões prontos</string>
+    <string name="settings_notifications_summary">Lembretes de estudo e status dos cartões</string>
     <string name="settings_notif_study">Lembretes de estudo</string>
     <string name="settings_notif_cards">Cartões prontos</string>
+    <string name="settings_notif_enabled">Quero notificações</string>
+    <string name="settings_notif_study_at">lembrar de estudar:</string>
+    <string name="notif_offline_ready_title">Cartões baixados</string>
+    <string name="notif_offline_ready_body">Todos os %1$d cartões offline estão prontos</string>
+    <string name="notif_import_ready_title">Importação concluída</string>
+    <string name="notif_import_ready_body">Todos os %1$d cartões importados estão prontos</string>
     <string name="settings_reminder_hour">Hora do lembrete (0–23)</string>
     <string name="notif_channel_study">Estudo</string>
     <string name="notif_channel_cards">Cartões</string>

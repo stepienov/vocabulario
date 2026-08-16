@@ -24,6 +24,7 @@ from app.models import LanguageProfile, LearningCard, LexicalEntry, User
 from app.services.distractors import in_learning_lemma, lemma_keys
 from app.services.enrichment import enrich_adaptive_card_content, enrich_card_content
 from app.services.lexical import LexicalService
+from app.services.pos_normalize import normalize_pos_bucket
 from app.services.similar_words import ensure_similar_words
 
 logger = logging.getLogger(__name__)
@@ -227,6 +228,55 @@ def _entry_has_paid_content(entry: LexicalEntry) -> bool:
     return bool(content.get("meanings") or content.get("lemma") or content.get("similar_words"))
 
 
+def same_pos_bucket(left: str | None, right: str | None) -> bool:
+    """True when both sides name the same POS, or one side is unknown."""
+    a = normalize_pos_bucket(left)
+    b = normalize_pos_bucket(right)
+    if a == "unknown" or b == "unknown":
+        return True
+    return a == b
+
+
+def same_headword(left: str | None, right: str | None) -> bool:
+    """True when both sides are the same citation form (articles/punct ignored)."""
+    a = canonical_lemma(left)
+    b = canonical_lemma(right)
+    return bool(a and b and a == b)
+
+
+def pick_ready_entry(rows: list, pos: str | None, require_lemma: str | None = None):
+    """Pick a cached lexical row. Never return a different POS than requested."""
+    if not rows:
+        return None
+    complete = [e for e in rows if content_is_complete(getattr(e, "content", None))]
+    pool = complete or list(rows)
+    if require_lemma:
+        pool = [e for e in pool if same_headword(require_lemma, getattr(e, "lemma_l2", None))]
+        if not pool:
+            return None
+    if not pos:
+        return pool[0]
+    want = normalize_pos_bucket(pos)
+    if want == "unknown":
+        return None
+    for e in pool:
+        content = getattr(e, "content", None) or {}
+        entry_pos = None
+        if isinstance(content, dict):
+            entry_pos = content.get("pos")
+        entry_pos = entry_pos or getattr(e, "pos", None)
+        if normalize_pos_bucket(entry_pos) == want:
+            return e
+    return None
+
+
+def entry_compatible_with_card(card: LearningCard, entry: LexicalEntry) -> bool:
+    content = dict(entry.content or {})
+    if not same_pos_bucket(card.pos, content.get("pos") or entry.pos):
+        return False
+    return same_headword(card.lemma_l2, entry.lemma_l2)
+
+
 async def find_ready_entry(
     db: AsyncSession,
     *,
@@ -235,9 +285,14 @@ async def find_ready_entry(
     pos: str | None,
     learning_lang: str | None = None,
     gloss: str | None = None,
+    require_l2: bool = False,
 ) -> LexicalEntry | None:
-    """Szuka po kanonicznym kluczu L2 albo L1. Trafienie = zero OpenAI."""
-    keys = cache_lookup_keys(lemma, gloss)
+    """Szuka po kanonicznym kluczu L2 albo L1. Trafienie = zero OpenAI.
+
+    ``require_l2=True`` (hydrate karty): tylko ten sam headword L2 — synonim
+    z tym samym glossem (acabar/terminar → kończyć) nie może nadpisać lematu.
+    """
+    keys = cache_lookup_keys(lemma) if require_l2 else cache_lookup_keys(lemma, gloss)
     if not keys:
         return None
     match = or_(
@@ -278,24 +333,21 @@ async def find_ready_entry(
             payload={"lang_pair": lang_pair, "keys": sorted(keys), "lemma": lemma, "gloss": gloss},
         )
         return None
-    complete = [e for e in rows if content_is_complete(e.content)]
-    pool = complete or rows
-    if pos:
-        for e in pool:
-            if (e.pos or "") == pos:
-                logger.info(
-                    "lexical cache HIT pair=%s query=%r → %r / %r",
-                    lang_pair,
-                    lemma,
-                    e.lemma_l2,
-                    e.lemma_l1_primary,
-                )
-                return e
-    hit = pool[0]
+    hit = pick_ready_entry(rows, pos, require_lemma=lemma if require_l2 else None)
+    if hit is None:
+        logger.info(
+            "lexical cache MISS pair=%s keys=%s lemma=%r pos=%r (wrong-POS only)",
+            lang_pair,
+            keys,
+            lemma,
+            pos,
+        )
+        return None
     logger.info(
-        "lexical cache HIT pair=%s query=%r → %r / %r",
+        "lexical cache HIT pair=%s query=%r pos=%r → %r / %r",
         lang_pair,
         lemma,
+        pos,
         hit.lemma_l2,
         hit.lemma_l1_primary,
     )
@@ -309,15 +361,25 @@ async def hydrate_from_lexical_cache(
 ) -> bool:
     """Jeśli PG ma już gotową kartę — wstaw treść i READY. Zero LLM."""
     pair = lang_pair_key(profile.app_lang, profile.learning_lang)
+    if card.lexical_entry_id is not None:
+        pinned = (
+            await db.execute(
+                select(LexicalEntry).where(LexicalEntry.id == card.lexical_entry_id)
+            )
+        ).scalar_one_or_none()
+        if pinned is not None and entry_compatible_with_card(card, pinned):
+            _apply_entry_to_card(card, pinned, profile)
+            pinned.usage_count = (pinned.usage_count or 0) + 1
+            return True
     cached = await find_ready_entry(
         db,
         lang_pair=pair,
         lemma=card.lemma_l2,
         pos=card.pos,
         learning_lang=profile.learning_lang,
-        gloss=card.gloss_primary,
+        require_l2=True,
     )
-    if cached is None:
+    if cached is None or not entry_compatible_with_card(card, cached):
         return False
     _apply_entry_to_card(card, cached, profile)
     cached.usage_count = (cached.usage_count or 0) + 1
@@ -332,14 +394,22 @@ def _apply_entry_to_card(
     content = dict(entry.content or {})
     card.content = content
     card.lexical_entry_id = entry.id
-    card.pos = content.get("pos") or entry.pos or card.pos
+    applied_pos = content.get("pos") or entry.pos
+    if card.pos and applied_pos and not same_pos_bucket(card.pos, applied_pos):
+        applied_pos = card.pos
+        content["pos"] = card.pos
+    card.pos = applied_pos or card.pos
     meanings = content.get("meanings") or []
     card.gloss_primary = (
         meanings[0].get("gloss_l1") if meanings else None
     ) or entry.lemma_l1_primary or card.gloss_primary
     articles = articles_for(profile.learning_lang)
-    if not in_learning_lemma(card.lemma_l2, lemma_keys(entry.lemma_l2, articles), articles):
+    if same_headword(card.lemma_l2, entry.lemma_l2) and not in_learning_lemma(
+        card.lemma_l2, lemma_keys(entry.lemma_l2, articles), articles
+    ):
         card.lemma_l2 = entry.lemma_l2
+    elif not same_headword(card.lemma_l2, entry.lemma_l2):
+        content["lemma"] = card.lemma_l2
     card.enrichment_status = STATUS_READY
     card.enrichment_error = None
 
@@ -386,6 +456,10 @@ async def _resolve_content(
 
     final_lemma = content.get("lemma") or lemma
     final_pos = content.get("pos") or pos
+    if pos and final_pos and not same_pos_bucket(pos, final_pos):
+        content = dict(content)
+        content["pos"] = pos
+        final_pos = pos
     cached = await find_ready_entry(
         db,
         lang_pair=pair,
@@ -488,6 +562,10 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                         articles,
                     )
                 )
+                if resolved and same_headword:
+                    resolved_pos = resolved.get("pos")
+                    if card.pos and resolved_pos and not same_pos_bucket(card.pos, resolved_pos):
+                        resolved = None
                 if resolved and same_headword:
                     card.lemma_l2 = resolved_lemma or card.lemma_l2
                     card.pos = resolved.get("pos") or card.pos

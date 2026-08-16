@@ -655,9 +655,15 @@
         <string name="voice_permission_denied">Нет доступа к микрофону.</string>
     <string name="voice_unavailable">Распознавание речи недоступно на этом устройстве.</string>
     <string name="settings_notifications">Уведомления</string>
-    <string name="settings_notifications_summary">Напоминания об учёбе и готовые карточки</string>
+    <string name="settings_notifications_summary">Напоминания об учёбе и статус карточек</string>
     <string name="settings_notif_study">Напоминания об учёбе</string>
     <string name="settings_notif_cards">Карточки готовы</string>
+    <string name="settings_notif_enabled">Хочу уведомления</string>
+    <string name="settings_notif_study_at">напоминать об учёбе:</string>
+    <string name="notif_offline_ready_title">Карточки скачаны</string>
+    <string name="notif_offline_ready_body">Все %1$d офлайн-карточек готовы</string>
+    <string name="notif_import_ready_title">Импорт завершён</string>
+    <string name="notif_import_ready_body">Все %1$d импортированных карточек готовы</string>
     <string name="settings_reminder_hour">Час напоминания (0–23)</string>
     <string name="notif_channel_study">Учёба</string>
     <string name="notif_channel_cards">Карточки</string>

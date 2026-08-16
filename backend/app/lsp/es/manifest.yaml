@@ -51,23 +51,6 @@ adjectives:
   full_declension: true
 
 ui_labels:
-  pl:
-    presente: Czas teraźniejszy
-    preterito_perfecto: Pretérito perfecto
-    preterito_indefinido: Czas przeszły prosty
-    preterito_imperfecto: Czas przeszły niedokonany
-    futuro_simple: Czas przyszły
-    condicional_simple: Tryb warunkowy
-    presente_subjuntivo: Subjuntivo — czas teraźniejszy
-    imperfecto_subjuntivo: Subjuntivo — imperfecto
-    futuro_subjuntivo: Subjuntivo — czas przyszły
-    preterito_pluscuamperfecto: Plusquamperfectum
-    condicional_compuesto: Tryb warunkowy złożony
-    futuro_perfecto: Czas przyszły dokonany
-    imperativo_afirmativo: Tryb rozkazujący (twierdzący)
-    imperativo_negativo: Tryb rozkazujący (przeczący)
-    gerundio: Gerundium
-    participio: Imiesłów
   en:
     presente: Present
     preterito_perfecto: Present perfect
@@ -85,3 +68,37 @@ ui_labels:
     imperativo_negativo: Negative imperative
     gerundio: Gerund
     participio: Participle
+  es:
+    presente: Presente
+    preterito_perfecto: Pretérito perfecto
+    preterito_indefinido: Pretérito indefinido
+    preterito_imperfecto: Pretérito imperfecto
+    futuro_simple: Futuro simple
+    condicional_simple: Condicional
+    presente_subjuntivo: Presente de subjuntivo
+    imperfecto_subjuntivo: Imperfecto de subjuntivo
+    futuro_subjuntivo: Futuro de subjuntivo
+    preterito_pluscuamperfecto: Pretérito pluscuamperfecto
+    condicional_compuesto: Condicional compuesto
+    futuro_perfecto: Futuro perfecto
+    imperativo_afirmativo: Imperativo afirmativo
+    imperativo_negativo: Imperativo negativo
+    gerundio: Gerundio
+    participio: Participio
+  pl:
+    presente: Czas teraźniejszy
+    preterito_perfecto: Pretérito perfecto
+    preterito_indefinido: Czas przeszły prosty
+    preterito_imperfecto: Czas przeszły niedokonany
+    futuro_simple: Czas przyszły
+    condicional_simple: Tryb warunkowy
+    presente_subjuntivo: Subjuntivo — czas teraźniejszy
+    imperfecto_subjuntivo: Subjuntivo — imperfecto
+    futuro_subjuntivo: Subjuntivo — czas przyszły
+    preterito_pluscuamperfecto: Plusquamperfectum
+    condicional_compuesto: Tryb warunkowy złożony
+    futuro_perfecto: Czas przyszły dokonany
+    imperativo_afirmativo: Tryb rozkazujący (twierdzący)
+    imperativo_negativo: Tryb rozkazujący (przeczący)
+    gerundio: Gerundium
+    participio: Imiesłów

@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, normalize_text
@@ -391,6 +392,7 @@ async def create_card(
         lemma_l2=body.lemma,
         pos=body.pos,
         gloss_primary=body.gloss,
+        lexical_entry_id=body.lexical_entry_id,
         content=build_pending_content(
             lemma=body.lemma,
             pos=body.pos,
@@ -406,7 +408,11 @@ async def create_card(
     await db.flush()
     db.add(SrsState(card_id=card.id, scope="main", status="new"))
     await hydrate_from_lexical_cache(db, card, profile)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise api_error(409, "word_already_on_list", "This word is already on the list") from exc
     await db.refresh(card)
 
     if card.enrichment_status == STATUS_PENDING:
@@ -1045,7 +1051,7 @@ async def list_words(
     )
     wl = result.scalar_one_or_none()
     if wl is None:
-        raise api_error(404, "list_not_found", "List not found")
+        return []
     if wl.is_system:
         cards_q = await db.execute(
             select(LearningCard)
@@ -1132,6 +1138,7 @@ async def add_word_to_list(
             lemma_l2=lemma,
             pos=pos,
             gloss_primary=gloss,
+            lexical_entry_id=lexical_entry_id,
             content=build_pending_content(
                 lemma=lemma,
                 pos=pos,
@@ -1154,6 +1161,7 @@ async def add_word_to_list(
             lemma_l2=lemma,
             pos=pos,
             gloss_primary=gloss,
+            lexical_entry_id=lexical_entry_id,
             content=build_pending_content(
                 lemma=lemma,
                 pos=pos,
@@ -1169,7 +1177,11 @@ async def add_word_to_list(
         await db.flush()
 
     await hydrate_from_lexical_cache(db, card, profile)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise api_error(409, "word_already_on_list", "This word is already on the list") from exc
     await db.refresh(card)
     if card.enrichment_status == STATUS_PENDING:
         background.add_task(enrich_card, card.id)

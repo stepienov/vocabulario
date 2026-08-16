@@ -734,11 +734,24 @@
 
     <string name="settings_notifications">알림</string>
 
-    <string name="settings_notifications_summary">학습 알림 및 카드 준비 상태</string>
+    <string name="settings_notifications_summary">학습 알림 및 카드 상태</string>
 
     <string name="settings_notif_study">학습 알림</string>
 
     <string name="settings_notif_cards">카드 준비 완료</string>
+
+
+    <string name="settings_notif_enabled">알림을 받겠습니다</string>
+
+    <string name="settings_notif_study_at">학습 알림 시간:</string>
+
+    <string name="notif_offline_ready_title">카드 다운로드 완료</string>
+
+    <string name="notif_offline_ready_body">오프라인 카드 %1$d장이 모두 준비되었습니다</string>
+
+    <string name="notif_import_ready_title">가져오기 완료</string>
+
+    <string name="notif_import_ready_body">가져온 카드 %1$d장이 모두 준비되었습니다</string>
 
     <string name="settings_reminder_hour">알림 시간 (0–23)</string>
 

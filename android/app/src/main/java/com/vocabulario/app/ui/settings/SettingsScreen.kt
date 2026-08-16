@@ -1,5 +1,9 @@
 package com.vocabulario.app.ui.settings
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -45,6 +49,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -67,11 +73,13 @@ import com.vocabulario.app.ui.components.AppCard
 import com.vocabulario.app.ui.components.AppDialogButtonRow
 import com.vocabulario.app.ui.components.AppDialogShape
 import com.vocabulario.app.ui.components.AppDialogWindowChrome
+import com.vocabulario.app.notifications.NotificationHelper
 import com.vocabulario.app.ui.components.AppGrayField
 import com.vocabulario.app.ui.components.AppPillDropdown
 import com.vocabulario.app.ui.components.AppScreenScaffold
 import com.vocabulario.app.ui.components.SettingsCheckRow
 import com.vocabulario.app.ui.components.SettingsRadioRow
+import com.vocabulario.app.ui.components.WheelTimePicker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,7 +89,29 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        viewModel.setNotificationsEnabled(granted || NotificationHelper.canPost(context))
+    }
+    fun onRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33 && !NotificationHelper.canPost(context)) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            viewModel.setNotificationsEnabled(true)
+        }
+    }
     LaunchedEffect(Unit) { viewModel.load() }
+    LaunchedEffect(state.expanded, state.notificationsEnabled) {
+        if (state.expanded == SettingsSection.NOTIFICATIONS &&
+            state.notificationsEnabled &&
+            Build.VERSION.SDK_INT >= 33 &&
+            !NotificationHelper.canPost(context)
+        ) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     var tenseModalOpen by remember { mutableStateOf(false) }
     var tenseDraft by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -305,27 +335,34 @@ fun SettingsScreen(
                 testTag = TestTags.SETTINGS_SECTION_NOTIFICATIONS,
             ) {
                 SettingsCheckRow(
-                    label = stringResource(R.string.settings_notif_study),
-                    checked = state.studyReminderEnabled,
-                    onCheckedChange = viewModel::setStudyReminderEnabled,
+                    label = stringResource(R.string.settings_notif_enabled),
+                    checked = state.notificationsEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled) onRequestNotificationPermission()
+                        else viewModel.setNotificationsEnabled(false)
+                    },
+                    showDivider = false,
                     testTag = TestTags.SETTINGS_NOTIF_STUDY,
                 )
-                AppGrayField(
-                    value = state.reminderHour.toString(),
-                    onValueChange = { raw ->
-                        raw.toIntOrNull()?.let(viewModel::setReminderHour)
-                    },
-                    placeholder = stringResource(R.string.settings_reminder_hour),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                )
-                SettingsCheckRow(
-                    label = stringResource(R.string.settings_notif_cards),
-                    checked = state.cardsReadyPushEnabled,
-                    onCheckedChange = viewModel::setCardsReadyPushEnabled,
-                    showDivider = false,
-                    testTag = TestTags.SETTINGS_NOTIF_CARDS,
-                )
+                AnimatedVisibility(
+                    visible = state.notificationsEnabled,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut(),
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            stringResource(R.string.settings_notif_study_at),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                        WheelTimePicker(
+                            hour = state.reminderHour,
+                            minute = state.reminderMinute,
+                            onTimeChange = viewModel::setReminderTime,
+                            testTag = TestTags.SETTINGS_NOTIF_TIME,
+                        )
+                    }
+                }
             }
 
             AccordionSection(
@@ -358,24 +395,6 @@ fun SettingsScreen(
                     onSelect = viewModel::setLearningLang,
                     testTag = TestTags.SETTINGS_LEARNING_LANG,
                 )
-                if (LanguagePacks.showsTensePicker(state.activeProfile?.learning_lang)) {
-                    Text(
-                        stringResource(R.string.settings_tense_labels),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                    SettingsRadioRow(
-                        stringResource(R.string.settings_tense_labels_app),
-                        selected = state.tenseLabelLang == "app_lang",
-                        onSelect = { viewModel.setTenseLabelLang("app_lang") },
-                    )
-                    SettingsRadioRow(
-                        stringResource(R.string.settings_tense_labels_learning),
-                        selected = state.tenseLabelLang == "learning_lang",
-                        onSelect = { viewModel.setTenseLabelLang("learning_lang") },
-                        showDivider = false,
-                    )
-                }
             }
 
             AccordionSection(
@@ -450,6 +469,10 @@ private fun CustomTensesRadioRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(
+                if (selected) MaterialTheme.colorScheme.primaryContainer
+                else Color.Transparent,
+            )
             .clickable(onClick = onSelect)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -562,11 +585,15 @@ private fun AccordionSection(
     showDivider: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    val scheme = MaterialTheme.colorScheme
+    val headerBg = if (expanded) scheme.primaryContainer else Color.Transparent
+    val bodyBg = if (expanded) scheme.surfaceVariant else Color.Transparent
     AppCard {
         Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(headerBg)
                     .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
                     .clickable(onClick = onHeaderClick)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -576,13 +603,13 @@ private fun AccordionSection(
                     Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     if (subtitle != null) {
                         Spacer(Modifier.height(2.dp))
-                        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
                     }
                 }
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = scheme.onSurfaceVariant,
                 )
             }
             AnimatedVisibility(
@@ -593,6 +620,7 @@ private fun AccordionSection(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .background(bodyBg)
                         .padding(bottom = 4.dp),
                 ) {
                     if (showDivider) {
@@ -601,7 +629,7 @@ private fun AccordionSection(
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp)
                                 .height(1.dp)
-                                .background(MaterialTheme.colorScheme.outlineVariant),
+                                .background(scheme.outline),
                         )
                     }
                     content()

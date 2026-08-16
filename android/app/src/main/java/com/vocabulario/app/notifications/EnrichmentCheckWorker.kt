@@ -13,21 +13,19 @@ class EnrichmentCheckWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val repository: LearningRepository,
+    private val tracker: ReadyBatchTracker,
+    private val scheduler: NotificationScheduler,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         if (!repository.hasSyncableSession()) return Result.success()
         return try {
             val settings = repository.getSettings()
-            if (!settings.cards_ready_push_enabled) return Result.success()
-            val pendingBefore = repository.listCards().count { it.enrichment_status == "pending" }
-            if (pendingBefore == 0) return Result.success()
+            val on = settings.study_reminder_enabled || settings.cards_ready_push_enabled
+            if (!on) return Result.success()
             repository.syncNow(fullReplace = false)
-            val pendingAfter = repository.listCards().count { it.enrichment_status == "pending" }
-            val becameReady = pendingBefore - pendingAfter
-            if (becameReady > 0) {
-                NotificationHelper.showCardsReady(applicationContext, becameReady)
-            }
+            repository.evaluateReadyBatches()
+            if (tracker.hasWatches()) scheduler.scheduleEnrichmentSoon()
             Result.success()
         } catch (_: Exception) {
             Result.retry()

@@ -2,6 +2,7 @@ package com.vocabulario.app.data.local
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.withTransaction
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.DashboardStatsResponse
 import com.vocabulario.app.data.api.appLang
@@ -62,6 +63,12 @@ class OfflineStore @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun applyPull(profileId: String, pull: SyncPullResponse, fullReplace: Boolean) {
+        db.withTransaction {
+            applyPullLocked(profileId, pull, fullReplace)
+        }
+    }
+
+    private suspend fun applyPullLocked(profileId: String, pull: SyncPullResponse, fullReplace: Boolean) {
         saveSettings(pull.settings)
         // Keep local Pending inbox + unflushed lookup stubs across full replace.
         val localInbox = listDao.pendingInbox(profileId)
@@ -128,6 +135,9 @@ class OfflineStore @Inject constructor(
     }
 
     suspend fun cacheProfile(profile: LanguageProfileResponse) {
+        if (profile.is_active) {
+            profileDao.deactivateOthers(profile.id)
+        }
         profileDao.upsert(
             CachedProfileEntity(
                 id = profile.id,
@@ -157,7 +167,14 @@ class OfflineStore @Inject constructor(
         }
 
     suspend fun cacheProfiles(profiles: List<LanguageProfileResponse>) {
-        profiles.forEach { cacheProfile(it) }
+        db.withTransaction {
+            if (profiles.isEmpty()) {
+                profileDao.deleteAll()
+            } else {
+                profileDao.deleteNotIn(profiles.map { it.id })
+                profiles.forEach { cacheProfile(it) }
+            }
+        }
     }
 
     suspend fun buildDashboardStats(profileId: String, newLimit: Int, days: Int = 7): DashboardStatsResponse =
@@ -502,23 +519,37 @@ class OfflineStore @Inject constructor(
     }
 
     suspend fun moveCardLocally(cardId: String, targetListId: String?, systemListId: String?): String {
-        val card = cardDao.byId(cardId) ?: error("offline_card")
+        moveCardsLocally(listOf(cardId), targetListId, systemListId)
+        return cardId
+    }
+
+    /** Jedna transakcja — jeden emit Room, bez liczenia w nawiasie po każdej karcie. */
+    suspend fun moveCardsLocally(
+        cardIds: List<String>,
+        targetListId: String?,
+        systemListId: String?,
+    ) {
+        if (cardIds.isEmpty()) return
         val newDeckId = when {
             targetListId == null -> null
             systemListId != null && targetListId == systemListId -> null
             else -> targetListId
         }
-        cardDao.update(card.copy(deckId = newDeckId, updatedAt = System.currentTimeMillis()))
-        val clientId = UUID.randomUUID().toString()
-        moveDao.insert(
-            PendingMoveEntity(
-                clientId = clientId,
-                cardId = cardId,
-                targetListId = newDeckId,
-                movedAt = System.currentTimeMillis(),
-            ),
-        )
-        return clientId
+        val now = System.currentTimeMillis()
+        db.withTransaction {
+            for (cardId in cardIds) {
+                val card = cardDao.byId(cardId) ?: continue
+                cardDao.update(card.copy(deckId = newDeckId, updatedAt = now))
+                moveDao.insert(
+                    PendingMoveEntity(
+                        clientId = UUID.randomUUID().toString(),
+                        cardId = cardId,
+                        targetListId = newDeckId,
+                        movedAt = now,
+                    ),
+                )
+            }
+        }
     }
 
     suspend fun enqueueReview(review: PendingReviewEntity) {
@@ -714,7 +745,13 @@ class OfflineStore @Inject constructor(
     // ---- Lokalne mutacje „posiadanych” danych (Room-first) ----
 
     suspend fun deleteCardLocally(cardId: String) {
-        cardDao.deleteIds(listOf(cardId))
+        deleteCardsLocally(listOf(cardId))
+    }
+
+    suspend fun deleteCardsLocally(cardIds: List<String>) {
+        val ids = cardIds.filterNot { it.startsWith("pending-") }
+        if (ids.isEmpty()) return
+        db.withTransaction { cardDao.deleteIds(ids) }
     }
 
     suspend fun renameListLocally(listId: String, name: String) {

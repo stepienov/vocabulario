@@ -16,6 +16,7 @@ object TestTags {
 
     const val TAB_DASHBOARD = "tab_dashboard"
     const val TAB_ADD = "tab_add"
+    const val TAB_ADD_BADGE = "tab_add_badge"
     const val TAB_LISTS = "tab_lists"
     const val BTN_LEARN = "btn_learn"
     const val BTN_SETTINGS = "btn_settings"
@@ -150,4 +151,5 @@ object TestTags {
     const val SETTINGS_SECTION_NOTIFICATIONS = "settings_section_notifications"
     const val SETTINGS_NOTIF_STUDY = "settings_notif_study"
     const val SETTINGS_NOTIF_CARDS = "settings_notif_cards"
+    const val SETTINGS_NOTIF_TIME = "settings_notif_time"
 }

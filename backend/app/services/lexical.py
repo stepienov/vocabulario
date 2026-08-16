@@ -10,6 +10,7 @@ from app.models import LanguageProfile, LearningCard, LexicalEntry, User
 from app.services.llm import LLMService
 from app.services.enrichment import enrich_card_content
 from app.services.lookup_candidates import (
+    cached_lookup_covers_query,
     gloss_query_score,
     has_confident_match,
     merge_candidates,
@@ -17,6 +18,7 @@ from app.services.lookup_candidates import (
     sanitize_lookup_candidates,
     token_similarity,
 )
+from app.services.pos_normalize import normalize_pos_bucket
 from app.services.similar_words import ensure_similar_words
 from app.services.word_persistence import (
     EphemeralLexicalEntry,
@@ -26,6 +28,38 @@ from app.services.word_persistence import (
 
 
 LexicalEntryLike = LexicalEntry | EphemeralLexicalEntry
+
+
+def lexical_entry_for_candidate(
+    by_key: dict[tuple[str, str], LexicalEntry],
+    lemma: str,
+    pos: str | None,
+) -> LexicalEntry | None:
+    """Resolve a cached entry by lemma + POS only — never fall back to another POS."""
+    bucket = normalize_pos_bucket(pos)
+    if bucket == "unknown":
+        return None
+    return by_key.get((normalize_text(lemma), bucket))
+
+
+def _card_matches_lookup(
+    card: LearningCard,
+    lemma_norm: str,
+    pos: str | None,
+    lexical_entry_id: str | None,
+) -> bool:
+    if normalize_text(card.lemma_l2) != lemma_norm:
+        return False
+    want = normalize_pos_bucket(pos)
+    got = normalize_pos_bucket(card.pos)
+    if want != "unknown" and got != "unknown" and want != got:
+        return False
+    if lexical_entry_id and card.lexical_entry_id:
+        if str(card.lexical_entry_id) == str(lexical_entry_id):
+            return want == "unknown" or got == "unknown" or want == got
+    if want == "unknown" or got == "unknown":
+        return False
+    return want == got
 
 
 def _normalize_import_headword(raw: str) -> str:
@@ -122,8 +156,7 @@ class LexicalService:
                 (
                     card
                     for card in cards
-                    if normalize_text(card.lemma_l2) == lemma_norm
-                    and (not pos or card.pos == pos)
+                    if _card_matches_lookup(card, lemma_norm, pos, c.get("lexical_entry_id"))
                 ),
                 None,
             )
@@ -177,15 +210,15 @@ class LexicalService:
                 func.lower(LexicalEntry.lemma_l2).in_(lemmas),
             )
         )
-        by_key: dict[tuple[str, str | None], LexicalEntry] = {}
+        by_key: dict[tuple[str, str], LexicalEntry] = {}
         for entry in result.scalars().all():
-            by_key[(normalize_text(entry.lemma_l2), entry.pos)] = entry
-            by_key.setdefault((normalize_text(entry.lemma_l2), None), entry)
+            bucket = normalize_pos_bucket(entry.pos)
+            if bucket == "unknown":
+                continue
+            by_key[(normalize_text(entry.lemma_l2), bucket)] = entry
         out = []
         for c in candidates:
-            key_pos = (normalize_text(c["lemma"]), c.get("pos"))
-            key_any = (normalize_text(c["lemma"]), None)
-            entry = by_key.get(key_pos) or by_key.get(key_any)
+            entry = lexical_entry_for_candidate(by_key, c.get("lemma") or "", c.get("pos"))
             out.append(
                 {
                     **c,
@@ -278,9 +311,12 @@ class LexicalService:
             )
         scored.sort(key=lambda t: -t[0])
         out: list[dict] = []
-        seen: set[str] = set()
+        seen: set[tuple[str, str]] = set()
         for _, item in scored:
-            key = normalize_text(item["lemma"])
+            key = (
+                normalize_text(item["lemma"]),
+                normalize_pos_bucket(item.get("pos")),
+            )
             if key in seen:
                 continue
             seen.add(key)
@@ -322,7 +358,7 @@ class LexicalService:
 
         # PG-first short-circuit — only when the DB match is confident, never on a guess.
         db_first = await self._db_first_candidates(profile, text)
-        if db_first and has_confident_match(
+        if db_first and cached_lookup_covers_query(
             db_first, text, learning_lang=profile.learning_lang
         ):
             attached = await self._attach_lexical_ids(profile, db_first)
@@ -335,7 +371,12 @@ class LexicalService:
             text, profile.app_lang, profile.learning_lang, profile.cefr_level
         )
         candidates = self._rank_lookup_candidates(
-            self._raw_to_candidates(raw),
+            merge_candidates(
+                db_first,
+                self._raw_to_candidates(raw),
+                limit=12,
+                learning_lang=profile.learning_lang,
+            ),
             text,
             learning_lang=profile.learning_lang,
         )
@@ -528,8 +569,11 @@ class LexicalService:
             )
             entry = result.scalar_one_or_none()
             if entry:
-                entry.usage_count += 1
-                return entry
+                want = normalize_pos_bucket(pos)
+                got = normalize_pos_bucket(entry.pos)
+                if want == "unknown" or got == "unknown" or want == got:
+                    entry.usage_count += 1
+                    return entry
 
         from app.services.card_jobs import apply_lexical_keys, find_ready_entry
 

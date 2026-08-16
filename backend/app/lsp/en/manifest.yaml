@@ -41,11 +41,195 @@ adjectives:
   full_declension: true
 
 ui_labels:
-  pl:
-    present_simple: Czas teraźniejszy prosty
-    past_simple: Czas przeszły prosty
-    present_continuous: Czas teraźniejszy ciągły
   en:
     present_simple: Present simple
-    past_simple: Past simple
     present_continuous: Present continuous
+    present_perfect: Present perfect
+    past_simple: Past simple
+    past_continuous: Past continuous
+    past_perfect: Past perfect
+    future_will: Future (will)
+    going_to: Going to
+    conditionals: Conditionals
+    ing_form: "-ing form"
+    past_participle: Past participle
+  es:
+    present_simple: Presente simple
+    present_continuous: Presente continuo
+    present_perfect: Presente perfecto
+    past_simple: Pasado simple
+    past_continuous: Pasado continuo
+    past_perfect: Pasado perfecto
+    future_will: Futuro (will)
+    going_to: Going to
+    conditionals: Condicionales
+    ing_form: Forma -ing
+    past_participle: Participio pasado
+  fr:
+    present_simple: Présent simple
+    present_continuous: Présent continu
+    present_perfect: Present perfect
+    past_simple: Prétérit
+    past_continuous: Passé continu
+    past_perfect: Plus-que-parfait
+    future_will: Futur (will)
+    going_to: Going to
+    conditionals: Conditionnels
+    ing_form: Forme -ing
+    past_participle: Participe passé
+  de:
+    present_simple: Simple Present
+    present_continuous: Present Progressive
+    present_perfect: Present Perfect
+    past_simple: Simple Past
+    past_continuous: Past Progressive
+    past_perfect: Past Perfect
+    future_will: Zukunft (will)
+    going_to: Going to
+    conditionals: Konditionalsätze
+    ing_form: ing-Form
+    past_participle: Partizip Perfekt
+  it:
+    present_simple: Presente semplice
+    present_continuous: Presente progressivo
+    present_perfect: Present perfect
+    past_simple: Passato semplice
+    past_continuous: Passato progressivo
+    past_perfect: Trapassato
+    future_will: Futuro (will)
+    going_to: Going to
+    conditionals: Periodi ipotetici
+    ing_form: Forma in -ing
+    past_participle: Participio passato
+  pt-br:
+    present_simple: Presente simples
+    present_continuous: Presente contínuo
+    present_perfect: Presente perfeito
+    past_simple: Passado simples
+    past_continuous: Passado contínuo
+    past_perfect: Passado perfeito
+    future_will: Futuro (will)
+    going_to: Going to
+    conditionals: Condicionais
+    ing_form: Forma -ing
+    past_participle: Particípio passado
+  pt-pt:
+    present_simple: Presente simples
+    present_continuous: Presente contínuo
+    present_perfect: Presente perfeito
+    past_simple: Passado simples
+    past_continuous: Passado contínuo
+    past_perfect: Passado perfeito
+    future_will: Futuro (will)
+    going_to: Going to
+    conditionals: Condicionais
+    ing_form: Forma -ing
+    past_participle: Particípio passado
+  zh:
+    present_simple: 一般现在时
+    present_continuous: 现在进行时
+    present_perfect: 现在完成时
+    past_simple: 一般过去时
+    past_continuous: 过去进行时
+    past_perfect: 过去完成时
+    future_will: 一般将来时（will）
+    going_to: be going to
+    conditionals: 条件句
+    ing_form: "-ing 形式"
+    past_participle: 过去分词
+  ja:
+    present_simple: 現在形
+    present_continuous: 現在進行形
+    present_perfect: 現在完了
+    past_simple: 過去形
+    past_continuous: 過去進行形
+    past_perfect: 過去完了
+    future_will: 未来形（will）
+    going_to: going to
+    conditionals: 条件文
+    ing_form: "-ing形"
+    past_participle: 過去分詞
+  ko:
+    present_simple: 현재 단순
+    present_continuous: 현재 진행
+    present_perfect: 현재 완료
+    past_simple: 과거 단순
+    past_continuous: 과거 진행
+    past_perfect: 과거 완료
+    future_will: 미래 (will)
+    going_to: going to
+    conditionals: 조건문
+    ing_form: "-ing형"
+    past_participle: 과거분사
+  ar:
+    present_simple: المضارع البسيط
+    present_continuous: المضارع المستمر
+    present_perfect: المضارع التام
+    past_simple: الماضي البسيط
+    past_continuous: الماضي المستمر
+    past_perfect: الماضي التام
+    future_will: المستقبل (will)
+    going_to: going to
+    conditionals: الجمل الشرطية
+    ing_form: صيغة -ing
+    past_participle: التصريف الثالث
+  ru:
+    present_simple: Настоящее простое
+    present_continuous: Настоящее длительное
+    present_perfect: Настоящее совершенное
+    past_simple: Прошедшее простое
+    past_continuous: Прошедшее длительное
+    past_perfect: Предпрошедшее
+    future_will: Будущее (will)
+    going_to: Конструкция going to
+    conditionals: Условные предложения
+    ing_form: Форма -ing
+    past_participle: Причастие прошедшего
+  hi:
+    present_simple: सामान्य वर्तमान
+    present_continuous: वर्तमान सतत
+    present_perfect: पूर्ण वर्तमान
+    past_simple: सामान्य भूत
+    past_continuous: भूत सतत
+    past_perfect: पूर्ण भूत
+    future_will: भविष्य (will)
+    going_to: going to
+    conditionals: शर्त वाक्य
+    ing_form: "-ing रूप"
+    past_participle: भूतकालिक कृदंत
+  tr:
+    present_simple: Geniş zaman
+    present_continuous: Şimdiki zaman
+    present_perfect: Yakın geçmiş
+    past_simple: Geçmiş zaman
+    past_continuous: Şimdiki zamanın hikâyesi
+    past_perfect: Miş’li geçmiş
+    future_will: Gelecek (will)
+    going_to: going to
+    conditionals: Koşul cümleleri
+    ing_form: "-ing biçimi"
+    past_participle: Üçüncü hali
+  vi:
+    present_simple: Hiện tại đơn
+    present_continuous: Hiện tại tiếp diễn
+    present_perfect: Hiện tại hoàn thành
+    past_simple: Quá khứ đơn
+    past_continuous: Quá khứ tiếp diễn
+    past_perfect: Quá khứ hoàn thành
+    future_will: Tương lai (will)
+    going_to: going to
+    conditionals: Câu điều kiện
+    ing_form: Dạng -ing
+    past_participle: Quá khứ phân từ
+  pl:
+    present_simple: Czas teraźniejszy prosty
+    present_continuous: Czas teraźniejszy ciągły
+    present_perfect: Czas teraźniejszy dokonany
+    past_simple: Czas przeszły prosty
+    past_continuous: Czas przeszły ciągły
+    past_perfect: Czas zaprzeszły
+    future_will: Czas przyszły (will)
+    going_to: Konstrukcja going to
+    conditionals: Okresy warunkowe
+    ing_form: Forma -ing
+    past_participle: Imiesłów przeszły
