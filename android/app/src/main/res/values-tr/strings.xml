@@ -423,6 +423,40 @@
 
     <string name="home_forecast_title">Gelecek günlerdeki gözden geçirmeler</string>
 
+    <string name="home_reviews">tekrarlar</string>
+    <string name="home_new">yeni</string>
+    <string name="home_empty_title">Henüz hiç kelimen yok</string>
+    <string name="home_empty_body">Bir kelime ara veya liste içe aktar.</string>
+    <string name="home_add_first">İlk kelimeleri ekle</string>
+    <string name="home_caught_up">Bugün bekleyen bir şey yok</string>
+    <string name="home_next_review">Sonraki tekrar: %1$s</string>
+    <string name="home_change_limit">Limiti değiştir</string>
+    <string name="home_relative_tomorrow">yarın</string>
+    <string name="home_relative_day_after">öbür gün</string>
+    <string name="home_in_days">%1$d gün sonra</string>
+    <string name="weekday_full_mon">Pazartesi</string>
+    <string name="weekday_full_tue">Salı</string>
+    <string name="weekday_full_wed">Çarşamba</string>
+    <string name="weekday_full_thu">Perşembe</string>
+    <string name="weekday_full_fri">Cuma</string>
+    <string name="weekday_full_sat">Cumartesi</string>
+    <string name="weekday_full_sun">Pazar</string>
+    <string name="cd_language">Öğrenme dili</string>
+    <string-array name="month_names">
+        <item>Ocak</item>
+        <item>Şubat</item>
+        <item>Mart</item>
+        <item>Nisan</item>
+        <item>Mayıs</item>
+        <item>Haziran</item>
+        <item>Temmuz</item>
+        <item>Ağustos</item>
+        <item>Eylül</item>
+        <item>Ekim</item>
+        <item>Kasım</item>
+        <item>Aralık</item>
+    </string-array>
+
     <string name="home_words_count">%1$d kelime</string>
 
     <string name="home_new_words_count">%1$d yeni kelime</string>

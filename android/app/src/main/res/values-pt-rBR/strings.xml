@@ -391,6 +391,40 @@
 
     <string name="home_forecast_title">Revisões nos próximos dias</string>
 
+    <string name="home_reviews">revisões</string>
+    <string name="home_new">novas</string>
+    <string name="home_empty_title">Você ainda não tem palavras</string>
+    <string name="home_empty_body">Busque uma palavra ou importe uma lista.</string>
+    <string name="home_add_first">Adicione as primeiras palavras</string>
+    <string name="home_caught_up">Nada para hoje</string>
+    <string name="home_next_review">Próxima revisão: %1$s</string>
+    <string name="home_change_limit">Alterar limite</string>
+    <string name="home_relative_tomorrow">amanhã</string>
+    <string name="home_relative_day_after">depois de amanhã</string>
+    <string name="home_in_days">daqui a %1$d dias</string>
+    <string name="weekday_full_mon">segunda-feira</string>
+    <string name="weekday_full_tue">terça-feira</string>
+    <string name="weekday_full_wed">quarta-feira</string>
+    <string name="weekday_full_thu">quinta-feira</string>
+    <string name="weekday_full_fri">sexta-feira</string>
+    <string name="weekday_full_sat">sábado</string>
+    <string name="weekday_full_sun">domingo</string>
+    <string name="cd_language">Idioma de estudo</string>
+    <string-array name="month_names">
+        <item>janeiro</item>
+        <item>fevereiro</item>
+        <item>março</item>
+        <item>abril</item>
+        <item>maio</item>
+        <item>junho</item>
+        <item>julho</item>
+        <item>agosto</item>
+        <item>setembro</item>
+        <item>outubro</item>
+        <item>novembro</item>
+        <item>dezembro</item>
+    </string-array>
+
     <string name="home_words_count">%1$d palavras</string>
 
     <string name="home_new_words_count">%1$d palavras novas</string>

@@ -541,25 +541,21 @@ class PracticeViewModel @Inject constructor(
             AnswerMode.CHOICE -> "choice"
         }
         viewModelScope.launch {
-            val snapshot = repository.cardSrsSnapshot(item.card_id)
-                ?: run {
-                    _state.value = _state.value.copy(
-                        error = strings.get(R.string.err_save_grade),
-                    )
-                    return@launch
-                }
-            val undoFrame = UndoFrame(
-                clientId = "",
-                cardId = item.card_id,
-                previousIndex = _state.value.currentIndex,
-                previousPhase = _state.value.phase,
-                previousAnswerMode = _state.value.answerMode,
-                previousTypedAnswer = _state.value.typedAnswer,
-                previousLastCorrect = _state.value.lastCorrect,
-                snapshot = snapshot,
-                wasSessionComplete = false,
-            )
             _state.value = _state.value.copy(grading = true, error = null)
+            val snapshot = repository.cardSrsSnapshot(item.card_id)
+            val undoFrame = snapshot?.let {
+                UndoFrame(
+                    clientId = "",
+                    cardId = item.card_id,
+                    previousIndex = _state.value.currentIndex,
+                    previousPhase = _state.value.phase,
+                    previousAnswerMode = _state.value.answerMode,
+                    previousTypedAnswer = _state.value.typedAnswer,
+                    previousLastCorrect = _state.value.lastCorrect,
+                    snapshot = it,
+                    wasSessionComplete = false,
+                )
+            }
             runCatching {
                 repository.submitReview(
                     cardId = item.card_id,
@@ -571,7 +567,7 @@ class PracticeViewModel @Inject constructor(
                 )
             }.onSuccess { clientId ->
                 _state.value = _state.value.copy(
-                    lastUndo = undoFrame.copy(clientId = clientId),
+                    lastUndo = undoFrame?.copy(clientId = clientId),
                     grading = false,
                 )
                 advanceToNext()

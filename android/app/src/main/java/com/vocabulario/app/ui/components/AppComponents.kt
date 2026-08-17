@@ -542,15 +542,16 @@ fun GradeRow(
     onHard: () -> Unit,
     onGood: () -> Unit,
     onEasy: () -> Unit,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        GradeSquare(stringResource(R.string.grade_again), GradeAgain, Modifier.weight(1f).testTag(TestTags.GRADE_AGAIN), onAgain)
-        GradeSquare(stringResource(R.string.grade_hard), GradeHard, Modifier.weight(1f).testTag(TestTags.GRADE_HARD), onHard)
-        GradeSquare(stringResource(R.string.grade_good), GradeLearning, Modifier.weight(1f).testTag(TestTags.GRADE_GOOD), onGood)
-        GradeSquare(stringResource(R.string.grade_easy), GradeKnown, Modifier.weight(1f).testTag(TestTags.GRADE_EASY), onEasy)
+        GradeSquare(stringResource(R.string.grade_again), GradeAgain, Modifier.weight(1f).testTag(TestTags.GRADE_AGAIN), onAgain, enabled)
+        GradeSquare(stringResource(R.string.grade_hard), GradeHard, Modifier.weight(1f).testTag(TestTags.GRADE_HARD), onHard, enabled)
+        GradeSquare(stringResource(R.string.grade_good), GradeLearning, Modifier.weight(1f).testTag(TestTags.GRADE_GOOD), onGood, enabled)
+        GradeSquare(stringResource(R.string.grade_easy), GradeKnown, Modifier.weight(1f).testTag(TestTags.GRADE_EASY), onEasy, enabled)
     }
 }
 
@@ -561,9 +562,11 @@ private fun GradeSquare(
     color: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    enabled: Boolean = true,
 ) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier.height(56.dp),
         shape = RoundedCornerShape(12.dp),
         color = color,

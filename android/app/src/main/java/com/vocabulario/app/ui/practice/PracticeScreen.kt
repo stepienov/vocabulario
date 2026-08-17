@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -383,6 +384,7 @@ fun PracticeScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .background(MaterialTheme.colorScheme.background)
+                                            .navigationBarsPadding()
                                             .padding(top = 14.dp, bottom = 8.dp),
                                     ) {
                                         GradeRow(
@@ -390,6 +392,7 @@ fun PracticeScreen(
                                             onHard = { viewModel.grade("hard") },
                                             onGood = { viewModel.grade("good") },
                                             onEasy = { viewModel.grade("easy") },
+                                            enabled = !state.grading,
                                         )
                                     }
                                 }

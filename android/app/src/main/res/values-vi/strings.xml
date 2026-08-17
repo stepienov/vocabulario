@@ -422,6 +422,40 @@
 
     <string name="home_forecast_title">Ôn tập trong những ngày tới</string>
 
+    <string name="home_reviews">ôn tập</string>
+    <string name="home_new">mới</string>
+    <string name="home_empty_title">Bạn chưa có từ nào</string>
+    <string name="home_empty_body">Tìm một từ hoặc nhập danh sách.</string>
+    <string name="home_add_first">Thêm từ đầu tiên</string>
+    <string name="home_caught_up">Hôm nay không có gì chờ</string>
+    <string name="home_next_review">Ôn tập tiếp: %1$s</string>
+    <string name="home_change_limit">Đổi giới hạn</string>
+    <string name="home_relative_tomorrow">ngày mai</string>
+    <string name="home_relative_day_after">ngày kia</string>
+    <string name="home_in_days">sau %1$d ngày</string>
+    <string name="weekday_full_mon">Thứ Hai</string>
+    <string name="weekday_full_tue">Thứ Ba</string>
+    <string name="weekday_full_wed">Thứ Tư</string>
+    <string name="weekday_full_thu">Thứ Năm</string>
+    <string name="weekday_full_fri">Thứ Sáu</string>
+    <string name="weekday_full_sat">Thứ Bảy</string>
+    <string name="weekday_full_sun">Chủ Nhật</string>
+    <string name="cd_language">Ngôn ngữ học</string>
+    <string-array name="month_names">
+        <item>Tháng 1</item>
+        <item>Tháng 2</item>
+        <item>Tháng 3</item>
+        <item>Tháng 4</item>
+        <item>Tháng 5</item>
+        <item>Tháng 6</item>
+        <item>Tháng 7</item>
+        <item>Tháng 8</item>
+        <item>Tháng 9</item>
+        <item>Tháng 10</item>
+        <item>Tháng 11</item>
+        <item>Tháng 12</item>
+    </string-array>
+
     <string name="home_words_count">%1$d từ</string>
 
     <string name="home_new_words_count">%1$d từ mới</string>

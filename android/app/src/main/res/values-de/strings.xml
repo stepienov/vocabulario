@@ -391,6 +391,40 @@
 
     <string name="home_forecast_title">Wiederholungen in den nächsten Tagen</string>
 
+    <string name="home_reviews">Wiederholungen</string>
+    <string name="home_new">Neue</string>
+    <string name="home_empty_title">Du hast noch keine Wörter</string>
+    <string name="home_empty_body">Such ein Wort oder importiere eine Liste.</string>
+    <string name="home_add_first">Erste Wörter hinzufügen</string>
+    <string name="home_caught_up">Heute steht nichts an</string>
+    <string name="home_next_review">Nächste Wiederholung: %1$s</string>
+    <string name="home_change_limit">Limit ändern</string>
+    <string name="home_relative_tomorrow">morgen</string>
+    <string name="home_relative_day_after">übermorgen</string>
+    <string name="home_in_days">in %1$d Tagen</string>
+    <string name="weekday_full_mon">Montag</string>
+    <string name="weekday_full_tue">Dienstag</string>
+    <string name="weekday_full_wed">Mittwoch</string>
+    <string name="weekday_full_thu">Donnerstag</string>
+    <string name="weekday_full_fri">Freitag</string>
+    <string name="weekday_full_sat">Samstag</string>
+    <string name="weekday_full_sun">Sonntag</string>
+    <string name="cd_language">Lernsprache</string>
+    <string-array name="month_names">
+        <item>Januar</item>
+        <item>Februar</item>
+        <item>März</item>
+        <item>April</item>
+        <item>Mai</item>
+        <item>Juni</item>
+        <item>Juli</item>
+        <item>August</item>
+        <item>September</item>
+        <item>Oktober</item>
+        <item>November</item>
+        <item>Dezember</item>
+    </string-array>
+
     <string name="home_words_count">%1$d Wörter</string>
 
     <string name="home_new_words_count">%1$d neue Wörter</string>

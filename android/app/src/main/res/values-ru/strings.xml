@@ -391,6 +391,40 @@
 
     <string name="home_forecast_title">Повторения в ближайшие дни</string>
 
+    <string name="home_reviews">повторения</string>
+    <string name="home_new">новые</string>
+    <string name="home_empty_title">У вас ещё нет слов</string>
+    <string name="home_empty_body">Найдите слово или импортируйте список.</string>
+    <string name="home_add_first">Добавить первые слова</string>
+    <string name="home_caught_up">На сегодня ничего нет</string>
+    <string name="home_next_review">Следующее повторение: %1$s</string>
+    <string name="home_change_limit">Изменить лимит</string>
+    <string name="home_relative_tomorrow">завтра</string>
+    <string name="home_relative_day_after">послезавтра</string>
+    <string name="home_in_days">через %1$d дн.</string>
+    <string name="weekday_full_mon">понедельник</string>
+    <string name="weekday_full_tue">вторник</string>
+    <string name="weekday_full_wed">среда</string>
+    <string name="weekday_full_thu">четверг</string>
+    <string name="weekday_full_fri">пятница</string>
+    <string name="weekday_full_sat">суббота</string>
+    <string name="weekday_full_sun">воскресенье</string>
+    <string name="cd_language">Изучаемый язык</string>
+    <string-array name="month_names">
+        <item>январь</item>
+        <item>февраль</item>
+        <item>март</item>
+        <item>апрель</item>
+        <item>май</item>
+        <item>июнь</item>
+        <item>июль</item>
+        <item>август</item>
+        <item>сентябрь</item>
+        <item>октябрь</item>
+        <item>ноябрь</item>
+        <item>декабрь</item>
+    </string-array>
+
     <string name="home_words_count">%1$d слов</string>
 
     <string name="home_new_words_count">%1$d новых слов</string>

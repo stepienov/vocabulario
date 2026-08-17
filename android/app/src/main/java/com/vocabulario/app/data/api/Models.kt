@@ -336,6 +336,7 @@ data class DashboardForecastDay(
     val day_offset: Int,
     val label: String,
     val due_count: Int,
+    val start_ms: Long = 0L,
 )
 
 @Serializable
@@ -359,6 +360,9 @@ data class DashboardStatsResponse(
     val reviews_in_period: Int = 0,
     val avg_words_per_day: Double = 0.0,
     val period_days: Int = 1,
+    val ready_count: Int = 0,
+    val session_new: Int = 0,
+    val next_review_at: String? = null,
 )
 
 @Serializable

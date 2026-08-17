@@ -423,6 +423,40 @@
 
     <string name="home_forecast_title">今後のレビュー</string>
 
+    <string name="home_reviews">復習</string>
+    <string name="home_new">新規</string>
+    <string name="home_empty_title">まだ単語がありません</string>
+    <string name="home_empty_body">単語を検索するか、リストを取り込みましょう。</string>
+    <string name="home_add_first">最初の単語を追加</string>
+    <string name="home_caught_up">今日の課題はありません</string>
+    <string name="home_next_review">次の復習: %1$s</string>
+    <string name="home_change_limit">上限を変更</string>
+    <string name="home_relative_tomorrow">明日</string>
+    <string name="home_relative_day_after">明後日</string>
+    <string name="home_in_days">%1$d日後</string>
+    <string name="weekday_full_mon">月曜日</string>
+    <string name="weekday_full_tue">火曜日</string>
+    <string name="weekday_full_wed">水曜日</string>
+    <string name="weekday_full_thu">木曜日</string>
+    <string name="weekday_full_fri">金曜日</string>
+    <string name="weekday_full_sat">土曜日</string>
+    <string name="weekday_full_sun">日曜日</string>
+    <string name="cd_language">学習言語</string>
+    <string-array name="month_names">
+        <item>1月</item>
+        <item>2月</item>
+        <item>3月</item>
+        <item>4月</item>
+        <item>5月</item>
+        <item>6月</item>
+        <item>7月</item>
+        <item>8月</item>
+        <item>9月</item>
+        <item>10月</item>
+        <item>11月</item>
+        <item>12月</item>
+    </string-array>
+
     <string name="home_words_count">%1$d 単語</string>
 
     <string name="home_new_words_count">%1$d 新しい単語</string>

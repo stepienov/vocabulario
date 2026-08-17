@@ -3,6 +3,7 @@ package com.vocabulario.app.data.local
 import com.vocabulario.app.data.api.DashboardForecastDay
 import com.vocabulario.app.data.api.DashboardStatsResponse
 import com.vocabulario.app.data.local.db.CachedCardEntity
+import java.time.Instant
 import java.util.Calendar
 
 /**
@@ -10,12 +11,14 @@ import java.util.Calendar
  */
 object LocalDashboard {
     const val MASTERED_INTERVAL_DAYS = 21.0
+    const val FORECAST_CELLS = 35
 
     fun build(
         learningCards: List<CachedCardEntity>,
         newLimit: Int,
         nowMs: Long,
         periodDays: Int = 7,
+        newDoneToday: Int = 0,
     ): DashboardStatsResponse {
         val ready = learningCards.filter { it.enrichmentStatus == "ready" }
         val due = ready.filter { isDue(it, nowMs) }
@@ -32,20 +35,22 @@ object LocalDashboard {
             val at = card.lastReviewedAt ?: return@filter false
             at >= todayStart
         }
-        val newDoneToday = reviewedToday.count { it.repetitions == 1 || it.intervalDays < 1.0 }
+        val doneToday = newDoneToday.coerceAtLeast(0)
+        val newRemaining = if (newLimit > 0) (newLimit - doneToday).coerceAtLeast(0) else newCards.size
+        val sessionNew = if (newLimit > 0) minOf(newRemaining, newCards.size) else newCards.size
         val reviewsDoneToday = reviewedToday.size
-        val newRemaining = (newLimit - newDoneToday).coerceAtLeast(0)
         val lastReviewed = learningCards.maxOfOrNull { it.lastReviewedAt ?: 0L }
             ?.takeIf { it > 0L }
-            ?.let { java.time.Instant.ofEpochMilli(it).toString() }
+            ?.let { Instant.ofEpochMilli(it).toString() }
         val lastAdded = learningCards.maxOfOrNull { it.updatedAt }
             ?.takeIf { it > 0L }
-            ?.let { java.time.Instant.ofEpochMilli(it).toString() }
+            ?.let { Instant.ofEpochMilli(it).toString() }
+        val nextReview = nextReviewAtMs(ready, nowMs)?.let { Instant.ofEpochMilli(it).toString() }
 
         return DashboardStatsResponse(
             due_count = due.size,
             new_remaining = newRemaining,
-            new_done_today = newDoneToday,
+            new_done_today = doneToday,
             new_limit = newLimit,
             reviews_done_today = reviewsDoneToday,
             done_today = reviewsDoneToday,
@@ -58,10 +63,13 @@ object LocalDashboard {
             forecast = forecast(ready, nowMs),
             last_added_at = lastAdded,
             last_reviewed_at = lastReviewed,
-            new_today = newDoneToday,
+            new_today = doneToday,
             reviews_in_period = reviewsDoneToday,
-            avg_words_per_day = newDoneToday.toDouble(),
+            avg_words_per_day = doneToday.toDouble(),
             period_days = periodDays,
+            ready_count = ready.size,
+            session_new = sessionNew,
+            next_review_at = nextReview,
         )
     }
 
@@ -81,18 +89,52 @@ object LocalDashboard {
         return cal.timeInMillis
     }
 
+    fun startOfWeekMondayMs(nowMs: Long): Long {
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = startOfDayMs(nowMs)
+        val daysFromMonday = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        cal.add(Calendar.DAY_OF_MONTH, -daysFromMonday)
+        return cal.timeInMillis
+    }
+
+    fun addDaysMs(startMs: Long, days: Int): Long {
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = startMs
+        cal.add(Calendar.DAY_OF_MONTH, days)
+        return cal.timeInMillis
+    }
+
+    fun newOffered(newLimit: Int, newDoneToday: Int, newReserve: Int): Int {
+        if (newLimit <= 0) return newReserve
+        return minOf((newLimit - newDoneToday).coerceAtLeast(0), newReserve)
+    }
+
+    fun nextReviewAtMs(ready: List<CachedCardEntity>, nowMs: Long): Long? =
+        ready.asSequence()
+            .filter { it.status in DUE_STATUSES }
+            .mapNotNull { it.nextReviewAt }
+            .filter { it > nowMs }
+            .minOrNull()
+
     private fun forecast(ready: List<CachedCardEntity>, nowMs: Long): List<DashboardForecastDay> {
+        val weekStart = startOfWeekMondayMs(nowMs)
         val todayStart = startOfDayMs(nowMs)
-        val dayMs = 86_400_000L
-        return (0 until 7).map { offset ->
-            val start = todayStart + offset * dayMs
-            val end = start + dayMs
+        val todayEnd = addDaysMs(todayStart, 1)
+        return (0 until FORECAST_CELLS).map { offset ->
+            val start = addDaysMs(weekStart, offset)
+            val end = addDaysMs(start, 1)
+            val isToday = start == todayStart
             val count = ready.count { card ->
                 if (card.status !in DUE_STATUSES) return@count false
-                val next = card.nextReviewAt ?: return@count offset == 0
-                next in start until end
+                val next = card.nextReviewAt ?: return@count isToday
+                if (isToday) next < todayEnd else next in start until end
             }
-            DashboardForecastDay(day_offset = offset, label = "", due_count = count)
+            DashboardForecastDay(
+                day_offset = offset,
+                label = "",
+                due_count = count,
+                start_ms = start,
+            )
         }
     }
 

@@ -41,7 +41,15 @@ object LocalFsrs {
         val rating = toRating(g)
         val now = Instant.ofEpochMilli(nowMs)
         val fsrsCard = toFsrsCard(card, now)
-        val updated = scheduler.reviewCard(fsrsCard, rating, now).card()
+        val updated = try {
+            scheduler.reviewCard(fsrsCard, rating, now).card()
+        } catch (_: Exception) {
+            val fresh = Card.builder()
+                .cardId(stableCardId(card.id))
+                .due(now)
+                .build()
+            scheduler.reviewCard(fresh, rating, now).card()
+        }
         return fromFsrsCard(card, updated, g, nowMs, rating == Rating.AGAIN)
     }
 

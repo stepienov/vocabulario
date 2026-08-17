@@ -19,12 +19,31 @@ class LocalDashboardTest {
             card("new2", status = "new"),
             card("pending", status = "new", enrichment = "pending"),
         )
-        val stats = LocalDashboard.build(cards, newLimit = 20, nowMs = now)
+        val stats = LocalDashboard.build(cards, newLimit = 20, nowMs = now, newDoneToday = 0)
         assertEquals(1, stats.due_count)
         assertEquals(2, stats.srs_new)
         assertEquals(2, stats.new_reserve)
+        assertEquals(2, stats.session_new)
         assertEquals(5, stats.cards_total)
         assertEquals(20, stats.new_limit)
+        assertEquals(4, stats.ready_count)
+    }
+
+    @Test
+    fun sessionNewRespectsDailyQuota() {
+        val cards = (1..10).map { card("n$it", status = "new") }
+        val stats = LocalDashboard.build(cards, newLimit = 20, nowMs = now, newDoneToday = 17)
+        assertEquals(3, stats.session_new)
+        assertEquals(3, stats.new_remaining)
+        assertEquals(17, stats.new_done_today)
+        assertEquals(10, stats.new_reserve)
+    }
+
+    @Test
+    fun newOfferedNeverExceedsReserve() {
+        assertEquals(4, LocalDashboard.newOffered(newLimit = 20, newDoneToday = 0, newReserve = 4))
+        assertEquals(0, LocalDashboard.newOffered(newLimit = 20, newDoneToday = 20, newReserve = 40))
+        assertEquals(5, LocalDashboard.newOffered(newLimit = 20, newDoneToday = 15, newReserve = 40))
     }
 
     @Test
@@ -45,19 +64,28 @@ class LocalDashboardTest {
             card("a", status = "learning", lastReviewedAt = today + 1_000, repetitions = 1, intervalDays = 0.0),
             card("b", status = "review", lastReviewedAt = today - 86_400_000, repetitions = 4, intervalDays = 8.0),
         )
-        val stats = LocalDashboard.build(cards, newLimit = 20, nowMs = today + 3_600_000)
+        val stats = LocalDashboard.build(cards, newLimit = 20, nowMs = today + 3_600_000, newDoneToday = 0)
         assertEquals(1, stats.reviews_done_today)
-        assertEquals(1, stats.new_done_today)
-        assertEquals(19, stats.new_remaining)
+        assertEquals(0, stats.new_done_today)
+        assertEquals(20, stats.new_remaining)
     }
 
     @Test
-    fun forecastHasSevenDays() {
-        val dueToday = card("t", status = "review", nextReviewAt = today + 1_000)
-        val stats = LocalDashboard.build(listOf(dueToday), newLimit = 5, nowMs = today + 2_000)
-        assertEquals(7, stats.forecast.size)
-        assertEquals(1, stats.forecast[0].due_count)
-        assertTrue(stats.forecast.drop(1).all { it.due_count == 0 })
+    fun forecastIsFiveWeeksAndOverdueCountsToday() {
+        val overdue = card("over", status = "review", nextReviewAt = today - 3 * 86_400_000L)
+        val stats = LocalDashboard.build(listOf(overdue), newLimit = 5, nowMs = today + 2_000)
+        assertEquals(35, stats.forecast.size)
+        val todayCell = stats.forecast.first { it.start_ms == today }
+        assertEquals(1, todayCell.due_count)
+        assertTrue(stats.forecast.filter { it.start_ms != today }.all { it.due_count == 0 })
+    }
+
+    @Test
+    fun nextReviewAfterNow() {
+        val later = card("l", status = "review", nextReviewAt = now + 2 * 86_400_000L)
+        val stats = LocalDashboard.build(listOf(later), newLimit = 5, nowMs = now)
+        assertEquals(0, stats.due_count)
+        assertTrue(stats.next_review_at != null)
     }
 
     private fun card(

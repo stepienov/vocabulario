@@ -51,6 +51,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -65,6 +66,8 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -89,6 +92,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -100,6 +104,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
+import java.time.Instant
+import java.util.Calendar
 import com.vocabulario.app.R
 import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.data.api.CardResponse
@@ -109,6 +115,8 @@ import com.vocabulario.app.data.api.WordListResponse
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.vocabulario.app.data.normalizePosKey
+import com.vocabulario.app.data.local.LocalDashboard
+import com.vocabulario.app.ui.theme.BrandTeal
 import com.vocabulario.app.ui.theme.LocalVocabExtraColors
 import com.vocabulario.app.ui.components.AddToListSheet
 import com.vocabulario.app.ui.components.AppAlertDialog
@@ -178,7 +186,16 @@ fun HomeScreen(
             .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
-        HomeHeader(onSettings = onSettings)
+        HomeHeader(
+            state = state,
+            onSettings = onSettings,
+            onLanguagesSettings = {
+                viewModel.openSettingsLanguages()
+                onSettings()
+            },
+            onToggleLangMenu = viewModel::setLangMenuOpen,
+            onSwitchProfile = viewModel::switchLearningProfile,
+        )
         HomeTabs(
             selected = state.tab,
             onSelect = viewModel::selectTab,
@@ -191,7 +208,15 @@ fun HomeScreen(
                 .fillMaxWidth(),
         ) {
             when (state.tab) {
-                HomeTab.DASHBOARD -> DashboardTab(state = state)
+                HomeTab.DASHBOARD -> DashboardTab(
+                    state = state,
+                    onPractice = onPractice,
+                    onAddFirst = { viewModel.selectTab(HomeTab.ADD) },
+                    onChangeLimit = {
+                        viewModel.openSettingsLimits()
+                        onSettings()
+                    },
+                )
                 HomeTab.ADD -> AddTab(
                     state = state,
                     importState = importState,
@@ -238,31 +263,6 @@ fun HomeScreen(
                     onReviewWord = viewModel::openPendingReview,
                     onClearWordFocus = viewModel::clearWordFocus,
                 )
-            }
-        }
-        when {
-            state.selectionMode -> Unit // akcje multi-select w ListsTab
-            else -> {
-                Button(
-                    onClick = onPractice,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = ScreenPad, vertical = 16.dp)
-                        .height(54.dp)
-                        .testTag(TestTags.BTN_LEARN),
-                    shape = AppButtonShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = scheme.primary,
-                        contentColor = scheme.onPrimary,
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.action_learn),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
             }
         }
     }
@@ -352,9 +352,17 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeHeader(onSettings: () -> Unit) {
+private fun HomeHeader(
+    state: HomeUiState,
+    onSettings: () -> Unit,
+    onLanguagesSettings: () -> Unit,
+    onToggleLangMenu: (Boolean) -> Unit,
+    onSwitchProfile: (com.vocabulario.app.data.api.LanguageProfileResponse) -> Unit,
+) {
     val scheme = MaterialTheme.colorScheme
     val headerControl = 44.dp
+    val chip = langChipLabel(state.activeProfile, state.profiles)
+    val manyLangs = state.profiles.size > 1
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -363,30 +371,84 @@ private fun HomeHeader(onSettings: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Logo PNG has a drop-shadow below the glyphs, so geometric center sits high —
-        // nudge down slightly so letterforms look vertically balanced in the header.
         Box(
-            modifier = Modifier.height(headerControl),
+            modifier = Modifier.height(headerControl).weight(1f),
             contentAlignment = Alignment.CenterStart,
         ) {
             BrandLogo(
                 modifier = Modifier.offset(y = 2.dp),
                 height = 38.dp,
-                maxWidth = 236.dp,
+                maxWidth = 200.dp,
             )
         }
-        Surface(
-            onClick = onSettings,
-            shape = CircleShape,
-            color = scheme.surfaceVariant,
-            modifier = Modifier.size(headerControl).testTag(TestTags.BTN_SETTINGS),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Icon(
-                    Icons.Outlined.Settings,
-                    contentDescription = stringResource(R.string.cd_settings),
-                    tint = scheme.onSurface,
-                )
+            if (chip.isNotEmpty()) {
+                Box {
+                    Surface(
+                        onClick = {
+                            if (manyLangs) onToggleLangMenu(true) else onLanguagesSettings()
+                        },
+                        shape = AppChipShape,
+                        color = scheme.surfaceVariant,
+                        modifier = Modifier
+                            .height(headerControl)
+                            .testTag(TestTags.CHIP_LANG),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Text(
+                                chip,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = scheme.onSurface,
+                            )
+                            if (manyLangs) {
+                                Icon(
+                                    Icons.Filled.ArrowDropDown,
+                                    contentDescription = stringResource(R.string.cd_language),
+                                    tint = scheme.onSurface,
+                                )
+                            }
+                        }
+                    }
+                    DropdownMenu(
+                        expanded = state.langMenuOpen,
+                        onDismissRequest = { onToggleLangMenu(false) },
+                    ) {
+                        state.profiles.forEach { profile ->
+                            val selected = profile.id == state.activeProfile?.id
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        langChipLabel(profile, state.profiles),
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                    )
+                                },
+                                onClick = { onSwitchProfile(profile) },
+                            )
+                        }
+                    }
+                }
+            }
+            Surface(
+                onClick = onSettings,
+                shape = CircleShape,
+                color = scheme.surfaceVariant,
+                modifier = Modifier.size(headerControl).testTag(TestTags.BTN_SETTINGS),
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        Icons.Outlined.Settings,
+                        contentDescription = stringResource(R.string.cd_settings),
+                        tint = scheme.onSurface,
+                    )
+                }
             }
         }
     }
@@ -480,23 +542,40 @@ private fun HomeTabs(
 
 
 @Composable
-private fun localizedWeekday(dayOffset: Int): String {
-    val cal = java.util.Calendar.getInstance()
-    cal.add(java.util.Calendar.DAY_OF_YEAR, dayOffset)
-    // Calendar: SUNDAY=1 … SATURDAY=7 → map to Mon-first string resources
-    return when (cal.get(java.util.Calendar.DAY_OF_WEEK)) {
-        java.util.Calendar.MONDAY -> stringResource(R.string.weekday_mon)
-        java.util.Calendar.TUESDAY -> stringResource(R.string.weekday_tue)
-        java.util.Calendar.WEDNESDAY -> stringResource(R.string.weekday_wed)
-        java.util.Calendar.THURSDAY -> stringResource(R.string.weekday_thu)
-        java.util.Calendar.FRIDAY -> stringResource(R.string.weekday_fri)
-        java.util.Calendar.SATURDAY -> stringResource(R.string.weekday_sat)
-        else -> stringResource(R.string.weekday_sun)
-    }
+private fun weekdayFull(dayOfWeek: Int): String = when (dayOfWeek) {
+    java.util.Calendar.MONDAY -> stringResource(R.string.weekday_full_mon)
+    java.util.Calendar.TUESDAY -> stringResource(R.string.weekday_full_tue)
+    java.util.Calendar.WEDNESDAY -> stringResource(R.string.weekday_full_wed)
+    java.util.Calendar.THURSDAY -> stringResource(R.string.weekday_full_thu)
+    java.util.Calendar.FRIDAY -> stringResource(R.string.weekday_full_fri)
+    java.util.Calendar.SATURDAY -> stringResource(R.string.weekday_full_sat)
+    else -> stringResource(R.string.weekday_full_sun)
 }
 
 @Composable
-private fun DashboardTab(state: HomeUiState) {
+private fun nextReviewLabel(nextIso: String?): String? {
+    if (nextIso.isNullOrBlank()) return null
+    val nextMs = runCatching { Instant.parse(nextIso).toEpochMilli() }.getOrNull() ?: return null
+    val now = System.currentTimeMillis()
+    val days = NextReviewCopy.calendarDaysBetween(now, nextMs)
+    val tomorrow = stringResource(R.string.home_relative_tomorrow)
+    val dayAfter = stringResource(R.string.home_relative_day_after)
+    val whenText = when (NextReviewCopy.kind(days, tomorrow.isNotBlank(), dayAfter.isNotBlank())) {
+        NextReviewCopy.Kind.Tomorrow -> tomorrow
+        NextReviewCopy.Kind.DayAfter -> dayAfter
+        NextReviewCopy.Kind.Weekday -> weekdayFull(NextReviewCopy.weekdayCalendarConst(nextMs))
+        NextReviewCopy.Kind.InDays -> stringResource(R.string.home_in_days, days)
+    }
+    return stringResource(R.string.home_next_review, whenText)
+}
+
+@Composable
+private fun DashboardTab(
+    state: HomeUiState,
+    onPractice: () -> Unit,
+    onAddFirst: () -> Unit,
+    onChangeLimit: () -> Unit,
+) {
     val stats = state.stats
     val scheme = MaterialTheme.colorScheme
 
@@ -506,91 +585,170 @@ private fun DashboardTab(state: HomeUiState) {
             .padding(horizontal = ScreenPad, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // Dziś — 3 kluczowe metryki
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = TileRadius,
-            color = scheme.surface,
-        ) {
-            Row(
+        when (state.homeKind) {
+            HomeKind.Empty -> {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = TileRadius,
+                    color = scheme.surface,
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp)) {
+                        Text(
+                            stringResource(R.string.home_empty_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = scheme.onSurface,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            stringResource(R.string.home_empty_body),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            HomeKind.CaughtUp -> {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = TileRadius,
+                    color = scheme.surface,
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp)) {
+                        Text(
+                            stringResource(R.string.home_caught_up),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = scheme.onSurface,
+                        )
+                        nextReviewLabel(stats?.next_review_at)?.let { line ->
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                line,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = scheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+            HomeKind.Session -> {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = TileRadius,
+                    color = scheme.surface,
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        TodayStat(
+                            label = stringResource(R.string.home_reviews),
+                            value = state.sessionDue.toString(),
+                            modifier = Modifier.weight(1f),
+                        )
+                        TodayStat(
+                            label = stringResource(R.string.home_new),
+                            value = state.sessionNew.toString(),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+        }
+
+        DashboardCta(
+            kind = state.homeKind,
+            onPractice = onPractice,
+            onAddFirst = onAddFirst,
+            onChangeLimit = onChangeLimit,
+        )
+
+        if (state.homeKind != HomeKind.Empty) {
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    .weight(1f, fill = true),
+                shape = TileRadius,
+                color = scheme.surface,
             ) {
-                TodayStat(
-                    label = stringResource(R.string.home_due_now),
-                    value = stats?.due_count?.toString() ?: "–",
-                    modifier = Modifier.weight(1f),
-                )
-                TodayStat(
-                    label = stringResource(R.string.home_new_today),
-                    value = stats?.new_done_today?.toString() ?: "–",
-                    modifier = Modifier.weight(1f),
-                )
-                TodayStat(
-                    label = stringResource(R.string.home_reviewed_today),
-                    value = stats?.reviews_done_today?.toString() ?: "–",
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-
-        // Status — kompaktowa lista
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = TileRadius,
-            color = scheme.surfaceVariant,
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                StatusLine(
-                    label = stringResource(R.string.home_learning_now),
-                    value = stats?.let { stringResource(R.string.home_words_count, it.srs_learning) } ?: "–",
-                )
-                HorizontalDivider(color = scheme.outline.copy(alpha = 0.25f))
-                StatusLine(
-                    label = stringResource(R.string.home_new_left),
-                    value = stats?.let { stringResource(R.string.home_new_words_count, it.new_reserve) } ?: "–",
-                )
-                HorizontalDivider(color = scheme.outline.copy(alpha = 0.25f))
-                StatusLine(
-                    label = stringResource(R.string.home_mastered),
-                    value = stats?.let { stringResource(R.string.home_words_count, it.srs_mastered) } ?: "–",
-                )
-            }
-        }
-
-        // Wykres 7 dni — stała wysokość, reszta miejsca bez scrolla
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f, fill = true),
-            shape = TileRadius,
-            color = scheme.surface,
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-            ) {
-                Text(
-                    stringResource(R.string.home_forecast_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = scheme.onSurface,
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                ReviewForecastBars(
+                ReviewHeatGrid(
                     days = stats?.forecast.orEmpty(),
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
                 )
             }
         }
 
         state.error?.let {
             Text(it, color = scheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun DashboardCta(
+    kind: HomeKind,
+    onPractice: () -> Unit,
+    onAddFirst: () -> Unit,
+    onChangeLimit: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    when (kind) {
+        HomeKind.Empty -> Button(
+            onClick = onAddFirst,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .testTag(TestTags.BTN_ADD_FIRST_WORDS),
+            shape = AppButtonShape,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = scheme.primary,
+                contentColor = scheme.onPrimary,
+            ),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+        ) {
+            Text(
+                stringResource(R.string.home_add_first),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        HomeKind.CaughtUp -> OutlinedButton(
+            onClick = onChangeLimit,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .testTag(TestTags.BTN_CHANGE_LIMIT),
+            shape = AppButtonShape,
+        ) {
+            Text(
+                stringResource(R.string.home_change_limit),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        HomeKind.Session -> Button(
+            onClick = onPractice,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .testTag(TestTags.BTN_LEARN),
+            shape = AppButtonShape,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = scheme.primary,
+                contentColor = scheme.onPrimary,
+            ),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+        ) {
+            Text(
+                stringResource(R.string.action_learn),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
@@ -626,89 +784,132 @@ private fun TodayStat(
 }
 
 @Composable
-private fun StatusLine(
-    label: String,
-    value: String,
-) {
-    val scheme = MaterialTheme.colorScheme
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurface,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = scheme.onSurface,
-        )
-    }
-}
-
-@Composable
-private fun ReviewForecastBars(
+private fun ReviewHeatGrid(
     days: List<DashboardForecastDay>,
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val maxCount = (days.maxOfOrNull { it.due_count } ?: 0).coerceAtLeast(1)
-    val barMaxHeight = 120.dp
-
-    if (days.isEmpty()) {
-        Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            Text("—", color = scheme.onSurfaceVariant)
-        }
-        return
+    val months = stringArrayResource(R.array.month_names)
+    val now = System.currentTimeMillis()
+    val todayStart = LocalDashboard.startOfDayMs(now)
+    val thisMonth = Calendar.getInstance().apply { timeInMillis = now }.get(Calendar.MONTH)
+    val cells = remember(days, todayStart) { heatCells(days, todayStart) }
+    val maxCount = (cells.maxOfOrNull { it.due_count } ?: 0).coerceAtLeast(1)
+    val firstMs = cells.firstOrNull()?.start_ms?.takeIf { it > 0 } ?: todayStart
+    val lastMs = cells.lastOrNull()?.start_ms?.takeIf { it > 0 } ?: firstMs
+    val firstMonth = Calendar.getInstance().apply { timeInMillis = firstMs }.get(Calendar.MONTH)
+    val lastMonth = Calendar.getInstance().apply { timeInMillis = lastMs }.get(Calendar.MONTH)
+    val title = if (firstMonth == lastMonth) {
+        months.getOrElse(firstMonth) { "" }
+    } else {
+        "${months.getOrElse(firstMonth) { "" }} / ${months.getOrElse(lastMonth) { "" }}"
     }
+    val headers = listOf(
+        stringResource(R.string.weekday_mon),
+        stringResource(R.string.weekday_tue),
+        stringResource(R.string.weekday_wed),
+        stringResource(R.string.weekday_thu),
+        stringResource(R.string.weekday_fri),
+        stringResource(R.string.weekday_sat),
+        stringResource(R.string.weekday_sun),
+    )
 
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        days.take(7).forEachIndexed { index, day ->
-            val fraction = day.due_count.toFloat() / maxCount.toFloat()
-            val barHeight = if (day.due_count == 0) 4.dp else (barMaxHeight * fraction).coerceAtLeast(8.dp)
-            // Odcienie primary: dziś najmocniejszy, dalej jaśniej
-            val alpha = (1f - index * 0.09f).coerceIn(0.38f, 1f)
-            val barColor: Color = scheme.primary.copy(alpha = alpha)
-
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Bottom,
-            ) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = scheme.onSurface,
+        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            headers.forEach { label ->
                 Text(
-                    "${day.due_count}",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = scheme.onSurface,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.72f)
-                        .height(barHeight)
-                        .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-                        .background(barColor),
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    localizedWeekday(day.day_offset),
+                    label,
+                    modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.labelSmall,
                     color = scheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                     maxLines = 1,
                 )
             }
         }
+        Column(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            cells.chunked(7).forEach { week ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    week.forEach { day ->
+                        val start = day.start_ms
+                        val cal = Calendar.getInstance().apply {
+                            timeInMillis = if (start > 0) start else todayStart
+                        }
+                        val otherMonth = cal.get(Calendar.MONTH) != thisMonth
+                        val past = start > 0 && start < todayStart
+                        val isToday = start == todayStart
+                        val n = day.due_count
+                        val alpha = when {
+                            past -> 0.14f
+                            n == 0 -> 0.12f
+                            else -> 0.22f + (n.toFloat() / maxCount) * 0.78f
+                        }
+                        val fill = (if (otherMonth) BrandTeal else scheme.primary).copy(alpha = alpha)
+                        val textColor = when {
+                            past || otherMonth -> scheme.onSurfaceVariant
+                            else -> scheme.onSurface
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(fill)
+                                .then(
+                                    if (isToday) {
+                                        Modifier.border(1.dp, scheme.onSurface, RoundedCornerShape(4.dp))
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                "${cal.get(Calendar.DAY_OF_MONTH)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = textColor,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun heatCells(
+    days: List<DashboardForecastDay>,
+    todayStart: Long,
+): List<DashboardForecastDay> {
+    if (days.size >= LocalDashboard.FORECAST_CELLS && days.all { it.start_ms > 0L }) {
+        return days.take(LocalDashboard.FORECAST_CELLS)
+    }
+    val weekStart = LocalDashboard.startOfWeekMondayMs(todayStart)
+    val byStart = days.associateBy { it.start_ms }
+    return (0 until LocalDashboard.FORECAST_CELLS).map { offset ->
+        val start = LocalDashboard.addDaysMs(weekStart, offset)
+        val existing = byStart[start] ?: days.getOrNull(offset)
+        DashboardForecastDay(
+            day_offset = offset,
+            label = existing?.label.orEmpty(),
+            due_count = existing?.let {
+                if (it.start_ms == start || it.start_ms == 0L) it.due_count else 0
+            } ?: 0,
+            start_ms = start,
+        )
     }
 }
 

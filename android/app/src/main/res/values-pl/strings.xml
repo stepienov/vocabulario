@@ -403,6 +403,40 @@
 
     <string name="home_forecast_title">Słowa do powtórki w najbliższych dniach</string>
 
+    <string name="home_reviews">powtórki</string>
+    <string name="home_new">nowe</string>
+    <string name="home_empty_title">Nie masz jeszcze słówek</string>
+    <string name="home_empty_body">Wyszukaj słowo albo zaimportuj listę.</string>
+    <string name="home_add_first">Dodaj pierwsze słówka</string>
+    <string name="home_caught_up">Nic nie czeka na dziś</string>
+    <string name="home_next_review">Następna powtórka: %1$s</string>
+    <string name="home_change_limit">Zmień limit</string>
+    <string name="home_relative_tomorrow">jutro</string>
+    <string name="home_relative_day_after">pojutrze</string>
+    <string name="home_in_days">za %1$d dni</string>
+    <string name="weekday_full_mon">poniedziałek</string>
+    <string name="weekday_full_tue">wtorek</string>
+    <string name="weekday_full_wed">środa</string>
+    <string name="weekday_full_thu">czwartek</string>
+    <string name="weekday_full_fri">piątek</string>
+    <string name="weekday_full_sat">sobota</string>
+    <string name="weekday_full_sun">niedziela</string>
+    <string name="cd_language">Język nauki</string>
+    <string-array name="month_names">
+        <item>styczeń</item>
+        <item>luty</item>
+        <item>marzec</item>
+        <item>kwiecień</item>
+        <item>maj</item>
+        <item>czerwiec</item>
+        <item>lipiec</item>
+        <item>sierpień</item>
+        <item>wrzesień</item>
+        <item>październik</item>
+        <item>listopad</item>
+        <item>grudzień</item>
+    </string-array>
+
     <string name="home_words_count">%1$d słów</string>
 
     <string name="home_new_words_count">%1$d nowych słów</string>

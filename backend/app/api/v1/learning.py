@@ -504,6 +504,26 @@ async def srs_queue(
         )
 
     new_limit = settings.new_cards_per_day if settings.new_cards_per_day > 0 else None
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    first_review_sq = (
+        select(
+            ReviewLog.card_id.label("card_id"),
+            func.min(ReviewLog.reviewed_at).label("first_at"),
+        )
+        .join(LearningCard, LearningCard.id == ReviewLog.card_id)
+        .where(
+            ReviewLog.user_id == user.id,
+            LearningCard.profile_id == profile_id,
+            LearningCard.deck_id.is_(None),
+            LearningCard.deleted_at.is_(None),
+        )
+        .group_by(ReviewLog.card_id)
+        .subquery()
+    )
+    new_done_q = await db.execute(
+        select(func.count()).select_from(first_review_sq).where(first_review_sq.c.first_at >= today_start)
+    )
+    new_done_today = int(new_done_q.scalar_one())
     new_query = (
         select(LearningCard, SrsState)
         .join(SrsState, SrsState.card_id == LearningCard.id)
@@ -518,7 +538,7 @@ async def srs_queue(
         )
     )
     if new_limit is not None:
-        new_query = new_query.limit(new_limit)
+        new_query = new_query.limit(max(0, new_limit - new_done_today))
     new_result = await db.execute(new_query)
     new_items = []
     for card, state in new_result.all():

@@ -182,12 +182,13 @@ class OfflineStore @Inject constructor(
         }
     }
 
-    suspend fun buildDashboardStats(profileId: String, newLimit: Int, days: Int = 7): DashboardStatsResponse =
+    suspend fun buildDashboardStats(profileId: String, newLimit: Int, days: Int = 7, newDoneToday: Int = 0): DashboardStatsResponse =
         LocalDashboard.build(
             learningCards = cardDao.systemListCards(profileId),
             newLimit = newLimit,
             nowMs = System.currentTimeMillis(),
             periodDays = days,
+            newDoneToday = newDoneToday,
         )
 
     /**
@@ -489,15 +490,15 @@ class OfflineStore @Inject constructor(
     suspend fun lookupStubsForProfile(profileId: String): List<CardResponse> =
         lookupDao.forProfile(profileId).map { it.toStubCard() }
 
-    suspend fun localQueue(profileId: String, newLimit: Int): List<CachedCardEntity> {
+    suspend fun localQueue(profileId: String, newLimit: Int, newDoneToday: Int = 0): List<CachedCardEntity> {
         val now = System.currentTimeMillis()
         val all = cardDao.learningCards(profileId)
         val due = all.filter { card ->
             card.status != "new" && (card.nextReviewAt == null || card.nextReviewAt <= now)
         }.sortedBy { it.nextReviewAt ?: 0L }
         val newCards = all.filter { it.status == "new" }
-            .let { if (newLimit > 0) it.take(newLimit) else it }
-        return due + newCards
+        val offered = LocalDashboard.newOffered(newLimit, newDoneToday, newCards.size)
+        return due + newCards.take(offered)
     }
 
     suspend fun applyReviewLocally(

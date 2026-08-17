@@ -391,6 +391,40 @@
 
     <string name="home_forecast_title">未来几天的复习</string>
 
+    <string name="home_reviews">复习</string>
+    <string name="home_new">新词</string>
+    <string name="home_empty_title">还没有单词</string>
+    <string name="home_empty_body">搜索一个词或导入列表。</string>
+    <string name="home_add_first">添加第一批单词</string>
+    <string name="home_caught_up">今天没有待学内容</string>
+    <string name="home_next_review">下次复习：%1$s</string>
+    <string name="home_change_limit">更改上限</string>
+    <string name="home_relative_tomorrow">明天</string>
+    <string name="home_relative_day_after">后天</string>
+    <string name="home_in_days">%1$d 天后</string>
+    <string name="weekday_full_mon">星期一</string>
+    <string name="weekday_full_tue">星期二</string>
+    <string name="weekday_full_wed">星期三</string>
+    <string name="weekday_full_thu">星期四</string>
+    <string name="weekday_full_fri">星期五</string>
+    <string name="weekday_full_sat">星期六</string>
+    <string name="weekday_full_sun">星期日</string>
+    <string name="cd_language">学习语言</string>
+    <string-array name="month_names">
+        <item>一月</item>
+        <item>二月</item>
+        <item>三月</item>
+        <item>四月</item>
+        <item>五月</item>
+        <item>六月</item>
+        <item>七月</item>
+        <item>八月</item>
+        <item>九月</item>
+        <item>十月</item>
+        <item>十一月</item>
+        <item>十二月</item>
+    </string-array>
+
     <string name="home_words_count">%1$d 个单词</string>
 
     <string name="home_new_words_count">%1$d 个新词</string>

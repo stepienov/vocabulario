@@ -391,6 +391,40 @@
 
     <string name="home_forecast_title">مراجعات الأيام القادمة</string>
 
+    <string name="home_reviews">مراجعات</string>
+    <string name="home_new">جديدة</string>
+    <string name="home_empty_title">ليس لديك كلمات بعد</string>
+    <string name="home_empty_body">ابحث عن كلمة أو استورد قائمة.</string>
+    <string name="home_add_first">أضف كلماتك الأولى</string>
+    <string name="home_caught_up">لا شيء لليوم</string>
+    <string name="home_next_review">المراجعة التالية: %1$s</string>
+    <string name="home_change_limit">تغيير الحد</string>
+    <string name="home_relative_tomorrow">غدًا</string>
+    <string name="home_relative_day_after">بعد غد</string>
+    <string name="home_in_days">خلال %1$d أيام</string>
+    <string name="weekday_full_mon">الاثنين</string>
+    <string name="weekday_full_tue">الثلاثاء</string>
+    <string name="weekday_full_wed">الأربعاء</string>
+    <string name="weekday_full_thu">الخميس</string>
+    <string name="weekday_full_fri">الجمعة</string>
+    <string name="weekday_full_sat">السبت</string>
+    <string name="weekday_full_sun">الأحد</string>
+    <string name="cd_language">لغة التعلّم</string>
+    <string-array name="month_names">
+        <item>يناير</item>
+        <item>فبراير</item>
+        <item>مارس</item>
+        <item>أبريل</item>
+        <item>مايو</item>
+        <item>يونيو</item>
+        <item>يوليو</item>
+        <item>أغسطس</item>
+        <item>سبتمبر</item>
+        <item>أكتوبر</item>
+        <item>نوفمبر</item>
+        <item>ديسمبر</item>
+    </string-array>
+
     <string name="home_words_count">%1$d كلمة</string>
 
     <string name="home_new_words_count">%1$d كلمة جديدة</string>

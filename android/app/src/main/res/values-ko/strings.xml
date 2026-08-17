@@ -423,6 +423,40 @@
 
     <string name="home_forecast_title">앞으로의 복습</string>
 
+    <string name="home_reviews">복습</string>
+    <string name="home_new">새로운</string>
+    <string name="home_empty_title">아직 단어가 없습니다</string>
+    <string name="home_empty_body">단어를 검색하거나 목록을 가져오세요.</string>
+    <string name="home_add_first">첫 단어 추가</string>
+    <string name="home_caught_up">오늘 할 일이 없습니다</string>
+    <string name="home_next_review">다음 복습: %1$s</string>
+    <string name="home_change_limit">한도 변경</string>
+    <string name="home_relative_tomorrow">내일</string>
+    <string name="home_relative_day_after">모레</string>
+    <string name="home_in_days">%1$d일 후</string>
+    <string name="weekday_full_mon">월요일</string>
+    <string name="weekday_full_tue">화요일</string>
+    <string name="weekday_full_wed">수요일</string>
+    <string name="weekday_full_thu">목요일</string>
+    <string name="weekday_full_fri">금요일</string>
+    <string name="weekday_full_sat">토요일</string>
+    <string name="weekday_full_sun">일요일</string>
+    <string name="cd_language">학습 언어</string>
+    <string-array name="month_names">
+        <item>1월</item>
+        <item>2월</item>
+        <item>3월</item>
+        <item>4월</item>
+        <item>5월</item>
+        <item>6월</item>
+        <item>7월</item>
+        <item>8월</item>
+        <item>9월</item>
+        <item>10월</item>
+        <item>11월</item>
+        <item>12월</item>
+    </string-array>
+
     <string name="home_words_count">%1$d 단어</string>
 
     <string name="home_new_words_count">%1$d 새로운 단어</string>

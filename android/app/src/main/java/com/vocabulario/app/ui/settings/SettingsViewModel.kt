@@ -86,7 +86,9 @@ class SettingsViewModel @Inject constructor(
     private var inFlightSaves = 0
 
     init {
-        if (tokenStore.consumeExpandLanguages()) {
+        if (tokenStore.consumeExpandLimits()) {
+            _state.value = _state.value.copy(expanded = SettingsSection.LIMITS)
+        } else if (tokenStore.consumeExpandLanguages()) {
             _state.value = _state.value.copy(expanded = SettingsSection.LANGUAGES)
         }
         // Reaktywnie: zmiana ustawień w Room (lokalna lub dociągnięta z sync) aktualizuje UI.

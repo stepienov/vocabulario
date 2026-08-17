@@ -35,6 +35,8 @@ import javax.inject.Inject
 
 enum class HomeTab { DASHBOARD, ADD, LISTS }
 
+enum class HomeKind { Empty, Session, CaughtUp }
+
 data class HomeUiState(
     val tab: HomeTab = HomeTab.DASHBOARD,
     val query: String = "",
@@ -82,6 +84,8 @@ data class HomeUiState(
     val reviewSelectedIndex: Int? = null,
     val reviewLoading: Boolean = false,
     val reviewSubmitting: Boolean = false,
+    val profiles: List<LanguageProfileResponse> = emptyList(),
+    val langMenuOpen: Boolean = false,
 ) {
     val selectionMode: Boolean get() = selectedWordIds.isNotEmpty()
     val visibleListWords: List<CardResponse>
@@ -89,6 +93,14 @@ data class HomeUiState(
     val hasMovableListWords: Boolean get() = listWords.any { it.isReadyToMove() }
     val hasMovableSelectedWords: Boolean
         get() = listWords.any { it.id in selectedWordIds && it.isReadyToMove() }
+    val sessionDue: Int get() = stats?.due_count ?: 0
+    val sessionNew: Int get() = stats?.session_new ?: 0
+    val homeKind: HomeKind
+        get() {
+            val ready = stats?.ready_count ?: 0
+            if (ready <= 0) return HomeKind.Empty
+            return if (sessionDue == 0 && sessionNew == 0) HomeKind.CaughtUp else HomeKind.Session
+        }
 }
 
 @HiltViewModel
@@ -264,9 +276,49 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { repository.getActiveProfile() }
                 .onSuccess { _state.value = _state.value.copy(activeProfile = it) }
+            runCatching { repository.listProfiles() }
+                .onSuccess { _state.value = _state.value.copy(profiles = it) }
             loadStats()
             loadLists()
             pairSession.markDataReady()
+        }
+    }
+
+    fun setLangMenuOpen(open: Boolean) {
+        _state.value = _state.value.copy(langMenuOpen = open)
+    }
+
+    fun openSettingsLanguages() {
+        tokenStore.markReopenSettings()
+    }
+
+    fun openSettingsLimits() {
+        tokenStore.markExpandLimits()
+    }
+
+    fun switchLearningProfile(profile: LanguageProfileResponse) {
+        val current = _state.value.activeProfile ?: return
+        if (profile.id == current.id) {
+            _state.value = _state.value.copy(langMenuOpen = false)
+            return
+        }
+        _state.value = _state.value.copy(langMenuOpen = false)
+        viewModelScope.launch {
+            runCatching {
+                pairSession.withSwitch(awaitDataReload = true) {
+                    repository.switchToLangPair(
+                        appLang = profile.app_lang,
+                        learningLang = profile.learning_lang,
+                        cefr = profile.cefr_level,
+                    )
+                    runCatching { repository.syncNow(fullReplace = true) }
+                }
+            }.onFailure {
+                _state.value = _state.value.copy(
+                    error = it.userMessage(strings, R.string.err_learning_lang),
+                )
+                pairSession.markDataReady()
+            }
         }
     }
     fun selectTab(tab: HomeTab) {

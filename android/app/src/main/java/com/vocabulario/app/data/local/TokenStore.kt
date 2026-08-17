@@ -40,6 +40,7 @@ class TokenStore @Inject constructor(
     private val cachedAppLang = AtomicReference<String?>(null)
     private val reopenSettings = AtomicBoolean(false)
     private val expandLanguages = AtomicBoolean(false)
+    private val expandLimits = AtomicBoolean(false)
 
     private val _ready = MutableStateFlow(false)
     val ready: StateFlow<Boolean> = _ready.asStateFlow()
@@ -148,6 +149,12 @@ class TokenStore @Inject constructor(
     }
 
     fun peekAppLang(): String = cachedAppLang.get().orEmpty()
+
+    fun markExpandLimits() {
+        expandLimits.set(true)
+    }
+
+    fun consumeExpandLimits(): Boolean = expandLimits.getAndSet(false)
 
     fun markReopenSettings() {
         reopenSettings.set(true)

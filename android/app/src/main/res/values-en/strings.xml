@@ -403,6 +403,40 @@
 
     <string name="home_forecast_title">Reviews in the coming days</string>
 
+    <string name="home_reviews">Reviews</string>
+    <string name="home_new">New</string>
+    <string name="home_empty_title">You don\'t have any words yet</string>
+    <string name="home_empty_body">Look up a word or import a list.</string>
+    <string name="home_add_first">Add your first words</string>
+    <string name="home_caught_up">Nothing waiting today</string>
+    <string name="home_next_review">Next review: %1$s</string>
+    <string name="home_change_limit">Change limit</string>
+    <string name="home_relative_tomorrow">tomorrow</string>
+    <string name="home_relative_day_after"></string>
+    <string name="home_in_days">in %1$d days</string>
+    <string name="weekday_full_mon">Monday</string>
+    <string name="weekday_full_tue">Tuesday</string>
+    <string name="weekday_full_wed">Wednesday</string>
+    <string name="weekday_full_thu">Thursday</string>
+    <string name="weekday_full_fri">Friday</string>
+    <string name="weekday_full_sat">Saturday</string>
+    <string name="weekday_full_sun">Sunday</string>
+    <string name="cd_language">Learning language</string>
+    <string-array name="month_names">
+        <item>January</item>
+        <item>February</item>
+        <item>March</item>
+        <item>April</item>
+        <item>May</item>
+        <item>June</item>
+        <item>July</item>
+        <item>August</item>
+        <item>September</item>
+        <item>October</item>
+        <item>November</item>
+        <item>December</item>
+    </string-array>
+
     <string name="home_words_count">%1$d words</string>
 
     <string name="home_new_words_count">%1$d new words</string>

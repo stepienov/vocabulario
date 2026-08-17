@@ -86,6 +86,7 @@ class LearningRepository @Inject constructor(
     private val networkMonitor: NetworkMonitor,
     private val readyBatchTracker: ReadyBatchTracker,
     private val notificationScheduler: NotificationScheduler,
+    private val dailyNewCounter: com.vocabulario.app.data.local.DailyNewCounter,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val outboxMutex = Mutex()
@@ -626,7 +627,8 @@ class LearningRepository @Inject constructor(
     suspend fun dashboardStats(days: Int = 7): DashboardStatsResponse {
         val profileId = activeProfileId()
         val settings = getSettings()
-        return offlineStore.buildDashboardStats(profileId, settings.new_cards_per_day, days)
+        val newDone = dailyNewCounter.get(profileId)
+        return offlineStore.buildDashboardStats(profileId, settings.new_cards_per_day, days, newDone)
     }
 
     fun requestBackgroundSync() {
@@ -638,7 +640,8 @@ class LearningRepository @Inject constructor(
         val settings = getSettings()
         val newLimit = settings.new_cards_per_day
         val directionPref = settings.practice_direction
-        val local = offlineStore.localQueue(profileId, newLimit)
+        val newDone = dailyNewCounter.get(profileId)
+        val local = offlineStore.localQueue(profileId, newLimit, newDone)
         if (local.isNotEmpty()) {
             if (networkMonitor.isCurrentlyOnline()) syncScheduler.requestNow()
             return buildSrsQueue(local, directionPref)
@@ -789,12 +792,12 @@ class LearningRepository @Inject constructor(
         offlineStore.cardSrsSnapshot(cardId)
 
     suspend fun undoReview(clientId: String, previous: SyncSrsState) {
+        val nowMs = System.currentTimeMillis()
         offlineStore.undoReviewLocally(clientId, previous)
-        runCatching {
-            api.srsUndo(SrsUndoRequest(client_id = clientId, previous_srs = previous))
-        }.onFailure {
-            offlineStore.enqueuePendingUndo(clientId, previous)
+        if (previous.status == "new") {
+            runCatching { dailyNewCounter.decrement(activeProfileId(), nowMs) }
         }
+        offlineStore.enqueuePendingUndo(clientId, previous)
         syncScheduler.requestNow()
     }
 
@@ -808,7 +811,11 @@ class LearningRepository @Inject constructor(
     ): String {
         val clientId = UUID.randomUUID().toString()
         val nowMs = System.currentTimeMillis()
+        val wasNew = offlineStore.cardSrsSnapshot(cardId)?.status == "new"
         offlineStore.applyReviewLocally(cardId, grade, correct, nowMs)
+        if (wasNew) {
+            runCatching { dailyNewCounter.increment(activeProfileId(), nowMs) }
+        }
         offlineStore.enqueueReview(
             PendingReviewEntity(
                 clientId = clientId,
@@ -821,7 +828,8 @@ class LearningRepository @Inject constructor(
                 createdAt = nowMs,
             ),
         )
-        runCatching { pushOutbox() }
+        // Nie czekaj na sieć — ocena musi od razu odsłonić kolejną kartę.
+        // Outbox + WorkManager dociągają review w tle (timeout / mutex syncu nie blokują UI).
         syncScheduler.requestNow()
         return clientId
     }

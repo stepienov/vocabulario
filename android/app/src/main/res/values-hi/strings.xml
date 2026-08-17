@@ -391,6 +391,40 @@
 
     <string name="home_forecast_title">आने वाले दिनों की दोहराई</string>
 
+    <string name="home_reviews">दोहराव</string>
+    <string name="home_new">नए</string>
+    <string name="home_empty_title">अभी कोई शब्द नहीं है</string>
+    <string name="home_empty_body">कोई शब्द खोजें या सूची आयात करें।</string>
+    <string name="home_add_first">पहले शब्द जोड़ें</string>
+    <string name="home_caught_up">आज कुछ बाकी नहीं</string>
+    <string name="home_next_review">अगली दोहराई: %1$s</string>
+    <string name="home_change_limit">सीमा बदलें</string>
+    <string name="home_relative_tomorrow">कल</string>
+    <string name="home_relative_day_after">परसों</string>
+    <string name="home_in_days">%1$d दिन में</string>
+    <string name="weekday_full_mon">सोमवार</string>
+    <string name="weekday_full_tue">मंगलवार</string>
+    <string name="weekday_full_wed">बुधवार</string>
+    <string name="weekday_full_thu">गुरुवार</string>
+    <string name="weekday_full_fri">शुक्रवार</string>
+    <string name="weekday_full_sat">शनिवार</string>
+    <string name="weekday_full_sun">रविवार</string>
+    <string name="cd_language">सीखने की भाषा</string>
+    <string-array name="month_names">
+        <item>जनवरी</item>
+        <item>फ़रवरी</item>
+        <item>मार्च</item>
+        <item>अप्रैल</item>
+        <item>मई</item>
+        <item>जून</item>
+        <item>जुलाई</item>
+        <item>अगस्त</item>
+        <item>सितंबर</item>
+        <item>अक्टूबर</item>
+        <item>नवंबर</item>
+        <item>दिसंबर</item>
+    </string-array>
+
     <string name="home_words_count">%1$d शब्द</string>
 
     <string name="home_new_words_count">%1$d नए शब्द</string>
