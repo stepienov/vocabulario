@@ -115,6 +115,8 @@
 
     <string name="settings_learning_lang">学习语言</string>
 
+    <string name="settings_i_learn">我在学</string>
+
         <string name="settings_langs_hint">应用语言是界面和卡片译文的语言。学习语言是你正在学的语言。</string>
 <string name="settings_theme">主题</string>
 
@@ -142,9 +144,11 @@
 
     <string name="settings_direction_random">随机</string>
 
+    <string name="settings_direction_sub">首先显示：%1$s</string>
+
     <string name="settings_card_layout">卡片布局</string>
 
-    <string name="settings_card_layout_sub">答对后显示的内容</string>
+    <string name="settings_card_layout_sub">自定义卡片内容</string>
 
     <string name="settings_examples">句子</string>
 
@@ -659,7 +663,7 @@
     <string name="settings_notif_study">学习提醒</string>
     <string name="settings_notif_cards">卡片已就绪</string>
     <string name="settings_notif_enabled">我想接收通知</string>
-    <string name="settings_notif_study_at">学习提醒时间：</string>
+    <string name="settings_study_hour">学习时间</string>
     <string name="notif_offline_ready_title">卡片已下载</string>
     <string name="notif_offline_ready_body">全部 %1$d 张离线卡片已就绪</string>
     <string name="notif_import_ready_title">导入完成</string>
@@ -669,6 +673,8 @@
     <string name="notif_channel_cards">卡片</string>
     <string name="notif_study_title">该复习了</string>
     <string name="notif_study_body">%1$d 张卡片待复习</string>
+
+    <string name="notif_study_body_empty">该学习了</string>
     <string name="notif_cards_ready_title">卡片已就绪</string>
     <string name="notif_cards_ready_body">%1$d 个词可以学习</string>
     <string name="status_needs_review">需要核对</string>

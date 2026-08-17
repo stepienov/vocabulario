@@ -35,8 +35,8 @@ from app.services.card_jobs import (
     STATUS_READY,
     build_import_display_content,
     build_pending_content,
-    enrich_card,
     hydrate_from_lexical_cache,
+    spawn_enrich,
 )
 from app.lsp.constants import SUPPORTED_L2_LANGS
 from app.lsp.lang_utils import articles_for
@@ -1092,7 +1092,7 @@ async def _run_commit(db: AsyncSession, job: ImportJob) -> None:
                 )
                 await db.commit()
                 if card.enrichment_status != STATUS_READY:
-                    asyncio.create_task(enrich_card(card.id))
+                    spawn_enrich(card.id)
                 break
             except DuplicateImportError as exc:
                 item.verdict = "duplicate"
@@ -1280,6 +1280,9 @@ async def start_heartbeat_watchdog() -> None:
         await asyncio.sleep(WATCHDOG_INTERVAL_S)
         try:
             await _watchdog_tick()
+            from app.services.card_jobs import resume_pending_enrichment
+
+            await resume_pending_enrichment(stale_only=True)
         except asyncio.CancelledError:
             raise
         except Exception as exc:

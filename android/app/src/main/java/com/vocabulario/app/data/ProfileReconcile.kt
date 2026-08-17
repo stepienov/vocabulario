@@ -36,3 +36,19 @@ internal fun findLangPair(
             it.learning_lang.equals(learning, ignoreCase = true)
     }
 }
+
+/** Para (język aplikacji, język nauki) ma własny profil — nigdy nie nadpisujemy app_lang istniejącej pary. */
+internal sealed class LangPairSwitch {
+    data object Keep : LangPairSwitch()
+    data class Activate(val profileId: String) : LangPairSwitch()
+    data object Create : LangPairSwitch()
+}
+
+internal fun langPairSwitch(
+    existing: LanguageProfileResponse?,
+    activeProfileId: String?,
+): LangPairSwitch {
+    if (existing == null) return LangPairSwitch.Create
+    if (existing.id == activeProfileId) return LangPairSwitch.Keep
+    return LangPairSwitch.Activate(existing.id)
+}

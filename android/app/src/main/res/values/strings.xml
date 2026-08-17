@@ -115,6 +115,8 @@
 
     <string name="settings_learning_lang">Learning language</string>
 
+    <string name="settings_i_learn">I’m learning</string>
+
     <string name="settings_langs_hint">App language is the language of the interface and card translations. Learning language is what you study.</string>
 
     <string name="settings_theme">Theme</string>
@@ -143,9 +145,11 @@
 
     <string name="settings_direction_random">Random</string>
 
+    <string name="settings_direction_sub">What to show first: %1$s</string>
+
     <string name="settings_card_layout">Card layout</string>
 
-    <string name="settings_card_layout_sub">What you see after the answer</string>
+    <string name="settings_card_layout_sub">Customize flashcard content</string>
 
     <string name="settings_examples">Sentences</string>
 
@@ -742,7 +746,7 @@
     <string name="settings_notif_study">Study reminders</string>
     <string name="settings_notif_cards">Cards ready</string>
     <string name="settings_notif_enabled">I want notifications</string>
-    <string name="settings_notif_study_at">Remind me to study:</string>
+    <string name="settings_study_hour">Study time</string>
     <string name="notif_offline_ready_title">Cards downloaded</string>
     <string name="notif_offline_ready_body">All %1$d offline cards are ready</string>
     <string name="notif_import_ready_title">Import complete</string>
@@ -752,6 +756,8 @@
     <string name="notif_channel_cards">Cards</string>
     <string name="notif_study_title">Time to review</string>
     <string name="notif_study_body">%1$d cards due</string>
+
+    <string name="notif_study_body_empty">Time to study</string>
     <string name="notif_cards_ready_title">Cards ready</string>
     <string name="notif_cards_ready_body">%1$d word(s) ready to study</string>
 

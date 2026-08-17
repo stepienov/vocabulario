@@ -115,6 +115,8 @@
 
     <string name="settings_learning_lang">لغة التعلّم</string>
 
+    <string name="settings_i_learn">أتعلم</string>
+
         <string name="settings_langs_hint">لغة التطبيق هي لغة الواجهة وترجمات البطاقات. لغة التعلّم هي اللغة التي تدرسها.</string>
 <string name="settings_theme">المظهر</string>
 
@@ -142,9 +144,11 @@
 
     <string name="settings_direction_random">عشوائي</string>
 
+    <string name="settings_direction_sub">ما الذي يظهر أولاً: %1$s</string>
+
     <string name="settings_card_layout">تخطيط البطاقة</string>
 
-    <string name="settings_card_layout_sub">ما تراه بعد الإجابة</string>
+    <string name="settings_card_layout_sub">تخصيص محتوى البطاقة</string>
 
     <string name="settings_examples">جمل</string>
 
@@ -659,7 +663,7 @@
     <string name="settings_notif_study">تذكيرات الدراسة</string>
     <string name="settings_notif_cards">البطاقات جاهزة</string>
     <string name="settings_notif_enabled">أريد الإشعارات</string>
-    <string name="settings_notif_study_at">ذكّرني بالدراسة:</string>
+    <string name="settings_study_hour">وقت الدراسة</string>
     <string name="notif_offline_ready_title">تم تنزيل البطاقات</string>
     <string name="notif_offline_ready_body">جميع بطاقات دون اتصال وعددها %1$d جاهزة</string>
     <string name="notif_import_ready_title">اكتمل الاستيراد</string>
@@ -669,6 +673,8 @@
     <string name="notif_channel_cards">بطاقات</string>
     <string name="notif_study_title">حان وقت المراجعة</string>
     <string name="notif_study_body">%1$d بطاقة مستحقة</string>
+
+    <string name="notif_study_body_empty">حان وقت الدراسة</string>
     <string name="notif_cards_ready_title">البطاقات جاهزة</string>
     <string name="notif_cards_ready_body">%1$d كلمة جاهزة للدراسة</string>
     <string name="status_needs_review">يحتاج مراجعة</string>

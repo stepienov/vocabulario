@@ -137,6 +137,8 @@
 
     <string name="settings_learning_lang">학습 언어</string>
 
+    <string name="settings_i_learn">배우고 있어요</string>
+
     <string name="settings_langs_hint">앱 언어는 인터페이스와 카드 번역의 언어입니다. 학습 언어는 공부하는 언어입니다.</string>
 
     <string name="settings_theme">테마</string>
@@ -165,9 +167,11 @@
 
     <string name="settings_direction_random">무작위</string>
 
+    <string name="settings_direction_sub">먼저 보여줄 내용: %1$s</string>
+
     <string name="settings_card_layout">카드 레이아웃</string>
 
-    <string name="settings_card_layout_sub">정답 후에 보이는 내용</string>
+    <string name="settings_card_layout_sub">카드 내용 맞춤 설정</string>
 
     <string name="settings_examples">문장</string>
 
@@ -743,7 +747,7 @@
 
     <string name="settings_notif_enabled">알림을 받겠습니다</string>
 
-    <string name="settings_notif_study_at">학습 알림 시간:</string>
+    <string name="settings_study_hour">학습 시간</string>
 
     <string name="notif_offline_ready_title">카드 다운로드 완료</string>
 
@@ -762,6 +766,8 @@
     <string name="notif_study_title">복습할 시간</string>
 
     <string name="notif_study_body">%1$d 카드가 만료됨</string>
+
+    <string name="notif_study_body_empty">공부할 시간입니다</string>
 
     <string name="notif_cards_ready_title">카드 준비 완료</string>
 

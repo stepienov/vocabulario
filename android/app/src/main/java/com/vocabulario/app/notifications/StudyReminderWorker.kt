@@ -16,15 +16,11 @@ class StudyReminderWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        if (!repository.hasSyncableSession()) return Result.success()
         return try {
-            val settings = repository.getSettings()
-            if (!settings.study_reminder_enabled) return Result.success()
-            val queue = repository.getQueue()
-            val due = queue.due.size
-            if (due > 0) {
-                NotificationHelper.showStudyReminder(applicationContext, due)
-            }
+            val settings = runCatching { repository.getSettings() }.getOrNull()
+            if (settings?.study_reminder_enabled != true) return Result.success()
+            val due = runCatching { repository.getQueue().due.size }.getOrDefault(0)
+            NotificationHelper.showStudyReminder(applicationContext, due)
             Result.success()
         } catch (_: Exception) {
             Result.retry()

@@ -134,6 +134,8 @@
 
     <string name="settings_learning_lang">Lingua di apprendimento</string>
 
+    <string name="settings_i_learn">Sto imparando</string>
+
     <string name="settings_langs_hint">La lingua dell\'app è la lingua dell\'interfaccia e delle traduzioni delle schede. La lingua di apprendimento è ciò che studi.</string>
 
     <string name="settings_theme">Tema</string>
@@ -162,9 +164,11 @@
 
     <string name="settings_direction_random">Casuale</string>
 
+    <string name="settings_direction_sub">Cosa mostrare per primo: %1$s</string>
+
     <string name="settings_card_layout">Layout della scheda</string>
 
-    <string name="settings_card_layout_sub">Cosa vedi dopo la risposta</string>
+    <string name="settings_card_layout_sub">Personalizza il contenuto della scheda</string>
 
     <string name="settings_examples">Frasi</string>
 
@@ -735,7 +739,7 @@
 
     <string name="settings_notif_cards">Schede pronte</string>
     <string name="settings_notif_enabled">Voglio le notifiche</string>
-    <string name="settings_notif_study_at">ricordami di studiare:</string>
+    <string name="settings_study_hour">Ora di studio</string>
     <string name="notif_offline_ready_title">Schede scaricate</string>
     <string name="notif_offline_ready_body">Tutte le %1$d schede offline sono pronte</string>
     <string name="notif_import_ready_title">Importazione completata</string>
@@ -750,6 +754,8 @@
     <string name="notif_study_title">È tempo di rivedere</string>
 
     <string name="notif_study_body">%1$d schede da rivedere</string>
+
+    <string name="notif_study_body_empty">È ora di studiare</string>
 
     <string name="notif_cards_ready_title">Schede pronte</string>
 

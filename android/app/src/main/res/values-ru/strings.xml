@@ -115,6 +115,8 @@
 
     <string name="settings_learning_lang">Изучаемый язык</string>
 
+    <string name="settings_i_learn">Я учу</string>
+
         <string name="settings_langs_hint">Язык приложения — язык интерфейса и переводов на карточках. Язык изучения — тот, который вы учите.</string>
 <string name="settings_theme">Тема</string>
 
@@ -142,9 +144,11 @@
 
     <string name="settings_direction_random">Случайно</string>
 
+    <string name="settings_direction_sub">Что показывать сначала: %1$s</string>
+
     <string name="settings_card_layout">Макет карточки</string>
 
-    <string name="settings_card_layout_sub">Что видно после ответа</string>
+    <string name="settings_card_layout_sub">Настроить содержимое карточки</string>
 
     <string name="settings_examples">Предложения</string>
 
@@ -659,7 +663,7 @@
     <string name="settings_notif_study">Напоминания об учёбе</string>
     <string name="settings_notif_cards">Карточки готовы</string>
     <string name="settings_notif_enabled">Хочу уведомления</string>
-    <string name="settings_notif_study_at">напоминать об учёбе:</string>
+    <string name="settings_study_hour">Время занятий</string>
     <string name="notif_offline_ready_title">Карточки скачаны</string>
     <string name="notif_offline_ready_body">Все %1$d офлайн-карточек готовы</string>
     <string name="notif_import_ready_title">Импорт завершён</string>
@@ -669,6 +673,8 @@
     <string name="notif_channel_cards">Карточки</string>
     <string name="notif_study_title">Пора повторять</string>
     <string name="notif_study_body">%1$d карточек к повторению</string>
+
+    <string name="notif_study_body_empty">Пора заниматься</string>
     <string name="notif_cards_ready_title">Карточки готовы</string>
     <string name="notif_cards_ready_body">%1$d слов готово к изучению</string>
     <string name="status_needs_review">Нужна проверка</string>

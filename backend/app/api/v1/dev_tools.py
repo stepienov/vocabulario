@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +12,7 @@ from app.core.config import get_settings
 from app.core.deps import lang_pair_key
 from app.db.session import get_db
 from app.models import LanguageProfile, LearningCard, LexicalEntry, ReviewLog, SrsState, User
-from app.services.card_jobs import STATUS_PENDING, build_pending_content, enrich_card
+from app.services.card_jobs import STATUS_PENDING, build_pending_content, spawn_enrich
 from app.services.distractors import generate_choice_options
 from app.services.lexical import LexicalService
 from app.services.word_persistence import words_persistence_enabled
@@ -138,7 +138,6 @@ async def dev_search(
 @router.get("/add/{word}")
 async def dev_add(
     word: str,
-    background: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     pos: str | None = Query(None, description="Część mowy, np. verb"),
     gloss: str | None = Query(None, description="Tłumaczenie z lookupu"),
@@ -264,7 +263,7 @@ async def dev_add(
     db.add(SrsState(card_id=card.id, scope="main", status="new"))
     await db.commit()
     await db.refresh(card)
-    background.add_task(enrich_card, card.id)
+    spawn_enrich(card.id)
     return {
         "action": "created_pending",
         "persist_words": True,

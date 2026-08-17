@@ -711,6 +711,14 @@ class OfflineStore @Inject constructor(
         return clientOpId
     }
 
+    /** Jedna aktualna kopia ustawień w outboxie — stare PATCH-e nie nadpiszą nowszego tapnięcia. */
+    suspend fun replaceSettingsOp(payloadJson: String) {
+        for (op in outboxDao.all()) {
+            if (op.type == "settings_update") outboxDao.deleteBySeq(op.seq)
+        }
+        enqueueOp("settings_update", payloadJson)
+    }
+
     suspend fun pendingOps(): List<OutboxOpEntity> = outboxDao.pending()
 
     suspend fun outboxPendingCount(): Int = outboxDao.pendingCount()

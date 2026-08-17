@@ -69,7 +69,7 @@ class LLMService:
         settings = get_settings()
         self.mock = settings.llm_mock or not settings.openai_api_key
         self.client = (
-            AsyncOpenAI(api_key=settings.openai_api_key) if not self.mock else None
+            AsyncOpenAI(api_key=settings.openai_api_key, timeout=90.0) if not self.mock else None
         )
         self.lookup_model = settings.llm_lookup_model
         self.enrichment_model = settings.llm_enrichment_model

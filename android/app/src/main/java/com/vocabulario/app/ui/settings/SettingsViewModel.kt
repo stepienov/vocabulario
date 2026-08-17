@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
 import com.vocabulario.app.data.LearningRepository
-import com.vocabulario.app.data.overlayAppLang
+import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.data.api.UserSettingsUpdate
@@ -14,6 +14,7 @@ import com.vocabulario.app.data.normalizeTenseKeys
 import com.vocabulario.app.i18n.AppLocale
 import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,11 +73,17 @@ class SettingsViewModel @Inject constructor(
     private val tokenStore: TokenStore,
     private val strings: UiStrings,
     private val notificationScheduler: com.vocabulario.app.notifications.NotificationScheduler,
+    private val pairSession: PairSession,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsUiState())
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
     private var reminderSaveJob: Job? = null
+    private var limitsSaveJob: Job? = null
+    private var cefrSaveJob: Job? = null
+    /** Kolejne tapnięcia / load() nie mogą stosować starszego snapshota. */
+    private var writeGen = 0
+    private var inFlightSaves = 0
 
     init {
         if (tokenStore.consumeExpandLanguages()) {
@@ -86,9 +93,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             repository.observeSettings().collect { s ->
                 if (s == null) return@collect
+                if (inFlightSaves > 0 ||
+                    reminderSaveJob?.isActive == true ||
+                    limitsSaveJob?.isActive == true
+                ) return@collect
                 val showSyn = if (s.show_synonyms_antonyms) s.show_synonyms else false
                 val showAnt = if (s.show_synonyms_antonyms) s.show_antonyms else false
-                val spinningClock = reminderSaveJob?.isActive == true
                 _state.value = _state.value.copy(
                     practiceInputPref = when (s.practice_input_pref) {
                         "random" -> "choice"
@@ -107,12 +117,8 @@ class SettingsViewModel @Inject constructor(
                     showConjugation = s.show_conjugation,
                     studyReminderEnabled = s.study_reminder_enabled,
                     cardsReadyPushEnabled = s.cards_ready_push_enabled,
-                    reminderHour = if (spinningClock) _state.value.reminderHour else s.reminder_hour,
-                    reminderMinute = if (spinningClock) {
-                        _state.value.reminderMinute
-                    } else {
-                        notificationScheduler.reminderMinute()
-                    },
+                    reminderHour = s.reminder_hour,
+                    reminderMinute = notificationScheduler.reminderMinute(),
                 )
             }
         }
@@ -120,6 +126,7 @@ class SettingsViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
+            val genAtStart = writeGen
             val hadData = _state.value.activeProfile != null
             if (!hadData) {
                 _state.value = _state.value.copy(loading = true, error = null)
@@ -130,18 +137,24 @@ class SettingsViewModel @Inject constructor(
                 val profiles = runCatching { repository.listProfiles() }.getOrElse {
                     active?.let { listOf(it) } ?: emptyList()
                 }
-                val storedLang = tokenStore.peekAppLang()
-                val resolvedActive = (
-                    active
-                        ?: profiles.firstOrNull { it.is_active }
-                        ?: profiles.firstOrNull()
-                    )?.let { overlayAppLang(it, storedLang) }
+                val resolvedActive = active
+                    ?: profiles.firstOrNull { it.is_active }
+                    ?: profiles.firstOrNull()
                 resolvedActive?.let { tokenStore.saveActiveProfile(it.id) }
                 AppLocale.applyIfChanged(
-                    tokenStore.peekAppLang().ifBlank { resolvedActive?.appLang ?: "en" },
+                    resolvedActive?.appLang ?: tokenStore.peekAppLang().ifBlank { "en" },
                 )
                 Triple(settings, profiles, resolvedActive)
-            }.onSuccess { (s, profiles, active) ->
+            }.onSuccess { (_, profilesIn, _) ->
+                if (writeGen != genAtStart) {
+                    _state.value = _state.value.copy(loading = false)
+                    return@onSuccess
+                }
+                val s = repository.getSettings()
+                val active = repository.getActiveProfile()
+                    ?: profilesIn.firstOrNull { it.is_active }
+                    ?: profilesIn.firstOrNull()
+                val profiles = repository.listProfiles().ifEmpty { profilesIn }
                 val showSyn = if (s.show_synonyms_antonyms) s.show_synonyms else false
                 val showAnt = if (s.show_synonyms_antonyms) s.show_antonyms else false
                 val selected = normalizeTenseKeys(active?.selected_tenses.orEmpty()).toSet()
@@ -183,12 +196,13 @@ class SettingsViewModel @Inject constructor(
                     runCatching { repository.refreshProfilesFromNetwork() }
                         .onSuccess { remote ->
                             if (remote.isEmpty()) return@onSuccess
-                            val storedLang = tokenStore.peekAppLang()
-                            val resolved = (
-                                repository.getActiveProfile()
-                                    ?: remote.firstOrNull { it.is_active }
-                                    ?: remote.firstOrNull()
-                                )?.let { overlayAppLang(it, storedLang) }
+                            if (writeGen != genAtStart) {
+                                _state.value = _state.value.copy(profiles = remote)
+                                return@onSuccess
+                            }
+                            val resolved = repository.getActiveProfile()
+                                ?: remote.firstOrNull { it.is_active }
+                                ?: remote.firstOrNull()
                             resolved?.let { tokenStore.saveActiveProfile(it.id) }
                             _state.value = _state.value.copy(
                                 profiles = remote,
@@ -212,20 +226,20 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun save(update: UserSettingsUpdate, onUpdated: (SettingsUiState) -> SettingsUiState) {
-        // Optimistic UI — radio/toggles respond immediately; revert on failure.
         val previous = _state.value
+        val gen = ++writeGen
         _state.value = onUpdated(previous).copy(error = null)
         viewModelScope.launch {
+            inFlightSaves++
             update.theme?.let { tokenStore.saveTheme(it) }
             runCatching { repository.updateSettings(update) }
                 .onSuccess { result ->
+                    if (writeGen != gen) return@onSuccess
                     result.theme.let { tokenStore.saveTheme(it) }
-                    _state.value = onUpdated(_state.value).copy(
-                        theme = result.theme,
-                        error = null,
-                    )
+                    _state.value = _state.value.copy(theme = result.theme, error = null)
                 }
                 .onFailure {
+                    if (writeGen != gen) return@onFailure
                     _state.value = previous.copy(
                         error = it.userMessage(strings, R.string.err_save),
                     )
@@ -233,6 +247,7 @@ class SettingsViewModel @Inject constructor(
                         runCatching { tokenStore.saveTheme(theme) }
                     }
                 }
+            inFlightSaves--
         }
     }
 
@@ -248,8 +263,15 @@ class SettingsViewModel @Inject constructor(
         save(UserSettingsUpdate(practice_direction = value)) { it.copy(practiceDirection = value) }
 
     fun setNewCardsPerDay(value: Int) {
-        val clamped = value.coerceIn(1, 200)
-        save(UserSettingsUpdate(new_cards_per_day = clamped)) { it.copy(newCardsPerDay = clamped) }
+        val clamped = value.coerceIn(5, 50)
+        if (_state.value.newCardsPerDay == clamped) return
+        writeGen++
+        _state.value = _state.value.copy(newCardsPerDay = clamped, error = null)
+        limitsSaveJob?.cancel()
+        limitsSaveJob = viewModelScope.launch {
+            delay(400)
+            save(UserSettingsUpdate(new_cards_per_day = clamped)) { it.copy(newCardsPerDay = clamped) }
+        }
     }
 
     fun setTheme(value: String) =
@@ -267,9 +289,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setReminderHour(hour: Int) {
+        setReminderTime(hour, _state.value.reminderMinute)
+    }
+
+    fun setReminderMinute(minute: Int) {
+        setReminderTime(_state.value.reminderHour, minute)
+    }
+
     fun setReminderTime(hour: Int, minute: Int) {
         val safeHour = hour.coerceIn(0, 23)
         val safeMinute = minute.coerceIn(0, 59)
+        writeGen++
         _state.value = _state.value.copy(reminderHour = safeHour, reminderMinute = safeMinute)
         notificationScheduler.scheduleStudyReminder(
             safeHour,
@@ -346,6 +377,7 @@ class SettingsViewModel @Inject constructor(
     ) {
         val canonical = normalizeTenseKeys(tenses).toSet()
         val previous = _state.value
+        val gen = ++writeGen
         _state.value = previous.copy(
             selectedTenses = canonical,
             lastCustomTenses = if (rememberCustom && canonical.isNotEmpty()) {
@@ -362,6 +394,7 @@ class SettingsViewModel @Inject constructor(
                 repository.updateSettings(UserSettingsUpdate(show_conjugation = conjugationOn))
                 profile
             }.onSuccess { profile ->
+                if (writeGen != gen) return@onSuccess
                 _state.value = _state.value.copy(
                     selectedTenses = canonical,
                     lastCustomTenses = if (rememberCustom && canonical.isNotEmpty()) {
@@ -373,6 +406,7 @@ class SettingsViewModel @Inject constructor(
                     showConjugation = conjugationOn,
                 )
             }.onFailure {
+                if (writeGen != gen) return@onFailure
                 _state.value = previous.copy(
                     error = it.userMessage(strings, R.string.err_save_tenses),
                 )
@@ -387,18 +421,7 @@ class SettingsViewModel @Inject constructor(
             _state.value = _state.value.copy(error = strings.get(R.string.err_langs_must_differ))
             return
         }
-        tokenStore.markReopenSettings()
-        _state.value = _state.value.copy(
-            activeProfile = current.copy(app_lang = code, native_lang = code),
-            error = null,
-            expanded = SettingsSection.LANGUAGES,
-        )
-        viewModelScope.launch {
-            tokenStore.saveAppLang(code)
-            repository.cacheActiveProfileLang(code)
-            repository.persistAppLangAsync(code)
-            AppLocale.applyIfChanged(code)
-        }
+        switchLangPair(appLang = code, learningLang = current.learning_lang, cefr = current.cefr_level)
     }
 
     fun setLearningLang(code: String) {
@@ -408,49 +431,66 @@ class SettingsViewModel @Inject constructor(
             _state.value = _state.value.copy(error = strings.get(R.string.err_langs_must_differ))
             return
         }
-        _state.value = _state.value.copy(
-            activeProfile = current.copy(learning_lang = code),
-            error = null,
-            expanded = SettingsSection.LANGUAGES,
-        )
+        switchLangPair(appLang = current.appLang, learningLang = code, cefr = current.cefr_level)
+    }
+
+    private fun switchLangPair(appLang: String, learningLang: String, cefr: String) {
+        val previous = _state.value.activeProfile
+        cefrSaveJob?.cancel()
+        tokenStore.markReopenSettings()
+        _state.value = _state.value.copy(error = null, expanded = SettingsSection.LANGUAGES)
         viewModelScope.launch {
             runCatching {
-                repository.switchToLangPair(
-                    appLang = current.appLang,
-                    learningLang = code,
-                    cefr = current.cefr_level,
-                )
+                pairSession.withSwitch(awaitDataReload = true) {
+                    val profile = repository.switchToLangPair(
+                        appLang = appLang,
+                        learningLang = learningLang,
+                        cefr = cefr,
+                    )
+                    runCatching { repository.syncNow(fullReplace = true) }
+                    AppLocale.applyIfChanged(profile.appLang)
+                    profile
+                }
             }.onSuccess { profile ->
                 _state.value = _state.value.copy(
                     activeProfile = profile,
+                    cefrLevel = profile.cefr_level,
                     profiles = runCatching { repository.listProfiles() }.getOrElse { _state.value.profiles },
                     expanded = SettingsSection.LANGUAGES,
                     error = null,
                 )
-            }.onFailure {
+                pairSession.markDataReady()
+            }.onFailure { err ->
+                if (err is CancellationException) throw err
                 _state.value = _state.value.copy(
-                    activeProfile = current,
-                    error = it.userMessage(strings, R.string.err_learning_lang),
+                    activeProfile = previous,
+                    error = err.userMessage(strings, R.string.err_learning_lang),
                     expanded = SettingsSection.LANGUAGES,
                 )
+                pairSession.markDataReady()
             }
         }
     }
 
     fun setCefr(level: String) {
-        viewModelScope.launch {
-            runCatching { repository.updateProfile(cefr = level) }
-                .onSuccess { profile ->
-                    _state.value = _state.value.copy(
-                        cefrLevel = level,
-                        activeProfile = profile,
-                    )
-                }
-                .onFailure {
-                    _state.value = _state.value.copy(
-                        error = it.userMessage(strings, R.string.err_cefr),
-                    )
-                }
+        if (_state.value.cefrLevel == level) return
+        _state.value = _state.value.copy(cefrLevel = level, error = null)
+        cefrSaveJob?.cancel()
+        cefrSaveJob = viewModelScope.launch {
+            try {
+                val profile = repository.updateProfile(cefr = level)
+                _state.value = _state.value.copy(
+                    cefrLevel = level,
+                    activeProfile = profile,
+                    error = null,
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    error = e.userMessage(strings, R.string.err_cefr),
+                )
+            }
         }
     }
 }

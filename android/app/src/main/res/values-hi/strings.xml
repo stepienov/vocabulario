@@ -115,6 +115,8 @@
 
     <string name="settings_learning_lang">सीखने की भाषा</string>
 
+    <string name="settings_i_learn">मैं सीख रहा/रही हूँ</string>
+
         <string name="settings_langs_hint">ऐप की भाषा इंटरफ़ेस और कार्ड अनुवाद की भाषा है। सीखने की भाषा वह है जिसे आप पढ़ते हैं।</string>
 <string name="settings_theme">थीम</string>
 
@@ -142,9 +144,11 @@
 
     <string name="settings_direction_random">यादृच्छिक</string>
 
+    <string name="settings_direction_sub">पहले क्या दिखाएँ: %1$s</string>
+
     <string name="settings_card_layout">कार्ड लेआउट</string>
 
-    <string name="settings_card_layout_sub">उत्तर के बाद क्या दिखे</string>
+    <string name="settings_card_layout_sub">फ्लैशकार्ड सामग्री अनुकूलित करें</string>
 
     <string name="settings_examples">वाक्य</string>
 
@@ -659,7 +663,7 @@
     <string name="settings_notif_study">अध्ययन अनुस्मारक</string>
     <string name="settings_notif_cards">कार्ड तैयार</string>
     <string name="settings_notif_enabled">मुझे सूचनाएँ चाहिए</string>
-    <string name="settings_notif_study_at">अध्ययन की याद दिलाएँ:</string>
+    <string name="settings_study_hour">अध्ययन समय</string>
     <string name="notif_offline_ready_title">कार्ड डाउनलोड हो गए</string>
     <string name="notif_offline_ready_body">सभी %1$d ऑफ़लाइन कार्ड तैयार हैं</string>
     <string name="notif_import_ready_title">आयात पूरा</string>
@@ -669,6 +673,8 @@
     <string name="notif_channel_cards">कार्ड</string>
     <string name="notif_study_title">दोहराने का समय</string>
     <string name="notif_study_body">%1$d कार्ड बाकी</string>
+
+    <string name="notif_study_body_empty">पढ़ने का समय</string>
     <string name="notif_cards_ready_title">कार्ड तैयार</string>
     <string name="notif_cards_ready_body">%1$d शब्द अध्ययन के लिए तैयार</string>
     <string name="status_needs_review">जाँच ज़रूरी</string>

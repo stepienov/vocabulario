@@ -36,8 +36,8 @@ object NotificationHelper {
             NotificationChannel(
                 CHANNEL_STUDY,
                 context.getString(R.string.notif_channel_study),
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply { enableVibration(true) },
         )
         manager.createNotificationChannel(
             NotificationChannel(
@@ -49,12 +49,17 @@ object NotificationHelper {
     }
 
     fun showStudyReminder(context: Context, dueCount: Int) {
+        val body = if (dueCount > 0) {
+            context.getString(R.string.notif_study_body, dueCount)
+        } else {
+            context.getString(R.string.notif_study_body_empty)
+        }
         post(
             context,
             CHANNEL_STUDY,
             1001,
             context.getString(R.string.notif_study_title),
-            context.getString(R.string.notif_study_body, dueCount),
+            body,
         )
     }
 
@@ -112,6 +117,8 @@ object NotificationHelper {
             .setContentText(body)
             .setContentIntent(tap)
             .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .build()
         runCatching { NotificationManagerCompat.from(context).notify(id, notification) }
     }

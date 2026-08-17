@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
@@ -35,7 +36,12 @@ STATUS_FAILED = "failed"
 
 # Max kart wzbogacanych naraz. 9× równolegle = ~36 calli reasoning-modelu i lawina.
 _ENRICH_CONCURRENCY = 3
+_ENRICH_TIMEOUT_S = 120
+_ENRICH_STALE_S = 45
+_ENRICH_RESUME_BATCH = 40
 _enrich_gate: asyncio.Semaphore | None = None
+_claimed: set[UUID] = set()
+_resume_lock = asyncio.Lock()
 
 
 def _enrich_semaphore() -> asyncio.Semaphore:
@@ -43,6 +49,39 @@ def _enrich_semaphore() -> asyncio.Semaphore:
     if _enrich_gate is None:
         _enrich_gate = asyncio.Semaphore(_ENRICH_CONCURRENCY)
     return _enrich_gate
+
+
+def spawn_enrich(card_id: UUID) -> None:
+    """Odpal enrichment w tle. Bezpieczne do wielokrotnego wołania."""
+    if card_id in _claimed:
+        return
+    _claimed.add(card_id)
+    task = asyncio.create_task(_run_claimed_enrich(card_id), name=f"enrich:{card_id}")
+
+    def _done(done: asyncio.Task) -> None:
+        _claimed.discard(card_id)
+        if done.cancelled():
+            return
+        exc = done.exception()
+        if exc is not None:
+            logger.error("enrich task %s died: %s", card_id, exc)
+
+    task.add_done_callback(_done)
+
+
+async def _mark_enrich_failed(card_id: UUID, error: str) -> None:
+    try:
+        async with async_session_factory() as db:
+            card = (
+                await db.execute(select(LearningCard).where(LearningCard.id == card_id))
+            ).scalar_one_or_none()
+            if card is None or card.enrichment_status == STATUS_READY:
+                return
+            card.enrichment_status = STATUS_FAILED
+            card.enrichment_error = error[:500]
+            await db.commit()
+    except Exception:
+        logger.exception("Nie udało się oznaczyć karty %s jako failed", card_id)
 
 
 def build_pending_content(
@@ -515,9 +554,35 @@ async def _resolve_content(
 
 
 async def enrich_card(card_id: UUID) -> None:
-    """Zadanie w tle dla karty dodanej do nauki."""
-    async with _enrich_semaphore():
-        await _enrich_card_unlocked(card_id)
+    """Zadanie w tle dla karty dodanej do nauki. Awaitowalne (testy)."""
+    if card_id in _claimed:
+        return
+    _claimed.add(card_id)
+    try:
+        await _run_claimed_enrich(card_id)
+    finally:
+        _claimed.discard(card_id)
+
+
+async def _run_claimed_enrich(card_id: UUID) -> None:
+    try:
+        async with _enrich_semaphore():
+            try:
+                await asyncio.wait_for(
+                    _enrich_card_unlocked(card_id),
+                    timeout=_ENRICH_TIMEOUT_S,
+                )
+            except TimeoutError:
+                logger.error(
+                    "Enrichment timeout card=%s after %ss — zostaje pending do retry",
+                    card_id,
+                    _ENRICH_TIMEOUT_S,
+                )
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        logger.exception("Enrichment karty %s wywalił się", card_id)
+        await _mark_enrich_failed(card_id, "enrichment_crash")
 
 
 async def _enrich_card_unlocked(card_id: UUID) -> None:
@@ -548,50 +613,50 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
         if profile is None:
             return
 
-        if await hydrate_from_lexical_cache(db, card, profile):
-            await db.commit()
-            from app.services.push import notify_cards_ready
-
-            await notify_cards_ready(db, card.user_id)
-            return
-
-        if not (card.gloss_primary or "").strip():
-            user = (
-                await db.execute(select(User).where(User.id == card.user_id))
-            ).scalar_one_or_none()
-            if user is not None:
-                resolved = await LexicalService(db).best_lookup_candidate(
-                    user, card.profile_id, card.lemma_l2
-                )
-                resolved_lemma = (resolved or {}).get("lemma") if resolved else None
-                articles = articles_for(profile.learning_lang)
-                same_headword = bool(
-                    resolved_lemma
-                    and in_learning_lemma(
-                        resolved_lemma,
-                        lemma_keys(card.lemma_l2, articles),
-                        articles,
-                    )
-                )
-                if resolved and same_headword:
-                    resolved_pos = resolved.get("pos")
-                    if card.pos and resolved_pos and not same_pos_bucket(card.pos, resolved_pos):
-                        resolved = None
-                if resolved and same_headword:
-                    card.lemma_l2 = resolved_lemma or card.lemma_l2
-                    card.pos = resolved.get("pos") or card.pos
-                    card.gloss_primary = resolved.get("gloss") or card.gloss_primary
-                    if resolved.get("lexical_entry_id"):
-                        card.lexical_entry_id = UUID(resolved["lexical_entry_id"])
-                    card.content = build_pending_content(
-                        lemma=card.lemma_l2,
-                        pos=card.pos,
-                        gloss=card.gloss_primary,
-                        learning_lang=profile.learning_lang,
-                    )
-                    content0 = dict(card.content or {})
-
         try:
+            if await hydrate_from_lexical_cache(db, card, profile):
+                await db.commit()
+                from app.services.push import notify_cards_ready
+
+                await notify_cards_ready(db, card.user_id)
+                return
+
+            if not (card.gloss_primary or "").strip():
+                user = (
+                    await db.execute(select(User).where(User.id == card.user_id))
+                ).scalar_one_or_none()
+                if user is not None:
+                    resolved = await LexicalService(db).best_lookup_candidate(
+                        user, card.profile_id, card.lemma_l2
+                    )
+                    resolved_lemma = (resolved or {}).get("lemma") if resolved else None
+                    articles = articles_for(profile.learning_lang)
+                    same_headword = bool(
+                        resolved_lemma
+                        and in_learning_lemma(
+                            resolved_lemma,
+                            lemma_keys(card.lemma_l2, articles),
+                            articles,
+                        )
+                    )
+                    if resolved and same_headword:
+                        resolved_pos = resolved.get("pos")
+                        if card.pos and resolved_pos and not same_pos_bucket(card.pos, resolved_pos):
+                            resolved = None
+                    if resolved and same_headword:
+                        card.lemma_l2 = resolved_lemma or card.lemma_l2
+                        card.pos = resolved.get("pos") or card.pos
+                        card.gloss_primary = resolved.get("gloss") or card.gloss_primary
+                        if resolved.get("lexical_entry_id"):
+                            card.lexical_entry_id = UUID(resolved["lexical_entry_id"])
+                        card.content = build_pending_content(
+                            lemma=card.lemma_l2,
+                            pos=card.pos,
+                            gloss=card.gloss_primary,
+                            learning_lang=profile.learning_lang,
+                        )
+                        content0 = dict(card.content or {})
+
             entry_kind = (content0.get("entry_kind") or "lemma").strip().lower()
             schema0 = content0.get("schema_version") or "vocabulario.card.v1"
             if schema0 == "vocabulario.adaptive.v1" or entry_kind in {
@@ -615,6 +680,8 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                 content, entry = await _resolve_content(
                     db, profile, card.lemma_l2, card.pos, user_id=card.user_id
                 )
+        except asyncio.CancelledError:
+            raise
         except Exception as exc:
             logger.exception("Enrichment karty %s nie powiódł się", card_id)
             from app.services.app_log import log_event
@@ -653,32 +720,42 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
         await notify_cards_ready(db, card.user_id)
 
 
-async def resume_pending_enrichment() -> None:
-    """Po restarcie procesu: raz, max N naraz. GET listy nie odpala LLM."""
-    try:
-        await _resume_pending_enrichment()
-    except asyncio.CancelledError:
-        logger.info("Resume enrichment przerwany (shutdown/reload)")
+async def resume_pending_enrichment(*, stale_only: bool = False) -> None:
+    """Wznowienie pending/failed. Na starcie wszystkie; watchdog tylko stare.
+
+    Nie czeka na LLM — odpalą się w tle. Shutdown nie kasuje więc całej kolejki.
+    """
+    if _resume_lock.locked():
         return
-
-
-async def _resume_pending_enrichment() -> None:
-    async with async_session_factory() as db:
-        rows = await db.execute(
-            select(LearningCard.id).where(
-                LearningCard.enrichment_status.in_([STATUS_PENDING, STATUS_FAILED]),
-                LearningCard.deleted_at.is_(None),
-            )
-        )
-        card_ids = [row[0] for row in rows.all()]
-    if not card_ids:
-        return
-    logger.info("Wznawiam enrichment %s kart po starcie (max %s naraz)", len(card_ids), _ENRICH_CONCURRENCY)
-
-    async def _one(card_id: UUID) -> None:
+    async with _resume_lock:
         try:
-            await enrich_card(card_id)
-        except Exception:
-            logger.exception("Resume enrichment nie powiódł się dla %s", card_id)
+            await _resume_pending_enrichment(stale_only=stale_only)
+        except asyncio.CancelledError:
+            logger.info("Resume enrichment przerwany (shutdown/reload)")
+            return
 
-    await asyncio.gather(*(_one(card_id) for card_id in card_ids))
+
+async def _resume_pending_enrichment(*, stale_only: bool = False) -> None:
+    stmt = select(LearningCard.id).where(
+        LearningCard.enrichment_status.in_([STATUS_PENDING, STATUS_FAILED]),
+        LearningCard.deleted_at.is_(None),
+    )
+    if stale_only:
+        cutoff = datetime.now(UTC) - timedelta(seconds=_ENRICH_STALE_S)
+        stmt = stmt.where(LearningCard.updated_at < cutoff)
+    stmt = stmt.limit(_ENRICH_RESUME_BATCH)
+    async with async_session_factory() as db:
+        rows = await db.execute(stmt)
+        card_ids = [row[0] for row in rows.all()]
+    spawned = 0
+    for card_id in card_ids:
+        if card_id in _claimed:
+            continue
+        spawn_enrich(card_id)
+        spawned += 1
+    if spawned:
+        logger.info(
+            "Wznawiam enrichment %s kart (max %s naraz)",
+            spawned,
+            _ENRICH_CONCURRENCY,
+        )

@@ -9,6 +9,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,14 +22,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -52,8 +52,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -74,12 +78,13 @@ import com.vocabulario.app.ui.components.AppDialogButtonRow
 import com.vocabulario.app.ui.components.AppDialogShape
 import com.vocabulario.app.ui.components.AppDialogWindowChrome
 import com.vocabulario.app.notifications.NotificationHelper
-import com.vocabulario.app.ui.components.AppGrayField
 import com.vocabulario.app.ui.components.AppPillDropdown
 import com.vocabulario.app.ui.components.AppScreenScaffold
 import com.vocabulario.app.ui.components.SettingsCheckRow
 import com.vocabulario.app.ui.components.SettingsRadioRow
+import com.vocabulario.app.ui.components.SettingsValueSlider
 import com.vocabulario.app.ui.components.WheelTimePicker
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -172,7 +177,11 @@ fun SettingsScreen(
 
             AccordionSection(
                 title = stringResource(R.string.settings_direction),
-                subtitle = directionSummary(state.practiceDirection, state.activeProfile?.appLang, state.activeProfile?.learning_lang),
+                subtitleAnnotated = directionSubtitle(
+                    state.practiceDirection,
+                    state.activeProfile?.appLang,
+                    state.activeProfile?.learning_lang,
+                ),
                 expanded = state.expanded == SettingsSection.DIRECTION,
                 onHeaderClick = { viewModel.toggleSection(SettingsSection.DIRECTION) },
                 testTag = TestTags.SETTINGS_SECTION_DIRECTION,
@@ -270,30 +279,11 @@ fun SettingsScreen(
                 onHeaderClick = { viewModel.toggleSection(SettingsSection.LIMITS) },
                 testTag = TestTags.SETTINGS_SECTION_LIMITS,
             ) {
-                var text by remember(state.newCardsPerDay) { mutableStateOf(state.newCardsPerDay.toString()) }
-                val draft = text.toIntOrNull()
-                val canConfirm = draft != null && draft != state.newCardsPerDay && draft in 1..200
-                AppGrayField(
-                    value = text,
-                    onValueChange = { raw -> text = raw.filter { it.isDigit() }.take(3) },
-                    placeholder = stringResource(R.string.settings_new_limit),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                SettingsValueSlider(
+                    value = state.newCardsPerDay.coerceIn(5, 50),
+                    onValueChange = viewModel::setNewCardsPerDay,
+                    valueRange = 5..50,
                 )
-                Button(
-                    onClick = { draft?.let(viewModel::setNewCardsPerDay) },
-                    enabled = canConfirm,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                    shape = AppButtonShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.tertiary,
-                        contentColor = MaterialTheme.colorScheme.onTertiary,
-                    ),
-                ) { Text(stringResource(R.string.action_ok)) }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -301,7 +291,6 @@ fun SettingsScreen(
 
             AccordionSection(
                 title = stringResource(R.string.settings_theme),
-                subtitle = themeSummary(state.theme),
                 expanded = state.expanded == SettingsSection.THEME,
                 onHeaderClick = { viewModel.toggleSection(SettingsSection.THEME) },
                 testTag = TestTags.SETTINGS_SECTION_THEME,
@@ -329,7 +318,6 @@ fun SettingsScreen(
 
             AccordionSection(
                 title = stringResource(R.string.settings_notifications),
-                subtitle = stringResource(R.string.settings_notifications_summary),
                 expanded = state.expanded == SettingsSection.NOTIFICATIONS,
                 onHeaderClick = { viewModel.toggleSection(SettingsSection.NOTIFICATIONS) },
                 testTag = TestTags.SETTINGS_SECTION_NOTIFICATIONS,
@@ -351,14 +339,20 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            stringResource(R.string.settings_notif_study_at),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            stringResource(R.string.settings_study_hour),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 4.dp),
                         )
                         WheelTimePicker(
                             hour = state.reminderHour,
                             minute = state.reminderMinute,
-                            onTimeChange = viewModel::setReminderTime,
+                            onHourChange = viewModel::setReminderHour,
+                            onMinuteChange = viewModel::setReminderMinute,
                             testTag = TestTags.SETTINGS_NOTIF_TIME,
                         )
                     }
@@ -367,20 +361,10 @@ fun SettingsScreen(
 
             AccordionSection(
                 title = stringResource(R.string.settings_languages),
-                subtitle = languagesSummary(
-                    state.activeProfile?.appLang,
-                    state.activeProfile?.learning_lang,
-                ),
                 expanded = state.expanded == SettingsSection.LANGUAGES,
                 onHeaderClick = { viewModel.toggleSection(SettingsSection.LANGUAGES) },
                 testTag = TestTags.SETTINGS_SECTION_LANGUAGES,
             ) {
-                Text(
-                    stringResource(R.string.settings_langs_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
                 SettingsDropdown(
                     label = stringResource(R.string.settings_native_lang),
                     options = SUPPORTED_LEARNING_LANGS,
@@ -389,7 +373,7 @@ fun SettingsScreen(
                     testTag = TestTags.SETTINGS_NATIVE_LANG,
                 )
                 SettingsDropdown(
-                    label = stringResource(R.string.settings_learning_lang),
+                    label = stringResource(R.string.settings_i_learn),
                     options = SUPPORTED_LEARNING_LANGS,
                     selectedCode = state.activeProfile?.learning_lang ?: "en",
                     onSelect = viewModel::setLearningLang,
@@ -404,11 +388,14 @@ fun SettingsScreen(
                 testTag = TestTags.SETTINGS_SECTION_CEFR,
                 showDivider = false,
             ) {
-                AppPillDropdown(
-                    options = CEFR_LEVELS.map { it to it },
-                    selectedCode = state.cefrLevel,
-                    onSelect = viewModel::setCefr,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                val cefrIndex = CEFR_LEVELS.indexOf(state.cefrLevel).coerceAtLeast(0)
+                SettingsValueSlider(
+                    value = cefrIndex,
+                    onValueChange = {},
+                    onValueChangeFinished = { viewModel.setCefr(CEFR_LEVELS[it]) },
+                    valueRange = 0 until CEFR_LEVELS.size,
+                    tickLabels = CEFR_LEVELS,
+                    showValueAbove = false,
                 )
             }
 
@@ -420,7 +407,7 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_LOGOUT),
                 shape = AppButtonShape,
             ) { Text(stringResource(R.string.action_logout)) }
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(80.dp))
         }
     }
 
@@ -575,6 +562,7 @@ private fun TensePickerDialog(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AccordionSection(
     title: String,
@@ -582,13 +570,22 @@ private fun AccordionSection(
     onHeaderClick: () -> Unit,
     testTag: String? = null,
     subtitle: String? = null,
+    subtitleAnnotated: AnnotatedString? = null,
     showDivider: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val headerBg = if (expanded) scheme.primaryContainer else Color.Transparent
     val bodyBg = if (expanded) scheme.surfaceVariant else Color.Transparent
-    AppCard {
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val subtitleText = subtitleAnnotated ?: subtitle?.let { AnnotatedString(it) }
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            delay(340)
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
+    AppCard(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
         Column {
             Row(
                 modifier = Modifier
@@ -601,9 +598,9 @@ private fun AccordionSection(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    if (subtitle != null) {
+                    if (subtitleText != null) {
                         Spacer(Modifier.height(2.dp))
-                        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                        Text(subtitleText, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
                     }
                 }
                 Icon(
@@ -665,28 +662,31 @@ private fun modeSummary(pref: String): String = when (pref) {
 }
 
 @Composable
-private fun directionSummary(dir: String, native: String?, learning: String?): String {
+private fun directionChoice(dir: String, native: String?, learning: String?): String {
     val n = native?.let { langDisplayName(it) } ?: stringResource(R.string.settings_native_lang)
     val l = learning?.let { langDisplayName(it) } ?: stringResource(R.string.settings_learning_lang)
     return when (dir) {
-        "l1_to_l2" -> stringResource(R.string.settings_direction_first, n)
-        "l2_to_l1" -> stringResource(R.string.settings_direction_first, l)
+        "l1_to_l2" -> n
+        "l2_to_l1" -> l
         else -> stringResource(R.string.settings_direction_random)
     }
 }
 
 @Composable
-private fun themeSummary(theme: String): String = when (theme) {
-    "light" -> stringResource(R.string.settings_theme_light)
-    "dark" -> stringResource(R.string.settings_theme_dark)
-    else -> stringResource(R.string.settings_theme_system)
-}
-
-@Composable
-private fun languagesSummary(native: String?, learning: String?): String {
-    return stringResource(
-        R.string.settings_languages_summary,
-        langDisplayName(native ?: "?"),
-        langDisplayName(learning ?: "?"),
-    )
+private fun directionSubtitle(dir: String, native: String?, learning: String?): AnnotatedString {
+    val choice = directionChoice(dir, native, learning)
+    val template = stringResource(R.string.settings_direction_sub)
+    val token = "%1\$s"
+    val at = template.indexOf(token)
+    if (at < 0) {
+        return buildAnnotatedString {
+            append(template)
+            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(choice) }
+        }
+    }
+    return buildAnnotatedString {
+        append(template.substring(0, at))
+        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(choice) }
+        append(template.substring(at + token.length))
+    }
 }

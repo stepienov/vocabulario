@@ -59,16 +59,12 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
@@ -93,7 +89,6 @@ class LearningRepository @Inject constructor(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val outboxMutex = Mutex()
-    private val persistScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val hydratedEmptyLists = mutableSetOf<String>()
 
     // Serializuje opróżnianie kolejki Oczekujących. Bez tego równoległe flushe (sync + wejście
@@ -968,8 +963,8 @@ class LearningRepository @Inject constructor(
         when (op.type) {
             OP_SETTINGS_UPDATE -> {
                 val update = json.decodeFromString(UserSettingsUpdate.serializer(), op.payloadJson)
-                val result = api.updateSettings(update)
-                offlineStore.saveSettings(result)
+                api.updateSettings(update)
+                // Lokalny Room jest źródłem prawdy — echo z PUT może być starsze niż kolejny tap.
             }
             OP_CARD_DELETE -> {
                 val p = json.parseToJsonElement(op.payloadJson).jsonObject
@@ -1242,9 +1237,8 @@ class LearningRepository @Inject constructor(
         val merged = current.mergedWith(update)
         offlineStore.saveSettings(merged)
         update.theme?.let { tokenStore.saveTheme(it) }
-        offlineStore.enqueueOp(
-            OP_SETTINGS_UPDATE,
-            json.encodeToString(UserSettingsUpdate.serializer(), update),
+        offlineStore.replaceSettingsOp(
+            json.encodeToString(UserSettingsUpdate.serializer(), merged.toUpdate()),
         )
         if (networkMonitor.isCurrentlyOnline()) runCatching { drainOutboxOps() } else syncScheduler.requestNow()
         return offlineStore.localUserSettings() ?: merged
@@ -1270,6 +1264,28 @@ class LearningRepository @Inject constructor(
         study_reminder_enabled = u.study_reminder_enabled ?: study_reminder_enabled,
         cards_ready_push_enabled = u.cards_ready_push_enabled ?: cards_ready_push_enabled,
         reminder_hour = u.reminder_hour ?: reminder_hour,
+    )
+
+    private fun UserSettingsResponse.toUpdate(): UserSettingsUpdate = UserSettingsUpdate(
+        practice_input_pref = practice_input_pref,
+        practice_direction = practice_direction,
+        typing_tolerance = typing_tolerance,
+        typo_modal_enabled = typo_modal_enabled,
+        new_cards_per_day = new_cards_per_day,
+        theme = theme,
+        show_usages = show_usages,
+        show_synonyms_antonyms = show_synonyms_antonyms,
+        show_synonyms = show_synonyms,
+        show_antonyms = show_antonyms,
+        show_word_family = show_word_family,
+        show_periphrases = show_periphrases,
+        show_conjugation = show_conjugation,
+        conjugation_expanded_default = conjugation_expanded_default,
+        show_example_sentences = show_example_sentences,
+        related_words_expanded_default = related_words_expanded_default,
+        study_reminder_enabled = study_reminder_enabled,
+        cards_ready_push_enabled = cards_ready_push_enabled,
+        reminder_hour = reminder_hour,
     )
 
     suspend fun listProfiles(): List<LanguageProfileResponse> {
@@ -1301,20 +1317,13 @@ class LearningRepository @Inject constructor(
         }
         offlineStore.cacheProfiles(merged)
         val chosen = resolveActiveProfile(tokenStore.activeProfileId.value, merged) ?: return
-        syncActiveProfileToLocal(overlayAppLang(chosen, tokenStore.peekAppLang()))
+        syncActiveProfileToLocal(chosen)
     }
 
     suspend fun getActiveProfile(): LanguageProfileResponse? =
-        offlineStore.cachedActiveProfile()?.let { overlayAppLang(it, tokenStore.peekAppLang()) }
+        offlineStore.cachedActiveProfile()
 
     suspend fun hasCachedProfile(): Boolean = offlineStore.cachedActiveProfile() != null
-
-    suspend fun cacheActiveProfileLang(appLang: String) {
-        val current = offlineStore.cachedActiveProfile() ?: return
-        offlineStore.cacheProfile(
-            current.copy(app_lang = appLang.trim().lowercase(), native_lang = appLang.trim().lowercase()),
-        )
-    }
 
     private suspend fun syncActiveProfileToLocal(
         profile: LanguageProfileResponse,
@@ -1396,17 +1405,6 @@ class LearningRepository @Inject constructor(
         return profile
     }
 
-    fun persistAppLangAsync(appLang: String) {
-        persistScope.launch {
-            runCatching { persistAppLang(appLang) }
-        }
-    }
-
-    suspend fun persistAppLang(appLang: String): LanguageProfileResponse {
-        val current = offlineStore.cachedActiveProfile() ?: error("no_active_profile")
-        return switchToLangPair(appLang, current.learning_lang, current.cefr_level)
-    }
-
     suspend fun switchToLangPair(
         appLang: String,
         learningLang: String,
@@ -1416,31 +1414,16 @@ class LearningRepository @Inject constructor(
         val learning = learningLang.trim().lowercase()
         val remote = refreshProfilesFromNetwork()
         val existing = findLangPair(remote, app, learning)
-        val profile = if (existing != null) {
-            if (existing.id == tokenStore.activeProfileId.value) {
-                if (!existing.app_lang.equals(app, ignoreCase = true)) {
-                    updateProfile(appLang = app)
-                } else {
-                    existing
-                }
-            } else {
-                activateProfile(existing.id)
-            }
-        } else {
-            try {
-                val sameLearning = tokenStore.activeProfileId.value
-                    ?.let { id -> remote.firstOrNull { it.id == id } }
-                    ?.takeIf { it.learning_lang.equals(learning, ignoreCase = true) }
-                if (sameLearning != null) {
-                    updateProfile(appLang = app)
-                } else {
-                    createProfile(
-                        appLang = app,
-                        learning = learning,
-                        cefr = cefr,
-                        tenses = LanguagePacks.defaultSelectedTenses(learning),
-                    )
-                }
+        val profile = when (val action = langPairSwitch(existing, tokenStore.activeProfileId.value)) {
+            LangPairSwitch.Keep -> existing!!
+            is LangPairSwitch.Activate -> activateProfile(action.profileId)
+            LangPairSwitch.Create -> try {
+                createProfile(
+                    appLang = app,
+                    learning = learning,
+                    cefr = cefr,
+                    tenses = LanguagePacks.defaultSelectedTenses(learning),
+                )
             } catch (e: HttpException) {
                 if (e.code() != 409) throw e
                 val again = refreshProfilesFromNetwork()
@@ -1448,8 +1431,9 @@ class LearningRepository @Inject constructor(
                 activateProfile(found.id)
             }
         }
+        tokenStore.saveAppLang(profile.app_lang)
         requestBackgroundSync()
-        return overlayAppLang(profile, app)
+        return profile
     }
 
     suspend fun getMe() = api.me()

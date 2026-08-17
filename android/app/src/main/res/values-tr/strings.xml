@@ -137,6 +137,8 @@
 
     <string name="settings_learning_lang">Öğrenme dili</string>
 
+    <string name="settings_i_learn">Öğreniyorum</string>
+
     <string name="settings_langs_hint">Uygulama dili arayüz ve kart çevirilerinin dilidir. Öğrenme dili ise çalıştığınız dildir.</string>
 
     <string name="settings_theme">Tema</string>
@@ -165,9 +167,11 @@
 
     <string name="settings_direction_random">Rastgele</string>
 
+    <string name="settings_direction_sub">Önce ne gösterilsin: %1$s</string>
+
     <string name="settings_card_layout">Kart düzeni</string>
 
-    <string name="settings_card_layout_sub">Cevaptan sonra gördüğünüz şey</string>
+    <string name="settings_card_layout_sub">Kart içeriğini özelleştir</string>
 
     <string name="settings_examples">Cümleler</string>
 
@@ -740,7 +744,7 @@
 
     <string name="settings_notif_cards">Kartlar hazır</string>
     <string name="settings_notif_enabled">Bildirim istiyorum</string>
-    <string name="settings_notif_study_at">çalışmayı hatırlat:</string>
+    <string name="settings_study_hour">Çalışma saati</string>
     <string name="notif_offline_ready_title">Kartlar indirildi</string>
     <string name="notif_offline_ready_body">Çevrimdışı %1$d kartın tümü hazır</string>
     <string name="notif_import_ready_title">İçe aktarma tamamlandı</string>
@@ -755,6 +759,8 @@
     <string name="notif_study_title">Gözden geçirme zamanı</string>
 
     <string name="notif_study_body">%1$d kart bekliyor</string>
+
+    <string name="notif_study_body_empty">Çalışma zamanı</string>
 
     <string name="notif_cards_ready_title">Kartlar hazır</string>
 

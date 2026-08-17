@@ -115,6 +115,8 @@
 
     <string name="settings_learning_lang">Lernsprache</string>
 
+    <string name="settings_i_learn">Ich lerne</string>
+
     <string name="settings_langs_hint">Die App-Sprache ist die Sprache der Oberfläche und der Kartenübersetzungen. Die Lernsprache ist die, die du lernst.</string>
 
     <string name="settings_theme">Design</string>
@@ -143,9 +145,11 @@
 
     <string name="settings_direction_random">Zufällig</string>
 
+    <string name="settings_direction_sub">Zuerst anzeigen: %1$s</string>
+
     <string name="settings_card_layout">Kartenlayout</string>
 
-    <string name="settings_card_layout_sub">Was du nach der Antwort siehst</string>
+    <string name="settings_card_layout_sub">Karteninhalt anpassen</string>
 
     <string name="settings_examples">Sätze</string>
 
@@ -659,7 +663,7 @@
     <string name="settings_notif_study">Lern-Erinnerungen</string>
     <string name="settings_notif_cards">Karten bereit</string>
     <string name="settings_notif_enabled">Ich möchte Benachrichtigungen</string>
-    <string name="settings_notif_study_at">an Lernen erinnern:</string>
+    <string name="settings_study_hour">Lernzeit</string>
     <string name="notif_offline_ready_title">Karten heruntergeladen</string>
     <string name="notif_offline_ready_body">Alle %1$d Offline-Karten sind bereit</string>
     <string name="notif_import_ready_title">Import abgeschlossen</string>
@@ -669,6 +673,8 @@
     <string name="notif_channel_cards">Karten</string>
     <string name="notif_study_title">Zeit zum Wiederholen</string>
     <string name="notif_study_body">%1$d Karten fällig</string>
+
+    <string name="notif_study_body_empty">Zeit zum Lernen</string>
     <string name="notif_cards_ready_title">Karten bereit</string>
     <string name="notif_cards_ready_body">%1$d Wort/Wörter bereit zum Lernen</string>
     <string name="status_needs_review">Prüfung nötig</string>

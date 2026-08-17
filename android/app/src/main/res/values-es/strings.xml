@@ -115,6 +115,8 @@
 
     <string name="settings_learning_lang">Idioma de estudio</string>
 
+    <string name="settings_i_learn">Estoy aprendiendo</string>
+
     <string name="settings_langs_hint">El idioma de la app es el del interfaz y de las traducciones de las tarjetas. El idioma de estudio es el que aprendes.</string>
 
     <string name="settings_theme">Tema</string>
@@ -143,9 +145,11 @@
 
     <string name="settings_direction_random">Aleatorio</string>
 
+    <string name="settings_direction_sub">Qué mostrar primero: %1$s</string>
+
     <string name="settings_card_layout">Diseño de tarjeta</string>
 
-    <string name="settings_card_layout_sub">Qué ves tras la respuesta</string>
+    <string name="settings_card_layout_sub">Personaliza el contenido de la ficha</string>
 
     <string name="settings_examples">Oraciones</string>
 
@@ -673,7 +677,7 @@
     <string name="settings_notif_study">Recordatorios de estudio</string>
     <string name="settings_notif_cards">Tarjetas listas</string>
     <string name="settings_notif_enabled">Quiero notificaciones</string>
-    <string name="settings_notif_study_at">avísame para estudiar:</string>
+    <string name="settings_study_hour">Hora de estudio</string>
     <string name="notif_offline_ready_title">Tarjetas descargadas</string>
     <string name="notif_offline_ready_body">Las %1$d tarjetas sin conexión ya están listas</string>
     <string name="notif_import_ready_title">Importación completa</string>
@@ -683,6 +687,8 @@
     <string name="notif_channel_cards">Tarjetas</string>
     <string name="notif_study_title">Hora de repasar</string>
     <string name="notif_study_body">%1$d tarjetas pendientes</string>
+
+    <string name="notif_study_body_empty">Hora de estudiar</string>
     <string name="notif_cards_ready_title">Tarjetas listas</string>
     <string name="notif_cards_ready_body">%1$d palabra(s) listas para estudiar</string>
     <string name="status_needs_review">Requiere revisión</string>

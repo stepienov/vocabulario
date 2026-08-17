@@ -51,6 +51,7 @@ class VocabularioApp : Application(), Configuration.Provider {
                 notificationScheduler.scheduleStudyReminder(
                     hour = settings.reminder_hour,
                     enabled = settings.study_reminder_enabled || settings.cards_ready_push_enabled,
+                    minute = notificationScheduler.reminderMinute(),
                 )
             }
         }

@@ -136,6 +136,8 @@
 
     <string name="settings_learning_lang">Ngôn ngữ học tập</string>
 
+    <string name="settings_i_learn">Tôi đang học</string>
+
     <string name="settings_langs_hint">Ngôn ngữ ứng dụng là ngôn ngữ của giao diện và bản dịch thẻ. Ngôn ngữ học tập là ngôn ngữ bạn học.</string>
 
     <string name="settings_theme">Chủ đề</string>
@@ -164,9 +166,11 @@
 
     <string name="settings_direction_random">Ngẫu nhiên</string>
 
+    <string name="settings_direction_sub">Hiện trước: %1$s</string>
+
     <string name="settings_card_layout">Bố cục thẻ</string>
 
-    <string name="settings_card_layout_sub">Những gì bạn thấy sau câu trả lời</string>
+    <string name="settings_card_layout_sub">Tùy chỉnh nội dung thẻ</string>
 
     <string name="settings_examples">Câu</string>
 
@@ -738,7 +742,7 @@
 
     <string name="settings_notif_cards">Thẻ đã sẵn sàng</string>
     <string name="settings_notif_enabled">Tôi muốn nhận thông báo</string>
-    <string name="settings_notif_study_at">nhắc học tập:</string>
+    <string name="settings_study_hour">Giờ học</string>
     <string name="notif_offline_ready_title">Đã tải thẻ</string>
     <string name="notif_offline_ready_body">Tất cả %1$d thẻ ngoại tuyến đã sẵn sàng</string>
     <string name="notif_import_ready_title">Nhập xong</string>
@@ -753,6 +757,8 @@
     <string name="notif_study_title">Đến giờ ôn tập</string>
 
     <string name="notif_study_body">%1$d thẻ đến hạn</string>
+
+    <string name="notif_study_body_empty">Đến giờ học</string>
 
     <string name="notif_cards_ready_title">Thẻ đã sẵn sàng</string>
 

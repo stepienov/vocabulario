@@ -115,6 +115,8 @@
 
     <string name="settings_learning_lang">Langue d’étude</string>
 
+    <string name="settings_i_learn">J’apprends</string>
+
     <string name="settings_langs_hint">La langue de l’app est celle de l’interface et des traductions des cartes. La langue d’étude est celle que vous apprenez.</string>
 
     <string name="settings_theme">Thème</string>
@@ -143,9 +145,11 @@
 
     <string name="settings_direction_random">Aléatoire</string>
 
+    <string name="settings_direction_sub">Quoi afficher en premier : %1$s</string>
+
     <string name="settings_card_layout">Mise en page de la carte</string>
 
-    <string name="settings_card_layout_sub">Ce que vous voyez après la réponse</string>
+    <string name="settings_card_layout_sub">Personnaliser le contenu de la fiche</string>
 
     <string name="settings_examples">Phrases</string>
 
@@ -658,7 +662,7 @@
     <string name="settings_notif_study">Rappels d’étude</string>
     <string name="settings_notif_cards">Cartes prêtes</string>
     <string name="settings_notif_enabled">Je veux des notifications</string>
-    <string name="settings_notif_study_at">rappeler l’étude :</string>
+    <string name="settings_study_hour">Heure d’étude</string>
     <string name="notif_offline_ready_title">Cartes téléchargées</string>
     <string name="notif_offline_ready_body">Les %1$d cartes hors ligne sont prêtes</string>
     <string name="notif_import_ready_title">Importation terminée</string>
@@ -668,6 +672,8 @@
     <string name="notif_channel_cards">Cartes</string>
     <string name="notif_study_title">C’est l’heure de réviser</string>
     <string name="notif_study_body">%1$d cartes à réviser</string>
+
+    <string name="notif_study_body_empty">C’est l’heure d’étudier</string>
     <string name="notif_cards_ready_title">Cartes prêtes</string>
     <string name="notif_cards_ready_body">%1$d mot(s) prêt(s) à étudier</string>
     <string name="status_needs_review">À vérifier</string>

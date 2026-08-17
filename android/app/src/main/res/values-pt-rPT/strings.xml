@@ -115,6 +115,8 @@
 
     <string name="settings_learning_lang">Idioma de estudo</string>
 
+    <string name="settings_i_learn">Estou a aprender</string>
+
         <string name="settings_langs_hint">O idioma da aplicação é o da interface e das traduções nos cartões. O idioma de estudo é o que está a aprender.</string>
 <string name="settings_theme">Tema</string>
 
@@ -142,9 +144,11 @@
 
     <string name="settings_direction_random">Aleatório</string>
 
+    <string name="settings_direction_sub">O que mostrar primeiro: %1$s</string>
+
     <string name="settings_card_layout">Layout do cartão</string>
 
-    <string name="settings_card_layout_sub">O que você vê após a resposta</string>
+    <string name="settings_card_layout_sub">Personalizar o conteúdo do cartão</string>
 
     <string name="settings_examples">Frases</string>
 
@@ -659,7 +663,7 @@
     <string name="settings_notif_study">Lembretes de estudo</string>
     <string name="settings_notif_cards">Cartões prontos</string>
     <string name="settings_notif_enabled">Quero notificações</string>
-    <string name="settings_notif_study_at">lembrar de estudar:</string>
+    <string name="settings_study_hour">Hora de estudo</string>
     <string name="notif_offline_ready_title">Cartões transferidos</string>
     <string name="notif_offline_ready_body">Todos os %1$d cartões offline estão prontos</string>
     <string name="notif_import_ready_title">Importação concluída</string>
@@ -669,6 +673,8 @@
     <string name="notif_channel_cards">Cartões</string>
     <string name="notif_study_title">Hora de rever</string>
     <string name="notif_study_body">%1$d cartões pendentes</string>
+
+    <string name="notif_study_body_empty">Hora de estudar</string>
     <string name="notif_cards_ready_title">Cartões prontos</string>
     <string name="notif_cards_ready_body">%1$d palavra(s) pronta(s) para estudar</string>
     <string name="status_needs_review">Necessita de revisão</string>

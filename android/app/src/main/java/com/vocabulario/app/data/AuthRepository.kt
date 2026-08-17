@@ -54,7 +54,7 @@ class AuthRepository @Inject constructor(
             if (tokenStore.peekAppLang().isBlank()) {
                 tokenStore.saveAppLang(chosen.app_lang)
             }
-            offlineStore.cacheProfile(overlayAppLang(chosen, tokenStore.peekAppLang()))
+            offlineStore.cacheProfile(chosen)
             return
         }
         offlineStore.cachedActiveProfile()?.let {

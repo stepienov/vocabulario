@@ -137,6 +137,8 @@
 
     <string name="settings_learning_lang">学習言語</string>
 
+    <string name="settings_i_learn">学習中</string>
+
     <string name="settings_langs_hint">アプリ言語はインターフェースとカード翻訳の言語です。学習言語は学ぶ言語です。</string>
 
     <string name="settings_theme">テーマ</string>
@@ -165,9 +167,11 @@
 
     <string name="settings_direction_random">ランダム</string>
 
+    <string name="settings_direction_sub">最初に表示: %1$s</string>
+
     <string name="settings_card_layout">カードレイアウト</string>
 
-    <string name="settings_card_layout_sub">回答後に表示される内容</string>
+    <string name="settings_card_layout_sub">カードの内容をカスタマイズ</string>
 
     <string name="settings_examples">文</string>
 
@@ -743,7 +747,7 @@
 
     <string name="settings_notif_enabled">通知を受け取る</string>
 
-    <string name="settings_notif_study_at">学習リマインダー：</string>
+    <string name="settings_study_hour">学習時刻</string>
 
     <string name="notif_offline_ready_title">カードをダウンロードしました</string>
 
@@ -762,6 +766,8 @@
     <string name="notif_study_title">復習の時間</string>
 
     <string name="notif_study_body">%1$d 枚のカードが期限です</string>
+
+    <string name="notif_study_body_empty">学習の時間です</string>
 
     <string name="notif_cards_ready_title">カードの準備完了</string>
 

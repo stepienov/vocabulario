@@ -188,7 +188,12 @@
     "err_offline": "أنت غير متصل",
     "err_offline_card": "هذه البطاقة غير متاحة دون اتصال",
     "err_no_inbox": "تعذر فتح قائمة الانتظار",
-    "err_email_taken": "هذا البريد مسجّل بالفعل"
+    "err_email_taken": "هذا البريد مسجّل بالفعل",
+    "settings_direction_sub": "ما الذي يظهر أولاً: %1$s",
+    "settings_i_learn": "أتعلم",
+    "settings_study_hour": "وقت الدراسة",
+    "settings_card_layout_sub": "تخصيص محتوى البطاقة",
+    "notif_study_body_empty": "حان وقت الدراسة"
   },
   "de": {
     "action_sort": "Sortieren",
@@ -379,7 +384,12 @@
     "err_offline": "Du bist offline",
     "err_offline_card": "Diese Karte ist offline nicht verfügbar",
     "err_no_inbox": "Die Warteliste konnte nicht geöffnet werden",
-    "err_email_taken": "Diese E-Mail ist bereits registriert"
+    "err_email_taken": "Diese E-Mail ist bereits registriert",
+    "settings_direction_sub": "Zuerst anzeigen: %1$s",
+    "settings_i_learn": "Ich lerne",
+    "settings_study_hour": "Lernzeit",
+    "settings_card_layout_sub": "Karteninhalt anpassen",
+    "notif_study_body_empty": "Zeit zum Lernen"
   },
   "es": {
     "action_sort": "Ordenar",
@@ -570,7 +580,12 @@
     "err_offline": "Estás sin conexión",
     "err_offline_card": "Esta tarjeta no está disponible sin conexión",
     "err_no_inbox": "No se pudo abrir la lista de pendientes",
-    "err_email_taken": "Este correo ya está registrado"
+    "err_email_taken": "Este correo ya está registrado",
+    "settings_direction_sub": "Qué mostrar primero: %1$s",
+    "settings_i_learn": "Estoy aprendiendo",
+    "settings_study_hour": "Hora de estudio",
+    "settings_card_layout_sub": "Personaliza el contenido de la ficha",
+    "notif_study_body_empty": "Hora de estudiar"
   },
   "fr": {
     "action_sort": "Trier",
@@ -761,7 +776,12 @@
     "err_offline": "Vous êtes hors ligne",
     "err_offline_card": "Cette carte n’est pas disponible hors ligne",
     "err_no_inbox": "Impossible d’ouvrir la liste en attente",
-    "err_email_taken": "Cet e-mail est déjà enregistré"
+    "err_email_taken": "Cet e-mail est déjà enregistré",
+    "settings_direction_sub": "Quoi afficher en premier : %1$s",
+    "settings_i_learn": "J’apprends",
+    "settings_study_hour": "Heure d’étude",
+    "settings_card_layout_sub": "Personnaliser le contenu de la fiche",
+    "notif_study_body_empty": "C’est l’heure d’étudier"
   },
   "hi": {
     "action_sort": "क्रम",
@@ -952,7 +972,12 @@
     "err_offline": "आप ऑफ़लाइन हैं",
     "err_offline_card": "यह कार्ड ऑफ़लाइन उपलब्ध नहीं है",
     "err_no_inbox": "लंबित सूची नहीं खोली जा सकी",
-    "err_email_taken": "यह ईमेल पहले से पंजीकृत है"
+    "err_email_taken": "यह ईमेल पहले से पंजीकृत है",
+    "settings_direction_sub": "पहले क्या दिखाएँ: %1$s",
+    "settings_i_learn": "मैं सीख रहा/रही हूँ",
+    "settings_study_hour": "अध्ययन समय",
+    "settings_card_layout_sub": "फ्लैशकार्ड सामग्री अनुकूलित करें",
+    "notif_study_body_empty": "पढ़ने का समय"
   },
   "it": {
     "action_sort": "Ordina",
@@ -1143,7 +1168,12 @@
     "err_offline": "Sei offline",
     "err_offline_card": "Questa carta non è disponibile offline",
     "err_no_inbox": "Impossibile aprire la lista in attesa",
-    "err_email_taken": "Questa e-mail è già registrata"
+    "err_email_taken": "Questa e-mail è già registrata",
+    "settings_direction_sub": "Cosa mostrare per primo: %1$s",
+    "settings_i_learn": "Sto imparando",
+    "settings_study_hour": "Ora di studio",
+    "settings_card_layout_sub": "Personalizza il contenuto della scheda",
+    "notif_study_body_empty": "È ora di studiare"
   },
   "ja": {
     "action_sort": "並べ替え",
@@ -1334,7 +1364,12 @@
     "err_offline": "オフラインです",
     "err_offline_card": "このカードはオフラインでは利用できません",
     "err_no_inbox": "保留リストを開けませんでした",
-    "err_email_taken": "このメールアドレスは既に登録されています"
+    "err_email_taken": "このメールアドレスは既に登録されています",
+    "settings_direction_sub": "最初に表示: %1$s",
+    "settings_i_learn": "学習中",
+    "settings_study_hour": "学習時刻",
+    "settings_card_layout_sub": "カードの内容をカスタマイズ",
+    "notif_study_body_empty": "学習の時間です"
   },
   "ko": {
     "action_sort": "정렬",
@@ -1525,7 +1560,12 @@
     "err_offline": "오프라인 상태입니다",
     "err_offline_card": "이 카드는 오프라인에서 사용할 수 없습니다",
     "err_no_inbox": "대기 목록을 열 수 없습니다",
-    "err_email_taken": "이미 등록된 이메일입니다"
+    "err_email_taken": "이미 등록된 이메일입니다",
+    "settings_direction_sub": "먼저 보여줄 내용: %1$s",
+    "settings_i_learn": "배우고 있어요",
+    "settings_study_hour": "학습 시간",
+    "settings_card_layout_sub": "카드 내용 맞춤 설정",
+    "notif_study_body_empty": "공부할 시간입니다"
   },
   "pt-br": {
     "action_sort": "Ordenar",
@@ -1716,7 +1756,12 @@
     "err_offline": "Você está offline",
     "err_offline_card": "Este cartão não está disponível offline",
     "err_no_inbox": "Não foi possível abrir a lista de pendentes",
-    "err_email_taken": "Este e-mail já está cadastrado"
+    "err_email_taken": "Este e-mail já está cadastrado",
+    "settings_direction_sub": "O que mostrar primeiro: %1$s",
+    "settings_i_learn": "Estou aprendendo",
+    "settings_study_hour": "Hora de estudo",
+    "settings_card_layout_sub": "Personalize o conteúdo do cartão",
+    "notif_study_body_empty": "Hora de estudar"
   },
   "pt-pt": {
     "action_sort": "Ordenar",
@@ -1907,7 +1952,12 @@
     "err_offline": "Está offline",
     "err_offline_card": "Este cartão não está disponível offline",
     "err_no_inbox": "Não foi possível abrir a lista de pendentes",
-    "err_email_taken": "Este e-mail já está registado"
+    "err_email_taken": "Este e-mail já está registado",
+    "settings_direction_sub": "O que mostrar primeiro: %1$s",
+    "settings_i_learn": "Estou a aprender",
+    "settings_study_hour": "Hora de estudo",
+    "settings_card_layout_sub": "Personalizar o conteúdo do cartão",
+    "notif_study_body_empty": "Hora de estudar"
   },
   "ru": {
     "action_sort": "Сортировка",
@@ -2098,7 +2148,12 @@
     "err_offline": "Нет подключения к сети",
     "err_offline_card": "Эта карточка недоступна офлайн",
     "err_no_inbox": "Не удалось открыть список ожидания",
-    "err_email_taken": "Этот email уже зарегистрирован"
+    "err_email_taken": "Этот email уже зарегистрирован",
+    "settings_direction_sub": "Что показывать сначала: %1$s",
+    "settings_i_learn": "Я учу",
+    "settings_study_hour": "Время занятий",
+    "settings_card_layout_sub": "Настроить содержимое карточки",
+    "notif_study_body_empty": "Пора заниматься"
   },
   "tr": {
     "action_sort": "Sırala",
@@ -2289,7 +2344,12 @@
     "err_offline": "Çevrimdışısınız",
     "err_offline_card": "Bu kart çevrimdışı kullanılamaz",
     "err_no_inbox": "Bekleyen listesi açılamadı",
-    "err_email_taken": "Bu e-posta zaten kayıtlı"
+    "err_email_taken": "Bu e-posta zaten kayıtlı",
+    "settings_direction_sub": "Önce ne gösterilsin: %1$s",
+    "settings_i_learn": "Öğreniyorum",
+    "settings_study_hour": "Çalışma saati",
+    "settings_card_layout_sub": "Kart içeriğini özelleştir",
+    "notif_study_body_empty": "Çalışma zamanı"
   },
   "vi": {
     "action_sort": "Sắp xếp",
@@ -2480,7 +2540,12 @@
     "err_offline": "Bạn đang ngoại tuyến",
     "err_offline_card": "Thẻ này không khả dụng khi ngoại tuyến",
     "err_no_inbox": "Không mở được danh sách đang chờ",
-    "err_email_taken": "Email này đã được đăng ký"
+    "err_email_taken": "Email này đã được đăng ký",
+    "settings_direction_sub": "Hiện trước: %1$s",
+    "settings_i_learn": "Tôi đang học",
+    "settings_study_hour": "Giờ học",
+    "settings_card_layout_sub": "Tùy chỉnh nội dung thẻ",
+    "notif_study_body_empty": "Đến giờ học"
   },
   "zh": {
     "action_sort": "排序",
@@ -2671,6 +2736,11 @@
     "err_offline": "您处于离线状态",
     "err_offline_card": "此卡片在离线时不可用",
     "err_no_inbox": "无法打开待处理列表",
-    "err_email_taken": "该邮箱已被注册"
+    "err_email_taken": "该邮箱已被注册",
+    "settings_direction_sub": "首先显示：%1$s",
+    "settings_i_learn": "我在学",
+    "settings_study_hour": "学习时间",
+    "settings_card_layout_sub": "自定义卡片内容",
+    "notif_study_body_empty": "该学习了"
   }
 }

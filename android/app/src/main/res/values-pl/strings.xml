@@ -115,6 +115,8 @@
 
     <string name="settings_learning_lang">Język nauki</string>
 
+    <string name="settings_i_learn">Uczę się</string>
+
     <string name="settings_langs_hint">Język aplikacji to język interfejsu i tłumaczeń na kartach. Język nauki to język, którego się uczysz.</string>
 
     <string name="settings_theme">Motyw</string>
@@ -143,9 +145,11 @@
 
     <string name="settings_direction_random">Losowo</string>
 
+    <string name="settings_direction_sub">Co pokazywać najpierw: %1$s</string>
+
     <string name="settings_card_layout">Układ karty</string>
 
-    <string name="settings_card_layout_sub">Co widać po odpowiedzi</string>
+    <string name="settings_card_layout_sub">Dostosuj zawartość fiszki</string>
 
     <string name="settings_examples">Zdania</string>
 
@@ -742,7 +746,7 @@
     <string name="settings_notif_study">Przypomnienia o nauce</string>
     <string name="settings_notif_cards">Karty gotowe</string>
     <string name="settings_notif_enabled">Chcę powiadomienia</string>
-    <string name="settings_notif_study_at">powiadamiaj o nauce:</string>
+    <string name="settings_study_hour">Godzina nauki</string>
     <string name="notif_offline_ready_title">Karty pobrane</string>
     <string name="notif_offline_ready_body">Wszystkie %1$d kart offline jest gotowych</string>
     <string name="notif_import_ready_title">Import zakończony</string>
@@ -752,6 +756,8 @@
     <string name="notif_channel_cards">Karty</string>
     <string name="notif_study_title">Czas na powtórkę</string>
     <string name="notif_study_body">%1$d kart do powtórki</string>
+
+    <string name="notif_study_body_empty">Czas na naukę</string>
     <string name="notif_cards_ready_title">Karty gotowe</string>
     <string name="notif_cards_ready_body">%1$d słów gotowych do nauki</string>
 

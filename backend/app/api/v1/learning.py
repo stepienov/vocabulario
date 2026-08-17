@@ -70,8 +70,8 @@ from app.services.card_jobs import (
     build_import_display_content,
     build_pending_content,
     content_is_complete,
-    enrich_card,
     hydrate_from_lexical_cache,
+    spawn_enrich,
 )
 from app.services.distractors import generate_choice_options
 from app.services.import_ai import resolve_import_words
@@ -353,7 +353,6 @@ async def commit_import_display(
 @router.post("/cards", response_model=CardResponse, status_code=201)
 async def create_card(
     body: CardCreateRequest,
-    background: BackgroundTasks,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -416,7 +415,7 @@ async def create_card(
     await db.refresh(card)
 
     if card.enrichment_status == STATUS_PENDING:
-        background.add_task(enrich_card, card.id)
+        spawn_enrich(card.id)
     return card
 
 
@@ -1091,7 +1090,6 @@ async def list_words(
 async def add_word_to_list(
     list_id: UUID,
     body: WordListAddWordRequest,
-    background: BackgroundTasks,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1184,7 +1182,7 @@ async def add_word_to_list(
         raise api_error(409, "word_already_on_list", "This word is already on the list") from exc
     await db.refresh(card)
     if card.enrichment_status == STATUS_PENDING:
-        background.add_task(enrich_card, card.id)
+        spawn_enrich(card.id)
     return card
 
 

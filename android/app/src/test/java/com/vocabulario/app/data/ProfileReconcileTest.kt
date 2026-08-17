@@ -39,6 +39,14 @@ class ProfileReconcileTest {
         assertNull(findLangPair(remote, "en", "es"))
     }
 
+    @Test
+    fun langPairSwitchNeverMutatesExistingPair() {
+        val plEs = profile("pl-es", active = true)
+        assertEquals(LangPairSwitch.Keep, langPairSwitch(plEs, "pl-es"))
+        assertEquals(LangPairSwitch.Activate("it-es"), langPairSwitch(profile("it-es", active = false), "pl-es"))
+        assertEquals(LangPairSwitch.Create, langPairSwitch(null, "pl-es"))
+    }
+
     private fun profile(id: String, active: Boolean) = LanguageProfileResponse(
         id = id,
         app_lang = "pl",
