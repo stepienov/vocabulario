@@ -851,7 +851,7 @@ class LearningRepository @Inject constructor(
                     val since = if (doFull) null else lastPulled
                     val pull = api.syncPull(profileId, since = since)
                     offlineStore.applyPull(profileId, pull, fullReplace = doFull)
-                    tokenStore.saveTheme(pull.settings.theme)
+                    offlineStore.localUserSettings()?.theme?.let { tokenStore.saveTheme(it) }
                     val needProfiles = doFull || offlineStore.cachedProfiles().isEmpty()
                     if (needProfiles) {
                         runCatching { api.listProfiles() }.getOrNull()?.let { applyRemoteProfiles(it) }
@@ -943,12 +943,18 @@ class LearningRepository @Inject constructor(
     private suspend fun drainOutboxOps() {
         if (!networkMonitor.isCurrentlyOnline()) return
         outboxMutex.withLock {
+            offlineStore.unparkAuthFailures()
             for (op in offlineStore.pendingOps()) {
                 try {
                     applyOutboxOp(op)
                     offlineStore.removeOp(op)
                 } catch (io: java.io.IOException) {
                     // Utrata sieci w trakcie — nie naliczaj próby, spróbuj przy następnym syncu.
+                    break
+                } catch (http: retrofit2.HttpException) {
+                    // 401/5xx: token albo BE. Nie parkuj — Authenticator odświeży, kolejny sync dociągnie.
+                    if (http.code() == 401 || http.code() == 408 || http.code() >= 500) break
+                    offlineStore.markOpFailed(op, http.message)
                     break
                 } catch (e: Exception) {
                     offlineStore.markOpFailed(op, e.message)
@@ -1280,8 +1286,21 @@ class LearningRepository @Inject constructor(
     }
 
     private suspend fun applyRemoteProfiles(profiles: List<LanguageProfileResponse>) {
-        offlineStore.cacheProfiles(profiles)
-        val chosen = resolveActiveProfile(tokenStore.activeProfileId.value, profiles) ?: return
+        val localActive = offlineStore.cachedActiveProfile()
+        val merged = profiles.map { remote ->
+            if (localActive != null && remote.id == localActive.id) {
+                // GET /profiles nie może cofać czasów / CEFR zapisanych lokalnie.
+                remote.copy(
+                    selected_tenses = localActive.selected_tenses,
+                    cefr_level = localActive.cefr_level,
+                    tense_label_lang = localActive.tense_label_lang,
+                )
+            } else {
+                remote
+            }
+        }
+        offlineStore.cacheProfiles(merged)
+        val chosen = resolveActiveProfile(tokenStore.activeProfileId.value, merged) ?: return
         syncActiveProfileToLocal(overlayAppLang(chosen, tokenStore.peekAppLang()))
     }
 
@@ -1351,6 +1370,15 @@ class LearningRepository @Inject constructor(
         tenseLabelLang: String? = null,
         appLang: String? = null,
     ): LanguageProfileResponse {
+        val current = offlineStore.cachedActiveProfile() ?: error("no_active_profile")
+        val optimistic = current.copy(
+            cefr_level = cefr ?: current.cefr_level,
+            selected_tenses = tenses ?: current.selected_tenses,
+            tense_label_lang = tenseLabelLang ?: current.tense_label_lang,
+            app_lang = appLang ?: current.app_lang,
+            native_lang = appLang ?: current.native_lang,
+        )
+        syncActiveProfileToLocal(optimistic, overwriteLang = appLang != null)
         val body = LanguageProfileUpdate(
             cefr_level = cefr,
             selected_tenses = tenses,
@@ -1360,7 +1388,7 @@ class LearningRepository @Inject constructor(
         val profile = try {
             api.updateProfile(activeProfileId(), body)
         } catch (e: HttpException) {
-            if (e.code() != 404) throw e
+            if (e.code() != 404) return optimistic
             applyRemoteProfiles(api.listProfiles())
             api.updateProfile(activeProfileId(), body)
         }

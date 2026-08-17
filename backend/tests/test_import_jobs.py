@@ -66,7 +66,23 @@ def test_apply_vocab_item_ready_pending():
     assert item.gloss == "dom"
 
 
-def test_apply_vocab_item_no_lemma_phrase():
+def test_apply_vocab_item_phrase_keeps_headword():
+    item = _item()
+    _apply_vocab_item(
+        item,
+        {
+            "valid": True,
+            "headword_l2": "tener prisa",
+            "entry_kind": "phrase",
+            "base_lemma": None,
+        },
+        "es",
+    )
+    assert item.verdict == "pending"
+    assert item.lemma == "tener prisa"
+
+
+def test_apply_vocab_item_construction_keeps_headword():
     item = _item()
     _apply_vocab_item(
         item,
@@ -78,8 +94,8 @@ def test_apply_vocab_item_no_lemma_phrase():
         },
         "es",
     )
-    assert item.verdict == "failed"
-    assert item.reason_code == "no_lemma"
+    assert item.verdict == "pending"
+    assert item.lemma == "volver a hacer algo"
 
 
 def test_apply_vocab_item_llm_invalid():
@@ -104,6 +120,9 @@ def test_plain_import_headword_rejects_numbers_and_junk():
     assert _plain_import_headword("el perro") == "el perro"
     assert _plain_import_headword("evaluar") == "evaluar"
     assert _plain_import_headword("el medio ambiente") == "el medio ambiente"
+    assert _plain_import_headword("(com)portarse") == "(com)portarse"
+    assert _plain_import_headword("tener prisa") == "tener prisa"
+    assert _plain_import_headword("volver a hacer algo") == "volver a hacer algo"
 
 
 def test_apply_vocab_item_rejects_number_even_if_llm_valid():
@@ -214,11 +233,28 @@ def test_quizlet_one_line_not_treated_as_word_list():
     assert deck.kind != "plain" or len(deck.notes) != 6
 
 
-def test_vocabulario_lemma_uses_base():
+def test_vocabulario_lemma_rejects_sentence():
+    assert (
+        _vocabulario_lemma(
+            {"headword_l2": "Tengo prisa porque llego tarde.", "entry_kind": "sentence"},
+            learning_lang="es",
+        )
+        is None
+    )
+
+
+def test_vocabulario_lemma_keeps_phrase_not_base():
+    assert (
+        _vocabulario_lemma(
+            {"headword_l2": "tener prisa", "entry_kind": "phrase", "base_lemma": "tener"},
+            learning_lang="es",
+        )
+        == "tener prisa"
+    )
     assert (
         _vocabulario_lemma(
             {"headword_l2": "ir a casa", "entry_kind": "construction", "base_lemma": "ir"},
             learning_lang="es",
         )
-        == "ir"
+        == "ir a casa"
     )

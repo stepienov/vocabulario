@@ -368,8 +368,13 @@ async def hydrate_from_lexical_cache(
             )
         ).scalar_one_or_none()
         if pinned is not None and entry_compatible_with_card(card, pinned):
-            _apply_entry_to_card(card, pinned, profile)
-            pinned.usage_count = (pinned.usage_count or 0) + 1
+            try:
+                async with db.begin_nested():
+                    _apply_entry_to_card(card, pinned, profile)
+                    pinned.usage_count = (pinned.usage_count or 0) + 1
+                    await db.flush()
+            except IntegrityError:
+                return False
             return True
     cached = await find_ready_entry(
         db,
@@ -381,8 +386,14 @@ async def hydrate_from_lexical_cache(
     )
     if cached is None or not entry_compatible_with_card(card, cached):
         return False
-    _apply_entry_to_card(card, cached, profile)
-    cached.usage_count = (cached.usage_count or 0) + 1
+    try:
+        async with db.begin_nested():
+            _apply_entry_to_card(card, cached, profile)
+            cached.usage_count = (cached.usage_count or 0) + 1
+            await db.flush()
+    except IntegrityError:
+        # Unique (lemma, pos) — nie zatruwaj sesji importu. Karta zostaje pending.
+        return False
     return True
 
 

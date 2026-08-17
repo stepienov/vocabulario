@@ -126,14 +126,18 @@ class HomeViewModel @Inject constructor(
         }
         viewModelScope.launch {
             var prev: com.vocabulario.app.data.imports.ImportStatus? = null
+            var prevCreated = -1
             importController.state.collect { job ->
-                if (job.status == com.vocabulario.app.data.imports.ImportStatus.Done &&
-                    prev != com.vocabulario.app.data.imports.ImportStatus.Done
-                ) {
-                    job.targetListId?.let { loadLists(it) }
-                    loadStats()
+                val finished = job.status == com.vocabulario.app.data.imports.ImportStatus.Done ||
+                    job.status == com.vocabulario.app.data.imports.ImportStatus.Failed
+                val justFinished = finished && prev != job.status
+                val createdMoved = job.createdCount != prevCreated && job.createdCount > 0
+                if (justFinished || createdMoved) {
+                    job.targetListId?.let { loadLists(it) } ?: loadLists()
+                    if (justFinished) loadStats()
                 }
                 prev = job.status
+                prevCreated = job.createdCount
             }
         }
         viewModelScope.launch {

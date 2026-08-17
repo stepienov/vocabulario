@@ -88,6 +88,7 @@ class SettingsViewModel @Inject constructor(
                 if (s == null) return@collect
                 val showSyn = if (s.show_synonyms_antonyms) s.show_synonyms else false
                 val showAnt = if (s.show_synonyms_antonyms) s.show_antonyms else false
+                val spinningClock = reminderSaveJob?.isActive == true
                 _state.value = _state.value.copy(
                     practiceInputPref = when (s.practice_input_pref) {
                         "random" -> "choice"
@@ -106,8 +107,12 @@ class SettingsViewModel @Inject constructor(
                     showConjugation = s.show_conjugation,
                     studyReminderEnabled = s.study_reminder_enabled,
                     cardsReadyPushEnabled = s.cards_ready_push_enabled,
-                    reminderHour = s.reminder_hour,
-                    reminderMinute = notificationScheduler.reminderMinute(),
+                    reminderHour = if (spinningClock) _state.value.reminderHour else s.reminder_hour,
+                    reminderMinute = if (spinningClock) {
+                        _state.value.reminderMinute
+                    } else {
+                        notificationScheduler.reminderMinute()
+                    },
                 )
             }
         }
@@ -340,6 +345,17 @@ class SettingsViewModel @Inject constructor(
         rememberCustom: Boolean,
     ) {
         val canonical = normalizeTenseKeys(tenses).toSet()
+        val previous = _state.value
+        _state.value = previous.copy(
+            selectedTenses = canonical,
+            lastCustomTenses = if (rememberCustom && canonical.isNotEmpty()) {
+                canonical
+            } else {
+                previous.lastCustomTenses
+            },
+            showConjugation = conjugationOn,
+            error = null,
+        )
         viewModelScope.launch {
             runCatching {
                 val profile = repository.updateProfile(tenses = canonical.toList())
@@ -357,7 +373,7 @@ class SettingsViewModel @Inject constructor(
                     showConjugation = conjugationOn,
                 )
             }.onFailure {
-                _state.value = _state.value.copy(
+                _state.value = previous.copy(
                     error = it.userMessage(strings, R.string.err_save_tenses),
                 )
             }

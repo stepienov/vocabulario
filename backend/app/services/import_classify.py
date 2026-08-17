@@ -82,8 +82,8 @@ async def resolve_import_vocabulario_entries(
         if not head:
             continue
 
-        # Vocabulario import = te same karty co lookup/+ : zawsze lemma + pełny enrichment.
-        # Zwroty/zdania bez lematu bazowego → invalid (tryb „zachowaj fiszkę” jest do oryginału).
+        # Vocabulario import = te same karty co lookup/+.
+        # Zdanie bez hasła → invalid; zwrot (tener prisa) zostaje headwordem.
         lemma_out = _vocabulario_lemma(item, learning_lang=learning_lang)
         if not lemma_out:
             invalid.append(head)
@@ -123,18 +123,22 @@ async def resolve_import_vocabulario_entries(
 
 
 def _vocabulario_lemma(item: dict[str, Any], *, learning_lang: str) -> str | None:
-    """Wybierz lemat słownikowy pod pełną kartę Vocabulario (jak lookup)."""
+    """Hasło karty Vocabulario — to samo, co lookup: zwrot zostaje zwrotem."""
     head = (item.get("headword_l2") or "").strip()
     if not head:
         return None
     kind = (item.get("entry_kind") or "lemma").strip().lower()
     base = (item.get("base_lemma") or "").strip() or None
 
+    if kind == "sentence":
+        return None
     if kind == "lemma":
+        return head
+    # phrase / construction / other: karta = headword (tener prisa), nie redukcja do bazy.
+    if kind in {"phrase", "construction", "other"}:
         return head
     if base:
         return base
-    # Krótki headword wyglądający jak lemma (np. „el banco”) — dopuszczamy.
     if _guess_kind(head, learning_lang=learning_lang) == "lemma":
         return head
     return None

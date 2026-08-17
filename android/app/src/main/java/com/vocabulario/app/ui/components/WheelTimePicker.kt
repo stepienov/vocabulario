@@ -45,10 +45,20 @@ fun WheelTimePicker(
     testTag: String? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
+    // Parent Settings Column uses verticalScroll. Nested order is:
+    // pre-scroll ancestors → LazyColumn → post-scroll ancestors.
+    // Consuming Y in onPreScroll starved the wheel (dead touch). Consume leftover
+    // in onPostScroll so the parent does not steal the fling after the wheel moves.
     val consumeVertical = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
-                Offset(0f, available.y)
+                Offset.Zero
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset = Offset(0f, available.y)
         }
     }
     Box(

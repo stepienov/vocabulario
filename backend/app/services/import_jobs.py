@@ -14,7 +14,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, PendingRollbackError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -828,8 +828,11 @@ _LATIN_VOWELS = frozenset("aeiouyáéíóúüàèìòùäöâêîôûæøåąę�
 def _token_looks_like_word(token: str) -> bool:
     letters = sum(1 for ch in token if ch.isalpha())
     digits = sum(1 for ch in token if ch.isdigit())
-    junk = sum(1 for ch in token if not ch.isalnum() and ch not in "-'’")
-    if letters < 2:
+    junk = sum(1 for ch in token if not ch.isalnum() and ch not in "-'’()")
+    if letters < 1:
+        return False
+    # Jednoliterowe przyimki/spójniki (a, y, e) w zwrotach typu „volver a hacer”.
+    if letters == 1 and not token.isalpha():
         return False
     if digits > letters:
         return False
@@ -1075,7 +1078,9 @@ async def _run_commit(db: AsyncSession, job: ImportJob) -> None:
             )
             await db.commit()
             try:
-                card = await _create_card_for_item(db, job, profile, wl, item)
+                async with db.begin_nested():
+                    card = await _create_card_for_item(db, job, profile, wl, item)
+                    await db.flush()
                 item.created_card_id = card.id
                 item.verdict_phase = "commit"
                 item.last_error = None
@@ -1101,7 +1106,59 @@ async def _run_commit(db: AsyncSession, job: ImportJob) -> None:
                 await db.commit()
                 ok = True
                 break
+            except (IntegrityError, PendingRollbackError) as exc:
+                await db.rollback()
+                existing = await find_card_anywhere(
+                    db, job.user_id, job.profile_id,
+                    (item.lemma or "").strip(),
+                    item.pos if job.mode != "preserve" else "imported",
+                )
+                job = await _load_job(db, job.id) or job
+                item = (
+                    await db.execute(select(ImportJobItem).where(ImportJobItem.id == item.id))
+                ).scalar_one()
+                profile = (
+                    await db.execute(select(LanguageProfile).where(LanguageProfile.id == job.profile_id))
+                ).scalar_one_or_none() or profile
+                wl = (
+                    await db.execute(select(WordList).where(WordList.id == job.list_id))
+                ).scalar_one_or_none() or wl
+                if existing is not None:
+                    item.verdict = "duplicate"
+                    item.reason_code = "already_on_list"
+                    item.existing_card_id = existing.id
+                    item.verdict_phase = "commit"
+                    await _add_event(
+                        db, job.id, "item_verdict", item_id=item.id,
+                        payload={"verdict": "duplicate", "phase": "commit", "unique": True},
+                    )
+                    await db.commit()
+                    ok = True
+                    break
+                item.last_error = str(exc)[:2000]
+                await _add_event(
+                    db, job.id, "item_retry", level="warn", item_id=item.id,
+                    payload={
+                        "attempt": attempt,
+                        "exception_type": type(exc).__name__,
+                        "exception_message": str(exc)[:500],
+                    },
+                )
+                await db.commit()
+                if attempt < COMMIT_MAX_ATTEMPTS:
+                    await asyncio.sleep(COMMIT_BACKOFF_S[attempt - 1])
             except Exception as exc:
+                await db.rollback()
+                job = await _load_job(db, job.id) or job
+                item = (
+                    await db.execute(select(ImportJobItem).where(ImportJobItem.id == item.id))
+                ).scalar_one()
+                profile = (
+                    await db.execute(select(LanguageProfile).where(LanguageProfile.id == job.profile_id))
+                ).scalar_one_or_none() or profile
+                wl = (
+                    await db.execute(select(WordList).where(WordList.id == job.list_id))
+                ).scalar_one_or_none() or wl
                 item.last_error = str(exc)[:2000]
                 await _add_event(
                     db, job.id, "item_retry", level="warn", item_id=item.id,

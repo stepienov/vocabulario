@@ -69,7 +69,12 @@ class OfflineStore @Inject constructor(
     }
 
     private suspend fun applyPullLocked(profileId: String, pull: SyncPullResponse, fullReplace: Boolean) {
-        saveSettings(pull.settings)
+        // Settings: telefon jest źródłem prawdy. Pull wkleja je tylko gdy Room jest pusty
+        // (pierwszy login / reinstall). Inkrementalny sync i fullReplace przy zmianie
+        // profilu NIE mogą cofać trybu / kierunku / układu karty.
+        if (localUserSettings() == null) {
+            saveSettings(pull.settings)
+        }
         // Keep local Pending inbox + unflushed lookup stubs across full replace.
         val localInbox = listDao.pendingInbox(profileId)
         // Preserve offline-created lists (local:<uuid>) that haven't been pushed/remapped yet.
@@ -709,6 +714,20 @@ class OfflineStore @Inject constructor(
     suspend fun pendingOps(): List<OutboxOpEntity> = outboxDao.pending()
 
     suspend fun outboxPendingCount(): Int = outboxDao.pendingCount()
+
+    /**
+     * 401 na wygasłym tokenie parkowało settings_update i zmiana nigdy nie wylatywała.
+     * Po udanym odświeżeniu sesji wracają do kolejki.
+     */
+    suspend fun unparkAuthFailures() {
+        for (op in outboxDao.all()) {
+            if (op.status != "parked") continue
+            val err = op.lastError.orEmpty()
+            if (err.contains("401") || err.contains("Unauthorized", ignoreCase = true)) {
+                outboxDao.update(op.copy(status = "pending", attempts = 0, lastError = null))
+            }
+        }
+    }
 
     suspend fun removeOp(op: OutboxOpEntity) {
         outboxDao.deleteBySeq(op.seq)

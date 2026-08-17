@@ -217,9 +217,9 @@ class ImportController @Inject constructor(
                     persistence.saveJobId(null)
                     return
                 }
-                if (restored.status == ImportStatus.Done) {
+                if (restored.status == ImportStatus.Done || restored.status == ImportStatus.Failed) {
                     runCatching { repository.refreshLocalAfterImport(restored.targetListId) }
-                    watchImportedCards(restored)
+                    if (restored.status == ImportStatus.Done) watchImportedCards(restored)
                 }
                 _state.value = restored
                 startPoll()
@@ -267,11 +267,19 @@ class ImportController @Inject constructor(
                         progress
                     }
                     val nextState = next.toState(_state.value, includeItems = true)
+                    val prevCreated = _state.value.createdCount
                     val becameDone = nextState.status == ImportStatus.Done &&
                         _state.value.status != ImportStatus.Done
-                    if (becameDone) {
+                    val becameFailed = nextState.status == ImportStatus.Failed &&
+                        _state.value.status != ImportStatus.Failed
+                    if (becameDone || becameFailed) {
                         runCatching { repository.refreshLocalAfterImport(nextState.targetListId) }
-                        watchImportedCards(nextState)
+                        if (becameDone) watchImportedCards(nextState)
+                    } else if (
+                        nextState.createdCount > prevCreated &&
+                        (nextState.createdCount == 1 || nextState.createdCount % 10 == 0)
+                    ) {
+                        repository.requestBackgroundSync()
                     }
                     _state.value = nextState
                     if (_state.value.status == ImportStatus.Cancelled) {
