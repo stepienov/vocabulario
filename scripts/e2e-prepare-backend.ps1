@@ -1,5 +1,5 @@
 # Seed E2E user + language profile against local API.
-# Does not start Docker/backend itself — assumes API is already up (scripts/start-backend.ps1).
+# Does not start Docker/backend itself — assumes API is already up (.\start-backend.ps1).
 # Optional: set LLM_MOCK=true in backend .env before restart for deterministic AI flows.
 
 param(
@@ -45,7 +45,7 @@ try {
     $health = Invoke-RestMethod -Uri ($api -replace "/api/v1$", "/health") -TimeoutSec 5
     Write-Host "Health: $($health.status)"
 } catch {
-    throw "Backend not reachable at $api. Start with scripts/start-backend.ps1 first. $_"
+    throw "Backend not reachable at $api. Start with .\\start-backend.ps1 first. $_"
 }
 
 $bodyRegister = @{ email = $email; password = $password } | ConvertTo-Json

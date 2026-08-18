@@ -5,8 +5,8 @@ Per file (one gallery row):
 If vocabulario can't produce lemmas (phrases/sentences/maps-only), placeholders.
 
 Run:
-  cd backend
-  python -m pytest tests/test_import_visual_modes.py -q -s
+    cd backend
+    python -m pytest -m visual tests/test_import_visual_modes.py -q -s
 
 Gallery:
   backend/tests/artifacts/import_visual_modes/index.html
@@ -40,6 +40,8 @@ from tests.visual.render_vocab_card import (
     vocab_card_to_html,
 )
 
+pytestmark = pytest.mark.visual
+
 FIXTURES = Path(__file__).parent / "fixtures" / "import"
 ARTIFACTS = Path(__file__).parent / "artifacts" / "import_visual_modes"
 SAMPLE_NOTES = 8
@@ -71,6 +73,8 @@ def _truncate(deck: RawImportDeck, n: int) -> RawImportDeck:
 
 def _load(name: str, mode: str) -> RawImportDeck:
     path = FIXTURES / name
+    if not path.exists():
+        pytest.skip(f"optional fixture missing: {name}")
     if mode == "apkg":
         return load_raw_import(name, path.read_bytes())
     return load_text_import(path.read_text(encoding="utf-8"))

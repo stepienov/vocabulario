@@ -1,8 +1,0 @@
-appId: com.vocabulario.app
----
-# Stub: list sort/filter smoke (not executed in CI by default)
-- launchApp
-- tapOn:
-    id: tab_lists
-- tapOn:
-    id: btn_list_sort

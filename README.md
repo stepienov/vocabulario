@@ -81,9 +81,12 @@ PERSIST_WORDS=true
 ```
 vocabulario/
 ├── android/          # aplikacja Android (Kotlin, Compose)
-├── backend/          # API FastAPI (+ Dockerfile)
+├── backend/          # API FastAPI (+ Dockerfile, railway.toml)
+├── e2e/              # Maestro E2E
 ├── infra/            # docker-compose (Postgres + Redis)
-└── backend/railway.toml  # konfiguracja deploy (Railway)
+├── scripts/          # CI, i18n, e2e
+├── docs/             # instalacja APK, epiki, szablon LSP
+└── doc/              # notatki robocze (lokalnie, nie na GitHub)
 ```
 
 

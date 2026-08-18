@@ -7,8 +7,8 @@ For each fixture file:
   4) render 2–3 cards to HTML + PNG under tests/artifacts/import_visual/
 
 Run:
-  cd backend
-  python -m pytest tests/test_import_visual_cards.py -q -s
+    cd backend
+    python -m pytest -m visual tests/test_import_visual_cards.py -q -s
 
 Open gallery:
   backend/tests/artifacts/import_visual/index.html
@@ -31,6 +31,8 @@ from tests.visual.render_card import (
     write_card_html,
     write_index,
 )
+
+pytestmark = pytest.mark.visual
 
 FIXTURES = Path(__file__).parent / "fixtures" / "import"
 ARTIFACTS = Path(__file__).parent / "artifacts" / "import_visual"
@@ -63,6 +65,8 @@ def _truncate(deck: RawImportDeck, n: int) -> RawImportDeck:
 
 def _load_case(name: str, mode: str) -> RawImportDeck:
     path = FIXTURES / name
+    if not path.exists():
+        pytest.skip(f"optional fixture missing: {name}")
     if mode == "apkg":
         return load_raw_import(name, path.read_bytes())
     return load_text_import(path.read_text(encoding="utf-8"))

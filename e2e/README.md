@@ -5,7 +5,7 @@ Plans: `doc/PLAN_TESTY_E2E_INFRA.md`, `doc/PLAN_TESTY_E2E_SCENARIUSZE.md`, `doc/
 ## Setup
 
 1. Emulator + Maestro (`C:\maestro`) + JDK `C:\Java\jdk-17`
-2. Backend: `scripts/start-backend.ps1`
+2. Backend: `.\start-backend.ps1` (albo `scripts/start-backend.ps1`)
 3. Optional for AI flows: `LLM_MOCK=true` in `.env`, restart backend
 4. Seed user + cards:
 

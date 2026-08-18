@@ -1,7 +1,7 @@
 # Epics — Vocabulario
 
 Dokument długoterminowych epików (poza bieżącą kolejką sprintową).
-Bieżące / gotowe do implementacji feature’y: [`plan-2026-08-04.md`](./plan-2026-08-04.md).
+Bieżące / historyczne kolejki feature’ów: lokalny katalog `doc/` (nie na GitHub).
 
 **Statusy:** `parked` = nie robimy teraz · `ready` = do rozbicia na feature’y · `in progress` · `done`
 
