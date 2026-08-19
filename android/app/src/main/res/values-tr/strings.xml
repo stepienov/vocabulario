@@ -19,6 +19,7 @@
     <string name="list_words_meta">%1$d kelime</string>
 
     <string name="list_filter_empty">Filtrelere uyan kelime yok</string>
+    <string name="list_search_hint">Listede ara…</string>
 
     <string name="sort_title">Sırala</string>
 
@@ -395,7 +396,7 @@
 
     <string name="section_synonyms">EŞ ANLAMLI KELİMELER</string>
 
-    <string name="section_syn_ant">EŞ ANLAMLI &amp;amp; ZIT ANLAMLI KELİMELER</string>
+    <string name="section_syn_ant">EŞ ANLAMLI VE ZIT ANLAMLI KELİMELER</string>
 
     <string name="section_antonyms">ZIT ANLAMLI KELİMELER</string>
 
@@ -428,12 +429,17 @@
     <string name="home_empty_title">Henüz hiç kelimen yok</string>
     <string name="home_empty_body">Bir kelime ara veya liste içe aktar.</string>
     <string name="home_add_first">İlk kelimeleri ekle</string>
-    <string name="home_caught_up">Bugün bekleyen bir şey yok</string>
+    <string name="home_caught_up">Güncelsiniz</string>
     <string name="home_next_review">Sonraki tekrar: %1$s</string>
     <string name="home_change_limit">Limiti değiştir</string>
+    <string name="home_relative_in_minutes">%1$d dak. sonra</string>
+    <string name="home_relative_in_one_hour">1 saat sonra</string>
+    <string name="home_relative_in_hours">%1$d saat sonra</string>
     <string name="home_relative_tomorrow">yarın</string>
     <string name="home_relative_day_after">öbür gün</string>
     <string name="home_in_days">%1$d gün sonra</string>
+    <string name="home_in_weeks">%1$d hafta sonra</string>
+    <string name="home_in_months">%1$d ay sonra</string>
     <string name="weekday_full_mon">Pazartesi</string>
     <string name="weekday_full_tue">Salı</string>
     <string name="weekday_full_wed">Çarşamba</string>
@@ -705,7 +711,7 @@
 
     <string name="correction_fix_card">Düzeltme bildir</string>
 
-    <string name="correction_report_title">Bir sorun bildir</string>
+    <string name="correction_report_title">Kartı kontrol et ve düzelt</string>
 
     <string name="correction_section_lemma">Lema</string>
 
@@ -731,15 +737,15 @@
 
     <string name="correction_validation">En az bir bölüm seçin veya bir not yazın (min. 3 karakter).</string>
 
-    <string name="correction_submit">Raporu gönder</string>
+    <string name="correction_submit">Doğrulama için gönder</string>
 
     <string name="correction_requires_online">İnternet bağlantısı gerektirir.</string>
 
-    <string name="correction_result_accepted_title">Rapor kabul edildi — kart güncellendi.</string>
+    <string name="correction_result_accepted_title">Rapor kabul edildi</string>
 
-    <string name="correction_result_rejected_title">Rapor kabul edilmedi.</string>
+    <string name="correction_result_rejected_title">Rapor kabul edilmedi</string>
 
-    <string name="correction_result_rejected_body">Kartı kendiniz düzenleyebilirsiniz — kendi riskinizle. Bu, özel bir kopya oluşturur.</string>
+    <string name="correction_result_rejected_body">Kart «%1$s». %2$s</string>
 
     <string name="correction_edit_self">Düzenle</string>
     <string name="correction_history_button">Değişiklik geçmişi</string>
@@ -885,5 +891,10 @@
     <string name="err_offline_card">Bu kart çevrimdışı kullanılamaz</string>
     <string name="err_no_inbox">Bekleyen listesi açılamadı</string>
     <string name="err_email_taken">Bu e-posta zaten kayıtlı</string>
+
+    <string name="status_prep_problem">hazırlık sorunu</string>
+    <string name="cd_retry_enrichment">Hazırlığı yeniden dene</string>
+    <string name="enrichment_retry_requires_online">İnternet bağlantısı gerekli.</string>
+    <string name="enrichment_retry_failed">Hazırlık yeniden denenemedi.</string>
 
 </resources>

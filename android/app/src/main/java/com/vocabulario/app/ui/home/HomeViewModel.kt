@@ -7,7 +7,9 @@ import com.vocabulario.app.R
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.SYSTEM_LIST_NAME
+import com.vocabulario.app.data.containsLemma
 import com.vocabulario.app.data.isReservedListName
+import com.vocabulario.app.data.lemmaKeys
 import com.vocabulario.app.data.normalizePosKey
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.DashboardStatsResponse
@@ -21,6 +23,7 @@ import com.vocabulario.app.i18n.UiStrings
 import com.vocabulario.app.ui.card.CorrectionResultItem
 import com.vocabulario.app.ui.card.CorrectionResultsState
 import com.vocabulario.app.ui.card.HomeUiStateSelfEditActive
+import com.vocabulario.app.ui.card.RelatedWord
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -46,11 +49,15 @@ data class HomeUiState(
     val error: String? = null,
     val notice: String? = null,
     val isOnline: Boolean = true,
+    /** True tylko gdy trwa flush kolejki lookupów (Oczekujące) — spinner na stubie. */
+    val pendingLookupFlushInProgress: Boolean = false,
     val stats: DashboardStatsResponse? = null,
     val lists: List<WordListResponse> = emptyList(),
     val selectedListId: String? = null,
     val listWords: List<CardResponse> = emptyList(),
     val addTarget: LookupCandidate? = null,
+    val learningLemmas: Set<String> = emptySet(),
+    val detailCard: CardResponse? = null,
     val pickListOpen: Boolean = false,
     val createListName: String = "",
     val showCreateListPrompt: Boolean = false,
@@ -58,6 +65,7 @@ data class HomeUiState(
     val selectedWordIds: Set<String> = emptySet(),
     val listSortOrder: ListSortOrder = ListSortOrder.LemmaAsc,
     val listFilter: ListFilterState = ListFilterState(),
+    val listQuery: String = "",
     val correctionCardId: String? = null,
     val correctionSubmitting: Boolean = false,
     val correctionResults: CorrectionResultsState = CorrectionResultsState(),
@@ -85,16 +93,21 @@ data class HomeUiState(
     val reviewLoading: Boolean = false,
     val reviewSubmitting: Boolean = false,
     val profiles: List<LanguageProfileResponse> = emptyList(),
+    val cardCounts: Map<String, Int> = emptyMap(),
     val langMenuOpen: Boolean = false,
 ) {
     val selectionMode: Boolean get() = selectedWordIds.isNotEmpty()
     val visibleListWords: List<CardResponse>
-        get() = applyListFilterSort(listWords, listFilter, listSortOrder)
+        get() = applyListFilterSort(listWords, listFilter, listSortOrder, listQuery)
     val hasMovableListWords: Boolean get() = listWords.any { it.isReadyToMove() }
     val hasMovableSelectedWords: Boolean
         get() = listWords.any { it.id in selectedWordIds && it.isReadyToMove() }
     val sessionDue: Int get() = stats?.due_count ?: 0
     val sessionNew: Int get() = stats?.session_new ?: 0
+    val showLangDropdown: Boolean
+        get() = hasOtherLearningLanguage(profiles, cardCounts, activeProfile?.id)
+    val dropdownProfiles: List<LanguageProfileResponse>
+        get() = dropdownLearningProfiles(profiles, cardCounts, activeProfile?.id)
     val homeKind: HomeKind
         get() {
             val ready = stats?.ready_count ?: 0
@@ -247,6 +260,7 @@ class HomeViewModel @Inject constructor(
         }
         val words = selected?.let { runCatching { repository.cachedListWords(it) }.getOrNull() }
         val stats = runCatching { repository.dashboardStats(7) }.getOrNull()
+        val learningLemmas = runCatching { repository.learningLemmaSet() }.getOrNull()
         _state.value = _state.value.copy(
             loading = false,
             lists = visible,
@@ -254,6 +268,8 @@ class HomeViewModel @Inject constructor(
             listWords = words ?: _state.value.listWords,
             selectedWordIds = if (clearSelection) emptySet() else _state.value.selectedWordIds,
             stats = stats ?: _state.value.stats,
+            learningLemmas = learningLemmas ?: _state.value.learningLemmas,
+            detailCard = syncDetailCard(words ?: _state.value.listWords, _state.value.detailCard),
         )
     }
 
@@ -277,7 +293,10 @@ class HomeViewModel @Inject constructor(
             runCatching { repository.getActiveProfile() }
                 .onSuccess { _state.value = _state.value.copy(activeProfile = it) }
             runCatching { repository.listProfiles() }
-                .onSuccess { _state.value = _state.value.copy(profiles = it) }
+                .onSuccess { profiles ->
+                    val counts = runCatching { repository.cardCountsByProfile() }.getOrDefault(emptyMap())
+                    _state.value = _state.value.copy(profiles = profiles, cardCounts = counts)
+                }
             loadStats()
             loadLists()
             pairSession.markDataReady()
@@ -305,13 +324,8 @@ class HomeViewModel @Inject constructor(
         _state.value = _state.value.copy(langMenuOpen = false)
         viewModelScope.launch {
             runCatching {
-                pairSession.withSwitch(awaitDataReload = true) {
-                    repository.switchToLangPair(
-                        appLang = profile.app_lang,
-                        learningLang = profile.learning_lang,
-                        cefr = profile.cefr_level,
-                    )
-                    runCatching { repository.syncNow(fullReplace = true) }
+                pairSession.withSwitch(awaitDataReload = false) {
+                    repository.activateLocalProfile(profile.id)
                 }
             }.onFailure {
                 _state.value = _state.value.copy(
@@ -333,6 +347,7 @@ class HomeViewModel @Inject constructor(
             pickListOpen = if (leavingAdd) false else _state.value.pickListOpen,
             showCreateListPrompt = if (leavingAdd) false else _state.value.showCreateListPrompt,
             createListName = if (leavingAdd) "" else _state.value.createListName,
+            detailCard = if (tab != HomeTab.LISTS) null else _state.value.detailCard,
         )
         when (tab) {
             HomeTab.DASHBOARD -> loadStats()
@@ -412,6 +427,7 @@ class HomeViewModel @Inject constructor(
             selectedListId = listId,
             selectedWordIds = emptySet(),
             listFilter = if (switching) ListFilterState() else _state.value.listFilter,
+            listQuery = if (switching) "" else _state.value.listQuery,
         )
         loadListWords(listId)
     }
@@ -422,6 +438,10 @@ class HomeViewModel @Inject constructor(
 
     fun setListFilter(filter: ListFilterState) {
         _state.value = _state.value.copy(listFilter = filter)
+    }
+
+    fun setListQuery(query: String) {
+        _state.value = _state.value.copy(listQuery = query)
     }
 
     fun clearListFilter() {
@@ -459,6 +479,7 @@ class HomeViewModel @Inject constructor(
             focusWordId = candidate.learning_card_id,
             focusLemma = candidate.lemma.takeIf { candidate.learning_card_id.isNullOrBlank() },
             listFilter = ListFilterState(),
+            listQuery = "",
             selectedWordIds = emptySet(),
             error = null,
         )
@@ -481,7 +502,14 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { repository.hydrateListIfEmpty(listId) }
                 .onSuccess { words ->
-                    _state.value = _state.value.copy(loading = false, listWords = words, error = null)
+                    val lemmas = runCatching { repository.learningLemmaSet() }.getOrNull()
+                    _state.value = _state.value.copy(
+                        loading = false,
+                        listWords = words,
+                        error = null,
+                        learningLemmas = lemmas ?: _state.value.learningLemmas,
+                        detailCard = syncDetailCard(words, _state.value.detailCard),
+                    )
                     startPollingIfNeeded()
                 }
                 .onFailure {
@@ -496,11 +524,17 @@ class HomeViewModel @Inject constructor(
             if (pendingInbox && networkMonitor.isCurrentlyOnline() &&
                 runCatching { repository.hasQueuedLookups() }.getOrDefault(false)
             ) {
-                runCatching { repository.flushPendingLookupsIfNeeded() }
-                runCatching { repository.cachedListWords(listId) }
-                    .onSuccess { words ->
-                        _state.value = _state.value.copy(listWords = words, error = null)
-                    }
+                _state.value = _state.value.copy(pendingLookupFlushInProgress = true)
+                try {
+                    runCatching { repository.flushPendingLookupsIfNeeded() }
+                    runCatching { repository.cachedListWords(listId) }
+                        .onSuccess { words ->
+                            _state.value = _state.value.copy(listWords = words, error = null)
+                        }
+                    loadLists(_state.value.selectedListId)
+                } finally {
+                    _state.value = _state.value.copy(pendingLookupFlushInProgress = false)
+                }
             }
         }
     }
@@ -654,6 +688,31 @@ class HomeViewModel @Inject constructor(
     fun openAddSheet(candidate: LookupCandidate) {
         if (candidate.onList || candidate.isCreating) return
         _state.value = _state.value.copy(addTarget = candidate, pickListOpen = false, showCreateListPrompt = false)
+    }
+
+    fun openCardDetail(card: CardResponse) {
+        _state.value = _state.value.copy(detailCard = card)
+        viewModelScope.launch {
+            val lemmas = runCatching { repository.learningLemmaSet() }.getOrNull() ?: return@launch
+            _state.value = _state.value.copy(
+                learningLemmas = lemmas + _state.value.learningLemmas,
+            )
+        }
+    }
+
+    fun dismissCardDetail() {
+        _state.value = _state.value.copy(detailCard = null)
+        if (_state.value.addTarget != null) dismissAddSheet()
+    }
+
+    fun openAddRelated(word: RelatedWord) {
+        if (word.lemma.isBlank()) return
+        if (_state.value.learningLemmas.containsLemma(word.lemma)) return
+        if (!networkMonitor.isCurrentlyOnline()) {
+            _state.value = _state.value.copy(error = strings.get(R.string.import_online_only))
+            return
+        }
+        openAddSheet(relatedWordToCandidate(word))
     }
 
     fun dismissAddSheet() {
@@ -1192,7 +1251,9 @@ class HomeViewModel @Inject constructor(
             enrichment_status = "pending",
         )
         val onCurrentList = listId == null || listId == _state.value.selectedListId
+        val addedKeys = if (isLearningListName(listName)) lemmaKeys(candidate.lemma) else emptySet()
         _state.value = _state.value.copy(
+            learningLemmas = _state.value.learningLemmas + addedKeys,
             candidates = _state.value.candidates.map {
                 if (sameLemmaAndPos(it.lemma, it.pos, candidate.lemma, candidate.pos)) {
                     it.copy(
@@ -1215,6 +1276,7 @@ class HomeViewModel @Inject constructor(
 
     private fun revertCreating(candidate: LookupCandidate) {
         _state.value = _state.value.copy(
+            learningLemmas = _state.value.learningLemmas - lemmaKeys(candidate.lemma),
             candidates = _state.value.candidates.map {
                 if (sameLemmaAndPos(it.lemma, it.pos, candidate.lemma, candidate.pos)) {
                     it.copy(
@@ -1239,7 +1301,9 @@ class HomeViewModel @Inject constructor(
         cardId: String,
         enrichmentStatus: String,
     ) {
+        val addedKeys = if (isLearningListName(listName)) lemmaKeys(candidate.lemma) else emptySet()
         _state.value = _state.value.copy(
+            learningLemmas = _state.value.learningLemmas + addedKeys,
             candidates = _state.value.candidates.map {
                 if (sameLemmaAndPos(it.lemma, it.pos, candidate.lemma, candidate.pos)) {
                     it.copy(
@@ -1267,8 +1331,12 @@ class HomeViewModel @Inject constructor(
      * w repo. Dzięki temu nie ma lawiny zapytań LLM ani duplikatów kart.
      */
     private fun startPollingIfNeeded() {
-        val pendingCandidates = _state.value.candidates.any { it.enrichment_status == "pending" }
-        val pendingWords = _state.value.listWords.any { it.enrichment_status == "pending" }
+        val pendingCandidates = _state.value.candidates.any {
+            it.enrichment_status == "pending" || it.enrichment_status == "preparing"
+        }
+        val pendingWords = _state.value.listWords.any {
+            it.enrichment_status == "pending" || it.enrichment_status == "preparing"
+        }
         val hasActivity = _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
         if (!pendingCandidates && !pendingWords && !hasActivity) {
             pollJob?.cancel()
@@ -1290,8 +1358,12 @@ class HomeViewModel @Inject constructor(
                         }
                 }
                 val stillPending =
-                    _state.value.candidates.any { it.enrichment_status == "pending" } ||
-                        _state.value.listWords.any { it.enrichment_status == "pending" } ||
+                    _state.value.candidates.any {
+                        it.enrichment_status == "pending" || it.enrichment_status == "preparing"
+                    } ||
+                        _state.value.listWords.any {
+                            it.enrichment_status == "pending" || it.enrichment_status == "preparing"
+                        } ||
                         _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
                 if (!stillPending) {
                     runCatching { repository.evaluateReadyBatches() }
@@ -1325,6 +1397,28 @@ class HomeViewModel @Inject constructor(
                 correctionCardId = cardId,
                 correctionQuotaRemaining = remaining,
             )
+        }
+    }
+
+    fun retryCardEnrichment(cardId: String) {
+        if (!networkMonitor.isCurrentlyOnline()) {
+            _state.value = _state.value.copy(error = strings.get(R.string.enrichment_retry_requires_online))
+            return
+        }
+        viewModelScope.launch {
+            runCatching { repository.retryCardEnrichment(cardId) }
+                .onSuccess { updated ->
+                    _state.value = _state.value.copy(
+                        listWords = _state.value.listWords.map { if (it.id == cardId) updated else it },
+                        error = null,
+                    )
+                    startPollingIfNeeded()
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(
+                        error = e.userMessage(strings, R.string.enrichment_retry_failed),
+                    )
+                }
         }
     }
 
@@ -1636,6 +1730,17 @@ internal fun sameLemmaAndPos(
 /** Ten sam lemat w innym POS to inna karta — nie zlewaj play/verb z play/noun. */
 internal fun candidateMatchesCard(candidate: LookupCandidate, card: CardResponse): Boolean {
     return sameLemmaAndPos(card.lemma_l2, card.pos, candidate.lemma, candidate.pos)
+}
+
+internal fun relatedWordToCandidate(word: RelatedWord) = LookupCandidate(
+    lemma = word.lemma,
+    pos = word.pos,
+    gloss = word.glossL1.orEmpty(),
+)
+
+private fun syncDetailCard(words: List<CardResponse>, opened: CardResponse?): CardResponse? {
+    if (opened == null) return null
+    return words.firstOrNull { it.id == opened.id } ?: opened
 }
 
 internal fun listNameConflictMessage(

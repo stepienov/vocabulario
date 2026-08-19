@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 from app.core.lemma_keys import cache_lookup_keys, canonical_lemma
 from app.services.card_jobs import (
+    _entry_has_paid_content,
     entry_compatible_with_card,
     lexical_lookup_variants,
     pick_ready_entry,
@@ -56,8 +57,39 @@ def _entry(pos: str, lemma: str = "play"):
         pos=pos,
         lemma_l2=lemma,
         lemma_l1_primary="x",
-        content={"pos": pos, "meanings": [{"gloss_l1": "x"}]},
+        content={
+            "pos": pos,
+            "schema_version": "vocabulario.adaptive.v1",
+            "meanings": [{"gloss_l1": "x", "examples": [{"l2": "ej", "l1": "pr"}]}],
+        },
     )
+
+
+def _incomplete_entry(pos: str = "verb", lemma: str = "tener que"):
+    return SimpleNamespace(
+        pos=pos,
+        lemma_l2=lemma,
+        lemma_l1_primary="musieć",
+        content={
+            "pos": pos,
+            "similar_words": [{"lemma": "a"}, {"lemma": "b"}, {"lemma": "c"}],
+            "conjugation": {"present": ["tengo"]},
+        },
+    )
+
+
+def test_entry_has_paid_content_rejects_similar_words_without_meanings():
+    assert not _entry_has_paid_content(_incomplete_entry())
+
+
+def test_entry_has_paid_content_accepts_complete_adaptive():
+    assert _entry_has_paid_content(_entry("verb"))
+
+
+def test_pick_ready_entry_skips_incomplete_rows():
+    broken = _incomplete_entry()
+    assert pick_ready_entry([broken], "verb") is None
+    assert pick_ready_entry([broken, _entry("verb", "tener que")], "verb") is not None
 
 
 def test_pick_ready_entry_does_not_return_other_pos():

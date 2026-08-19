@@ -42,6 +42,20 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  ar:
+    nastoyashchee: المضارع
+    proshedshee: الماضي
+    budushchee: المستقبل
+    povelitelnoe: الأمر
+    infinitiv: المصدر
+    deeprichastie: اسم الفاعل الظرفي
+  de:
+    nastoyashchee: Präsens
+    proshedshee: Präteritum
+    budushchee: Futur
+    povelitelnoe: Imperativ
+    infinitiv: Infinitiv
+    deeprichastie: Adverbialpartizip
   en:
     nastoyashchee: Present
     proshedshee: Past
@@ -49,13 +63,48 @@ ui_labels:
     povelitelnoe: Imperative
     infinitiv: Infinitive
     deeprichastie: Adverbial participle
-  ru:
-    nastoyashchee: Настоящее
-    proshedshee: Прошедшее
-    budushchee: Будущее
-    povelitelnoe: Повелительное
-    infinitiv: Инфинитив
-    deeprichastie: Деепричастие
+  es:
+    nastoyashchee: Presente
+    proshedshee: Pasado
+    budushchee: Futuro
+    povelitelnoe: Imperativo
+    infinitiv: Infinitivo
+    deeprichastie: Gerundio adverbial
+  fr:
+    nastoyashchee: Présent
+    proshedshee: Passé
+    budushchee: Futur
+    povelitelnoe: Impératif
+    infinitiv: Infinitif
+    deeprichastie: Gérondif
+  hi:
+    nastoyashchee: वर्तमान
+    proshedshee: भूत
+    budushchee: भविष्य
+    povelitelnoe: आज्ञार्थ
+    infinitiv: मूलधातु
+    deeprichastie: क्रियान्वेषी कृदंत
+  it:
+    nastoyashchee: Presente
+    proshedshee: Passato
+    budushchee: Futuro
+    povelitelnoe: Imperativo
+    infinitiv: Infinito
+    deeprichastie: Gerundio
+  ja:
+    nastoyashchee: 現在
+    proshedshee: 過去
+    budushchee: 未来
+    povelitelnoe: 命令形
+    infinitiv: 不定詞
+    deeprichastie: 副動詞
+  ko:
+    nastoyashchee: 현재
+    proshedshee: 과거
+    budushchee: 미래
+    povelitelnoe: 명령
+    infinitiv: 부정사
+    deeprichastie: 부동사
   pl:
     nastoyashchee: Czas teraźniejszy
     proshedshee: Czas przeszły
@@ -63,3 +112,45 @@ ui_labels:
     povelitelnoe: Tryb rozkazujący
     infinitiv: Bezokolicznik
     deeprichastie: Imiesłów przysłówkowy
+  pt-br:
+    nastoyashchee: Presente
+    proshedshee: Passado
+    budushchee: Futuro
+    povelitelnoe: Imperativo
+    infinitiv: Infinitivo
+    deeprichastie: Gerúndio adverbial
+  pt-pt:
+    nastoyashchee: Presente
+    proshedshee: Passado
+    budushchee: Futuro
+    povelitelnoe: Imperativo
+    infinitiv: Infinitivo
+    deeprichastie: Gerúndio adverbial
+  ru:
+    nastoyashchee: Настоящее
+    proshedshee: Прошедшее
+    budushchee: Будущее
+    povelitelnoe: Повелительное
+    infinitiv: Инфинитив
+    deeprichastie: Деепричастие
+  tr:
+    nastoyashchee: Şimdiki zaman
+    proshedshee: Geçmiş zaman
+    budushchee: Gelecek zaman
+    povelitelnoe: Emir kipi
+    infinitiv: Mastar
+    deeprichastie: Zarf-fiil
+  vi:
+    nastoyashchee: Hiện tại
+    proshedshee: Quá khứ
+    budushchee: Tương lai
+    povelitelnoe: Mệnh lệnh
+    infinitiv: Nguyên mẫu
+    deeprichastie: Phân từ trạng ngữ
+  zh:
+    nastoyashchee: 现在
+    proshedshee: 过去
+    budushchee: 将来
+    povelitelnoe: 祈使
+    infinitiv: 不定式
+    deeprichastie: 副动词

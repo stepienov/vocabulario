@@ -154,6 +154,12 @@ interface VocabularioApi {
         @Query("profile_id") profileId: String,
     ): retrofit2.Response<Unit>
 
+    @POST("cards/{card_id}/retry-enrichment")
+    suspend fun retryCardEnrichment(
+        @Path("card_id") cardId: String,
+        @Query("profile_id") profileId: String,
+    ): CardResponse
+
     @DELETE("cards/{card_id}")
     suspend fun deleteCard(
         @Path("card_id") cardId: String,

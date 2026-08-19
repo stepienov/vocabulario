@@ -19,6 +19,7 @@
     <string name="list_words_meta">%1$d parole</string>
 
     <string name="list_filter_empty">Nessuna parola corrisponde ai filtri</string>
+    <string name="list_search_hint">Cerca nell\'elenco…</string>
 
     <string name="sort_title">Ordina</string>
 
@@ -102,10 +103,8 @@
     <string name="auth_or_continue">Oppure continua con e-mail</string>
 
         <string name="auth_email">E-mail</string>
-    <string name="auth_password">Password</string>
-
-
-    <string name="auth_have_account">Ho già un account</string>
+        <string name="auth_password">Password</string>
+<string name="auth_have_account">Ho già un account</string>
 
     <string name="onboarding_app_setup">Configurazione dell\'app</string>
 
@@ -338,7 +337,7 @@
 
     <string name="import_empty_hint">Digita una parola o importa un elenco (CSV/TXT/apkg)</string>
 
-        <string name="import_file_label">File: \'%1$s\'</string>
+            <string name="import_file_label">File: \'%1$s\'</string>
 <!-- TODO: translate import UI strings -->
     <string name="import_start_title">Importa flashcard</string>
     <string name="import_pick_list">Lista di destinazione</string>
@@ -392,7 +391,7 @@
 
     <string name="section_synonyms">SINONIMI</string>
 
-    <string name="section_syn_ant">SINONIMI &amp;amp; ANTONIMI</string>
+    <string name="section_syn_ant">SINONIMI E CONTRARI</string>
 
     <string name="section_antonyms">ANTONIMI</string>
 
@@ -425,12 +424,17 @@
     <string name="home_empty_title">Non hai ancora parole</string>
     <string name="home_empty_body">Cerca una parola o importa un elenco.</string>
     <string name="home_add_first">Aggiungi le prime parole</string>
-    <string name="home_caught_up">Niente in attesa oggi</string>
+    <string name="home_caught_up">Sei in pari</string>
     <string name="home_next_review">Prossima ripetizione: %1$s</string>
     <string name="home_change_limit">Cambia limite</string>
+    <string name="home_relative_in_minutes">tra %1$d min</string>
+    <string name="home_relative_in_one_hour">tra 1 ora</string>
+    <string name="home_relative_in_hours">tra %1$d ore</string>
     <string name="home_relative_tomorrow">domani</string>
     <string name="home_relative_day_after">dopodomani</string>
     <string name="home_in_days">tra %1$d giorni</string>
+    <string name="home_in_weeks">tra %1$d settimane</string>
+    <string name="home_in_months">tra %1$d mesi</string>
     <string name="weekday_full_mon">lunedì</string>
     <string name="weekday_full_tue">martedì</string>
     <string name="weekday_full_wed">mercoledì</string>
@@ -702,9 +706,9 @@
 
     <string name="correction_fix_card">Segnala una correzione</string>
 
-    <string name="correction_report_title">Segnala un problema</string>
+    <string name="correction_report_title">Controlla e correggi la scheda</string>
 
-        <string name="correction_section_lemma">Lemma</string>
+            <string name="correction_section_lemma">Lemma</string>
 <string name="correction_section_pos">Parte del discorso</string>
 
     <string name="correction_section_gloss">Glossario principale</string>
@@ -727,22 +731,22 @@
 
     <string name="correction_validation">Seleziona almeno una sezione o scrivi una nota (min. 3 caratteri).</string>
 
-    <string name="correction_submit">Invia segnalazione</string>
+    <string name="correction_submit">Invia per verifica</string>
 
     <string name="correction_requires_online">Richiede connessione a Internet.</string>
 
-    <string name="correction_result_accepted_title">Segnalazione accettata — scheda aggiornata.</string>
+    <string name="correction_result_accepted_title">Segnalazione accettata</string>
 
-    <string name="correction_result_rejected_title">Segnalazione non accettata.</string>
+    <string name="correction_result_rejected_title">Segnalazione non accettata</string>
 
-    <string name="correction_result_rejected_body">Puoi modificare la scheda tu stesso — a tuo rischio. Questo crea una copia privata.</string>
+    <string name="correction_result_rejected_body">Scheda «%1$s». %2$s</string>
 
     <string name="correction_edit_self">Modifica</string>
     <string name="correction_history_button">Cronologia modifiche</string>
 
     <string name="correction_self_edit_title">Modifica scheda</string>
 
-        <string name="correction_field_lemma">Lemma</string>
+            <string name="correction_field_lemma">Lemma</string>
 <string name="correction_field_pos">Parte del discorso</string>
 
     <string name="correction_field_gloss">Glossario principale</string>
@@ -880,5 +884,10 @@
     <string name="err_offline_card">Questa carta non è disponibile offline</string>
     <string name="err_no_inbox">Impossibile aprire la lista in attesa</string>
     <string name="err_email_taken">Questa e-mail è già registrata</string>
+
+    <string name="status_prep_problem">problema di preparazione</string>
+    <string name="cd_retry_enrichment">Riprova preparazione</string>
+    <string name="enrichment_retry_requires_online">Connessione internet richiesta.</string>
+    <string name="enrichment_retry_failed">Impossibile riprovare la preparazione.</string>
 
 </resources>

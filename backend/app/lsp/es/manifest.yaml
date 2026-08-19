@@ -51,6 +51,40 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  ar:
+    presente: المضارع
+    preterito_perfecto: الماضي التام
+    preterito_indefinido: الماضي البسيط
+    preterito_imperfecto: الماضي المستمر
+    futuro_simple: المستقبل
+    condicional_simple: الشرط
+    presente_subjuntivo: الشرط الحاضر
+    imperfecto_subjuntivo: الشرط الماضي
+    futuro_subjuntivo: الشرط المستقبل
+    preterito_pluscuamperfecto: الماضي الأسبق
+    condicional_compuesto: الشرط المركب
+    futuro_perfecto: المستقبل التام
+    imperativo_afirmativo: الأمر
+    imperativo_negativo: الأمر
+    gerundio: المصدر الحالي
+    participio: اسم المفعول
+  de:
+    presente: Präsens
+    preterito_perfecto: Perfekt
+    preterito_indefinido: Indefinido
+    preterito_imperfecto: Imperfekt
+    futuro_simple: Futur
+    condicional_simple: Konditional
+    presente_subjuntivo: Konjunktiv Präsens
+    imperfecto_subjuntivo: Konjunktiv Imperfekt
+    futuro_subjuntivo: Konjunktiv Futur
+    preterito_pluscuamperfecto: Plusquamperfekt
+    condicional_compuesto: Konditional II
+    futuro_perfecto: Futur II
+    imperativo_afirmativo: Imperativ
+    imperativo_negativo: Verneinter Imperativ
+    gerundio: Gerundium
+    participio: Partizip
   en:
     presente: Present
     preterito_perfecto: Present perfect
@@ -85,6 +119,91 @@ ui_labels:
     imperativo_negativo: Imperativo negativo
     gerundio: Gerundio
     participio: Participio
+  fr:
+    presente: Présent
+    preterito_perfecto: Passé composé
+    preterito_indefinido: Passé simple
+    preterito_imperfecto: Imparfait
+    futuro_simple: Futur
+    condicional_simple: Conditionnel
+    presente_subjuntivo: Subjonctif présent
+    imperfecto_subjuntivo: Subjonctif imparfait
+    futuro_subjuntivo: Subjonctif futur
+    preterito_pluscuamperfecto: Plus-que-parfait
+    condicional_compuesto: Conditionnel passé
+    futuro_perfecto: Futur antérieur
+    imperativo_afirmativo: Impératif
+    imperativo_negativo: Impératif négatif
+    gerundio: Gérondif
+    participio: Participe
+  hi:
+    presente: वर्तमान
+    preterito_perfecto: पूर्ण वर्तमान
+    preterito_indefinido: सामान्य भूत
+    preterito_imperfecto: अपूर्ण भूत
+    futuro_simple: भविष्य
+    condicional_simple: संभाव्य
+    presente_subjuntivo: संभाव्य वर्तमान
+    imperfecto_subjuntivo: अपूर्ण संभाव्य
+    futuro_subjuntivo: भविष्य संभाव्य
+    preterito_pluscuamperfecto: पूर्ण भूत पूर्व
+    condicional_compuesto: संभाव्य पूर्ण
+    futuro_perfecto: पूर्ण भविष्य
+    imperativo_afirmativo: आज्ञार्थ
+    imperativo_negativo: आज्ञार्थ
+    gerundio: क्रियार्थक संज्ञा
+    participio: कृदंत
+  it:
+    presente: Presente
+    preterito_perfecto: Passato prossimo
+    preterito_indefinido: Passato remoto
+    preterito_imperfecto: Imperfetto
+    futuro_simple: Futuro
+    condicional_simple: Condizionale
+    presente_subjuntivo: Congiuntivo presente
+    imperfecto_subjuntivo: Congiuntivo imperfetto
+    futuro_subjuntivo: Congiuntivo futuro
+    preterito_pluscuamperfecto: Trapassato prossimo
+    condicional_compuesto: Condizionale composto
+    futuro_perfecto: Futuro anteriore
+    imperativo_afirmativo: Imperativo
+    imperativo_negativo: Imperativo negativo
+    gerundio: Gerundio
+    participio: Participio
+  ja:
+    presente: 現在
+    preterito_perfecto: 現在完了
+    preterito_indefinido: 不定過去
+    preterito_imperfecto: 未完了過去
+    futuro_simple: 未来
+    condicional_simple: 条件法
+    presente_subjuntivo: 接続法現在
+    imperfecto_subjuntivo: 接続法半過去
+    futuro_subjuntivo: 接続法未来
+    preterito_pluscuamperfecto: 大過去
+    condicional_compuesto: 複合条件法
+    futuro_perfecto: 未来完了
+    imperativo_afirmativo: 命令形
+    imperativo_negativo: 命令形
+    gerundio: 動名詞
+    participio: 分詞
+  ko:
+    presente: 현재
+    preterito_perfecto: 현재완료
+    preterito_indefinido: 단순 과거
+    preterito_imperfecto: 미완료 과거
+    futuro_simple: 미래
+    condicional_simple: 조건법
+    presente_subjuntivo: 접속법 현재
+    imperfecto_subjuntivo: 접속법 미완료
+    futuro_subjuntivo: 접속법 미래
+    preterito_pluscuamperfecto: 대과거
+    condicional_compuesto: 복합 조건법
+    futuro_perfecto: 미래완료
+    imperativo_afirmativo: 명령
+    imperativo_negativo: 명령
+    gerundio: 동명사
+    participio: 분사
   pl:
     presente: Czas teraźniejszy
     preterito_perfecto: Pretérito perfecto
@@ -102,3 +221,105 @@ ui_labels:
     imperativo_negativo: Tryb rozkazujący (przeczący)
     gerundio: Gerundium
     participio: Imiesłów
+  pt-br:
+    presente: Presente
+    preterito_perfecto: Pretérito perfeito composto
+    preterito_indefinido: Pretérito perfeito
+    preterito_imperfecto: Pretérito imperfeito
+    futuro_simple: Futuro
+    condicional_simple: Condicional
+    presente_subjuntivo: Subjuntivo presente
+    imperfecto_subjuntivo: Subjuntivo imperfeito
+    futuro_subjuntivo: Subjuntivo futuro
+    preterito_pluscuamperfecto: Mais-que-perfeito
+    condicional_compuesto: Condicional composto
+    futuro_perfecto: Futuro perfeito
+    imperativo_afirmativo: Imperativo
+    imperativo_negativo: Imperativo negativo
+    gerundio: Gerúndio
+    participio: Particípio
+  pt-pt:
+    presente: Presente
+    preterito_perfecto: Pretérito perfeito composto
+    preterito_indefinido: Pretérito perfeito
+    preterito_imperfecto: Pretérito imperfeito
+    futuro_simple: Futuro
+    condicional_simple: Condicional
+    presente_subjuntivo: Conjuntivo presente
+    imperfecto_subjuntivo: Conjuntivo imperfeito
+    futuro_subjuntivo: Conjuntivo futuro
+    preterito_pluscuamperfecto: Mais-que-perfeito
+    condicional_compuesto: Condicional composto
+    futuro_perfecto: Futuro perfeito
+    imperativo_afirmativo: Imperativo
+    imperativo_negativo: Imperativo negativo
+    gerundio: Gerúndio
+    participio: Particípio
+  ru:
+    presente: Настоящее
+    preterito_perfecto: Перфект
+    preterito_indefinido: Прошедшее простое
+    preterito_imperfecto: Имперфект
+    futuro_simple: Будущее
+    condicional_simple: Условное
+    presente_subjuntivo: Сослагательное настоящее
+    imperfecto_subjuntivo: Сослагательное имперфект
+    futuro_subjuntivo: Сослагательное будущее
+    preterito_pluscuamperfecto: Предпрошедшее
+    condicional_compuesto: Сложное условное
+    futuro_perfecto: Будущее совершенное
+    imperativo_afirmativo: Повелительное
+    imperativo_negativo: Отрицательное повелительное
+    gerundio: Герундий
+    participio: Причастие
+  tr:
+    presente: Şimdiki zaman
+    preterito_perfecto: Yakın geçmiş
+    preterito_indefinido: Belirli geçmiş
+    preterito_imperfecto: Hikâye geçmiş
+    futuro_simple: Gelecek zaman
+    condicional_simple: Koşul kipi
+    presente_subjuntivo: Dilek kipi şimdiki
+    imperfecto_subjuntivo: Dilek kipi geçmiş
+    futuro_subjuntivo: Dilek kipi gelecek
+    preterito_pluscuamperfecto: Miş’li geçmiş
+    condicional_compuesto: Bileşik koşul
+    futuro_perfecto: Gelecek zamanın hikâyesi
+    imperativo_afirmativo: Emir kipi
+    imperativo_negativo: Emir kipi
+    gerundio: Ulaç
+    participio: Ortaç
+  vi:
+    presente: Hiện tại
+    preterito_perfecto: Hiện tại hoàn thành
+    preterito_indefinido: Quá khứ đơn
+    preterito_imperfecto: Quá khứ chưa hoàn thành
+    futuro_simple: Tương lai
+    condicional_simple: Điều kiện
+    presente_subjuntivo: Giả định hiện tại
+    imperfecto_subjuntivo: Giả định quá khứ
+    futuro_subjuntivo: Giả định tương lai
+    preterito_pluscuamperfecto: Quá khứ hoàn thành xa
+    condicional_compuesto: Điều kiện kép
+    futuro_perfecto: Tương lai hoàn thành
+    imperativo_afirmativo: Mệnh lệnh
+    imperativo_negativo: Mệnh lệnh
+    gerundio: Danh động từ
+    participio: Phân từ
+  zh:
+    presente: 现在
+    preterito_perfecto: 现在完成
+    preterito_indefinido: 简单过去
+    preterito_imperfecto: 过去未完成
+    futuro_simple: 将来
+    condicional_simple: 条件式
+    presente_subjuntivo: 虚拟式现在
+    imperfecto_subjuntivo: 虚拟式过去
+    futuro_subjuntivo: 虚拟式将来
+    preterito_pluscuamperfecto: 过去完成
+    condicional_compuesto: 复合条件式
+    futuro_perfecto: 将来完成
+    imperativo_afirmativo: 祈使
+    imperativo_negativo: 否定祈使
+    gerundio: 动名词
+    participio: 分词

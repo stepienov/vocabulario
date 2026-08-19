@@ -12,6 +12,7 @@
     <string name="action_apply">लागू करें</string>
     <string name="list_words_meta">%1$d शब्द</string>
     <string name="list_filter_empty">फ़िल्टर से कोई शब्द मेल नहीं खाता</string>
+    <string name="list_search_hint">सूची में खोजें…</string>
     <string name="sort_title">क्रम</string>
 <string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
@@ -396,12 +397,17 @@
     <string name="home_empty_title">अभी कोई शब्द नहीं है</string>
     <string name="home_empty_body">कोई शब्द खोजें या सूची आयात करें।</string>
     <string name="home_add_first">पहले शब्द जोड़ें</string>
-    <string name="home_caught_up">आज कुछ बाकी नहीं</string>
+    <string name="home_caught_up">आप अप-टू-डेट हैं</string>
     <string name="home_next_review">अगली दोहराई: %1$s</string>
     <string name="home_change_limit">सीमा बदलें</string>
+    <string name="home_relative_in_minutes">%1$d मिनट में</string>
+    <string name="home_relative_in_one_hour">1 घंटे में</string>
+    <string name="home_relative_in_hours">%1$d घंटे में</string>
     <string name="home_relative_tomorrow">कल</string>
     <string name="home_relative_day_after">परसों</string>
     <string name="home_in_days">%1$d दिन में</string>
+    <string name="home_in_weeks">%1$d सप्ताह में</string>
+    <string name="home_in_months">%1$d महीने में</string>
     <string name="weekday_full_mon">सोमवार</string>
     <string name="weekday_full_tue">मंगलवार</string>
     <string name="weekday_full_wed">बुधवार</string>
@@ -659,7 +665,7 @@
     <string name="practice_well_done">बहुत बढ़िया!</string>
     <string name="cd_search">खोजें</string>
     <string name="correction_fix_card">सुधार रिपोर्ट करें</string>
-<string name="correction_report_title">Report a problem</string>
+<string name="correction_report_title">कार्ड जाँचें और ठीक करें</string>
         <string name="correction_section_lemma">मूल रूप</string>
     <string name="correction_section_pos">शब्द भेद</string>
     <string name="correction_section_gloss">मुख्य अनुवाद</string>
@@ -672,11 +678,11 @@
     <string name="correction_note_label">नोट</string>
     <string name="correction_note_hint">गलती बताएँ…</string>
     <string name="correction_validation">कम से कम एक अनुभाग चुनें या नोट लिखें (न्यूनतम 3 अक्षर)।</string>
-<string name="correction_submit">Submit report</string>
+<string name="correction_submit">सत्यापन के लिए भेजें</string>
         <string name="correction_requires_online">इंटरनेट कनेक्शन चाहिए।</string>
-<string name="correction_result_accepted_title">Report accepted — card updated.</string>
-    <string name="correction_result_rejected_title">Report not accepted.</string>
-    <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
+<string name="correction_result_accepted_title">रिपोर्ट स्वीकृत</string>
+    <string name="correction_result_rejected_title">रिपोर्ट स्वीकृत नहीं हुई</string>
+    <string name="correction_result_rejected_body">कार्ड «%1$s». %2$s</string>
         <string name="correction_edit_self">संपादित करें</string>
         <string name="correction_history_button">परिवर्तन इतिहास</string>
     <string name="correction_self_edit_title">कार्ड संपादित करें</string>
@@ -796,6 +802,11 @@
     <string name="err_offline_card">यह कार्ड ऑफ़लाइन उपलब्ध नहीं है</string>
     <string name="err_no_inbox">लंबित सूची नहीं खोली जा सकी</string>
     <string name="err_email_taken">यह ईमेल पहले से पंजीकृत है</string>
+
+    <string name="status_prep_problem">तैयारी में समस्या</string>
+    <string name="cd_retry_enrichment">तैयारी फिर से करें</string>
+    <string name="enrichment_retry_requires_online">इंटरनेट कनेक्शन आवश्यक है।</string>
+    <string name="enrichment_retry_failed">तैयारी दोबारा नहीं हो सकी।</string>
 
 </resources>
 

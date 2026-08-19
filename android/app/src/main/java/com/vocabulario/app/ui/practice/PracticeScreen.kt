@@ -55,7 +55,6 @@ import com.vocabulario.app.ui.card.CardSelfEditWarningDialog
 import com.vocabulario.app.ui.card.CorrectionActivityColor
 import com.vocabulario.app.ui.card.cardActivityStatusLabel
 import com.vocabulario.app.ui.TestTags
-import com.vocabulario.app.data.containsLemma
 import com.vocabulario.app.data.langDisplayName
 import com.vocabulario.app.ui.card.FlashcardBackContent
 import com.vocabulario.app.ui.components.ImportDisplayFlip
@@ -253,11 +252,11 @@ fun PracticeScreen(
                                                     ?: if (direction == "l2_to_l1") choice.text else null
                                                 val displayText = if (disabled) tileLemma else choice.text
                                                 val displayGloss = if (disabled) tileGloss else null
-                                                val addLemma = choice.lemma_l2?.trim().orEmpty()
-                                                val showAdd = disabled &&
-                                                    addLemma.isNotEmpty() &&
-                                                    !choice.in_learning &&
-                                                    !state.learningLemmas.containsLemma(addLemma)
+                                                val addLemma = choice.quizAddLemma()
+                                                val showAdd = choice.showQuizAdd(
+                                                    revealedWrong = disabled,
+                                                    learningLemmas = state.learningLemmas,
+                                                )
                                                 ChoiceTile(
                                                     text = displayText,
                                                     selected = false,
@@ -266,7 +265,7 @@ fun PracticeScreen(
                                                     dimmed = disabled,
                                                     gloss = displayGloss,
                                                     showActions = disabled,
-                                                    onAddLearning = if (showAdd) {
+                                                    onAddLearning = if (showAdd && addLemma != null) {
                                                         { viewModel.openAddWrongChoice(choice) }
                                                     } else {
                                                         null

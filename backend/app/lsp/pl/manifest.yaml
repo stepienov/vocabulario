@@ -125,6 +125,24 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  ar:
+    czas_terazniejszy: المضارع
+    czas_przeszly: الماضي
+    czas_przyszly: المستقبل
+    tryb_rozkazujacy: الأمر
+    tryb_przypuszczajacy: الشرط
+    bezokolicznik: المصدر
+    imieslow_przeszly: اسم المفعول
+    imieslow_przyszly: اسم الفاعل المستقبلي
+  de:
+    czas_terazniejszy: Präsens
+    czas_przeszly: Präteritum
+    czas_przyszly: Futur
+    tryb_rozkazujacy: Imperativ
+    tryb_przypuszczajacy: Konditional
+    bezokolicznik: Infinitiv
+    imieslow_przeszly: Partizip Perfekt
+    imieslow_przyszly: Partizip Futur
   en:
     czas_terazniejszy: Present tense
     czas_przeszly: Past tense
@@ -134,6 +152,60 @@ ui_labels:
     bezokolicznik: Infinitive
     imieslow_przeszly: Past participle
     imieslow_przyszly: Future participle
+  es:
+    czas_terazniejszy: Presente
+    czas_przeszly: Pasado
+    czas_przyszly: Futuro
+    tryb_rozkazujacy: Imperativo
+    tryb_przypuszczajacy: Condicional
+    bezokolicznik: Infinitivo
+    imieslow_przeszly: Participio pasado
+    imieslow_przyszly: Participio futuro
+  fr:
+    czas_terazniejszy: Présent
+    czas_przeszly: Passé
+    czas_przyszly: Futur
+    tryb_rozkazujacy: Impératif
+    tryb_przypuszczajacy: Conditionnel
+    bezokolicznik: Infinitif
+    imieslow_przeszly: Participe passé
+    imieslow_przyszly: Participe futur
+  hi:
+    czas_terazniejszy: वर्तमान
+    czas_przeszly: भूत
+    czas_przyszly: भविष्य
+    tryb_rozkazujacy: आज्ञार्थ
+    tryb_przypuszczajacy: संभाव्य
+    bezokolicznik: मूलधातु
+    imieslow_przeszly: भूतकालिक कृदंत
+    imieslow_przyszly: भविष्यकालिक कृदंत
+  it:
+    czas_terazniejszy: Presente
+    czas_przeszly: Passato
+    czas_przyszly: Futuro
+    tryb_rozkazujacy: Imperativo
+    tryb_przypuszczajacy: Condizionale
+    bezokolicznik: Infinito
+    imieslow_przeszly: Participio passato
+    imieslow_przyszly: Participio futuro
+  ja:
+    czas_terazniejszy: 現在
+    czas_przeszly: 過去
+    czas_przyszly: 未来
+    tryb_rozkazujacy: 命令形
+    tryb_przypuszczajacy: 仮定法
+    bezokolicznik: 不定詞
+    imieslow_przeszly: 過去分詞
+    imieslow_przyszly: 未来分詞
+  ko:
+    czas_terazniejszy: 현재
+    czas_przeszly: 과거
+    czas_przyszly: 미래
+    tryb_rozkazujacy: 명령
+    tryb_przypuszczajacy: 가정법
+    bezokolicznik: 부정사
+    imieslow_przeszly: 과거분사
+    imieslow_przyszly: 미래분사
   pl:
     czas_terazniejszy: Czas teraźniejszy
     czas_przeszly: Czas przeszły
@@ -143,3 +215,57 @@ ui_labels:
     bezokolicznik: Bezokolicznik
     imieslow_przeszly: Imiesłów przeszły
     imieslow_przyszly: Imiesłów przyszły
+  pt-br:
+    czas_terazniejszy: Presente
+    czas_przeszly: Passado
+    czas_przyszly: Futuro
+    tryb_rozkazujacy: Imperativo
+    tryb_przypuszczajacy: Condicional
+    bezokolicznik: Infinitivo
+    imieslow_przeszly: Particípio passado
+    imieslow_przyszly: Particípio futuro
+  pt-pt:
+    czas_terazniejszy: Presente
+    czas_przeszly: Passado
+    czas_przyszly: Futuro
+    tryb_rozkazujacy: Imperativo
+    tryb_przypuszczajacy: Condicional
+    bezokolicznik: Infinitivo
+    imieslow_przeszly: Particípio passado
+    imieslow_przyszly: Particípio futuro
+  ru:
+    czas_terazniejszy: Настоящее
+    czas_przeszly: Прошедшее
+    czas_przyszly: Будущее
+    tryb_rozkazujacy: Повелительное
+    tryb_przypuszczajacy: Сослагательное
+    bezokolicznik: Инфинитив
+    imieslow_przeszly: Причастие прошедшего
+    imieslow_przyszly: Причастие будущего
+  tr:
+    czas_terazniejszy: Şimdiki zaman
+    czas_przeszly: Geçmiş zaman
+    czas_przyszly: Gelecek zaman
+    tryb_rozkazujacy: Emir kipi
+    tryb_przypuszczajacy: Dilek-şart
+    bezokolicznik: Mastar
+    imieslow_przeszly: Geçmiş zaman ortacı
+    imieslow_przyszly: Gelecek zaman ortacı
+  vi:
+    czas_terazniejszy: Hiện tại
+    czas_przeszly: Quá khứ
+    czas_przyszly: Tương lai
+    tryb_rozkazujacy: Mệnh lệnh
+    tryb_przypuszczajacy: Điều kiện
+    bezokolicznik: Nguyên mẫu
+    imieslow_przeszly: Quá khứ phân từ
+    imieslow_przyszly: Tương lai phân từ
+  zh:
+    czas_terazniejszy: 现在
+    czas_przeszly: 过去
+    czas_przyszly: 将来
+    tryb_rozkazujacy: 祈使
+    tryb_przypuszczajacy: 条件式
+    bezokolicznik: 不定式
+    imieslow_przeszly: 过去分词
+    imieslow_przyszly: 将来分词

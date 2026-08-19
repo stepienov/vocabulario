@@ -71,6 +71,7 @@ from app.services.card_jobs import (
     build_pending_content,
     content_is_complete,
     hydrate_from_lexical_cache,
+    request_manual_enrichment_retry,
     spawn_enrich,
 )
 from app.services.distractors import generate_choice_options
@@ -955,6 +956,44 @@ async def delete_list(
         card.deleted_at = now
     wl.deleted_at = now
     await db.commit()
+
+
+@router.post("/cards/{card_id}/retry-enrichment", response_model=CardResponse)
+async def retry_card_enrichment(
+    card_id: UUID,
+    profile_id: UUID = Query(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Ręczne ponowienie enrichmentu (max 3×) gdy status=prep_problem."""
+    profile = await _active_profile(db, user.id, profile_id)
+    result = await db.execute(
+        select(LearningCard).where(
+            LearningCard.id == card_id,
+            LearningCard.user_id == user.id,
+            LearningCard.profile_id == profile.id,
+            LearningCard.deleted_at.is_(None),
+        )
+    )
+    card = result.scalar_one_or_none()
+    if card is None:
+        raise api_error(404, "card_not_found", "Card not found")
+    try:
+        await request_manual_enrichment_retry(db, card)
+    except ValueError as exc:
+        code = str(exc)
+        if code == "manual_retries_exhausted":
+            raise api_error(
+                409,
+                "manual_retries_exhausted",
+                "Maximum manual enrichment retries reached",
+            ) from exc
+        if code == "card_enrichment_failed":
+            raise api_error(409, "card_enrichment_failed", "Card enrichment failed permanently") from exc
+        raise api_error(409, "card_not_retryable", "Card is not awaiting enrichment retry") from exc
+    await db.commit()
+    await db.refresh(card)
+    return card
 
 
 @router.delete("/cards/{card_id}", status_code=204)

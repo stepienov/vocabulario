@@ -302,6 +302,18 @@ _STATEMENTS = (
     "CREATE UNIQUE INDEX IF NOT EXISTS uq_learning_cards_live_lemma_pos "
     "ON learning_cards (user_id, profile_id, lower(lemma_l2), lower(COALESCE(pos, ''))) "
     "WHERE deleted_at IS NULL",
+    "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS "
+    "enrichment_retry_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS "
+    "enrichment_retry_at TIMESTAMPTZ",
+    "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS "
+    "enrichment_auto_retry_used BOOLEAN NOT NULL DEFAULT false",
+    "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS "
+    "enrichment_manual_triggered BOOLEAN NOT NULL DEFAULT false",
+    "ALTER TABLE learning_cards ALTER COLUMN enrichment_status TYPE VARCHAR(32)",
+    "CREATE INDEX IF NOT EXISTS ix_learning_cards_enrichment_retry_at "
+    "ON learning_cards (enrichment_retry_at) "
+    "WHERE enrichment_status = 'preparing'",
 )
 
 

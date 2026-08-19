@@ -12,6 +12,7 @@
     <string name="action_apply">Zastosuj</string>
     <string name="list_words_meta">%1$d słów</string>
     <string name="list_filter_empty">Brak słów pasujących do filtrów</string>
+    <string name="list_search_hint">Szukaj na liście…</string>
     <string name="sort_title">Sortowanie</string>
     <string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
@@ -238,6 +239,7 @@
     <string name="offline_lookup_queued">Dodano do "Oczekujące" — lookup po powrocie sieci.</string>
     <string name="offline_lookup_duplicate">To słowo już czeka na liście "Oczekujące".</string>
     <string name="status_awaiting_network">Czeka na sieć</string>
+    <string name="status_lookup_queued">W kolejce</string>
     <string name="status_needs_review">Wymaga sprawdzenia</string>
 
     <string name="review_title">Słowo wymaga sprawdzenia</string>
@@ -377,7 +379,7 @@
 
     <string name="section_syn_ant">SYNONIMY I PRZECIWIEŃSTWA</string>
 
-    <string name="section_antonyms">ANTONIMY</string>
+    <string name="section_antonyms">PRZECIWIEŃSTWA</string>
 
     <string name="section_antonyms_title">Przeciwieństwa</string>
 
@@ -408,12 +410,17 @@
     <string name="home_empty_title">Nie masz jeszcze słówek</string>
     <string name="home_empty_body">Wyszukaj słowo albo zaimportuj listę.</string>
     <string name="home_add_first">Dodaj pierwsze słówka</string>
-    <string name="home_caught_up">Nic nie czeka na dziś</string>
+    <string name="home_caught_up">Jesteś na bieżąco</string>
     <string name="home_next_review">Następna powtórka: %1$s</string>
     <string name="home_change_limit">Zmień limit</string>
+    <string name="home_relative_in_minutes">za %1$d min</string>
+    <string name="home_relative_in_one_hour">za 1 godz.</string>
+    <string name="home_relative_in_hours">za %1$d godz.</string>
     <string name="home_relative_tomorrow">jutro</string>
     <string name="home_relative_day_after">pojutrze</string>
     <string name="home_in_days">za %1$d dni</string>
+    <string name="home_in_weeks">za %1$d tyg.</string>
+    <string name="home_in_months">za %1$d mies.</string>
     <string name="weekday_full_mon">poniedziałek</string>
     <string name="weekday_full_tue">wtorek</string>
     <string name="weekday_full_wed">środa</string>
@@ -462,6 +469,14 @@
     <string name="cd_list_options">Opcje listy</string>
 
     <string name="status_error">błąd</string>
+
+    <string name="status_prep_problem">problem z przygotowaniem</string>
+
+    <string name="cd_retry_enrichment">Ponów przygotowanie</string>
+
+    <string name="enrichment_retry_requires_online">Wymaga połączenia z internetem.</string>
+
+    <string name="enrichment_retry_failed">Nie udało się ponowić przygotowania.</string>
 
     <string name="status_new">nowe</string>
 
@@ -639,7 +654,7 @@
 
     <string name="section_synonyms_short">Synonimy</string>
 
-    <string name="section_antonyms_short">Antonimy</string>
+    <string name="section_antonyms_short">Przeciwieństwa</string>
     <string name="section_word_family">Wyrazy pokrewne</string>
 
     <string name="section_conjugation_short">Odmiana</string>
@@ -752,7 +767,7 @@
     <string name="card_history_event_reviewed">Edycja zweryfikowana</string>
     <string name="card_history_summary_report">Sekcje: %1$s</string>
     <string name="card_history_summary_restored">Przywrócono oryginalną wersję.</string>
-    <string name="card_history_diff_lemma">lemma: %1$s → %2$s</string>
+    <string name="card_history_diff_lemma">lemat: %1$s → %2$s</string>
     <string name="card_history_diff_pos">część mowy: %1$s → %2$s</string>
     <string name="card_history_diff_gloss">znaczenie: %1$s → %2$s</string>
     <string name="card_history_diff_ipa">ipa: %1$s → %2$s</string>

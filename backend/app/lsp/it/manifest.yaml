@@ -40,6 +40,26 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  ar:
+    presente: المضارع
+    passato_prossimo: الماضي القريب
+    imperfetto: الماضي المستمر
+    futuro_semplice: المستقبل
+    condizionale: الشرط
+    congiuntivo_presente: الشرط الحاضر
+    imperativo: الأمر
+    gerundio: المصدر الحالي
+    participio: اسم المفعول
+  de:
+    presente: Präsens
+    passato_prossimo: Passato prossimo
+    imperfetto: Imperfekt
+    futuro_semplice: Futur
+    condizionale: Konditional
+    congiuntivo_presente: Konjunktiv Präsens
+    imperativo: Imperativ
+    gerundio: Gerundium
+    participio: Partizip
   en:
     presente: Present
     passato_prossimo: Present perfect
@@ -50,6 +70,36 @@ ui_labels:
     imperativo: Imperative
     gerundio: Gerund
     participio: Participle
+  es:
+    presente: Presente
+    passato_prossimo: Pretérito perfecto
+    imperfetto: Imperfecto
+    futuro_semplice: Futuro
+    condizionale: Condicional
+    congiuntivo_presente: Presente de subjuntivo
+    imperativo: Imperativo
+    gerundio: Gerundio
+    participio: Participio
+  fr:
+    presente: Présent
+    passato_prossimo: Passé composé
+    imperfetto: Imparfait
+    futuro_semplice: Futur
+    condizionale: Conditionnel
+    congiuntivo_presente: Subjonctif présent
+    imperativo: Impératif
+    gerundio: Gérondif
+    participio: Participe
+  hi:
+    presente: वर्तमान
+    passato_prossimo: निकट भूत
+    imperfetto: अपूर्ण भूत
+    futuro_semplice: भविष्य
+    condizionale: संभाव्य
+    congiuntivo_presente: संभाव्य वर्तमान
+    imperativo: आज्ञार्थ
+    gerundio: क्रियार्थक संज्ञा
+    participio: कृदंत
   it:
     presente: Presente
     passato_prossimo: Passato prossimo
@@ -60,6 +110,26 @@ ui_labels:
     imperativo: Imperativo
     gerundio: Gerundio
     participio: Participio
+  ja:
+    presente: 現在
+    passato_prossimo: 近過去
+    imperfetto: 半過去
+    futuro_semplice: 未来
+    condizionale: 条件法
+    congiuntivo_presente: 接続法現在
+    imperativo: 命令形
+    gerundio: 動名詞
+    participio: 分詞
+  ko:
+    presente: 현재
+    passato_prossimo: 현재완료
+    imperfetto: 미완료 과거
+    futuro_semplice: 미래
+    condizionale: 조건법
+    congiuntivo_presente: 접속법 현재
+    imperativo: 명령
+    gerundio: 동명사
+    participio: 분사
   pl:
     presente: Czas teraźniejszy
     passato_prossimo: Czas przeszły złożony
@@ -70,3 +140,63 @@ ui_labels:
     imperativo: Tryb rozkazujący
     gerundio: Gerundium
     participio: Imiesłów
+  pt-br:
+    presente: Presente
+    passato_prossimo: Pretérito perfeito composto
+    imperfetto: Pretérito imperfeito
+    futuro_semplice: Futuro
+    condizionale: Condicional
+    congiuntivo_presente: Subjuntivo presente
+    imperativo: Imperativo
+    gerundio: Gerúndio
+    participio: Particípio
+  pt-pt:
+    presente: Presente
+    passato_prossimo: Pretérito perfeito composto
+    imperfetto: Pretérito imperfeito
+    futuro_semplice: Futuro
+    condizionale: Condicional
+    congiuntivo_presente: Conjuntivo presente
+    imperativo: Imperativo
+    gerundio: Gerúndio
+    participio: Particípio
+  ru:
+    presente: Настоящее
+    passato_prossimo: Ближайшее прошедшее
+    imperfetto: Имперфект
+    futuro_semplice: Будущее
+    condizionale: Условное
+    congiuntivo_presente: Сослагательное настоящее
+    imperativo: Повелительное
+    gerundio: Герундий
+    participio: Причастие
+  tr:
+    presente: Şimdiki zaman
+    passato_prossimo: Yakın geçmiş
+    imperfetto: Hikâye geçmiş
+    futuro_semplice: Gelecek zaman
+    condizionale: Koşul kipi
+    congiuntivo_presente: Dilek kipi şimdiki
+    imperativo: Emir kipi
+    gerundio: Ulaç
+    participio: Ortaç
+  vi:
+    presente: Hiện tại
+    passato_prossimo: Quá khứ gần
+    imperfetto: Quá khứ chưa hoàn thành
+    futuro_semplice: Tương lai
+    condizionale: Điều kiện
+    congiuntivo_presente: Giả định hiện tại
+    imperativo: Mệnh lệnh
+    gerundio: Danh động từ
+    participio: Phân từ
+  zh:
+    presente: 现在
+    passato_prossimo: 近过去
+    imperfetto: 未完成过去
+    futuro_semplice: 将来
+    condizionale: 条件式
+    congiuntivo_presente: 虚拟式现在
+    imperativo: 祈使
+    gerundio: 动名词
+    participio: 分词

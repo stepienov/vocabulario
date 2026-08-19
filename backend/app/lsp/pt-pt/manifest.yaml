@@ -42,6 +42,28 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  ar:
+    presente: المضارع
+    preterito_perfeito: الماضي التام
+    preterito_imperfeito: الماضي المستمر
+    futuro: المستقبل
+    condicional: الشرط
+    subjuntivo_presente: الشرط الحاضر
+    imperativo: الأمر
+    infinitivo_pessoal: المصدر الشخصي
+    gerundio: المصدر الحالي
+    participio: اسم المفعول
+  de:
+    presente: Präsens
+    preterito_perfeito: Pretérito perfeito
+    preterito_imperfeito: Imperfekt
+    futuro: Futur
+    condicional: Konditional
+    subjuntivo_presente: Konjunktiv Präsens
+    imperativo: Imperativ
+    infinitivo_pessoal: Persönlicher Infinitiv
+    gerundio: Gerundium
+    participio: Partizip
   en:
     presente: Present
     preterito_perfeito: Preterite
@@ -53,17 +75,72 @@ ui_labels:
     infinitivo_pessoal: Personal infinitive
     gerundio: Gerund
     participio: Participle
-  pt-pt:
+  es:
     presente: Presente
-    preterito_perfeito: Pretérito perfeito
-    preterito_imperfeito: Pretérito imperfeito
+    preterito_perfeito: Pretérito perfecto
+    preterito_imperfeito: Pretérito imperfecto
     futuro: Futuro
     condicional: Condicional
-    subjuntivo_presente: Subjuntivo presente
+    subjuntivo_presente: Presente de subjuntivo
     imperativo: Imperativo
-    infinitivo_pessoal: Infinitivo pessoal
-    gerundio: Gerúndio
-    participio: Particípio
+    infinitivo_pessoal: Infinitivo personal
+    gerundio: Gerundio
+    participio: Participio
+  fr:
+    presente: Présent
+    preterito_perfeito: Passé simple
+    preterito_imperfeito: Imparfait
+    futuro: Futur
+    condicional: Conditionnel
+    subjuntivo_presente: Subjonctif présent
+    imperativo: Impératif
+    infinitivo_pessoal: Infinitif personnel
+    gerundio: Gérondif
+    participio: Participe
+  hi:
+    presente: वर्तमान
+    preterito_perfeito: भूत पूर्ण
+    preterito_imperfeito: अपूर्ण भूत
+    futuro: भविष्य
+    condicional: संभाव्य
+    subjuntivo_presente: संभाव्य वर्तमान
+    imperativo: आज्ञार्थ
+    infinitivo_pessoal: व्यक्तिगत अनंत
+    gerundio: क्रियार्थक संज्ञा
+    participio: कृदंत
+  it:
+    presente: Presente
+    preterito_perfeito: Passato remoto
+    preterito_imperfeito: Imperfetto
+    futuro: Futuro
+    condicional: Condizionale
+    subjuntivo_presente: Congiuntivo presente
+    imperativo: Imperativo
+    infinitivo_pessoal: Infinito personale
+    gerundio: Gerundio
+    participio: Participio
+  ja:
+    presente: 現在
+    preterito_perfeito: 完了過去
+    preterito_imperfeito: 未完了過去
+    futuro: 未来
+    condicional: 条件法
+    subjuntivo_presente: 接続法現在
+    imperativo: 命令形
+    infinitivo_pessoal: 人称不定詞
+    gerundio: 動名詞
+    participio: 分詞
+  ko:
+    presente: 현재
+    preterito_perfeito: 완료 과거
+    preterito_imperfeito: 미완료 과거
+    futuro: 미래
+    condicional: 조건법
+    subjuntivo_presente: 접속법 현재
+    imperativo: 명령
+    infinitivo_pessoal: 인칭 부정사
+    gerundio: 동명사
+    participio: 분사
   pl:
     presente: Czas teraźniejszy
     preterito_perfeito: Czas przeszły dokonany
@@ -75,3 +152,69 @@ ui_labels:
     infinitivo_pessoal: Bezokolicznik osobowy
     gerundio: Gerundium
     participio: Imiesłów
+  pt-br:
+    presente: Presente
+    preterito_perfeito: Pretérito perfeito
+    preterito_imperfeito: Pretérito imperfeito
+    futuro: Futuro
+    condicional: Condicional
+    subjuntivo_presente: Subjuntivo presente
+    imperativo: Imperativo
+    infinitivo_pessoal: Infinitivo pessoal
+    gerundio: Gerúndio
+    participio: Particípio
+  pt-pt:
+    presente: Presente
+    preterito_perfeito: Pretérito perfeito
+    preterito_imperfeito: Pretérito imperfeito
+    futuro: Futuro
+    condicional: Condicional
+    subjuntivo_presente: Subjuntivo presente
+    imperativo: Imperativo
+    infinitivo_pessoal: Infinitivo pessoal
+    gerundio: Gerúndio
+    participio: Particípio
+  ru:
+    presente: Настоящее
+    preterito_perfeito: Прошедшее совершенное
+    preterito_imperfeito: Прошедшее несовершенное
+    futuro: Будущее
+    condicional: Условное
+    subjuntivo_presente: Сослагательное настоящее
+    imperativo: Повелительное
+    infinitivo_pessoal: Личный инфинитив
+    gerundio: Герундий
+    participio: Причастие
+  tr:
+    presente: Şimdiki zaman
+    preterito_perfeito: Belirli geçmiş
+    preterito_imperfeito: Hikâye geçmiş
+    futuro: Gelecek zaman
+    condicional: Koşul kipi
+    subjuntivo_presente: Dilek kipi şimdiki
+    imperativo: Emir kipi
+    infinitivo_pessoal: Kişili mastar
+    gerundio: Ulaç
+    participio: Ortaç
+  vi:
+    presente: Hiện tại
+    preterito_perfeito: Quá khứ hoàn thành
+    preterito_imperfeito: Quá khứ chưa hoàn thành
+    futuro: Tương lai
+    condicional: Điều kiện
+    subjuntivo_presente: Giả định hiện tại
+    imperativo: Mệnh lệnh
+    infinitivo_pessoal: Động từ nguyên mẫu ngôi
+    gerundio: Danh động từ
+    participio: Phân từ
+  zh:
+    presente: 现在
+    preterito_perfeito: 简单过去
+    preterito_imperfeito: 过去未完成
+    futuro: 将来
+    condicional: 条件式
+    subjuntivo_presente: 虚拟式现在
+    imperativo: 祈使
+    infinitivo_pessoal: 人称不定式
+    gerundio: 动名词
+    participio: 分词

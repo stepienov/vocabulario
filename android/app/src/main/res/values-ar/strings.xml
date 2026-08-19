@@ -12,6 +12,7 @@
     <string name="action_apply">تطبيق</string>
     <string name="list_words_meta">%1$d كلمة</string>
     <string name="list_filter_empty">لا كلمات تطابق عوامل التصفية</string>
+    <string name="list_search_hint">ابحث في القائمة…</string>
     <string name="sort_title">ترتيب</string>
 <string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
@@ -396,12 +397,17 @@
     <string name="home_empty_title">ليس لديك كلمات بعد</string>
     <string name="home_empty_body">ابحث عن كلمة أو استورد قائمة.</string>
     <string name="home_add_first">أضف كلماتك الأولى</string>
-    <string name="home_caught_up">لا شيء لليوم</string>
+    <string name="home_caught_up">أنت على آخر المستجدات</string>
     <string name="home_next_review">المراجعة التالية: %1$s</string>
     <string name="home_change_limit">تغيير الحد</string>
+    <string name="home_relative_in_minutes">خلال %1$d دقيقة</string>
+    <string name="home_relative_in_one_hour">خلال ساعة</string>
+    <string name="home_relative_in_hours">خلال %1$d ساعات</string>
     <string name="home_relative_tomorrow">غدًا</string>
     <string name="home_relative_day_after">بعد غد</string>
     <string name="home_in_days">خلال %1$d أيام</string>
+    <string name="home_in_weeks">خلال %1$d أسابيع</string>
+    <string name="home_in_months">خلال %1$d أشهر</string>
     <string name="weekday_full_mon">الاثنين</string>
     <string name="weekday_full_tue">الثلاثاء</string>
     <string name="weekday_full_wed">الأربعاء</string>
@@ -659,7 +665,7 @@
     <string name="practice_well_done">أحسنت!</string>
     <string name="cd_search">بحث</string>
     <string name="correction_fix_card">الإبلاغ عن تصحيح</string>
-<string name="correction_report_title">Report a problem</string>
+<string name="correction_report_title">تحقق من البطاقة وأصلحها</string>
         <string name="correction_section_lemma">الجذر</string>
     <string name="correction_section_pos">قسم الكلام</string>
     <string name="correction_section_gloss">الترجمة الرئيسية</string>
@@ -672,11 +678,11 @@
     <string name="correction_note_label">ملاحظة</string>
     <string name="correction_note_hint">صف الخطأ…</string>
     <string name="correction_validation">اختر قسماً واحداً على الأقل أو اكتب ملاحظة (3 أحرف كحد أدنى).</string>
-<string name="correction_submit">Submit report</string>
+<string name="correction_submit">إرسال للتحقق</string>
         <string name="correction_requires_online">يتطلب اتصالاً بالإنترنت.</string>
-<string name="correction_result_accepted_title">Report accepted — card updated.</string>
-    <string name="correction_result_rejected_title">Report not accepted.</string>
-    <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
+<string name="correction_result_accepted_title">قُبل البلاغ</string>
+    <string name="correction_result_rejected_title">لم يُقبل البلاغ</string>
+    <string name="correction_result_rejected_body">البطاقة «%1$s». %2$s</string>
         <string name="correction_edit_self">تعديل</string>
         <string name="correction_history_button">سجل التغييرات</string>
     <string name="correction_self_edit_title">تعديل البطاقة</string>
@@ -796,6 +802,11 @@
     <string name="err_offline_card">هذه البطاقة غير متاحة دون اتصال</string>
     <string name="err_no_inbox">تعذر فتح قائمة الانتظار</string>
     <string name="err_email_taken">هذا البريد مسجّل بالفعل</string>
+
+    <string name="status_prep_problem">مشكلة في التحضير</string>
+    <string name="cd_retry_enrichment">إعادة محاولة التحضير</string>
+    <string name="enrichment_retry_requires_online">يتطلب اتصالاً بالإنترنت.</string>
+    <string name="enrichment_retry_failed">تعذرت إعادة محاولة التحضير.</string>
 
 </resources>
 

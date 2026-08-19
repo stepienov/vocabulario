@@ -226,7 +226,7 @@ class LearningViewModel @Inject constructor(
 
     private fun startPollingIfNeeded(cards: List<CardResponse>) {
         pollJob?.cancel()
-        if (cards.none { it.enrichment_status == "pending" }) return
+        if (cards.none { it.enrichment_status == "pending" || it.enrichment_status == "preparing" }) return
         repository.requestBackgroundSync()
         pollJob = viewModelScope.launch {
             var iterations = 0
@@ -241,7 +241,7 @@ class LearningViewModel @Inject constructor(
                     learningLemmas = refreshed.flatMap { lemmaKeys(it.lemma_l2) }.toSet() +
                         current.learningLemmas,
                 )
-                if (refreshed.none { it.enrichment_status == "pending" }) break
+                if (refreshed.none { it.enrichment_status == "pending" || it.enrichment_status == "preparing" }) break
                 if (iterations % 3 == 0) repository.requestBackgroundSync()
             }
         }

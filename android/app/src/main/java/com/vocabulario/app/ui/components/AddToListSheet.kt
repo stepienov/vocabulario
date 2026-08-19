@@ -1,25 +1,27 @@
 package com.vocabulario.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.vocabulario.app.R
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.ui.home.NameListDialog
@@ -59,7 +63,6 @@ fun AddToListSheet(
     onBackFromListPicker: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val customLists = remember(lists) { lists.filterNot { it.is_system } }
     val context = LocalContext.current
     val reservedName = isReservedListNameMessage(context, createListName)
@@ -87,74 +90,97 @@ fun AddToListSheet(
         )
     }
 
-    ModalBottomSheet(
+    Dialog(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = AppButtonShape,
-        containerColor = scheme.surface,
-        tonalElevation = 0.dp,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         AppDialogWindowChrome()
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 28.dp, top = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss,
+                ),
+            contentAlignment = Alignment.BottomCenter,
         ) {
-            Text(
-                lemma,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            if (!gloss.isNullOrBlank()) {
-                Text(
-                    gloss,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
+            Surface(
+                shape = AppButtonShape,
+                color = scheme.surface,
+                tonalElevation = 0.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {},
+                    ),
+            ) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 6.dp),
-                )
-            }
-            Spacer(Modifier.height(22.dp))
-
-            when {
-                !pickListOpen -> {
-                    SheetPrimaryButton(
-                        text = stringResource(R.string.list_learning),
-                        onClick = onLearning,
-                        modifier = Modifier.testTag(TestTags.SHEET_ADD_LEARNING),
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 28.dp, top = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        lemma,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    Spacer(Modifier.height(SheetControlSpacing))
-                    SheetOutlinedButton(
-                        text = stringResource(R.string.list_other),
-                        onClick = onOther,
-                        modifier = Modifier.testTag(TestTags.SHEET_ADD_OTHER),
-                    )
-                }
-                else -> {
-                    customLists.forEach { list ->
-                        SheetListRow(
-                            text = list.name,
-                            onClick = { onPickList(list.id) },
+                    if (!gloss.isNullOrBlank()) {
+                        Text(
+                            gloss,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 6.dp),
                         )
-                        Spacer(Modifier.height(SheetControlSpacing))
                     }
-                    SheetOutlinedButton(
-                        text = stringResource(R.string.list_new),
-                        onClick = onShowCreatePrompt,
-                        modifier = Modifier.testTag(TestTags.SHEET_NEW_LIST),
-                    )
-                    Spacer(Modifier.height(SheetControlSpacing))
-                    SheetOutlinedButton(
-                        text = stringResource(R.string.action_cancel),
-                        onClick = onBackFromListPicker,
-                        modifier = Modifier.testTag(TestTags.SHEET_BACK_FROM_LIST_PICKER),
-                    )
+                    Spacer(Modifier.height(22.dp))
+
+                    when {
+                        !pickListOpen -> {
+                            SheetPrimaryButton(
+                                text = stringResource(R.string.list_learning),
+                                onClick = onLearning,
+                                modifier = Modifier.testTag(TestTags.SHEET_ADD_LEARNING),
+                            )
+                            Spacer(Modifier.height(SheetControlSpacing))
+                            SheetOutlinedButton(
+                                text = stringResource(R.string.list_other),
+                                onClick = onOther,
+                                modifier = Modifier.testTag(TestTags.SHEET_ADD_OTHER),
+                            )
+                        }
+                        else -> {
+                            customLists.forEach { list ->
+                                SheetListRow(
+                                    text = list.name,
+                                    onClick = { onPickList(list.id) },
+                                )
+                                Spacer(Modifier.height(SheetControlSpacing))
+                            }
+                            SheetOutlinedButton(
+                                text = stringResource(R.string.list_new),
+                                onClick = onShowCreatePrompt,
+                                modifier = Modifier.testTag(TestTags.SHEET_NEW_LIST),
+                            )
+                            Spacer(Modifier.height(SheetControlSpacing))
+                            SheetOutlinedButton(
+                                text = stringResource(R.string.action_cancel),
+                                onClick = onBackFromListPicker,
+                                modifier = Modifier.testTag(TestTags.SHEET_BACK_FROM_LIST_PICKER),
+                            )
+                        }
+                    }
                 }
             }
         }

@@ -6,12 +6,13 @@
 
         <string name="action_sort">Sortieren</string>
     <string name="action_filter">Filtern</string>
-    <string name="action_filter_active">Filter · %1$d</string>
+    <string name="action_filter_active">Filtern · %1$d</string>
     <string name="action_clear_filters">Filter löschen</string>
     <string name="action_clear_all">Alles löschen</string>
     <string name="action_apply">Übernehmen</string>
     <string name="list_words_meta">%1$d Wörter</string>
     <string name="list_filter_empty">Keine Wörter passen zu den Filtern</string>
+    <string name="list_search_hint">In der Liste suchen…</string>
     <string name="sort_title">Sortierung</string>
 <string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
@@ -19,7 +20,7 @@
     <string name="sort_newest">Neueste zuerst</string>
     <string name="sort_oldest">Älteste zuerst</string>
     <string name="sort_status">Kartenstatus</string>
-    <string name="filter_title">Filter</string>
+    <string name="filter_title">Filtern</string>
     <string name="filter_section_pos">Wortart</string>
     <string name="filter_section_state">Kartenstatus</string>
     <string name="filter_pos_unknown">Ohne Wortart</string>
@@ -252,7 +253,7 @@
 
     <string name="list_move_to">In Liste verschieben</string>
 
-        <string name="list_name_hint">Name</string>
+            <string name="list_name_hint">Name</string>
 <string name="list_name_full_hint">Listenname</string>
 
     <string name="list_pick">Liste wählen</string>
@@ -396,12 +397,17 @@
     <string name="home_empty_title">Du hast noch keine Wörter</string>
     <string name="home_empty_body">Such ein Wort oder importiere eine Liste.</string>
     <string name="home_add_first">Erste Wörter hinzufügen</string>
-    <string name="home_caught_up">Heute steht nichts an</string>
+    <string name="home_caught_up">Du bist auf dem neuesten Stand</string>
     <string name="home_next_review">Nächste Wiederholung: %1$s</string>
     <string name="home_change_limit">Limit ändern</string>
+    <string name="home_relative_in_minutes">in %1$d Min.</string>
+    <string name="home_relative_in_one_hour">in 1 Std.</string>
+    <string name="home_relative_in_hours">in %1$d Std.</string>
     <string name="home_relative_tomorrow">morgen</string>
     <string name="home_relative_day_after">übermorgen</string>
     <string name="home_in_days">in %1$d Tagen</string>
+    <string name="home_in_weeks">in %1$d Wochen</string>
+    <string name="home_in_months">in %1$d Monaten</string>
     <string name="weekday_full_mon">Montag</string>
     <string name="weekday_full_tue">Dienstag</string>
     <string name="weekday_full_wed">Mittwoch</string>
@@ -659,9 +665,9 @@
     <string name="practice_well_done">Gut!</string>
     <string name="cd_search">Suchen</string>
     <string name="correction_fix_card">Korrektur melden</string>
-<string name="correction_report_title">Report a problem</string>
-        <string name="correction_section_lemma">Lemma</string>
-    <string name="correction_section_pos">Wortart</string>
+<string name="correction_report_title">Karte prüfen und korrigieren</string>
+            <string name="correction_section_lemma">Lemma</string>
+<string name="correction_section_pos">Wortart</string>
     <string name="correction_section_gloss">Hauptübersetzung</string>
     <string name="correction_section_meanings">Bedeutungen</string>
 <string name="correction_section_examples">Sätze</string>
@@ -672,16 +678,16 @@
     <string name="correction_note_label">Notiz</string>
     <string name="correction_note_hint">Beschreibe den Fehler…</string>
     <string name="correction_validation">Wähle mindestens einen Abschnitt oder schreibe eine Notiz (mind. 3 Zeichen).</string>
-<string name="correction_submit">Submit report</string>
+<string name="correction_submit">Zur Prüfung senden</string>
         <string name="correction_requires_online">Internetverbindung erforderlich.</string>
-<string name="correction_result_accepted_title">Report accepted — card updated.</string>
-    <string name="correction_result_rejected_title">Report not accepted.</string>
-    <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
+<string name="correction_result_accepted_title">Meldung angenommen</string>
+    <string name="correction_result_rejected_title">Meldung nicht angenommen</string>
+    <string name="correction_result_rejected_body">Karte „%1$s“. %2$s</string>
         <string name="correction_edit_self">Bearbeiten</string>
         <string name="correction_history_button">Änderungsverlauf</string>
     <string name="correction_self_edit_title">Karte bearbeiten</string>
-    <string name="correction_field_lemma">Lemma</string>
-    <string name="correction_field_pos">Wortart</string>
+        <string name="correction_field_lemma">Lemma</string>
+<string name="correction_field_pos">Wortart</string>
     <string name="correction_field_gloss">Hauptübersetzung</string>
     <string name="correction_field_extra_glosses">Weitere Übersetzungen (eine pro Zeile)</string>
     <string name="cd_voice_search">Sprachsuche</string>
@@ -796,6 +802,11 @@
     <string name="err_offline_card">Diese Karte ist offline nicht verfügbar</string>
     <string name="err_no_inbox">Die Warteliste konnte nicht geöffnet werden</string>
     <string name="err_email_taken">Diese E-Mail ist bereits registriert</string>
+
+    <string name="status_prep_problem">Vorbereitungsproblem</string>
+    <string name="cd_retry_enrichment">Vorbereitung wiederholen</string>
+    <string name="enrichment_retry_requires_online">Internetverbindung erforderlich.</string>
+    <string name="enrichment_retry_failed">Vorbereitung konnte nicht wiederholt werden.</string>
 
 </resources>
 

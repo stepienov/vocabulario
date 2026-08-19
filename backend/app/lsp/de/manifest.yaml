@@ -42,16 +42,16 @@ adjectives:
   full_declension: true
 
 ui_labels:
-  en:
-    prasens: Present
-    perfekt: Present perfect
-    prateritum: Simple past
-    futur_i: Future I
-    plusquamperfekt: Pluperfect
-    konjunktiv_ii: Subjunctive II
-    imperativ: Imperative
-    infinitiv: Infinitive
-    partizip_ii: Past participle
+  ar:
+    prasens: المضارع
+    perfekt: التام
+    prateritum: الماضي البسيط
+    futur_i: المستقبل
+    plusquamperfekt: الماضي الأسبق
+    konjunktiv_ii: الشرط
+    imperativ: الأمر
+    infinitiv: المصدر
+    partizip_ii: اسم المفعول
   de:
     prasens: Präsens
     perfekt: Perfekt
@@ -62,6 +62,76 @@ ui_labels:
     imperativ: Imperativ
     infinitiv: Infinitiv
     partizip_ii: Partizip II
+  en:
+    prasens: Present
+    perfekt: Present perfect
+    prateritum: Simple past
+    futur_i: Future I
+    plusquamperfekt: Pluperfect
+    konjunktiv_ii: Subjunctive II
+    imperativ: Imperative
+    infinitiv: Infinitive
+    partizip_ii: Past participle
+  es:
+    prasens: Presente
+    perfekt: Pretérito perfecto
+    prateritum: Pretérito
+    futur_i: Futuro
+    plusquamperfekt: Pluscuamperfecto
+    konjunktiv_ii: Subjuntivo II
+    imperativ: Imperativo
+    infinitiv: Infinitivo
+    partizip_ii: Participio II
+  fr:
+    prasens: Présent
+    perfekt: Passé composé
+    prateritum: Prétérit
+    futur_i: Futur
+    plusquamperfekt: Plus-que-parfait
+    konjunktiv_ii: Subjonctif II
+    imperativ: Impératif
+    infinitiv: Infinitif
+    partizip_ii: Participe II
+  hi:
+    prasens: वर्तमान
+    perfekt: पूर्ण वर्तमान
+    prateritum: सामान्य भूत
+    futur_i: भविष्य
+    plusquamperfekt: पूर्ण भूत पूर्व
+    konjunktiv_ii: संभाव्य II
+    imperativ: आज्ञार्थ
+    infinitiv: मूलधातु
+    partizip_ii: कृदंत II
+  it:
+    prasens: Presente
+    perfekt: Passato prossimo
+    prateritum: Passato remoto
+    futur_i: Futuro
+    plusquamperfekt: Trapassato
+    konjunktiv_ii: Congiuntivo II
+    imperativ: Imperativo
+    infinitiv: Infinito
+    partizip_ii: Participio II
+  ja:
+    prasens: 現在
+    perfekt: 現在完了
+    prateritum: 単純過去
+    futur_i: 未来
+    plusquamperfekt: 大過去
+    konjunktiv_ii: 接続法 II
+    imperativ: 命令形
+    infinitiv: 不定詞
+    partizip_ii: 第二分詞
+  ko:
+    prasens: 현재
+    perfekt: 현재완료
+    prateritum: 단순 과거
+    futur_i: 미래
+    plusquamperfekt: 대과거
+    konjunktiv_ii: 접속법 II
+    imperativ: 명령
+    infinitiv: 부정사
+    partizip_ii: 분사 II
   pl:
     prasens: Czas teraźniejszy
     perfekt: Czas przeszły złożony
@@ -72,3 +142,63 @@ ui_labels:
     imperativ: Tryb rozkazujący
     infinitiv: Bezokolicznik
     partizip_ii: Imiesłów II
+  pt-br:
+    prasens: Presente
+    perfekt: Pretérito perfeito composto
+    prateritum: Pretérito perfeito
+    futur_i: Futuro
+    plusquamperfekt: Mais-que-perfeito
+    konjunktiv_ii: Subjuntivo II
+    imperativ: Imperativo
+    infinitiv: Infinitivo
+    partizip_ii: Particípio II
+  pt-pt:
+    prasens: Presente
+    perfekt: Pretérito perfeito composto
+    prateritum: Pretérito perfeito
+    futur_i: Futuro
+    plusquamperfekt: Mais-que-perfeito
+    konjunktiv_ii: Conjuntivo II
+    imperativ: Imperativo
+    infinitiv: Infinitivo
+    partizip_ii: Particípio II
+  ru:
+    prasens: Настоящее
+    perfekt: Перфект
+    prateritum: Претерит
+    futur_i: Будущее
+    plusquamperfekt: Предпрошедшее
+    konjunktiv_ii: Конъюнктив II
+    imperativ: Повелительное
+    infinitiv: Инфинитив
+    partizip_ii: Причастие II
+  tr:
+    prasens: Şimdiki zaman
+    perfekt: Perfekt
+    prateritum: Präteritum
+    futur_i: Gelecek zaman
+    plusquamperfekt: Miş’li geçmiş
+    konjunktiv_ii: Konjunktiv II
+    imperativ: Emir kipi
+    infinitiv: Mastar
+    partizip_ii: Partizip II
+  vi:
+    prasens: Hiện tại
+    perfekt: Hiện tại hoàn thành
+    prateritum: Quá khứ đơn
+    futur_i: Tương lai
+    plusquamperfekt: Quá khứ hoàn thành xa
+    konjunktiv_ii: Giả định II
+    imperativ: Mệnh lệnh
+    infinitiv: Nguyên mẫu
+    partizip_ii: Phân từ II
+  zh:
+    prasens: 现在
+    perfekt: 现在完成
+    prateritum: 一般过去
+    futur_i: 将来
+    plusquamperfekt: 过去完成
+    konjunktiv_ii: 虚拟式 II
+    imperativ: 祈使
+    infinitiv: 不定式
+    partizip_ii: 第二分词

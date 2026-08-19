@@ -21,10 +21,10 @@ verbs:
   person_grids:
     vi_6:
       keys: ["toi", "ban", "no", "chung_toi", "cac_ban", "ho"]
-      labels: {}
+      labels: { "toi": "tôi", "ban": "bạn", "no": "nó", "chung_toi": "chúng tôi", "cac_ban": "các bạn", "ho": "họ" }
     vi_imperative:
       keys: ["ban", "cac_ban"]
-      labels: {}
+      labels: { "ban": "bạn", "cac_ban": "các bạn" }
   paradigm_rules: |
     VIETNAMESE (vi) for "{lemma}":
     - Northern standard. Tone marks required. language_specific.tones for tone info.
@@ -37,21 +37,99 @@ adjectives:
   full_declension: false
 
 ui_labels:
+  ar:
+    present: المضارع
+    past: الماضي
+    future: المستقبل
+    imperative: الأمر
+    infinitive: المصدر
+  de:
+    present: Präsens
+    past: Präteritum
+    future: Futur
+    imperative: Imperativ
+    infinitive: Infinitiv
   en:
     present: Present
     past: Past
     future: Future
     imperative: Imperative
     infinitive: Infinitive
-  vi:
-    present: Hiện tại
-    past: Quá khứ
-    future: Tương lai
-    imperative: Mệnh lệnh
-    infinitive: Nguyên mẫu
+  es:
+    present: Presente
+    past: Pasado
+    future: Futuro
+    imperative: Imperativo
+    infinitive: Infinitivo
+  fr:
+    present: Présent
+    past: Passé
+    future: Futur
+    imperative: Impératif
+    infinitive: Infinitif
+  hi:
+    present: वर्तमान
+    past: भूत
+    future: भविष्य
+    imperative: आज्ञार्थ
+    infinitive: मूलधातु
+  it:
+    present: Presente
+    past: Passato
+    future: Futuro
+    imperative: Imperativo
+    infinitive: Infinito
+  ja:
+    present: 現在
+    past: 過去
+    future: 未来
+    imperative: 命令形
+    infinitive: 不定詞
+  ko:
+    present: 현재
+    past: 과거
+    future: 미래
+    imperative: 명령
+    infinitive: 부정사
   pl:
     present: Czas teraźniejszy
     past: Czas przeszły
     future: Czas przyszły
     imperative: Tryb rozkazujący
     infinitive: Bezokolicznik
+  pt-br:
+    present: Presente
+    past: Passado
+    future: Futuro
+    imperative: Imperativo
+    infinitive: Infinitivo
+  pt-pt:
+    present: Presente
+    past: Passado
+    future: Futuro
+    imperative: Imperativo
+    infinitive: Infinitivo
+  ru:
+    present: Настоящее
+    past: Прошедшее
+    future: Будущее
+    imperative: Повелительное
+    infinitive: Инфинитив
+  tr:
+    present: Şimdiki zaman
+    past: Geçmiş zaman
+    future: Gelecek zaman
+    imperative: Emir kipi
+    infinitive: Mastar
+  vi:
+    present: Hiện tại
+    past: Quá khứ
+    future: Tương lai
+    imperative: Mệnh lệnh
+    infinitive: Nguyên mẫu
+  zh:
+    present: 现在
+    past: 过去
+    future: 将来
+    imperative: 祈使
+    infinitive: 不定式

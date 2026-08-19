@@ -32,21 +32,99 @@ adjectives:
   full_declension: false
 
 ui_labels:
+  ar:
+    simdi_zaman: المضارع المستمر
+    genis_zaman: المضارع العام
+    gecmis_zaman: الماضي
+    gelecek_zaman: المستقبل
+    mastar: المصدر
+  de:
+    simdi_zaman: Präsens (jetzt)
+    genis_zaman: Aorist
+    gecmis_zaman: Präteritum
+    gelecek_zaman: Futur
+    mastar: Infinitiv
   en:
     simdi_zaman: Present continuous
     genis_zaman: Aorist
     gecmis_zaman: Past
     gelecek_zaman: Future
     mastar: Infinitive
-  tr:
-    simdi_zaman: Şimdiki zaman
-    genis_zaman: Geniş zaman
-    gecmis_zaman: Geçmiş zaman
-    gelecek_zaman: Gelecek zaman
-    mastar: Mastar
+  es:
+    simdi_zaman: Presente continuo
+    genis_zaman: Aoristo
+    gecmis_zaman: Pasado
+    gelecek_zaman: Futuro
+    mastar: Infinitivo
+  fr:
+    simdi_zaman: Présent continu
+    genis_zaman: Aoriste
+    gecmis_zaman: Passé
+    gelecek_zaman: Futur
+    mastar: Infinitif
+  hi:
+    simdi_zaman: वर्तमान सतत
+    genis_zaman: सामान्य वर्तमान
+    gecmis_zaman: भूत
+    gelecek_zaman: भविष्य
+    mastar: मूलधातु
+  it:
+    simdi_zaman: Presente progressivo
+    genis_zaman: Aoristo
+    gecmis_zaman: Passato
+    gelecek_zaman: Futuro
+    mastar: Infinito
+  ja:
+    simdi_zaman: 現在進行
+    genis_zaman: 広時制
+    gecmis_zaman: 過去
+    gelecek_zaman: 未来
+    mastar: 不定詞
+  ko:
+    simdi_zaman: 현재 진행
+    genis_zaman: 넓적 시제
+    gecmis_zaman: 과거
+    gelecek_zaman: 미래
+    mastar: 부정사
   pl:
     simdi_zaman: Czas teraźniejszy ciągły
     genis_zaman: Czas teraźniejszy ogólny
     gecmis_zaman: Czas przeszły
     gelecek_zaman: Czas przyszły
     mastar: Bezokolicznik
+  pt-br:
+    simdi_zaman: Presente contínuo
+    genis_zaman: Aoristo
+    gecmis_zaman: Passado
+    gelecek_zaman: Futuro
+    mastar: Infinitivo
+  pt-pt:
+    simdi_zaman: Presente contínuo
+    genis_zaman: Aoristo
+    gecmis_zaman: Passado
+    gelecek_zaman: Futuro
+    mastar: Infinitivo
+  ru:
+    simdi_zaman: Настоящее длительное
+    genis_zaman: Аорист
+    gecmis_zaman: Прошедшее
+    gelecek_zaman: Будущее
+    mastar: Инфинитив
+  tr:
+    simdi_zaman: Şimdiki zaman
+    genis_zaman: Geniş zaman
+    gecmis_zaman: Geçmiş zaman
+    gelecek_zaman: Gelecek zaman
+    mastar: Mastar
+  vi:
+    simdi_zaman: Hiện tại tiếp diễn
+    genis_zaman: Hiện tại tổng quát
+    gecmis_zaman: Quá khứ
+    gelecek_zaman: Tương lai
+    mastar: Nguyên mẫu
+  zh:
+    simdi_zaman: 现在进行
+    genis_zaman: 一般现在
+    gecmis_zaman: 过去
+    gelecek_zaman: 将来
+    mastar: 不定式

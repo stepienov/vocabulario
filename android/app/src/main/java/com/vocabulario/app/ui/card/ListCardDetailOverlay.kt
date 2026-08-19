@@ -40,6 +40,9 @@ fun ListCardDetailOverlay(
     card: CardResponse,
     profile: LanguageProfileResponse?,
     onDismiss: () -> Unit,
+    onAddRelated: ((RelatedWord) -> Unit)? = null,
+    learningLemmas: Set<String> = emptySet(),
+    addSheet: @Composable () -> Unit = {},
 ) {
     BackHandler(onBack = onDismiss)
     val scheme = MaterialTheme.colorScheme
@@ -106,10 +109,13 @@ fun ListCardDetailOverlay(
                             enrichmentStatus = card.enrichment_status,
                             enrichmentError = card.enrichment_error,
                             profile = profile,
+                            onAddRelated = onAddRelated,
+                            learningLemmas = learningLemmas,
                         )
                     }
                 }
             }
         }
+        addSheet()
     }
 }

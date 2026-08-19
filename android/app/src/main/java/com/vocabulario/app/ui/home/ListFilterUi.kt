@@ -1,36 +1,46 @@
 package com.vocabulario.app.ui.home
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.vocabulario.app.R
-import com.vocabulario.app.i18n.localizedPosLabel
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppChipShape
+import com.vocabulario.app.ui.components.AppGrayField
 
 @Composable
 fun ListSortOrder.label(): String = when (this) {
     ListSortOrder.LemmaAsc -> stringResource(R.string.sort_lemma_asc)
     ListSortOrder.LemmaDesc -> stringResource(R.string.sort_lemma_desc)
-    ListSortOrder.PosAsc -> stringResource(R.string.sort_pos)
     ListSortOrder.Newest -> stringResource(R.string.sort_newest)
     ListSortOrder.Oldest -> stringResource(R.string.sort_oldest)
-    ListSortOrder.Status -> stringResource(R.string.sort_status)
 }
 
 @Composable
@@ -42,87 +52,89 @@ fun CardStateFilter.label(): String = when (this) {
 }
 
 @Composable
-fun ListWordsMetaBar(
+fun ListWordsToolbar(
+    query: String,
+    onQueryChange: (String) -> Unit,
     filter: ListFilterState,
     onSort: () -> Unit,
     onFilter: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val posPart = if (filter.pos.isEmpty()) {
-        ""
-    } else {
-        filter.pos.map { key ->
-            if (key == "unknown") {
-                stringResource(R.string.filter_pos_unknown)
-            } else {
-                localizedPosLabel(key).ifBlank { key }
-            }
-        }.joinToString(", ")
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    fun hideKeyboard() {
+        keyboard?.hide()
+        focusManager.clearFocus()
     }
-    val statePart = if (filter.states.isEmpty()) {
-        ""
-    } else {
-        filter.states.map { it.label() }.joinToString(", ")
-    }
-    val filterSummary = listOf(posPart, statePart).filter { it.isNotBlank() }.joinToString(" · ")
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = if (filterSummary.isNotBlank()) {
-            Arrangement.SpaceBetween
-        } else {
-            Arrangement.End
-        },
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        if (filterSummary.isNotBlank()) {
-            Text(
-                text = filterSummary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+        AppGrayField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier
+                .weight(1f)
+                .testTag(TestTags.LIST_SEARCH_INPUT),
+            singleLine = true,
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = stringResource(R.string.list_search_hint),
+                    tint = scheme.onSurfaceVariant,
+                )
+            },
+            trailingIcon = if (query.isNotEmpty()) {
+                {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(R.string.action_close),
+                            tint = scheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else {
+                null
+            },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { hideKeyboard() }),
+        )
+        IconButton(
+            onClick = onSort,
+            modifier = Modifier.testTag(TestTags.BTN_LIST_SORT),
+        ) {
+            Icon(
+                Icons.Default.Sort,
+                contentDescription = stringResource(R.string.action_sort),
+                tint = scheme.primary,
             )
         }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        IconButton(
+            onClick = onFilter,
+            modifier = Modifier.testTag(TestTags.BTN_LIST_FILTER),
         ) {
-            MetaBarAction(
-                label = stringResource(R.string.action_sort),
-                onClick = onSort,
-                modifier = Modifier.testTag(TestTags.BTN_LIST_SORT),
-            )
-            MetaBarAction(
-                label = if (filter.isActive) {
-                    stringResource(R.string.action_filter_active, filter.activeCount)
-                } else {
-                    stringResource(R.string.action_filter)
+            BadgedBox(
+                badge = {
+                    if (filter.isActive) {
+                        Badge { Text("${filter.activeCount}") }
+                    }
                 },
-                onClick = onFilter,
-                modifier = Modifier.testTag(TestTags.BTN_LIST_FILTER),
-            )
+            ) {
+                Icon(
+                    Icons.Default.FilterList,
+                    contentDescription = if (filter.isActive) {
+                        stringResource(R.string.action_filter_active, filter.activeCount)
+                    } else {
+                        stringResource(R.string.action_filter)
+                    },
+                    tint = if (filter.isActive) scheme.primary else scheme.onSurfaceVariant,
+                )
+            }
         }
     }
-}
-
-@Composable
-private fun MetaBarAction(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val scheme = MaterialTheme.colorScheme
-    Text(
-        text = label,
-        modifier = modifier
-            .clickable(onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 2.dp),
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.Medium,
-        color = scheme.primary,
-    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

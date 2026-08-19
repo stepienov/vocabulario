@@ -16,3 +16,21 @@ fun langChipLabel(
         iso
     }
 }
+
+/** Inny język nauki z ≥1 kartą — tylko wtedy Home pokazuje dropdown. */
+fun hasOtherLearningLanguage(
+    profiles: List<LanguageProfileResponse>,
+    cardCounts: Map<String, Int>,
+    activeId: String?,
+): Boolean = profiles.any { it.id != activeId && (cardCounts[it.id] ?: 0) > 0 }
+
+fun dropdownLearningProfiles(
+    profiles: List<LanguageProfileResponse>,
+    cardCounts: Map<String, Int>,
+    activeId: String?,
+): List<LanguageProfileResponse> {
+    if (!hasOtherLearningLanguage(profiles, cardCounts, activeId)) {
+        return profiles.filter { it.id == activeId }
+    }
+    return profiles.filter { it.id == activeId || (cardCounts[it.id] ?: 0) > 0 }
+}

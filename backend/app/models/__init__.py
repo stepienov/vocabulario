@@ -130,9 +130,16 @@ class LearningCard(Base):
     pos: Mapped[str | None] = mapped_column(String(32), nullable=True)
     gloss_primary: Mapped[str | None] = mapped_column(String(255), nullable=True)
     content: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    # pending → karta widoczna od razu, treść dociąga się w tle; ready → gotowa do nauki.
-    enrichment_status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    # pending → enrichment w toku; preparing → czeka na zaplanowany retry;
+    # ready → gotowa; failed → 3 nieudane próby.
+    enrichment_status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     enrichment_error: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    enrichment_retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    enrichment_retry_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    enrichment_auto_retry_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    enrichment_manual_triggered: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     content_review_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
     card_activity_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
     has_content_changes: Mapped[bool] = mapped_column(Boolean, default=False)

@@ -35,8 +35,12 @@ class AuthViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private val _debugLoginError = MutableStateFlow<String?>(null)
+    val debugLoginError: StateFlow<String?> = _debugLoginError.asStateFlow()
+
     fun clearError() {
         _errorMessage.value = null
+        _debugLoginError.value = null
     }
 
     private fun validate(email: String, password: String, isRegister: Boolean): String? {
@@ -55,17 +59,21 @@ class AuthViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _errorMessage.value = null
+            _debugLoginError.value = null
             runCatching {
                 authRepository.login(email.trim(), password)
-                !authRepository.hasProfile()
-            }.onSuccess { needsOnboarding ->
+            }.onSuccess {
+                val needsOnboarding = runCatching { !authRepository.hasProfile() }.getOrDefault(false)
                 if (!needsOnboarding) {
-                    authRepository.ensureActiveProfile()
-                    learningRepository.applyAppLocaleFromActiveProfile()
+                    runCatching { authRepository.ensureActiveProfile() }
+                    runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
                 }
-                learningRepository.syncThemeFromSettings()
+                runCatching { learningRepository.syncThemeFromSettings() }
                 onSuccess(needsOnboarding)
             }.onFailure {
+                if (com.vocabulario.app.BuildConfig.DEBUG) {
+                    _debugLoginError.value = it.javaClass.simpleName + ": " + (it.message ?: it.toString())
+                }
                 _errorMessage.value = it.userMessage(strings, R.string.err_login)
             }
         }
@@ -93,13 +101,13 @@ class AuthViewModel @Inject constructor(
             runCatching {
                 val idToken = googleAuthHelper.signIn(activityContext)
                 authRepository.googleLogin(idToken)
-                !authRepository.hasProfile()
-            }.onSuccess { needsOnboarding ->
+            }.onSuccess {
+                val needsOnboarding = runCatching { !authRepository.hasProfile() }.getOrDefault(false)
                 if (!needsOnboarding) {
-                    authRepository.ensureActiveProfile()
-                    learningRepository.applyAppLocaleFromActiveProfile()
+                    runCatching { authRepository.ensureActiveProfile() }
+                    runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
                 }
-                learningRepository.syncThemeFromSettings()
+                runCatching { learningRepository.syncThemeFromSettings() }
                 onSuccess(needsOnboarding)
             }.onFailure {
                 _errorMessage.value = it.userMessage(strings, R.string.err_google_login)

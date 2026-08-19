@@ -25,7 +25,7 @@ verbs:
   person_grids:
     ja_6:
       keys: ["watashi", "anata", "kare", "watashitachi", "anatatachi", "karera"]
-      labels: {}
+      labels: { "watashi": "私", "anata": "あなた", "kare": "彼", "watashitachi": "私たち", "anatatachi": "あなたたち", "karera": "彼ら" }
     ja_non_finite:
       keys: ["form"]
       labels: { form: 形 }
@@ -42,6 +42,22 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  ar:
+    jisho: صيغة المعجم
+    masu: صيغة المهذب
+    te: صيغة て
+    ta: صيغة た
+    nai: صيغة النفي
+    potential: صيغة الإمكان
+    imperative: الأمر
+  de:
+    jisho: Grundform
+    masu: Höflichkeitsform
+    te: Te-Form
+    ta: Ta-Form
+    nai: Negativform
+    potential: Potenzialform
+    imperative: Imperativ
   en:
     jisho: Dictionary form
     masu: Polite form
@@ -50,6 +66,38 @@ ui_labels:
     nai: Negative form
     potential: Potential form
     imperative: Imperative
+  es:
+    jisho: Forma de diccionario
+    masu: Forma cortés
+    te: Forma て
+    ta: Forma た
+    nai: Forma negativa
+    potential: Forma potencial
+    imperative: Imperativo
+  fr:
+    jisho: Forme dictionnaire
+    masu: Forme polie
+    te: Forme て
+    ta: Forme た
+    nai: Forme négative
+    potential: Forme potentielle
+    imperative: Impératif
+  hi:
+    jisho: शब्दकोष रूप
+    masu: विनम्र रूप
+    te: て रूप
+    ta: た रूप
+    nai: नकारात्मक रूप
+    potential: संभाव्य रूप
+    imperative: आज्ञार्थ
+  it:
+    jisho: Forma del dizionario
+    masu: Forma cortese
+    te: Forma て
+    ta: Forma た
+    nai: Forma negativa
+    potential: Forma potenziale
+    imperative: Imperativo
   ja:
     jisho: 辞書形
     masu: ます形
@@ -58,6 +106,14 @@ ui_labels:
     nai: ない形
     potential: 可能形
     imperative: 命令形
+  ko:
+    jisho: 사전형
+    masu: ます형
+    te: て형
+    ta: た형
+    nai: ない형
+    potential: 가능형
+    imperative: 명령
   pl:
     jisho: Forma słownikowa
     masu: Forma grzecznościowa
@@ -66,3 +122,51 @@ ui_labels:
     nai: Forma przecząca
     potential: Forma potencjalna
     imperative: Tryb rozkazujący
+  pt-br:
+    jisho: Forma de dicionário
+    masu: Forma educada
+    te: Forma て
+    ta: Forma た
+    nai: Forma negativa
+    potential: Forma potencial
+    imperative: Imperativo
+  pt-pt:
+    jisho: Forma de dicionário
+    masu: Forma educada
+    te: Forma て
+    ta: Forma た
+    nai: Forma negativa
+    potential: Forma potencial
+    imperative: Imperativo
+  ru:
+    jisho: Словарная форма
+    masu: Вежливая форма
+    te: Форма て
+    ta: Форма た
+    nai: Отрицательная форма
+    potential: Потенциальная форма
+    imperative: Повелительное
+  tr:
+    jisho: Sözlük biçimi
+    masu: Nazik biçim
+    te: て biçimi
+    ta: た biçimi
+    nai: Olumsuz biçim
+    potential: Yeterlik biçimi
+    imperative: Emir kipi
+  vi:
+    jisho: Dạng từ điển
+    masu: Dạng lịch sự
+    te: Dạng て
+    ta: Dạng た
+    nai: Dạng phủ định
+    potential: Dạng khả năng
+    imperative: Mệnh lệnh
+  zh:
+    jisho: 辞书形
+    masu: ます形
+    te: て形
+    ta: た形
+    nai: ない形
+    potential: 可能形
+    imperative: 祈使

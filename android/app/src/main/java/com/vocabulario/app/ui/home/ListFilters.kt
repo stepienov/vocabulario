@@ -6,10 +6,8 @@ import com.vocabulario.app.data.normalizePosKey
 enum class ListSortOrder {
     LemmaAsc,
     LemmaDesc,
-    PosAsc,
     Newest,
     Oldest,
-    Status,
 }
 
 enum class CardStateFilter {
@@ -42,28 +40,25 @@ fun applyListFilterSort(
     words: List<CardResponse>,
     filter: ListFilterState,
     sort: ListSortOrder,
+    query: String = "",
 ): List<CardResponse> {
     val filtered = words.filter { card ->
         val posOk = filter.pos.isEmpty() || normalizePosKey(card.pos) in filter.pos
         val stateOk = filter.states.isEmpty() || cardStateFilterOf(card) in filter.states
-        posOk && stateOk
+        posOk && stateOk && lemmaMatchesQuery(card.lemma_l2, query)
     }
     return when (sort) {
         ListSortOrder.LemmaAsc -> filtered.sortedBy { lemmaSortKey(it) }
         ListSortOrder.LemmaDesc -> filtered.sortedByDescending { lemmaSortKey(it) }
-        ListSortOrder.PosAsc -> filtered.sortedWith(
-            compareBy<CardResponse> {
-                val key = normalizePosKey(it.pos)
-                if (key == "unknown") "\uFFFF" else key
-            }.thenBy { lemmaSortKey(it) },
-        )
         ListSortOrder.Newest -> filtered.sortedByDescending { it.created_at }
         ListSortOrder.Oldest -> filtered.sortedBy { it.created_at }
-        ListSortOrder.Status -> filtered.sortedWith(
-            compareBy<CardResponse> { cardStateFilterOf(it).ordinal }
-                .thenBy { lemmaSortKey(it) },
-        )
     }
+}
+
+fun lemmaMatchesQuery(lemma: String, query: String): Boolean {
+    val needle = query.trim()
+    if (needle.isEmpty()) return true
+    return lemma.contains(needle, ignoreCase = true)
 }
 
 /**

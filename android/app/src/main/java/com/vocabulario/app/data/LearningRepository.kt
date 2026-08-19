@@ -44,7 +44,6 @@ import com.vocabulario.app.data.api.WordListAddWordRequest
 import com.vocabulario.app.data.api.WordListCreate
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.api.WordListUpdate
-import com.vocabulario.app.data.SYSTEM_LIST_NAME
 import com.vocabulario.app.data.local.LocalAnswerCheck
 import com.vocabulario.app.data.local.OfflineStore
 import com.vocabulario.app.data.local.TokenStore
@@ -164,20 +163,8 @@ class LearningRepository @Inject constructor(
     }
 
     private suspend fun offlineWordLists(profileId: String): List<WordListResponse> {
-        val cached = offlineStore.localLists(profileId)
-        if (cached.isNotEmpty()) {
-            return offlineStore.withComputedWordCounts(profileId, cached)
-        }
-        val count = offlineStore.learningCards(profileId).size
-        if (count == 0) return emptyList()
-        return listOf(
-            WordListResponse(
-                id = "local-system-learning",
-                name = SYSTEM_LIST_NAME,
-                is_system = true,
-                word_count = count,
-            ),
-        )
+        val lists = offlineStore.completeLocalWordLists(profileId)
+        return offlineStore.withComputedWordCounts(profileId, lists)
     }
 
     suspend fun activeProfileId(): String {
@@ -755,7 +742,11 @@ class LearningRepository @Inject constructor(
                 add(
                     ChoiceOption(
                         text = seed.text,
-                        lemma_l2 = source?.lemmaL2 ?: seed.lemmaL2 ?: seed.text,
+                        lemma_l2 = distractorLemmaL2(
+                            direction,
+                            source?.lemmaL2 ?: seed.lemmaL2,
+                            seed.text,
+                        ),
                         gloss = seed.gloss ?: source?.glossPrimary,
                         pos = seed.pos ?: source?.pos,
                         card_id = source?.id,
@@ -882,7 +873,7 @@ class LearningRepository @Inject constructor(
     }
 
     private fun watchOfflineIfPending(card: CardResponse) {
-        if (card.enrichment_status == "pending" || card.enrichment_status == "awaiting_network") {
+        if (card.enrichment_status == "pending" || card.enrichment_status == "preparing" || card.enrichment_status == "awaiting_network") {
             readyBatchTracker.watchOffline(listOf(card.id))
             notificationScheduler.scheduleEnrichmentSoon()
         }
@@ -1079,7 +1070,7 @@ class LearningRepository @Inject constructor(
                     ?: api.ensurePendingInbox(profileId)
             }.getOrNull() ?: return
             val inboxId = inbox.id
-            offlineStore.cacheLists(profileId, listOf(inbox))
+            offlineStore.upsertLists(profileId, listOf(inbox))
             var anyDone = false
             for (item in pending) {
                 // Stub mógł zostać usunięty (np. „Usuń listę”) między snapshotem a teraz — pomiń.
@@ -1191,7 +1182,7 @@ class LearningRepository @Inject constructor(
             api.listWordLists(profileId).find { it.is_pending_inbox }
                 ?: api.ensurePendingInbox(profileId)
         }.getOrNull() ?: error("no_inbox")
-        offlineStore.cacheLists(profileId, listOf(inbox))
+        offlineStore.upsertLists(profileId, listOf(inbox))
         val added = runCatching {
             api.addWordToList(
                 inbox.id,
@@ -1300,6 +1291,23 @@ class LearningRepository @Inject constructor(
         val cached = offlineStore.cachedProfiles()
         if (cached.isNotEmpty()) return cached
         return offlineStore.cachedActiveProfile()?.let { listOf(it) } ?: emptyList()
+    }
+
+    suspend fun cardCountsByProfile(): Map<String, Int> = offlineStore.cardCountsByProfile()
+
+    /** Przełącza parę języków w Room. Sieć tylko w tle (backup). */
+    suspend fun activateLocalProfile(profileId: String): LanguageProfileResponse {
+        val profiles = offlineStore.cachedProfiles()
+        val target = profiles.firstOrNull { it.id == profileId }
+            ?: offlineStore.cachedActiveProfile()?.takeIf { it.id == profileId }
+            ?: error("no_profile")
+        val updated = profiles.map { it.copy(is_active = it.id == profileId) }
+            .ifEmpty { listOf(target.copy(is_active = true)) }
+        offlineStore.cacheProfiles(updated)
+        val active = target.copy(is_active = true)
+        syncActiveProfileToLocal(active, overwriteLang = true)
+        requestBackgroundSync()
+        return active
     }
 
     suspend fun refreshProfilesFromNetwork(): List<LanguageProfileResponse> {
@@ -1510,6 +1518,12 @@ class LearningRepository @Inject constructor(
         )
         offlineStore.upsertCards(activeProfileId(), listOf(updated))
         syncScheduler.requestNow()
+        return updated
+    }
+
+    suspend fun retryCardEnrichment(cardId: String): CardResponse {
+        val updated = api.retryCardEnrichment(cardId, activeProfileId())
+        offlineStore.upsertCards(activeProfileId(), listOf(updated))
         return updated
     }
 

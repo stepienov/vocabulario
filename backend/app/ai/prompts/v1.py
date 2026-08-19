@@ -214,13 +214,13 @@ def lookup_output_form_rules_text(native: str, learning: str) -> str:
     )
 
 
-ENRICHMENT_CORE_PROMPT_V1 = """Jesteś ekspertem leksykograficznym. Tworzysz rdzeń karty słówka (BEZ przykładów zdań, BEZ koniugacji, BEZ similar_words).
+ENRICHMENT_CORE_STATIC_V1 = """Jesteś ekspertem leksykograficznym. Tworzysz pełny rdzeń karty słówka ze znaczeniami
+i przykładami zdań (BEZ koniugacji, BEZ similar_words).
 
 {pair_guidance}
 
 Para językowa: L1 (ojczysty) = {native}, L2 (uczony) = {learning}
-Lemat (L2): {lemma}
-Część mowy: {pos_line}
+Poziom ucznia (CEFR): {cefr}
 
 Zwróć WYŁĄCZNIE JSON:
 {{
@@ -242,7 +242,11 @@ Zwróć WYŁĄCZNIE JSON:
     {{
       "gloss_l1": "sens w L1 — kolejno od najczęstszego",
       "synonyms_l1": ["synonimy gloss_l1 w L1 — ta sama część mowy co gloss_l1"],
-      "examples": [],
+      "examples": [
+        {{"l2": "zdanie A2", "l1": "tłumaczenie A2", "cefr": "A2"}},
+        {{"l2": "zdanie B2", "l1": "tłumaczenie B2", "cefr": "B2"}},
+        {{"l2": "zdanie C2", "l1": "tłumaczenie C2", "cefr": "C2"}}
+      ],
       "usages": [
         {{"l2": "kolokacja w L2 pokazująca ten sens", "l1": "jej tłumaczenie w L1"}}
       ]
@@ -261,15 +265,14 @@ Zwróć WYŁĄCZNIE JSON:
   "confidence": 0.95
 }}
 
-Reguły:
-- Pole examples zostaw jako pustą tablicę [].
+Reguły ogólne:
 - pos: konkretna wartość (noun, verb, adj, adv, ...) — nigdy "unknown".
 - gloss_l1 = istniejące słowo języka {native}. Jeśli nie znasz lematu, podaj
   najbliższe realne tłumaczenie — nigdy nie twórz słowa przez dodanie
   końcówki {native} do lematu L2.
 - Język L2 = {learning}, tłumaczeń L1 = {native}.
 - ui_hints: ustaw show_conjugation zgodnie z typologią L2 (np. chiński/tajski → false).
-- NIE generuj: similar_words, conjugation, przykładów zdań.
+- NIE generuj: similar_words, conjugation.
 
 Znaczenia (meanings) — najważniejsza część karty:
 - KOLEJNOŚĆ według częstości użycia. Pierwsze znaczenie to takie, które słownik
@@ -292,6 +295,13 @@ Znaczenia (meanings) — najważniejsza część karty:
 - Forma zwrotna z innym sensu tylko gdy należy do 3 najczęstszych I dotyczy formy
   zwrotnej jako lematu karty.
 
+Przykłady zdań (examples) — w KAŻDYM znaczeniu:
+- Dokładnie 3 pełne zdania: A2, B2, C2 — po jednym na poziom.
+- A2: krótkie, proste; B2: złożone; C2: idiomatyczne.
+- Tekst L2 w skrypcie L2; tłumaczenie L1 w skrypcie L1.
+- Żadne zdanie l2 NIE MOŻE się powtórzyć między znaczeniami.
+- Zdania muszą ilustrować WYŁĄCZNIE sens danego znaczenia.
+
 Synonimy — DEFINICJA:
 Synonim = inne słowo TEJ SAMEJ części mowy, które w tym znaczeniu można użyć
 ZAMIAST gloss_l1 (L1) lub lematu (L2).
@@ -307,15 +317,6 @@ Wyrazy pokrewne (word_family_l2) — rodzina wyrazów / wspólny rdzeń:
   aguantar → aguante, aguantador, aguantado, inaguantable).
 - DOZWOLONA (i oczekiwana) inna część mowy niż lemat — tu trafiają derywaty.
 - Dla produktywnych rodzin podaj 4–10 NAJCZĘSTSZYCH, realnych lematów.
-  Typowe sloty (gdy istnieją i są częste w L2):
-  • rzeczownik odczasownikowy / abstrakcyjny (aguante, trabajo)
-  • agent / osoba (aguantador, trabajador) — także forma żeńska, jeśli osobna
-  • imiesłów / adj odczasownikowy używany jako lemat (aguantado, cansado)
-  • antonimiczny derywat z negacją (inaguantable, imposible) gdy częsty
-  • inne częste derywaty (czasownik zwrotny jako osobny lemat tylko gdy
-    słownikowy i inny sens — inaczej pomiń)
-- NIE pomijaj oczywistych, wysokoczęstotliwych derywatów (np. -dor/-tora,
-  -ción/-sión, -miento, -ado/-ido jako adj, in-/des- + rdzeń).
 - Jeśli brak wyraźnej rodziny → pusta tablica [].
 - ZAKAZ: powtórzenie lematu karty, synonimy/antonimy bez wspólnego rdzenia,
   formy fleksyjne tego samego lematu (odmiana → conjugation, nie tu),
@@ -323,6 +324,16 @@ Wyrazy pokrewne (word_family_l2) — rodzina wyrazów / wspólny rdzeń:
 - Format: obiekty {{lemma, pos, gloss_l1}} — pole pos OBOWIĄZKOWE
   (noun|verb|adj|adv|…), nigdy puste.
 """
+
+ENRICHMENT_CORE_DYNAMIC_V1 = """SŁOWO DO PRZYGOTOWANIA:
+Lemat (L2): {lemma}
+Część mowy: {pos_line}
+{gloss_hint_line}
+{retry_note}
+"""
+
+# Pełny prompt (testy / kompatybilność wsteczna).
+ENRICHMENT_CORE_PROMPT_V1 = ENRICHMENT_CORE_STATIC_V1 + "\n" + ENRICHMENT_CORE_DYNAMIC_V1
 
 EXAMPLES_PROMPT_V1 = """Jesteś ekspertem od przykładów zdań do nauki języków.
 
@@ -381,17 +392,58 @@ def build_enrichment_core_prompt(
     lemma: str,
     pos: str,
     cefr: str,
+    gloss_hint: str | None = None,
+    retry: bool = False,
 ) -> str:
-    known_pos = pos and pos.lower() != "unknown"
-    return ENRICHMENT_CORE_PROMPT_V1.format(
+    static, dynamic = build_enrichment_core_prompt_parts(
         native=native,
         learning=learning,
         lemma=lemma,
-        pos=pos if known_pos else "(ustal samodzielnie)",
-        pos_line=pos if known_pos else "nie podano — ustal ją samodzielnie z lematu",
+        pos=pos,
+        cefr=cefr,
+        gloss_hint=gloss_hint,
+        retry=retry,
+    )
+    return static + "\n" + dynamic
+
+
+def build_enrichment_core_prompt_parts(
+    *,
+    native: str,
+    learning: str,
+    lemma: str,
+    pos: str,
+    cefr: str,
+    gloss_hint: str | None = None,
+    retry: bool = False,
+) -> tuple[str, str]:
+    known_pos = pos and pos.lower() != "unknown"
+    gloss = (gloss_hint or "").strip()
+    gloss_hint_line = (
+        f"Wskazówka tłumaczenia od użytkownika (L1): {gloss}"
+        if gloss
+        else "Wskazówka tłumaczenia: brak — ustal znaczenia samodzielnie."
+    )
+    retry_note = (
+        "POPRZEDNIA ODPOWIEDŹ BYŁA BŁĘDNA LUB NIEKOMPLETNA. Każde znaczenie musi mieć "
+        "dokładnie 3 zdania (A2, B2, C2). ZAKAZ powtarzania tego samego l2 między "
+        "znaczeniami."
+        if retry
+        else ""
+    )
+    static = ENRICHMENT_CORE_STATIC_V1.format(
+        native=native,
+        learning=learning,
         cefr=cefr,
         pair_guidance=language_pair_guidance(native=native, learning=learning),
     )
+    dynamic = ENRICHMENT_CORE_DYNAMIC_V1.format(
+        lemma=lemma,
+        pos_line=pos if known_pos else "nie podano — ustal ją samodzielnie z lematu",
+        gloss_hint_line=gloss_hint_line,
+        retry_note=retry_note,
+    )
+    return static, dynamic
 
 
 def build_examples_prompt(
@@ -433,15 +485,34 @@ def build_similar_words_prompt(
     pos: str,
     count: int,
 ) -> str:
-    return SIMILAR_WORDS_PROMPT_V1.format(
+    static, dynamic = build_similar_words_prompt_parts(
         native=native,
         learning=learning,
         lemma=lemma,
+        pos=pos,
+        count=count,
+    )
+    return static + "\n" + dynamic
+
+
+def build_similar_words_prompt_parts(
+    *,
+    native: str,
+    learning: str,
+    lemma: str,
+    pos: str,
+    count: int,
+) -> tuple[str, str]:
+    static = SIMILAR_WORDS_STATIC_V1.format(
+        native=native,
+        learning=learning,
         pos=pos,
         pos_form=pos_form_label(pos),
         filler_cefr=FILLER_CEFR,
         count=count,
     )
+    dynamic = SIMILAR_WORDS_DYNAMIC_V1.format(lemma=lemma)
+    return static, dynamic
 
 
 def build_similar_words_fill_prompt(
@@ -503,41 +574,37 @@ SIMILAR_WORDS_SYSTEM_V1 = (
 # domykały słowa w rodzaju „comer”, „vivir”, „abrir” — zbyt oczywiste na dystraktor.
 FILLER_CEFR = "B2"
 
-SIMILAR_WORDS_PROMPT_V1 = """Przygotowujesz fiszkę do nauki języka {learning} dla osoby mówiącej po {native}.
+SIMILAR_WORDS_STATIC_V1 = """Przygotowujesz fiszkę do nauki języka {learning} dla osoby mówiącej po {native}.
 
-Słowo na fiszce: {lemma}
-Część mowy: {pos}
-
-Fiszka ma tryb wyboru odpowiedzi, więc obok poprawnej odpowiedzi trzeba pokazać
-inne słowa. Podaj {count} takich słów.
+Fiszka ma tryb wyboru odpowiedzi — podaj {count} słów-dystraktorów.
 
 Warunki — każdy obowiązkowy:
 1. Ta sama część mowy co słowo na fiszce: {pos}
 2. Prawdziwe słowo języka {learning} — nigdy forma wymyślona ani zniekształcona
-3. Inne słowo niż „{lemma}” — nie jego odmiana i nie wyraz pochodny od tego rdzenia
+3. Inne słowo niż słowo docelowe — nie jego odmiana i nie wyraz pochodny od tego rdzenia
 4. Forma słownikowa: {pos_form}
 5. Każda pozycja inna od pozostałych na liście
 6. Krótkie tłumaczenie na {native} — 1–3 słowa
 
 Kolejność wypełniania listy:
-Najpierw wpisz słowa możliwie podobne do „{lemma}” na piśmie lub w wymowie —
-takie, z którymi uczący się może je pomylić.
-
-Podobnych szukaj systematycznie i WYCZERP te sposoby, zanim sięgniesz
-po wypełniacze:
-a) ta sama końcówka, inny początek — dopisz do końcówki „{lemma}” różne
-   przedrostki i rdzenie; zwykle daje to najwięcej trafień
-b) zmiana jednej litery w „{lemma}”
+Najpierw wpisz słowa możliwie podobne do słowa docelowego na piśmie lub w wymowie.
+Podobnych szukaj systematycznie i WYCZERP te sposoby, zanim sięgniesz po wypełniacze:
+a) ta sama końcówka, inny początek — dopisz do końcówki różne przedrostki i rdzenie
+b) zmiana jednej litery
 c) dodanie lub usunięcie jednej litery
 d) ten sam początek, inna końcówka
 e) słowo o innym zapisie, ale bardzo bliskim brzmieniu
 Gdy podobne się skończą, dopełnij listę do {count} słowami z poziomu {filler_cefr}.
 Te nie muszą być podobne, ale trzymaj poziom: nie wpisuj podstawowych słów
-z A1–A2 ani rzadkich, literackich i książkowych. Ma to być słownictwo, które
-świadomy użytkownik języka spotyka w prasie i rozmowie.
+z A1–A2 ani rzadkich, literackich i książkowych.
 
-Zwróć pełne {count} pozycji.
+Zwróć pełne {count} pozycji w JSON zgodnym ze schematem similar_words.
 """
+
+SIMILAR_WORDS_DYNAMIC_V1 = """Słowo na fiszce: {lemma}
+"""
+
+SIMILAR_WORDS_PROMPT_V1 = SIMILAR_WORDS_STATIC_V1 + "\n" + SIMILAR_WORDS_DYNAMIC_V1
 
 SIMILAR_WORDS_FILL_PROMPT_V1 = """Przygotowujesz fiszkę do nauki języka {learning} dla osoby mówiącej po {native}.
 

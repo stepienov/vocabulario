@@ -126,7 +126,7 @@ data class LookupCandidate(
     val enrichment_status: String? = null,
 ) {
     val onList: Boolean get() = !list_name.isNullOrBlank()
-    val isCreating: Boolean get() = enrichment_status == "pending"
+    val isCreating: Boolean get() = enrichment_status == "pending" || enrichment_status == "preparing"
 }
 
 @Serializable

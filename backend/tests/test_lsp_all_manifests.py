@@ -56,3 +56,15 @@ def test_android_language_packs_sync():
         text=True,
     )
     assert proc.returncode == 0, (proc.stdout or "") + (proc.stderr or "")
+
+
+@pytest.mark.parametrize("code", sorted(SUPPORTED_L2_LANGS))
+def test_ui_labels_cover_all_ui_langs(code: str):
+    m = get_manifest(code)
+    keys = set(m.tense_keys() + m.non_finite_keys())
+    for ui in sorted(SUPPORTED_L2_LANGS):
+        labels = m.ui_labels.get(ui, {})
+        missing = sorted(keys - set(labels))
+        assert not missing, f"{code} ui_labels[{ui}] brak: {missing}"
+        empty = sorted(k for k in keys if not str(labels.get(k, "")).strip())
+        assert not empty, f"{code} ui_labels[{ui}] puste: {empty}"

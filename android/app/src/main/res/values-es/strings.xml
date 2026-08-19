@@ -12,6 +12,7 @@
     <string name="action_apply">Aplicar</string>
     <string name="list_words_meta">%1$d palabras</string>
     <string name="list_filter_empty">Ninguna palabra coincide con los filtros</string>
+    <string name="list_search_hint">Buscar en la lista…</string>
     <string name="sort_title">Ordenar</string>
 <string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
@@ -397,12 +398,17 @@
     <string name="home_empty_title">Aún no tienes palabras</string>
     <string name="home_empty_body">Busca una palabra o importa una lista.</string>
     <string name="home_add_first">Añade tus primeras palabras</string>
-    <string name="home_caught_up">Nada pendiente hoy</string>
+    <string name="home_caught_up">Estás al día</string>
     <string name="home_next_review">Próximo repaso: %1$s</string>
     <string name="home_change_limit">Cambiar límite</string>
+    <string name="home_relative_in_minutes">en %1$d min</string>
+    <string name="home_relative_in_one_hour">en 1 hora</string>
+    <string name="home_relative_in_hours">en %1$d horas</string>
     <string name="home_relative_tomorrow">mañana</string>
     <string name="home_relative_day_after">pasado mañana</string>
     <string name="home_in_days">en %1$d días</string>
+    <string name="home_in_weeks">en %1$d semanas</string>
+    <string name="home_in_months">en %1$d meses</string>
     <string name="weekday_full_mon">lunes</string>
     <string name="weekday_full_tue">martes</string>
     <string name="weekday_full_wed">miércoles</string>
@@ -450,7 +456,7 @@
 
     <string name="cd_list_options">Opciones de lista</string>
 
-        <string name="status_error">error</string>
+            <string name="status_error">error</string>
 <string name="status_new">nueva</string>
 
     <string name="status_learning">aprendiendo</string>
@@ -673,7 +679,7 @@
 
 
         <string name="correction_fix_card">Reportar una corrección</string>
-<string name="correction_report_title">Report a problem</string>
+<string name="correction_report_title">Revisar y corregir la tarjeta</string>
         <string name="correction_section_lemma">Lema</string>
     <string name="correction_section_pos">Categoría gramatical</string>
     <string name="correction_section_gloss">Traducción principal</string>
@@ -686,11 +692,11 @@
     <string name="correction_note_label">Nota</string>
     <string name="correction_note_hint">Describe el error…</string>
     <string name="correction_validation">Selecciona al menos una sección o escribe una nota (mín. 3 caracteres).</string>
-<string name="correction_submit">Submit report</string>
+<string name="correction_submit">Enviar para verificación</string>
         <string name="correction_requires_online">Requiere conexión a internet.</string>
-<string name="correction_result_accepted_title">Report accepted — card updated.</string>
-    <string name="correction_result_rejected_title">Report not accepted.</string>
-    <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
+<string name="correction_result_accepted_title">Informe aceptado</string>
+    <string name="correction_result_rejected_title">Informe no aceptado</string>
+    <string name="correction_result_rejected_body">Tarjeta «%1$s». %2$s</string>
         <string name="correction_edit_self">Editar</string>
         <string name="correction_history_button">Historial de cambios</string>
     <string name="correction_self_edit_title">Editar tarjeta</string>
@@ -810,6 +816,11 @@
     <string name="err_offline_card">Esta tarjeta no está disponible sin conexión</string>
     <string name="err_no_inbox">No se pudo abrir la lista de pendientes</string>
     <string name="err_email_taken">Este correo ya está registrado</string>
+
+    <string name="status_prep_problem">problema al preparar</string>
+    <string name="cd_retry_enrichment">Reintentar preparación</string>
+    <string name="enrichment_retry_requires_online">Requiere conexión a internet.</string>
+    <string name="enrichment_retry_failed">No se pudo reintentar la preparación.</string>
 
 </resources>
 

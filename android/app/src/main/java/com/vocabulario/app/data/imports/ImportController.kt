@@ -204,10 +204,13 @@ class ImportController @Inject constructor(
     }
 
     fun onAppForeground() {
-        startPoll()
+        scope.launch {
+            if (repository.hasSyncableSession()) startPoll()
+        }
     }
 
     private suspend fun restore() {
+        if (!repository.hasSyncableSession()) return
         val stored = persistence.loadJobId()
         if (!stored.isNullOrBlank()) {
             val detail = runCatching { repository.getImportJob(stored, includeItems = true) }.getOrNull()

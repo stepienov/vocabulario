@@ -57,6 +57,7 @@ object TestTags {
     const val LIST_WORD_TILE = "list_word_tile"
     const val BTN_LIST_SORT = "btn_list_sort"
     const val BTN_LIST_FILTER = "btn_list_filter"
+    const val LIST_SEARCH_INPUT = "list_search_input"
     const val SHEET_LIST_SORT = "sheet_list_sort"
     const val SHEET_LIST_FILTER = "sheet_list_filter"
     const val SORT_OPTION_PREFIX = "sort_option_"
@@ -144,6 +145,7 @@ object TestTags {
     const val SHEET_VOICE_SEARCH = "sheet_voice_search"
 
     const val BTN_REVIEW_WORD = "btn_review_word"
+    const val BTN_RETRY_ENRICHMENT = "btn_retry_enrichment"
     const val SHEET_REVIEW_WORD = "sheet_review_word"
     const val BTN_REVIEW_CLOSE = "btn_review_close"
     const val REVIEW_SUGGESTION = "review_suggestion"

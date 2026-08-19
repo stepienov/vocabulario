@@ -19,10 +19,10 @@ verbs:
   person_grids:
     ar_13:
       keys: ["1sg", "2sg_m", "2sg_f", "3sg_m", "3sg_f", "2du", "3du", "1pl", "2pl_m", "2pl_f", "3pl_m", "3pl_f"]
-      labels: {}
+      labels: { "1sg": "أنا", "2sg_m": "أنتَ", "2sg_f": "أنتِ", "3sg_m": "هو", "3sg_f": "هي", "2du": "أنتما", "3du": "هما", "1pl": "نحن", "2pl_m": "أنتم", "2pl_f": "أنتن", "3pl_m": "هم", "3pl_f": "هن" }
     ar_imperative:
       keys: ["2sg_m", "2sg_f", "2pl_m", "2pl_f"]
-      labels: {}
+      labels: { "2sg_m": "أنتَ", "2sg_f": "أنتِ", "2pl_m": "أنتم", "2pl_f": "أنتن" }
   paradigm_rules: |
     ARABIC MSA (ar) for "{lemma}":
     - Modern Standard Arabic only. Include vocalized forms where helpful.
@@ -37,18 +37,83 @@ adjectives:
   full_declension: true
 
 ui_labels:
-  en:
-    perfect: Past
-    imperfect: Present
-    imperative: Imperative
-    masdar: Verbal noun
   ar:
     perfect: الماضي
     imperfect: المضارع
     imperative: الأمر
     masdar: المصدر
+  de:
+    perfect: Präteritum
+    imperfect: Präsens
+    imperative: Imperativ
+    masdar: Verbalnomen
+  en:
+    perfect: Past
+    imperfect: Present
+    imperative: Imperative
+    masdar: Verbal noun
+  es:
+    perfect: Pasado
+    imperfect: Presente
+    imperative: Imperativo
+    masdar: Nombre verbal
+  fr:
+    perfect: Passé
+    imperfect: Présent
+    imperative: Impératif
+    masdar: Nom verbal
+  hi:
+    perfect: भूत
+    imperfect: वर्तमान
+    imperative: आज्ञार्थ
+    masdar: क्रियावाचक संज्ञा
+  it:
+    perfect: Passato
+    imperfect: Presente
+    imperative: Imperativo
+    masdar: Nome verbale
+  ja:
+    perfect: 過去
+    imperfect: 現在
+    imperative: 命令形
+    masdar: 動名詞
+  ko:
+    perfect: 과거
+    imperfect: 현재
+    imperative: 명령
+    masdar: 동명사
   pl:
     perfect: Czas przeszły
     imperfect: Czas teraźniejszy
     imperative: Tryb rozkazujący
     masdar: Rzeczownik odczasownikowy
+  pt-br:
+    perfect: Passado
+    imperfect: Presente
+    imperative: Imperativo
+    masdar: Nome verbal
+  pt-pt:
+    perfect: Passado
+    imperfect: Presente
+    imperative: Imperativo
+    masdar: Nome verbal
+  ru:
+    perfect: Прошедшее
+    imperfect: Настоящее
+    imperative: Повелительное
+    masdar: Отглагольное имя
+  tr:
+    perfect: Geçmiş zaman
+    imperfect: Şimdiki zaman
+    imperative: Emir kipi
+    masdar: Mastar ismi
+  vi:
+    perfect: Quá khứ
+    imperfect: Hiện tại
+    imperative: Mệnh lệnh
+    masdar: Danh động từ
+  zh:
+    perfect: 过去
+    imperfect: 现在
+    imperative: 祈使
+    masdar: 动名词

@@ -29,9 +29,16 @@ from app.ai.prompts.v1 import (
     lookup_output_form_rules_text,
     SIMILAR_WORDS_SYSTEM_V1,
     build_enrichment_core_prompt,
+    build_enrichment_core_prompt_parts,
     build_examples_prompt,
     build_similar_words_fill_prompt,
     build_similar_words_prompt,
+    build_similar_words_prompt_parts,
+)
+from app.ai.prompt_cache import (
+    cached_user_message,
+    pair_cache_key,
+    prompt_cache_request_options,
 )
 from app.ai.language_typology import lang_name_en, language_pair_guidance
 from app.ai.schemas.import_classify import (
@@ -50,6 +57,17 @@ from app.ai.schemas.similar_words import similar_words_response_schema
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+ENRICH_CORE_SYSTEM = (
+    "You work like a bilingual dictionary. Meanings in frequency order; "
+    "stylistic variants of the same sense go to synonyms, not meanings. "
+    "Periphrases belong to THIS L2 only (never invent Spanish acabar de / ir a "
+    "for other L2) and are NOT lemma meanings — omit them from meanings. "
+    "Synonyms/antonyms must match POS of the lemma; same-root derivatives go to "
+    "word_family_l2 (other POS allowed), not synonyms. "
+    "Each meaning needs exactly 3 example sentences (A2, B2, C2). "
+    "No conjugation, no similar_words. JSON only."
+)
 
 
 def _log_import_llm(title: str, body: str) -> None:
@@ -73,6 +91,7 @@ class LLMService:
         )
         self.lookup_model = settings.llm_lookup_model
         self.enrichment_model = settings.llm_enrichment_model
+        self.light_model = settings.llm_light_model
         self.import_layout_model = (
             settings.llm_import_layout_model.strip()
             or settings.llm_lookup_model
@@ -105,17 +124,28 @@ class LLMService:
         max_tokens: int | None = None,
         temperature: float = 0.2,
         provider: str | None = None,
+        cache_key: str | None = None,
+        prompt_static: str | None = None,
+        prompt_dynamic: str | None = None,
     ) -> dict[str, Any]:
         if self.mock:
-            return self._mock_response(prompt)
+            mock_prompt = prompt
+            if prompt_static is not None and prompt_dynamic is not None:
+                mock_prompt = prompt_static + "\n" + prompt_dynamic
+            return self._mock_response(mock_prompt)
         use_provider = (provider or "openai").strip().lower()
         schema_name = (json_schema or {}).get("name") or "chat_json"
+        prompt_len = len(prompt)
+        if prompt_static is not None and prompt_dynamic is not None:
+            prompt_len = len(prompt_static) + len(prompt_dynamic)
         started = time.perf_counter()
         try:
             if use_provider == "anthropic" and self._anthropic is not None:
                 data = await self._chat_json_anthropic(
                     model,
-                    prompt,
+                    prompt_static + "\n" + prompt_dynamic
+                    if prompt_static and prompt_dynamic
+                    else prompt,
                     system,
                     json_schema=json_schema,
                     max_tokens=max_tokens,
@@ -128,6 +158,9 @@ class LLMService:
                     json_schema=json_schema,
                     max_tokens=max_tokens,
                     temperature=temperature,
+                    cache_key=cache_key,
+                    prompt_static=prompt_static,
+                    prompt_dynamic=prompt_dynamic,
                 )
         except Exception as exc:
             from app.services.app_log import log_event
@@ -143,7 +176,8 @@ class LLMService:
                     "provider": use_provider,
                     "model": model,
                     "schema": schema_name,
-                    "prompt_chars": len(prompt or ""),
+                    "prompt_chars": prompt_len,
+                    "cache_key": cache_key,
                 },
                 exc=exc,
             )
@@ -161,7 +195,8 @@ class LLMService:
                 "provider": use_provider,
                 "model": model,
                 "schema": schema_name,
-                "prompt_chars": len(prompt or ""),
+                "prompt_chars": prompt_len,
+                "cache_key": cache_key,
             },
         )
         return data
@@ -175,19 +210,41 @@ class LLMService:
         json_schema: dict | None = None,
         max_tokens: int | None = None,
         temperature: float = 0.2,
+        cache_key: str | None = None,
+        prompt_static: str | None = None,
+        prompt_dynamic: str | None = None,
     ) -> dict[str, Any]:
         assert self.client is not None
         system_content = system or (
             "Jesteś asystentem językowym. Zwracasz wyłącznie poprawny JSON "
             "bez markdown i bez komentarzy."
         )
+        use_cache = (
+            cache_key
+            and prompt_static is not None
+            and prompt_dynamic is not None
+            and self._is_reasoning_model(model)
+            and len(prompt_static) >= 4096  # ~1024 tokens — OpenAI cache minimum
+        )
+        if use_cache:
+            user_content: str | list[dict[str, Any]] = cached_user_message(
+                static=prompt_static,
+                dynamic=prompt_dynamic,
+            )
+        elif prompt_static is not None and prompt_dynamic is not None:
+            user_content = prompt_static + "\n" + prompt_dynamic
+        else:
+            user_content = prompt
+
         kwargs: dict[str, Any] = {
             "model": model,
             "messages": [
                 {"role": "system", "content": system_content},
-                {"role": "user", "content": prompt},
+                {"role": "user", "content": user_content},
             ],
         }
+        if use_cache and cache_key:
+            kwargs.update(prompt_cache_request_options(cache_key=cache_key))
         if not self._is_reasoning_model(model):
             kwargs["temperature"] = temperature
         if json_schema:
@@ -405,8 +462,9 @@ class LLMService:
                     "gloss_l1": "przykładowe znaczenie",
                     "synonyms_l1": ["synonim"],
                     "examples": [
-                        {"l2": f"Ejemplo con {lemma}.", "l1": "Przykład.", "cefr": "A2"},
-                        {"l2": f"Otro {lemma}.", "l1": "Inny przykład.", "cefr": "A1"},
+                        {"l2": f"Ejemplo A2 con {lemma}.", "l1": "Przykład A2.", "cefr": "A2"},
+                        {"l2": f"Ejemplo B2 con {lemma}.", "l1": "Przykład B2.", "cefr": "B2"},
+                        {"l2": f"Ejemplo C2 con {lemma}.", "l1": "Przykład C2.", "cefr": "C2"},
                     ],
                     "usages": [],
                 }
@@ -469,26 +527,29 @@ class LLMService:
         native: str,
         learning: str,
         cefr: str,
+        *,
+        gloss_hint: str | None = None,
+        retry: bool = False,
     ) -> dict[str, Any]:
-        prompt = build_enrichment_core_prompt(
+        pos_val = pos or "unknown"
+        static, dynamic = build_enrichment_core_prompt_parts(
             native=native,
             learning=learning,
             lemma=lemma,
-            pos=pos or "unknown",
+            pos=pos_val,
             cefr=cefr,
+            gloss_hint=gloss_hint,
+            retry=retry,
         )
+        prompt = static + "\n" + dynamic
+        cache_key = pair_cache_key("enrich", native, learning, extra=cefr)
         return await self._chat_json(
             self.lookup_model,
             prompt,
-            system=(
-                "You work like a bilingual dictionary. Meanings in frequency order; "
-                "stylistic variants of the same sense go to synonyms, not meanings. "
-                "Periphrases belong to THIS L2 only (never invent Spanish acabar de / ir a "
-                "for other L2) and are NOT lemma meanings — omit them from meanings. "
-                "Synonyms/antonyms must match POS of the lemma; same-root derivatives go to "
-                "word_family_l2 (other POS allowed), not synonyms. "
-                "No examples, no conjugation. JSON only."
-            ),
+            system=ENRICH_CORE_SYSTEM,
+            cache_key=cache_key,
+            prompt_static=static,
+            prompt_dynamic=dynamic,
         )
 
     async def generate_examples(
@@ -509,7 +570,7 @@ class LLMService:
             retry=retry,
         )
         return await self._chat_json(
-            self.lookup_model,
+            self.light_model,
             prompt,
             system=(
                 "Generujesz przykłady zdań. Dla każdego znaczenia MUSISZ zwrócić dokładnie "
@@ -519,7 +580,14 @@ class LLMService:
             ),
         )
 
-    async def generate_lsp_inflection(self, prompt: str) -> dict[str, Any]:
+    async def generate_lsp_inflection(
+        self,
+        prompt: str,
+        *,
+        cache_key: str | None = None,
+        prompt_static: str | None = None,
+        prompt_dynamic: str | None = None,
+    ) -> dict[str, Any]:
         """Jeden krok inflection wg manifestu LSP."""
         if self.mock:
             return {
@@ -537,6 +605,9 @@ class LLMService:
                 "You are a rigorous morphologist. Return only attested inflected forms. "
                 "Never use placeholder dashes — omit inapplicable categories instead. JSON only."
             ),
+            cache_key=cache_key,
+            prompt_static=prompt_static,
+            prompt_dynamic=prompt_dynamic,
         )
         if isinstance(data.get("inflection"), dict):
             return data["inflection"]
@@ -586,19 +657,24 @@ class LLMService:
     ) -> list[dict]:
         """Dystraktory do fiszki: najpierw podobne formalnie, resztę z poziomu B2."""
         pos_val = pos or "unknown"
-        prompt = build_similar_words_prompt(
+        static, dynamic = build_similar_words_prompt_parts(
             native=native,
             learning=learning,
             lemma=lemma,
             pos=pos_val,
             count=count,
         )
+        prompt = static + "\n" + dynamic
+        cache_key = pair_cache_key("similar", native, learning, extra=pos_val)
         data = await self._chat_json(
-            self.lookup_model,
+            self.light_model,
             prompt,
             system=SIMILAR_WORDS_SYSTEM_V1,
             json_schema=similar_words_response_schema(count=count),
             max_tokens=4000,
+            cache_key=cache_key,
+            prompt_static=static,
+            prompt_dynamic=dynamic,
         )
         return self._parse_similar_words(data)
 
@@ -623,7 +699,7 @@ class LLMService:
             count=count,
         )
         data = await self._chat_json(
-            self.lookup_model,
+            self.light_model,
             prompt,
             system=SIMILAR_WORDS_SYSTEM_V1,
             json_schema=similar_words_response_schema(count=count),

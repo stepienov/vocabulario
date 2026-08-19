@@ -20,10 +20,10 @@ verbs:
   person_grids:
     hi_6:
       keys: ["main", "tu", "yeh", "hum", "aap", "ve"]
-      labels: {}
+      labels: { "main": "मैं", "tu": "तू", "yeh": "यह", "hum": "हम", "aap": "आप", "ve": "वे" }
     hi_imperative:
       keys: ["tu", "aap"]
-      labels: {}
+      labels: { "tu": "तू", "aap": "आप" }
   paradigm_rules: |
     HINDI (hi) for "{lemma}":
     - Devanagari forms + IAST romanization in language_specific.romanization.
@@ -37,21 +37,99 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  ar:
+    present: المضارع
+    past: الماضي
+    future: المستقبل
+    imperative: الأمر
+    infinitive: المصدر
+  de:
+    present: Präsens
+    past: Präteritum
+    future: Futur
+    imperative: Imperativ
+    infinitive: Infinitiv
   en:
     present: Present
     past: Past
     future: Future
     imperative: Imperative
     infinitive: Infinitive
+  es:
+    present: Presente
+    past: Pasado
+    future: Futuro
+    imperative: Imperativo
+    infinitive: Infinitivo
+  fr:
+    present: Présent
+    past: Passé
+    future: Futur
+    imperative: Impératif
+    infinitive: Infinitif
   hi:
     present: वर्तमान
     past: भूत
     future: भविष्य
     imperative: आज्ञार्थ
     infinitive: मूलधातु
+  it:
+    present: Presente
+    past: Passato
+    future: Futuro
+    imperative: Imperativo
+    infinitive: Infinito
+  ja:
+    present: 現在
+    past: 過去
+    future: 未来
+    imperative: 命令形
+    infinitive: 不定詞
+  ko:
+    present: 현재
+    past: 과거
+    future: 미래
+    imperative: 명령
+    infinitive: 부정사
   pl:
     present: Czas teraźniejszy
     past: Czas przeszły
     future: Czas przyszły
     imperative: Tryb rozkazujący
     infinitive: Bezokolicznik
+  pt-br:
+    present: Presente
+    past: Passado
+    future: Futuro
+    imperative: Imperativo
+    infinitive: Infinitivo
+  pt-pt:
+    present: Presente
+    past: Passado
+    future: Futuro
+    imperative: Imperativo
+    infinitive: Infinitivo
+  ru:
+    present: Настоящее
+    past: Прошедшее
+    future: Будущее
+    imperative: Повелительное
+    infinitive: Инфинитив
+  tr:
+    present: Şimdiki zaman
+    past: Geçmiş zaman
+    future: Gelecek zaman
+    imperative: Emir kipi
+    infinitive: Mastar
+  vi:
+    present: Hiện tại
+    past: Quá khứ
+    future: Tương lai
+    imperative: Mệnh lệnh
+    infinitive: Nguyên mẫu
+  zh:
+    present: 现在
+    past: 过去
+    future: 将来
+    imperative: 祈使
+    infinitive: 不定式

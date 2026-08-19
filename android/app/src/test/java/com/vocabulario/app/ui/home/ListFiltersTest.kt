@@ -54,13 +54,24 @@ class ListFiltersTest {
     }
 
     @Test
-    fun filterNew_hidesReviewCards() {
+    fun filterQuery_keepsLemmasThatContainNeedle() {
         val filtered = applyListFilterSort(
-            listOf(card("a", "new"), card("b", "review")),
-            ListFilterState(states = setOf(CardStateFilter.New)),
+            listOf(card("la correa"), card("el cinturón"), card("correr")),
+            ListFilterState(),
             ListSortOrder.LemmaAsc,
+            query = "corr",
         )
-        assertEquals(1, filtered.size)
-        assertEquals("a", filtered[0].lemma_l2)
+        assertEquals(listOf("la correa", "correr"), filtered.map { it.lemma_l2 })
+    }
+
+    @Test
+    fun filterQuery_isCaseInsensitive() {
+        val filtered = applyListFilterSort(
+            listOf(card("la Copa"), card("la casa")),
+            ListFilterState(),
+            ListSortOrder.LemmaAsc,
+            query = "COP",
+        )
+        assertEquals(listOf("la Copa"), filtered.map { it.lemma_l2 })
     }
 }

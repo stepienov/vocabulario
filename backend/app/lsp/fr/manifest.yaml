@@ -44,6 +44,30 @@ adjectives:
   full_declension: true
 
 ui_labels:
+  ar:
+    present: المضارع
+    passe_compose: الماضي المركب
+    imparfait: الماضي المستمر
+    futur_simple: المستقبل
+    conditionnel: الشرط
+    subjonctif_present: الشرط الحاضر
+    plus_que_parfait: الماضي الأسبق
+    imperatif: الأمر
+    infinitif: المصدر
+    participe_passe: اسم المفعول
+    gerondif: المصدر الحالي
+  de:
+    present: Präsens
+    passe_compose: Passé composé
+    imparfait: Imparfait
+    futur_simple: Futur
+    conditionnel: Konditional
+    subjonctif_present: Konjunktiv Präsens
+    plus_que_parfait: Plusquamperfekt
+    imperatif: Imperativ
+    infinitif: Infinitiv
+    participe_passe: Partizip Perfekt
+    gerondif: Gerundium
   en:
     present: Present
     passe_compose: Passé composé
@@ -56,6 +80,18 @@ ui_labels:
     infinitif: Infinitive
     participe_passe: Past participle
     gerondif: Gerund
+  es:
+    present: Presente
+    passe_compose: Pretérito perfecto
+    imparfait: Imperfecto
+    futur_simple: Futuro
+    conditionnel: Condicional
+    subjonctif_present: Presente de subjuntivo
+    plus_que_parfait: Pluscuamperfecto
+    imperatif: Imperativo
+    infinitif: Infinitivo
+    participe_passe: Participio pasado
+    gerondif: Gerundio
   fr:
     present: Présent
     passe_compose: Passé composé
@@ -68,6 +104,54 @@ ui_labels:
     infinitif: Infinitif
     participe_passe: Participe passé
     gerondif: Gérondif
+  hi:
+    present: वर्तमान
+    passe_compose: पूर्ण भूत
+    imparfait: अपूर्ण भूत
+    futur_simple: भविष्य
+    conditionnel: संभाव्य
+    subjonctif_present: संभाव्य वर्तमान
+    plus_que_parfait: पूर्ण भूत पूर्व
+    imperatif: आज्ञार्थ
+    infinitif: मूलधातु
+    participe_passe: भूतकालिक कृदंत
+    gerondif: क्रियार्थक संज्ञा
+  it:
+    present: Presente
+    passe_compose: Passato prossimo
+    imparfait: Imperfetto
+    futur_simple: Futuro
+    conditionnel: Condizionale
+    subjonctif_present: Congiuntivo presente
+    plus_que_parfait: Trapassato
+    imperatif: Imperativo
+    infinitif: Infinito
+    participe_passe: Participio passato
+    gerondif: Gerundio
+  ja:
+    present: 現在
+    passe_compose: 複合過去
+    imparfait: 半過去
+    futur_simple: 未来
+    conditionnel: 条件法
+    subjonctif_present: 接続法現在
+    plus_que_parfait: 大過去
+    imperatif: 命令形
+    infinitif: 不定詞
+    participe_passe: 過去分詞
+    gerondif: 動名詞
+  ko:
+    present: 현재
+    passe_compose: 복합 과거
+    imparfait: 미완료 과거
+    futur_simple: 미래
+    conditionnel: 조건법
+    subjonctif_present: 접속법 현재
+    plus_que_parfait: 대과거
+    imperatif: 명령
+    infinitif: 부정사
+    participe_passe: 과거분사
+    gerondif: 동명사
   pl:
     present: Czas teraźniejszy
     passe_compose: Czas przeszły złożony
@@ -80,3 +164,75 @@ ui_labels:
     infinitif: Bezokolicznik
     participe_passe: Imiesłów przeszły
     gerondif: Gerundium
+  pt-br:
+    present: Presente
+    passe_compose: Pretérito perfeito composto
+    imparfait: Pretérito imperfeito
+    futur_simple: Futuro
+    conditionnel: Condicional
+    subjonctif_present: Subjuntivo presente
+    plus_que_parfait: Mais-que-perfeito
+    imperatif: Imperativo
+    infinitif: Infinitivo
+    participe_passe: Particípio passado
+    gerondif: Gerúndio
+  pt-pt:
+    present: Presente
+    passe_compose: Pretérito perfeito composto
+    imparfait: Pretérito imperfeito
+    futur_simple: Futuro
+    conditionnel: Condicional
+    subjonctif_present: Conjuntivo presente
+    plus_que_parfait: Mais-que-perfeito
+    imperatif: Imperativo
+    infinitif: Infinitivo
+    participe_passe: Particípio passado
+    gerondif: Gerúndio
+  ru:
+    present: Настоящее
+    passe_compose: Сложное прошедшее
+    imparfait: Имперфект
+    futur_simple: Будущее
+    conditionnel: Условное
+    subjonctif_present: Сослагательное настоящее
+    plus_que_parfait: Предпрошедшее
+    imperatif: Повелительное
+    infinitif: Инфинитив
+    participe_passe: Причастие прошедшего
+    gerondif: Герундий
+  tr:
+    present: Şimdiki zaman
+    passe_compose: Bileşik geçmiş
+    imparfait: Hikâye geçmiş
+    futur_simple: Gelecek zaman
+    conditionnel: Koşul kipi
+    subjonctif_present: Dilek kipi şimdiki
+    plus_que_parfait: Miş’li geçmiş
+    imperatif: Emir kipi
+    infinitif: Mastar
+    participe_passe: Geçmiş zaman ortacı
+    gerondif: Ulaç
+  vi:
+    present: Hiện tại
+    passe_compose: Quá khứ kép
+    imparfait: Quá khứ chưa hoàn thành
+    futur_simple: Tương lai
+    conditionnel: Điều kiện
+    subjonctif_present: Giả định hiện tại
+    plus_que_parfait: Quá khứ hoàn thành xa
+    imperatif: Mệnh lệnh
+    infinitif: Nguyên mẫu
+    participe_passe: Quá khứ phân từ
+    gerondif: Danh động từ
+  zh:
+    present: 现在
+    passe_compose: 复合过去
+    imparfait: 未完成过去
+    futur_simple: 将来
+    conditionnel: 条件式
+    subjonctif_present: 虚拟式现在
+    plus_que_parfait: 过去完成
+    imperatif: 祈使
+    infinitif: 不定式
+    participe_passe: 过去分词
+    gerondif: 动名词

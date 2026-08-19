@@ -12,7 +12,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,8 +31,13 @@ from app.services.similar_words import ensure_similar_words
 logger = logging.getLogger(__name__)
 
 STATUS_PENDING = "pending"
+STATUS_PREPARING = "preparing"
+STATUS_PREPARATION_PROBLEM = "prep_problem"
 STATUS_READY = "ready"
 STATUS_FAILED = "failed"
+
+_MAX_MANUAL_ENRICH_RETRIES = 3
+_AUTO_RETRY_DELAY = timedelta(minutes=15)
 
 # Max kart wzbogacanych naraz. 9× równolegle = ~36 calli reasoning-modelu i lawina.
 _ENRICH_CONCURRENCY = 3
@@ -49,6 +54,15 @@ def _enrich_semaphore() -> asyncio.Semaphore:
     if _enrich_gate is None:
         _enrich_gate = asyncio.Semaphore(_ENRICH_CONCURRENCY)
     return _enrich_gate
+
+
+def _card_lookup_resolved(card: LearningCard) -> bool:
+    """Lookup w enrichment pomijamy, gdy karta ma już rozwiązany lemat (z UI / importu)."""
+    if card.lexical_entry_id is not None:
+        return True
+    gloss = (card.gloss_primary or "").strip()
+    pos = (card.pos or "").strip()
+    return bool(gloss and pos)
 
 
 def spawn_enrich(card_id: UUID) -> None:
@@ -77,11 +91,85 @@ async def _mark_enrich_failed(card_id: UUID, error: str) -> None:
             ).scalar_one_or_none()
             if card is None or card.enrichment_status == STATUS_READY:
                 return
-            card.enrichment_status = STATUS_FAILED
-            card.enrichment_error = error[:500]
+            _apply_enrich_retry(card, RuntimeError(error))
             await db.commit()
     except Exception:
         logger.exception("Nie udało się oznaczyć karty %s jako failed", card_id)
+
+
+def _apply_enrich_retry(card: LearningCard, exc: BaseException) -> None:
+    """Jeden auto-retry za 15 min, potem prep_problem; ręcznie max 3×."""
+    err = public_enrichment_error(exc)
+
+    if bool(getattr(card, "enrichment_manual_triggered", False)):
+        card.enrichment_manual_triggered = False
+        card.enrichment_retry_count = int(card.enrichment_retry_count or 0) + 1
+        card.enrichment_retry_at = None
+        if card.enrichment_retry_count >= _MAX_MANUAL_ENRICH_RETRIES:
+            card.enrichment_status = STATUS_FAILED
+            card.enrichment_error = err
+            logger.info(
+                "Enrichment karty %s → failed po %s ręcznych próbach (%s)",
+                card.id,
+                card.enrichment_retry_count,
+                card.lemma_l2,
+            )
+            return
+        card.enrichment_status = STATUS_PREPARATION_PROBLEM
+        card.enrichment_error = err
+        logger.info(
+            "Enrichment karty %s → prep_problem (manual %s/%s) (%s)",
+            card.id,
+            card.enrichment_retry_count,
+            _MAX_MANUAL_ENRICH_RETRIES,
+            card.lemma_l2,
+        )
+        return
+
+    if not bool(getattr(card, "enrichment_auto_retry_used", False)):
+        card.enrichment_auto_retry_used = True
+        card.enrichment_status = STATUS_PREPARING
+        card.enrichment_error = err
+        card.enrichment_retry_at = datetime.now(UTC) + _AUTO_RETRY_DELAY
+        logger.info(
+            "Enrichment karty %s → preparing; auto-retry za %s (%s)",
+            card.id,
+            _AUTO_RETRY_DELAY,
+            card.lemma_l2,
+        )
+        return
+
+    card.enrichment_status = STATUS_PREPARATION_PROBLEM
+    card.enrichment_error = err
+    card.enrichment_retry_at = None
+    logger.info(
+        "Enrichment karty %s → prep_problem po auto-retry (%s)",
+        card.id,
+        card.lemma_l2,
+    )
+
+
+def _clear_enrich_retry(card: LearningCard) -> None:
+    card.enrichment_retry_count = 0
+    card.enrichment_retry_at = None
+    card.enrichment_error = None
+    card.enrichment_auto_retry_used = False
+    card.enrichment_manual_triggered = False
+
+
+async def request_manual_enrichment_retry(db: AsyncSession, card: LearningCard) -> None:
+    """Użytkownik klika refresh — max 3 ręczne próby przed trwałym failed."""
+    if card.enrichment_status != STATUS_PREPARATION_PROBLEM:
+        raise ValueError("card_not_retryable")
+    if int(card.enrichment_retry_count or 0) >= _MAX_MANUAL_ENRICH_RETRIES:
+        raise ValueError("manual_retries_exhausted")
+    card.enrichment_status = STATUS_PENDING
+    card.enrichment_error = None
+    card.enrichment_retry_at = None
+    card.enrichment_manual_triggered = True
+    card.lexical_entry_id = None
+    await db.flush()
+    spawn_enrich(card.id)
 
 
 def build_pending_content(
@@ -263,8 +351,8 @@ def public_enrichment_error(exc: BaseException) -> str:
 
 
 def _entry_has_paid_content(entry: LexicalEntry) -> bool:
-    content = entry.content or {}
-    return bool(content.get("meanings") or content.get("lemma") or content.get("similar_words"))
+    """Tylko pełna treść — samo similar_words / odmiana bez znaczeń nie wchodzi do cache."""
+    return content_is_complete(getattr(entry, "content", None) or {})
 
 
 def same_pos_bucket(left: str | None, right: str | None) -> bool:
@@ -287,8 +375,9 @@ def pick_ready_entry(rows: list, pos: str | None, require_lemma: str | None = No
     """Pick a cached lexical row. Never return a different POS than requested."""
     if not rows:
         return None
-    complete = [e for e in rows if content_is_complete(getattr(e, "content", None))]
-    pool = complete or list(rows)
+    pool = [e for e in rows if content_is_complete(getattr(e, "content", None))]
+    if not pool:
+        return None
     if require_lemma:
         pool = [e for e in pool if same_headword(require_lemma, getattr(e, "lemma_l2", None))]
         if not pool:
@@ -461,7 +550,7 @@ def _apply_entry_to_card(
     elif not same_headword(card.lemma_l2, entry.lemma_l2):
         content["lemma"] = card.lemma_l2
     card.enrichment_status = STATUS_READY
-    card.enrichment_error = None
+    _clear_enrich_retry(card)
 
 
 async def _find_ready_entry(
@@ -484,6 +573,7 @@ async def _resolve_content(
     pos: str | None,
     *,
     user_id: UUID | None,
+    gloss_hint: str | None = None,
 ) -> tuple[dict, LexicalEntry | None]:
     """Zwraca gotową treść — z bazy, jeśli ktoś już to słowo wzbogacił."""
     pair = lang_pair_key(profile.app_lang, profile.learning_lang)
@@ -499,7 +589,7 @@ async def _resolve_content(
         cached.usage_count = (cached.usage_count or 0) + 1
         return dict(cached.content), cached
 
-    content = await enrich_card_content(profile, lemma, pos)
+    content = await enrich_card_content(profile, lemma, pos, gloss_hint=gloss_hint)
     content = await ensure_similar_words(
         content, profile, content.get("lemma") or lemma, content.get("pos") or pos
     )
@@ -574,10 +664,19 @@ async def _run_claimed_enrich(card_id: UUID) -> None:
                 )
             except TimeoutError:
                 logger.error(
-                    "Enrichment timeout card=%s after %ss — zostaje pending do retry",
+                    "Enrichment timeout card=%s after %ss",
                     card_id,
                     _ENRICH_TIMEOUT_S,
                 )
+                async with async_session_factory() as db:
+                    card = (
+                        await db.execute(
+                            select(LearningCard).where(LearningCard.id == card_id)
+                        )
+                    ).scalar_one_or_none()
+                    if card is not None and card.enrichment_status != STATUS_READY:
+                        _apply_enrich_retry(card, TimeoutError("enrichment_timeout"))
+                        await db.commit()
     except asyncio.CancelledError:
         raise
     except Exception:
@@ -594,11 +693,22 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
             return
         if card.enrichment_status == STATUS_READY and content_is_complete(card.content):
             return
+        if card.enrichment_status == STATUS_PREPARING:
+            retry_at = card.enrichment_retry_at
+            if retry_at is not None and retry_at > datetime.now(UTC):
+                return
+        if card.enrichment_status == STATUS_FAILED:
+            return
+        if card.enrichment_status == STATUS_PREPARATION_PROBLEM:
+            return
+
+        card.enrichment_status = STATUS_PENDING
+        await db.flush()
 
         content0 = dict(card.content or {})
         if content0.get("schema_version") == "import_display.v1":
             card.enrichment_status = STATUS_READY
-            card.enrichment_error = None
+            _clear_enrich_retry(card)
             await db.commit()
             from app.services.push import notify_cards_ready
 
@@ -621,7 +731,7 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                 await notify_cards_ready(db, card.user_id)
                 return
 
-            if not (card.gloss_primary or "").strip():
+            if not _card_lookup_resolved(card):
                 user = (
                     await db.execute(select(User).where(User.id == card.user_id))
                 ).scalar_one_or_none()
@@ -678,7 +788,12 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                 entry = None
             else:
                 content, entry = await _resolve_content(
-                    db, profile, card.lemma_l2, card.pos, user_id=card.user_id
+                    db,
+                    profile,
+                    card.lemma_l2,
+                    card.pos,
+                    user_id=card.user_id,
+                    gloss_hint=card.gloss_primary,
                 )
         except asyncio.CancelledError:
             raise
@@ -699,8 +814,7 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                 payload={"lemma": card.lemma_l2, "pos": card.pos},
                 exc=exc,
             )
-            card.enrichment_status = STATUS_FAILED
-            card.enrichment_error = public_enrichment_error(exc)
+            _apply_enrich_retry(card, exc)
             await db.commit()
             return
 
@@ -713,7 +827,7 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
         if entry is not None:
             card.lexical_entry_id = entry.id
         card.enrichment_status = STATUS_READY
-        card.enrichment_error = None
+        _clear_enrich_retry(card)
         await db.commit()
         from app.services.push import notify_cards_ready
 
@@ -721,10 +835,7 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
 
 
 async def resume_pending_enrichment(*, stale_only: bool = False) -> None:
-    """Wznowienie pending/failed. Na starcie wszystkie; watchdog tylko stare.
-
-    Nie czeka na LLM — odpalą się w tle. Shutdown nie kasuje więc całej kolejki.
-    """
+    """Wznowienie pending/preparing. Failed nie jest retry'owany — backoff w preparing."""
     if _resume_lock.locked():
         return
     async with _resume_lock:
@@ -736,14 +847,32 @@ async def resume_pending_enrichment(*, stale_only: bool = False) -> None:
 
 
 async def _resume_pending_enrichment(*, stale_only: bool = False) -> None:
-    stmt = select(LearningCard.id).where(
-        LearningCard.enrichment_status.in_([STATUS_PENDING, STATUS_FAILED]),
-        LearningCard.deleted_at.is_(None),
+    now = datetime.now(UTC)
+    preparing_due = and_(
+        LearningCard.enrichment_status == STATUS_PREPARING,
+        LearningCard.enrichment_retry_at.isnot(None),
+        LearningCard.enrichment_retry_at <= now,
     )
     if stale_only:
         cutoff = datetime.now(UTC) - timedelta(seconds=_ENRICH_STALE_S)
-        stmt = stmt.where(LearningCard.updated_at < cutoff)
-    stmt = stmt.limit(_ENRICH_RESUME_BATCH)
+        pending_stuck = and_(
+            LearningCard.enrichment_status == STATUS_PENDING,
+            LearningCard.updated_at < cutoff,
+        )
+        eligible = or_(pending_stuck, preparing_due)
+    else:
+        eligible = or_(
+            LearningCard.enrichment_status == STATUS_PENDING,
+            preparing_due,
+        )
+    stmt = (
+        select(LearningCard.id)
+        .where(
+            LearningCard.deleted_at.is_(None),
+            eligible,
+        )
+        .limit(_ENRICH_RESUME_BATCH)
+    )
     async with async_session_factory() as db:
         rows = await db.execute(stmt)
         card_ids = [row[0] for row in rows.all()]

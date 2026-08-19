@@ -12,6 +12,7 @@
     <string name="action_apply">Apply</string>
     <string name="list_words_meta">%1$d words</string>
     <string name="list_filter_empty">No words match filters</string>
+    <string name="list_search_hint">Search this list…</string>
     <string name="sort_title">Sort</string>
     <string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
@@ -238,6 +239,7 @@
     <string name="offline_lookup_queued">Added to "Pending" — lookup when you’re back online.</string>
     <string name="offline_lookup_duplicate">That word is already waiting on "Pending".</string>
     <string name="status_awaiting_network">Waiting for network</string>
+    <string name="status_lookup_queued">Queued</string>
     <string name="status_needs_review">Needs review</string>
 
     <string name="review_title">Word needs review</string>
@@ -408,12 +410,17 @@
     <string name="home_empty_title">You don\'t have any words yet</string>
     <string name="home_empty_body">Look up a word or import a list.</string>
     <string name="home_add_first">Add your first words</string>
-    <string name="home_caught_up">Nothing waiting today</string>
+    <string name="home_caught_up">You\'re up to date</string>
     <string name="home_next_review">Next review: %1$s</string>
     <string name="home_change_limit">Change limit</string>
+    <string name="home_relative_in_minutes">in %1$d min</string>
+    <string name="home_relative_in_one_hour">in 1 hour</string>
+    <string name="home_relative_in_hours">in %1$d hours</string>
     <string name="home_relative_tomorrow">tomorrow</string>
-    <string name="home_relative_day_after"></string>
+    <string name="home_relative_day_after">the day after tomorrow</string>
     <string name="home_in_days">in %1$d days</string>
+    <string name="home_in_weeks">in %1$d weeks</string>
+    <string name="home_in_months">in %1$d months</string>
     <string name="weekday_full_mon">Monday</string>
     <string name="weekday_full_tue">Tuesday</string>
     <string name="weekday_full_wed">Wednesday</string>
@@ -462,6 +469,14 @@
     <string name="cd_list_options">List options</string>
 
     <string name="status_error">error</string>
+
+    <string name="status_prep_problem">prep problem</string>
+
+    <string name="cd_retry_enrichment">Retry enrichment</string>
+
+    <string name="enrichment_retry_requires_online">Requires internet connection.</string>
+
+    <string name="enrichment_retry_failed">Could not retry enrichment.</string>
 
     <string name="status_new">new</string>
 

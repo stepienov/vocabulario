@@ -27,9 +27,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
@@ -56,6 +58,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.outlined.CloudOff
@@ -257,14 +260,29 @@ fun HomeScreen(
                     onClearAllWords = viewModel::clearAllWordsFromCurrentList,
                     onSetSort = viewModel::setListSortOrder,
                     onSetFilter = viewModel::setListFilter,
+                    onSetQuery = viewModel::setListQuery,
                     onClearFilter = viewModel::clearListFilter,
                     onFixCard = viewModel::openCorrection,
+                    onRetryEnrichment = viewModel::retryCardEnrichment,
                     onCardHistory = viewModel::openCardHistory,
                     onReviewWord = viewModel::openPendingReview,
                     onClearWordFocus = viewModel::clearWordFocus,
+                    onViewCard = viewModel::openCardDetail,
                 )
             }
         }
+    }
+
+    state.detailCard?.let { opened ->
+        val card = state.listWords.firstOrNull { it.id == opened.id } ?: opened
+        ListCardDetailOverlay(
+            card = card,
+            profile = state.activeProfile,
+            onDismiss = viewModel::dismissCardDetail,
+            onAddRelated = viewModel::openAddRelated,
+            learningLemmas = state.learningLemmas,
+            addSheet = { HomeAddToListSheet(state = state, viewModel = viewModel) },
+        )
     }
 
     if (importState.showAbortConfirm) {
@@ -275,29 +293,8 @@ fun HomeScreen(
         )
     }
 
-    state.addTarget?.let { target ->
-        AddToListSheet(
-            lemma = target.lemma,
-            gloss = target.gloss,
-            lists = state.lists,
-            pickListOpen = state.pickListOpen,
-            showCreateListPrompt = state.showCreateListPrompt,
-            createListName = state.createListName,
-            createNameError = listNameConflictMessage(
-                LocalContext.current,
-                state.lists,
-                state.createListName,
-            ),
-            onDismiss = viewModel::dismissAddSheet,
-            onLearning = viewModel::addToLearning,
-            onOther = viewModel::openOtherLists,
-            onPickList = viewModel::addToList,
-            onCreateNameChange = viewModel::onCreateListNameChange,
-            onCreateAndAdd = viewModel::createListAndAdd,
-            onShowCreatePrompt = viewModel::openCreateListPrompt,
-            onBackFromCreatePrompt = viewModel::backFromCreateListPrompt,
-            onBackFromListPicker = viewModel::backFromListPicker,
-        )
+    if (state.detailCard == null) {
+        HomeAddToListSheet(state = state, viewModel = viewModel)
     }
 
     CardCorrectionReportSheet(
@@ -361,8 +358,8 @@ private fun HomeHeader(
 ) {
     val scheme = MaterialTheme.colorScheme
     val headerControl = 44.dp
-    val chip = langChipLabel(state.activeProfile, state.profiles)
-    val manyLangs = state.profiles.size > 1
+    val chip = langChipLabel(state.activeProfile, state.dropdownProfiles)
+    val manyLangs = state.showLangDropdown
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -421,12 +418,12 @@ private fun HomeHeader(
                         expanded = state.langMenuOpen,
                         onDismissRequest = { onToggleLangMenu(false) },
                     ) {
-                        state.profiles.forEach { profile ->
+                        state.dropdownProfiles.forEach { profile ->
                             val selected = profile.id == state.activeProfile?.id
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        langChipLabel(profile, state.profiles),
+                                        langChipLabel(profile, state.dropdownProfiles),
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                                     )
                                 },
@@ -542,29 +539,20 @@ private fun HomeTabs(
 
 
 @Composable
-private fun weekdayFull(dayOfWeek: Int): String = when (dayOfWeek) {
-    java.util.Calendar.MONDAY -> stringResource(R.string.weekday_full_mon)
-    java.util.Calendar.TUESDAY -> stringResource(R.string.weekday_full_tue)
-    java.util.Calendar.WEDNESDAY -> stringResource(R.string.weekday_full_wed)
-    java.util.Calendar.THURSDAY -> stringResource(R.string.weekday_full_thu)
-    java.util.Calendar.FRIDAY -> stringResource(R.string.weekday_full_fri)
-    java.util.Calendar.SATURDAY -> stringResource(R.string.weekday_full_sat)
-    else -> stringResource(R.string.weekday_full_sun)
-}
-
-@Composable
 private fun nextReviewLabel(nextIso: String?): String? {
     if (nextIso.isNullOrBlank()) return null
     val nextMs = runCatching { Instant.parse(nextIso).toEpochMilli() }.getOrNull() ?: return null
     val now = System.currentTimeMillis()
-    val days = NextReviewCopy.calendarDaysBetween(now, nextMs)
-    val tomorrow = stringResource(R.string.home_relative_tomorrow)
-    val dayAfter = stringResource(R.string.home_relative_day_after)
-    val whenText = when (NextReviewCopy.kind(days, tomorrow.isNotBlank(), dayAfter.isNotBlank())) {
-        NextReviewCopy.Kind.Tomorrow -> tomorrow
-        NextReviewCopy.Kind.DayAfter -> dayAfter
-        NextReviewCopy.Kind.Weekday -> weekdayFull(NextReviewCopy.weekdayCalendarConst(nextMs))
-        NextReviewCopy.Kind.InDays -> stringResource(R.string.home_in_days, days)
+    val r = NextReviewCopy.classify(now, nextMs)
+    val whenText = when (r.kind) {
+        NextReviewCopy.Kind.InMinutes -> stringResource(R.string.home_relative_in_minutes, r.value)
+        NextReviewCopy.Kind.InOneHour -> stringResource(R.string.home_relative_in_one_hour)
+        NextReviewCopy.Kind.InHours -> stringResource(R.string.home_relative_in_hours, r.value)
+        NextReviewCopy.Kind.Tomorrow -> stringResource(R.string.home_relative_tomorrow)
+        NextReviewCopy.Kind.DayAfter -> stringResource(R.string.home_relative_day_after)
+        NextReviewCopy.Kind.InDays -> stringResource(R.string.home_in_days, r.value)
+        NextReviewCopy.Kind.InWeeks -> stringResource(R.string.home_in_weeks, r.value)
+        NextReviewCopy.Kind.InMonths -> stringResource(R.string.home_in_months, r.value)
     }
     return stringResource(R.string.home_next_review, whenText)
 }
@@ -582,6 +570,7 @@ private fun DashboardTab(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = ScreenPad, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -668,16 +657,14 @@ private fun DashboardTab(
 
         if (state.homeKind != HomeKind.Empty) {
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f, fill = true),
+                modifier = Modifier.fillMaxWidth(),
                 shape = TileRadius,
                 color = scheme.surface,
             ) {
                 ReviewHeatGrid(
                     days = stats?.forecast.orEmpty(),
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                 )
             }
@@ -834,12 +821,12 @@ private fun ReviewHeatGrid(
             }
         }
         Column(
-            modifier = Modifier.fillMaxWidth().weight(1f),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             cells.chunked(7).forEach { week ->
                 Row(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     week.forEach { day ->
@@ -864,7 +851,7 @@ private fun ReviewHeatGrid(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .fillMaxSize()
+                                .aspectRatio(1f)
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(fill)
                                 .then(
@@ -1323,6 +1310,36 @@ private enum class ListEditDialog { None, Menu, Rename, DeleteConfirm, ClearAllC
 private enum class WordEditDialog { None, DeleteConfirm, Move }
 private enum class MultiEditDialog { None, DeleteConfirm, Move }
 
+@Composable
+private fun HomeAddToListSheet(
+    state: HomeUiState,
+    viewModel: HomeViewModel,
+) {
+    val target = state.addTarget ?: return
+    AddToListSheet(
+        lemma = target.lemma,
+        gloss = target.gloss,
+        lists = state.lists,
+        pickListOpen = state.pickListOpen,
+        showCreateListPrompt = state.showCreateListPrompt,
+        createListName = state.createListName,
+        createNameError = listNameConflictMessage(
+            LocalContext.current,
+            state.lists,
+            state.createListName,
+        ),
+        onDismiss = viewModel::dismissAddSheet,
+        onLearning = viewModel::addToLearning,
+        onOther = viewModel::openOtherLists,
+        onPickList = viewModel::addToList,
+        onCreateNameChange = viewModel::onCreateListNameChange,
+        onCreateAndAdd = viewModel::createListAndAdd,
+        onShowCreatePrompt = viewModel::openCreateListPrompt,
+        onBackFromCreatePrompt = viewModel::backFromCreateListPrompt,
+        onBackFromListPicker = viewModel::backFromListPicker,
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ListsTab(
@@ -1347,11 +1364,14 @@ private fun ListsTab(
     onClearAllWords: () -> Unit,
     onSetSort: (ListSortOrder) -> Unit,
     onSetFilter: (ListFilterState) -> Unit,
+    onSetQuery: (String) -> Unit,
     onClearFilter: () -> Unit,
     onFixCard: (String) -> Unit,
+    onRetryEnrichment: (String) -> Unit,
     onCardHistory: (String) -> Unit,
     onReviewWord: (String) -> Unit,
     onClearWordFocus: () -> Unit,
+    onViewCard: (CardResponse) -> Unit,
 ) {
     var showCreate by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
@@ -1369,7 +1389,6 @@ private fun ListsTab(
     var showSortSheet by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
     var draftFilter by remember { mutableStateOf(ListFilterState()) }
-    var detailCard by remember { mutableStateOf<CardResponse?>(null) }
     val listState = rememberLazyListState()
     val scheme = MaterialTheme.colorScheme
     val selectedList = state.lists.firstOrNull { it.id == state.selectedListId }
@@ -1482,8 +1501,10 @@ private fun ListsTab(
             }
         }
 
-        ListWordsMetaBar(
-            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+        ListWordsToolbar(
+            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+            query = state.listQuery,
+            onQueryChange = onSetQuery,
             filter = state.listFilter,
             onSort = { showSortSheet = true },
             onFilter = {
@@ -1552,7 +1573,9 @@ private fun ListsTab(
                         val selected = card.id in state.selectedWordIds
                         ListWordTile(
                             card = card,
-                            flushInProgress = isOnline && card.enrichment_status == "awaiting_network",
+                            isOnline = isOnline,
+                            flushInProgress = state.pendingLookupFlushInProgress &&
+                                card.enrichment_status == "awaiting_network",
                             expanded = expandedId == card.id && !selectionMode,
                             selected = selected,
                             selectionMode = selectionMode,
@@ -1597,7 +1620,8 @@ private fun ListsTab(
                                 }
                             },
                             onFixCard = { onFixCard(card.id) },
-                            onViewCard = { detailCard = card },
+                            onRetryEnrichment = { onRetryEnrichment(card.id) },
+                            onViewCard = { onViewCard(card) },
                             onHistory = { onCardHistory(card.id) },
                             onReview = { onReviewWord(card.id) },
                         )
@@ -2134,14 +2158,6 @@ private fun ListsTab(
             }
         }
     }
-
-    detailCard?.let { card ->
-        ListCardDetailOverlay(
-            card = card,
-            profile = state.activeProfile,
-            onDismiss = { detailCard = null },
-        )
-    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -2152,6 +2168,7 @@ private fun ListWordTile(
     selected: Boolean = false,
     selectionMode: Boolean = false,
     editProcessing: Boolean = false,
+    isOnline: Boolean = true,
     flushInProgress: Boolean = false,
     onToggle: () -> Unit,
     onLongPress: () -> Unit = {},
@@ -2159,6 +2176,7 @@ private fun ListWordTile(
     onDelete: () -> Unit,
     onMove: () -> Unit,
     onFixCard: () -> Unit = {},
+    onRetryEnrichment: () -> Unit = {},
     onHistory: () -> Unit = {},
     onReview: () -> Unit = {},
 ) {
@@ -2175,8 +2193,10 @@ private fun ListWordTile(
         bringIntoViewRequester.bringIntoView()
     }
     val needsReview = card.enrichment_status == "needs_review"
-    val awaitingNetwork = card.enrichment_status == "awaiting_network" && !flushInProgress
-    val pending = card.enrichment_status == "pending" || flushInProgress
+    val prepProblem = card.enrichment_status == "prep_problem"
+    val lookupQueued = card.enrichment_status == "awaiting_network" && isOnline && !flushInProgress
+    val awaitingNetwork = card.enrichment_status == "awaiting_network" && !isOnline
+    val pending = card.enrichment_status == "pending" || card.enrichment_status == "preparing" || flushInProgress
     val activityProcessing = !card.card_activity_status.isNullOrBlank() || editProcessing
     val failed = card.enrichment_status == "failed"
     val posKey = normalizePosKey(card.pos)
@@ -2187,7 +2207,9 @@ private fun ListWordTile(
     }
     val statusLabel = when {
         needsReview -> stringResource(R.string.status_needs_review)
+        prepProblem -> stringResource(R.string.status_prep_problem)
         awaitingNetwork -> stringResource(R.string.status_awaiting_network)
+        lookupQueued -> stringResource(R.string.status_lookup_queued)
         pending -> null
         failed -> stringResource(R.string.status_error)
         card.srs_status.isNullOrBlank() -> null
@@ -2204,7 +2226,7 @@ private fun ListWordTile(
     val isImportPreserve = imported != null ||
         card.pos.equals("imported", ignoreCase = true) ||
         com.vocabulario.app.ui.components.isImportPreserveContent(card.content)
-    val muted = awaitingNetwork || activityProcessing || needsReview
+    val muted = awaitingNetwork || lookupQueued || activityProcessing || needsReview || prepProblem
     val tileColor = when {
         selected -> scheme.primary.copy(alpha = 0.12f)
         muted -> scheme.surfaceVariant.copy(alpha = 0.55f)
@@ -2280,6 +2302,27 @@ private fun ListWordTile(
                             )
                         }
                     }
+                    prepProblem -> {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        StatusChip(
+                            label = stringResource(R.string.status_prep_problem),
+                            failed = true,
+                            muted = true,
+                        )
+                        IconButton(
+                            onClick = onRetryEnrichment,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .testTag(TestTags.BTN_RETRY_ENRICHMENT),
+                        ) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = stringResource(R.string.cd_retry_enrichment),
+                                tint = scheme.primary,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                    }
                     activityProcessing -> {
                         Spacer(modifier = Modifier.width(8.dp))
                         CardActivitySpinner(color = CorrectionActivityColor)
@@ -2301,7 +2344,7 @@ private fun ListWordTile(
                             modifier = Modifier.size(22.dp),
                         )
                     }
-                    !selectionMode && (statusLabel != null || isImportPreserve) -> {
+                    !selectionMode && (statusLabel != null || isImportPreserve) && !prepProblem -> {
                         Spacer(modifier = Modifier.width(8.dp))
                         if (isImportPreserve) {
                             StatusChip(
@@ -2344,7 +2387,7 @@ private fun ListWordTile(
                 exit = shrinkVertically() + fadeOut(),
             ) {
                 Column(modifier = Modifier.padding(top = 4.dp)) {
-                    val compactActions = awaitingNetwork || pending || activityProcessing
+                    val compactActions = awaitingNetwork || lookupQueued || pending || activityProcessing
                     if (compactActions) {
                         Spacer(modifier = Modifier.height(8.dp))
                         HorizontalDivider(color = scheme.outline.copy(alpha = 0.5f))

@@ -19,6 +19,7 @@
     <string name="list_words_meta">%1$d 단어</string>
 
     <string name="list_filter_empty">필터에 맞는 단어가 없습니다</string>
+    <string name="list_search_hint">목록에서 검색…</string>
 
     <string name="sort_title">정렬</string>
 
@@ -428,12 +429,17 @@
     <string name="home_empty_title">아직 단어가 없습니다</string>
     <string name="home_empty_body">단어를 검색하거나 목록을 가져오세요.</string>
     <string name="home_add_first">첫 단어 추가</string>
-    <string name="home_caught_up">오늘 할 일이 없습니다</string>
+    <string name="home_caught_up">최신 상태입니다</string>
     <string name="home_next_review">다음 복습: %1$s</string>
     <string name="home_change_limit">한도 변경</string>
+    <string name="home_relative_in_minutes">%1$d분 후</string>
+    <string name="home_relative_in_one_hour">1시간 후</string>
+    <string name="home_relative_in_hours">%1$d시간 후</string>
     <string name="home_relative_tomorrow">내일</string>
     <string name="home_relative_day_after">모레</string>
     <string name="home_in_days">%1$d일 후</string>
+    <string name="home_in_weeks">%1$d주 후</string>
+    <string name="home_in_months">%1$d개월 후</string>
     <string name="weekday_full_mon">월요일</string>
     <string name="weekday_full_tue">화요일</string>
     <string name="weekday_full_wed">수요일</string>
@@ -705,7 +711,7 @@
 
     <string name="correction_fix_card">수정 신고</string>
 
-    <string name="correction_report_title">문제 신고</string>
+    <string name="correction_report_title">카드를 확인하고 수정</string>
 
     <string name="correction_section_lemma">표제어</string>
 
@@ -731,15 +737,15 @@
 
     <string name="correction_validation">최소 하나의 섹션을 선택하거나 노트를 작성하세요 (최소 3자).</string>
 
-    <string name="correction_submit">신고 제출</string>
+    <string name="correction_submit">검증을 위해 보내기</string>
 
     <string name="correction_requires_online">인터넷 연결이 필요합니다.</string>
 
-    <string name="correction_result_accepted_title">신고 수락됨 — 카드 업데이트됨.</string>
+    <string name="correction_result_accepted_title">신고가 수락됨</string>
 
-    <string name="correction_result_rejected_title">신고가 수락되지 않았습니다.</string>
+    <string name="correction_result_rejected_title">신고가 수락되지 않음</string>
 
-    <string name="correction_result_rejected_body">카드를 직접 수정할 수 있습니다 — 본인의 책임 하에. 이는 개인 복사본을 생성합니다.</string>
+    <string name="correction_result_rejected_body">카드 “%1$s”. %2$s</string>
 
     <string name="correction_edit_self">편집</string>
     <string name="correction_history_button">변경 기록</string>
@@ -892,5 +898,10 @@
     <string name="err_offline_card">이 카드는 오프라인에서 사용할 수 없습니다</string>
     <string name="err_no_inbox">대기 목록을 열 수 없습니다</string>
     <string name="err_email_taken">이미 등록된 이메일입니다</string>
+
+    <string name="status_prep_problem">준비 문제</string>
+    <string name="cd_retry_enrichment">준비 다시 시도</string>
+    <string name="enrichment_retry_requires_online">인터넷 연결이 필요합니다.</string>
+    <string name="enrichment_retry_failed">준비를 다시 시도할 수 없습니다.</string>
 
 </resources>

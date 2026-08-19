@@ -38,6 +38,7 @@ LOCALE_DIRS = [
 
 KEY_RE = re.compile(r'<string\s+name="([^"]+)"')
 STRING_RE = re.compile(r'<string name="([^"]+)">(.*?)</string>', re.S)
+FMT_RE = re.compile(r"%(?:\d+\$)?[sdif]")
 
 ALLOW_EN_COPY = {
     "app_name",
@@ -100,9 +101,12 @@ def main() -> int:
             errors.append(f"{locale}: brakuje {len(missing)} kluczy (np. {missing[:5]})")
         if extra:
             errors.append(f"{locale}: {len(extra)} nadmiarowych kluczy (np. {extra[:5]})")
+        vals = extract_values(path)
+        empty = sorted(k for k in keys if not vals.get(k, "").strip())
+        if empty:
+            errors.append(f"{locale}: {len(empty)} pustych stringów (np. {empty[:5]})")
         if locale in ("values", "values-en"):
             continue
-        vals = extract_values(path)
         copied = sorted(
             k
             for k in base_keys & keys
@@ -110,6 +114,9 @@ def main() -> int:
         )
         if copied:
             errors.append(f"{locale}: {len(copied)} skopiowanych EN (np. {copied[:5]})")
+        for k in sorted(base_keys & keys):
+            if set(FMT_RE.findall(base_vals.get(k, ""))) != set(FMT_RE.findall(vals.get(k, ""))):
+                errors.append(f"{locale}: {k} — placeholdery ≠ EN")
 
     print(f"Bazowy plik: {len(base_keys)} kluczy")
     if errors:

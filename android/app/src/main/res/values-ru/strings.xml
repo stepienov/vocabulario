@@ -12,6 +12,7 @@
     <string name="action_apply">Применить</string>
     <string name="list_words_meta">%1$d слов</string>
     <string name="list_filter_empty">Нет слов, подходящих под фильтры</string>
+    <string name="list_search_hint">Поиск по списку…</string>
     <string name="sort_title">Сортировка</string>
 <string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
@@ -396,12 +397,17 @@
     <string name="home_empty_title">У вас ещё нет слов</string>
     <string name="home_empty_body">Найдите слово или импортируйте список.</string>
     <string name="home_add_first">Добавить первые слова</string>
-    <string name="home_caught_up">На сегодня ничего нет</string>
+    <string name="home_caught_up">Вы в актуальном состоянии</string>
     <string name="home_next_review">Следующее повторение: %1$s</string>
     <string name="home_change_limit">Изменить лимит</string>
+    <string name="home_relative_in_minutes">через %1$d мин.</string>
+    <string name="home_relative_in_one_hour">через 1 ч.</string>
+    <string name="home_relative_in_hours">через %1$d ч.</string>
     <string name="home_relative_tomorrow">завтра</string>
     <string name="home_relative_day_after">послезавтра</string>
     <string name="home_in_days">через %1$d дн.</string>
+    <string name="home_in_weeks">через %1$d нед.</string>
+    <string name="home_in_months">через %1$d мес.</string>
     <string name="weekday_full_mon">понедельник</string>
     <string name="weekday_full_tue">вторник</string>
     <string name="weekday_full_wed">среда</string>
@@ -659,7 +665,7 @@
     <string name="practice_well_done">Отлично!</string>
     <string name="cd_search">Поиск</string>
     <string name="correction_fix_card">Сообщить об исправлении</string>
-<string name="correction_report_title">Report a problem</string>
+<string name="correction_report_title">Проверить и исправить карточку</string>
         <string name="correction_section_lemma">Лемма</string>
     <string name="correction_section_pos">Часть речи</string>
     <string name="correction_section_gloss">Основной перевод</string>
@@ -672,11 +678,11 @@
     <string name="correction_note_label">Заметка</string>
     <string name="correction_note_hint">Опишите ошибку…</string>
     <string name="correction_validation">Выберите хотя бы один раздел или напишите заметку (мин. 3 символа).</string>
-<string name="correction_submit">Submit report</string>
+<string name="correction_submit">Отправить на проверку</string>
         <string name="correction_requires_online">Требуется подключение к интернету.</string>
-<string name="correction_result_accepted_title">Report accepted — card updated.</string>
-    <string name="correction_result_rejected_title">Report not accepted.</string>
-    <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
+<string name="correction_result_accepted_title">Жалоба принята</string>
+    <string name="correction_result_rejected_title">Жалоба не принята</string>
+    <string name="correction_result_rejected_body">Карточка «%1$s». %2$s</string>
         <string name="correction_edit_self">Изменить</string>
         <string name="correction_history_button">История изменений</string>
     <string name="correction_self_edit_title">Изменить карточку</string>
@@ -796,6 +802,11 @@
     <string name="err_offline_card">Эта карточка недоступна офлайн</string>
     <string name="err_no_inbox">Не удалось открыть список ожидания</string>
     <string name="err_email_taken">Этот email уже зарегистрирован</string>
+
+    <string name="status_prep_problem">проблема подготовки</string>
+    <string name="cd_retry_enrichment">Повторить подготовку</string>
+    <string name="enrichment_retry_requires_online">Требуется подключение к интернету.</string>
+    <string name="enrichment_retry_failed">Не удалось повторить подготовку.</string>
 
 </resources>
 

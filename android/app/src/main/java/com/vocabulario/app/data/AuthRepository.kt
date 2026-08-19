@@ -4,6 +4,7 @@ import com.vocabulario.app.data.api.GoogleAuthRequest
 import com.vocabulario.app.data.api.LoginRequest
 import com.vocabulario.app.data.api.RegisterRequest
 import com.vocabulario.app.data.api.VocabularioApi
+import com.vocabulario.app.data.imports.ImportStatePersistence
 import com.vocabulario.app.data.local.OfflineStore
 import com.vocabulario.app.data.local.TokenStore
 import javax.inject.Inject
@@ -14,8 +15,10 @@ class AuthRepository @Inject constructor(
     private val api: VocabularioApi,
     private val tokenStore: TokenStore,
     private val offlineStore: OfflineStore,
+    private val importStatePersistence: ImportStatePersistence,
 ) {
     suspend fun register(email: String, password: String) {
+        beginNewSession()
         val tokens = api.register(RegisterRequest(email, password))
         tokenStore.saveTokens(tokens.access_token, tokens.refresh_token)
     }
@@ -32,6 +35,14 @@ class AuthRepository @Inject constructor(
 
     suspend fun logout() {
         tokenStore.clear()
+        offlineStore.clearAll()
+        importStatePersistence.saveJobId(null)
+    }
+
+    private suspend fun beginNewSession() {
+        tokenStore.clear()
+        offlineStore.clearAll()
+        importStatePersistence.saveJobId(null)
     }
 
     suspend fun hasProfile(): Boolean {

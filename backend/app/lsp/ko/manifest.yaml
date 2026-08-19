@@ -21,10 +21,10 @@ verbs:
   person_grids:
     ko_6:
       keys: ["jeo", "neo", "geu", "uri", "neohui", "geudeul"]
-      labels: {}
+      labels: { "jeo": "저", "neo": "너", "geu": "그", "uri": "우리", "neohui": "너희", "geudeul": "그들" }
     ko_imperative:
       keys: ["neo", "uri"]
-      labels: {}
+      labels: { "neo": "너", "uri": "우리" }
   paradigm_rules: |
     KOREAN (ko) for "{lemma}":
     - Honorific levels in language_specific if relevant. No placeholders.
@@ -37,12 +37,54 @@ adjectives:
   full_declension: false
 
 ui_labels:
+  ar:
+    present: المضارع
+    past: الماضي
+    future: المستقبل
+    imperative: الأمر
+    base: الجذر
+  de:
+    present: Präsens
+    past: Präteritum
+    future: Futur
+    imperative: Imperativ
+    base: Stamm
   en:
     present: Present
     past: Past
     future: Future
     imperative: Imperative
     base: Verb stem
+  es:
+    present: Presente
+    past: Pasado
+    future: Futuro
+    imperative: Imperativo
+    base: Raíz
+  fr:
+    present: Présent
+    past: Passé
+    future: Futur
+    imperative: Impératif
+    base: Forme de base
+  hi:
+    present: वर्तमान
+    past: भूत
+    future: भविष्य
+    imperative: आज्ञार्थ
+    base: मूल रूप
+  it:
+    present: Presente
+    past: Passato
+    future: Futuro
+    imperative: Imperativo
+    base: Tema
+  ja:
+    present: 現在
+    past: 過去
+    future: 未来
+    imperative: 命令形
+    base: 語幹
   ko:
     present: 현재
     past: 과거
@@ -55,3 +97,39 @@ ui_labels:
     future: Czas przyszły
     imperative: Tryb rozkazujący
     base: Temat czasownika
+  pt-br:
+    present: Presente
+    past: Passado
+    future: Futuro
+    imperative: Imperativo
+    base: Radical
+  pt-pt:
+    present: Presente
+    past: Passado
+    future: Futuro
+    imperative: Imperativo
+    base: Radical
+  ru:
+    present: Настоящее
+    past: Прошедшее
+    future: Будущее
+    imperative: Повелительное
+    base: Основа
+  tr:
+    present: Şimdiki zaman
+    past: Geçmiş zaman
+    future: Gelecek zaman
+    imperative: Emir kipi
+    base: Gövde
+  vi:
+    present: Hiện tại
+    past: Quá khứ
+    future: Tương lai
+    imperative: Mệnh lệnh
+    base: Gốc
+  zh:
+    present: 现在
+    past: 过去
+    future: 将来
+    imperative: 祈使
+    base: 原形

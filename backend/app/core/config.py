@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     llm_provider: str = "openai"
     llm_lookup_model: str = "gpt-5.6-terra"
     llm_enrichment_model: str = "gpt-5.6-terra"
+    # Tańszy model na proste kroki (dystraktory, fallback examples).
+    llm_light_model: str = "gpt-5.6-luna"
     # Per-task override for preserve layout analysis (empty → llm_lookup_model).
     llm_import_layout_model: str = ""
     llm_import_provider: str = "openai"  # openai | anthropic

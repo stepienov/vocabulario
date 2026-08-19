@@ -59,6 +59,9 @@ interface CachedCardDao {
     @Query("DELETE FROM cached_cards WHERE profileId = :profileId")
     suspend fun clearProfile(profileId: String)
 
+    @Query("SELECT COUNT(*) FROM cached_cards WHERE profileId = :profileId")
+    suspend fun countForProfile(profileId: String): Int
+
     @Query("DELETE FROM cached_cards WHERE id IN (:ids)")
     suspend fun deleteIds(ids: List<String>)
 

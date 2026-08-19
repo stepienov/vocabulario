@@ -233,13 +233,15 @@ async def enrich_card_content(
     profile: LanguageProfile,
     lemma: str,
     pos: str | None,
+    *,
+    gloss_hint: str | None = None,
 ) -> dict:
     """Buduje pełną kartę w formacie vocabulario.card.v1 (LSP)."""
     from app.lsp.enrichment import enrich_card_content_lsp
     from app.lsp.registry import require_manifest
 
     require_manifest(profile.learning_lang)
-    return await enrich_card_content_lsp(profile, lemma, pos)
+    return await enrich_card_content_lsp(profile, lemma, pos, gloss_hint=gloss_hint)
 
 
 # Legacy pipeline removed — all 16 L2 langs have LSP manifests.

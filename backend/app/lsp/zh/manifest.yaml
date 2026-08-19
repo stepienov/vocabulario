@@ -36,6 +36,20 @@ adjectives:
   full_declension: false
 
 ui_labels:
+  ar:
+    present: المضارع
+    past: الماضي
+    future: المستقبل
+    progressive: الاستمرار
+    perfect: التام
+    base: الجذر
+  de:
+    present: Präsens
+    past: Präteritum
+    future: Futur
+    progressive: Verlaufsform
+    perfect: Perfekt
+    base: Stamm
   en:
     present: Present
     past: Past
@@ -43,13 +57,48 @@ ui_labels:
     progressive: Progressive
     perfect: Perfect
     base: Base form
-  zh:
-    present: 现在
-    past: 过去
-    future: 将来
-    progressive: 进行
-    perfect: 完成
-    base: 原形
+  es:
+    present: Presente
+    past: Pasado
+    future: Futuro
+    progressive: Progresivo
+    perfect: Perfecto
+    base: Raíz
+  fr:
+    present: Présent
+    past: Passé
+    future: Futur
+    progressive: Progressif
+    perfect: Perfectif
+    base: Forme de base
+  hi:
+    present: वर्तमान
+    past: भूत
+    future: भविष्य
+    progressive: सातत्य
+    perfect: पूर्ण
+    base: मूल रूप
+  it:
+    present: Presente
+    past: Passato
+    future: Futuro
+    progressive: Progressivo
+    perfect: Perfetto
+    base: Tema
+  ja:
+    present: 現在
+    past: 過去
+    future: 未来
+    progressive: 進行
+    perfect: 完了
+    base: 語幹
+  ko:
+    present: 현재
+    past: 과거
+    future: 미래
+    progressive: 진행
+    perfect: 완료
+    base: 어간
   pl:
     present: Czas teraźniejszy
     past: Czas przeszły
@@ -57,3 +106,45 @@ ui_labels:
     progressive: Aspekt ciągły
     perfect: Aspekt dokonany
     base: Forma podstawowa
+  pt-br:
+    present: Presente
+    past: Passado
+    future: Futuro
+    progressive: Progressivo
+    perfect: Perfeito
+    base: Radical
+  pt-pt:
+    present: Presente
+    past: Passado
+    future: Futuro
+    progressive: Progressivo
+    perfect: Perfeito
+    base: Radical
+  ru:
+    present: Настоящее
+    past: Прошедшее
+    future: Будущее
+    progressive: Длительный вид
+    perfect: Совершенный вид
+    base: Основа
+  tr:
+    present: Şimdiki zaman
+    past: Geçmiş zaman
+    future: Gelecek zaman
+    progressive: Süreklilik
+    perfect: Görülen geçmiş
+    base: Gövde
+  vi:
+    present: Hiện tại
+    past: Quá khứ
+    future: Tương lai
+    progressive: Tiếp diễn
+    perfect: Hoàn thành
+    base: Gốc
+  zh:
+    present: 现在
+    past: 过去
+    future: 将来
+    progressive: 进行
+    perfect: 完成
+    base: 原形

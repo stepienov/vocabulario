@@ -12,6 +12,7 @@
     <string name="action_apply">应用</string>
     <string name="list_words_meta">%1$d 个词</string>
     <string name="list_filter_empty">没有符合筛选条件的词</string>
+    <string name="list_search_hint">搜索列表…</string>
     <string name="sort_title">排序</string>
 <string name="sort_lemma_asc">A → Z</string>
     <string name="sort_lemma_desc">Z → A</string>
@@ -396,12 +397,17 @@
     <string name="home_empty_title">还没有单词</string>
     <string name="home_empty_body">搜索一个词或导入列表。</string>
     <string name="home_add_first">添加第一批单词</string>
-    <string name="home_caught_up">今天没有待学内容</string>
+    <string name="home_caught_up">你已跟上进度</string>
     <string name="home_next_review">下次复习：%1$s</string>
     <string name="home_change_limit">更改上限</string>
+    <string name="home_relative_in_minutes">%1$d 分钟后</string>
+    <string name="home_relative_in_one_hour">1 小时后</string>
+    <string name="home_relative_in_hours">%1$d 小时后</string>
     <string name="home_relative_tomorrow">明天</string>
     <string name="home_relative_day_after">后天</string>
     <string name="home_in_days">%1$d 天后</string>
+    <string name="home_in_weeks">%1$d 周后</string>
+    <string name="home_in_months">%1$d 个月后</string>
     <string name="weekday_full_mon">星期一</string>
     <string name="weekday_full_tue">星期二</string>
     <string name="weekday_full_wed">星期三</string>
@@ -659,7 +665,7 @@
     <string name="practice_well_done">很好！</string>
     <string name="cd_search">搜索</string>
     <string name="correction_fix_card">报告更正</string>
-<string name="correction_report_title">Report a problem</string>
+<string name="correction_report_title">检查并修正卡片</string>
         <string name="correction_section_lemma">词目</string>
     <string name="correction_section_pos">词性</string>
     <string name="correction_section_gloss">主要释义</string>
@@ -672,11 +678,11 @@
     <string name="correction_note_label">备注</string>
     <string name="correction_note_hint">描述问题…</string>
     <string name="correction_validation">请至少选择一个栏目或填写备注（至少 3 个字符）。</string>
-<string name="correction_submit">Submit report</string>
+<string name="correction_submit">提交审核</string>
         <string name="correction_requires_online">需要互联网连接。</string>
-<string name="correction_result_accepted_title">Report accepted — card updated.</string>
-    <string name="correction_result_rejected_title">Report not accepted.</string>
-    <string name="correction_result_rejected_body">You can edit the card yourself — at your own risk. This creates your private copy.</string>
+<string name="correction_result_accepted_title">报告已接受</string>
+    <string name="correction_result_rejected_title">报告未接受</string>
+    <string name="correction_result_rejected_body">卡片“%1$s”。%2$s</string>
         <string name="correction_edit_self">编辑</string>
         <string name="correction_history_button">更改历史</string>
     <string name="correction_self_edit_title">编辑卡片</string>
@@ -796,6 +802,11 @@
     <string name="err_offline_card">此卡片在离线时不可用</string>
     <string name="err_no_inbox">无法打开待处理列表</string>
     <string name="err_email_taken">该邮箱已被注册</string>
+
+    <string name="status_prep_problem">准备出错</string>
+    <string name="cd_retry_enrichment">重试准备</string>
+    <string name="enrichment_retry_requires_online">需要网络连接。</string>
+    <string name="enrichment_retry_failed">无法重试准备。</string>
 
 </resources>
 

@@ -19,6 +19,7 @@
     <string name="list_words_meta">%1$d 語</string>
 
     <string name="list_filter_empty">フィルターに一致する語はありません</string>
+    <string name="list_search_hint">リストを検索…</string>
 
     <string name="sort_title">並べ替え</string>
 
@@ -395,7 +396,7 @@
 
     <string name="section_synonyms">同義語</string>
 
-    <string name="section_syn_ant">同義語 &amp;amp; 反意語</string>
+    <string name="section_syn_ant">同義語と反義語</string>
 
     <string name="section_antonyms">反意語</string>
 
@@ -428,12 +429,17 @@
     <string name="home_empty_title">まだ単語がありません</string>
     <string name="home_empty_body">単語を検索するか、リストを取り込みましょう。</string>
     <string name="home_add_first">最初の単語を追加</string>
-    <string name="home_caught_up">今日の課題はありません</string>
+    <string name="home_caught_up">最新の状態です</string>
     <string name="home_next_review">次の復習: %1$s</string>
     <string name="home_change_limit">上限を変更</string>
+    <string name="home_relative_in_minutes">%1$d分後</string>
+    <string name="home_relative_in_one_hour">1時間後</string>
+    <string name="home_relative_in_hours">%1$d時間後</string>
     <string name="home_relative_tomorrow">明日</string>
     <string name="home_relative_day_after">明後日</string>
     <string name="home_in_days">%1$d日後</string>
+    <string name="home_in_weeks">%1$d週間後</string>
+    <string name="home_in_months">%1$dか月後</string>
     <string name="weekday_full_mon">月曜日</string>
     <string name="weekday_full_tue">火曜日</string>
     <string name="weekday_full_wed">水曜日</string>
@@ -705,7 +711,7 @@
 
     <string name="correction_fix_card">修正を報告</string>
 
-    <string name="correction_report_title">問題を報告</string>
+    <string name="correction_report_title">カードを確認して修正</string>
 
     <string name="correction_section_lemma">レマ</string>
 
@@ -731,15 +737,15 @@
 
     <string name="correction_validation">少なくとも1つのセクションを選択するか、ノートを記入してください（最小3文字）。</string>
 
-    <string name="correction_submit">報告を送信</string>
+    <string name="correction_submit">確認のため送信</string>
 
     <string name="correction_requires_online">インターネット接続が必要です。</string>
 
-    <string name="correction_result_accepted_title">報告が受理されました — カードが更新されました。</string>
+    <string name="correction_result_accepted_title">報告が受理されました</string>
 
-    <string name="correction_result_rejected_title">報告は受理されませんでした。</string>
+    <string name="correction_result_rejected_title">報告は受理されませんでした</string>
 
-    <string name="correction_result_rejected_body">カードを自分で編集できます — 自己責任で。これにより、あなたのプライベートコピーが作成されます。</string>
+    <string name="correction_result_rejected_body">カード「%1$s」。%2$s</string>
 
     <string name="correction_edit_self">編集</string>
     <string name="correction_history_button">変更履歴</string>
@@ -892,5 +898,10 @@
     <string name="err_offline_card">このカードはオフラインでは利用できません</string>
     <string name="err_no_inbox">保留リストを開けませんでした</string>
     <string name="err_email_taken">このメールアドレスは既に登録されています</string>
+
+    <string name="status_prep_problem">準備の問題</string>
+    <string name="cd_retry_enrichment">準備を再試行</string>
+    <string name="enrichment_retry_requires_online">インターネット接続が必要です。</string>
+    <string name="enrichment_retry_failed">準備を再試行できませんでした。</string>
 
 </resources>

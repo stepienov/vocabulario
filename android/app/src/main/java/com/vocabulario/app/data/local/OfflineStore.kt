@@ -12,6 +12,7 @@ import com.vocabulario.app.data.api.SyncListItem
 import com.vocabulario.app.data.api.SyncPullResponse
 import com.vocabulario.app.data.api.SyncSrsState
 import com.vocabulario.app.data.api.UserSettingsResponse
+import com.vocabulario.app.data.SYSTEM_LIST_NAME
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.local.db.AppDatabase
 import com.vocabulario.app.data.local.db.CachedCardEntity
@@ -163,6 +164,15 @@ class OfflineStore @Inject constructor(
         val raw = profileDao.active()?.jsonBlob ?: return null
         return runCatching { json.decodeFromString(LanguageProfileResponse.serializer(), raw) }.getOrNull()
     }
+
+    suspend fun clearAll() {
+        db.clearAllTables()
+    }
+
+    suspend fun cardCount(profileId: String): Int = cardDao.countForProfile(profileId)
+
+    suspend fun cardCountsByProfile(): Map<String, Int> =
+        cachedProfiles().associate { it.id to cardDao.countForProfile(it.id) }
 
     suspend fun cachedProfiles(): List<LanguageProfileResponse> =
         profileDao.all().mapNotNull { entity ->
@@ -409,6 +419,10 @@ class OfflineStore @Inject constructor(
         }
     }
 
+    /**
+     * Pełna synchronizacja list z odpowiedzi serwera — kasuje w Room wiersze usunięte na serwerze.
+     * Tylko dla kompletnego GET /lists (sync pull, import refresh). Nigdy dla pojedynczej skrzynki.
+     */
     suspend fun cacheLists(profileId: String, lists: List<WordListResponse>) {
         consolidatePendingInboxes(profileId)
         val stubCount = pendingLookupCount(profileId)
@@ -444,6 +458,60 @@ class OfflineStore @Inject constructor(
                 listOf(inbox.copy(wordCount = stubCount, updatedAt = System.currentTimeMillis())),
             )
         }
+    }
+
+    /** Aktualizuje / dopisuje wybrane listy bez kasowania pozostałych wierszy w Room. */
+    suspend fun upsertLists(profileId: String, lists: List<WordListResponse>) {
+        if (lists.isEmpty()) return
+        consolidatePendingInboxes(profileId)
+        val stubCount = pendingLookupCount(profileId)
+        val serverLists = lists.filter { !it.id.startsWith("local-pending-inbox-") }
+        val entities = serverLists.map { list ->
+            val entity = list.toEntity(profileId)
+            if (list.is_pending_inbox) {
+                entity.copy(wordCount = list.word_count + stubCount)
+            } else {
+                entity
+            }
+        }
+        listDao.upsertAll(entities)
+        if (serverLists.any { it.is_pending_inbox }) {
+            listDao.forProfile(profileId)
+                .filter { it.isPendingInbox && it.id.startsWith("local-pending-inbox-") }
+                .forEach { listDao.deleteById(it.id) }
+        }
+    }
+
+    /** UI zawsze czyta komplet list z Room — niezależnie od sieci / kolejki lookupów. */
+    suspend fun completeLocalWordLists(profileId: String): List<WordListResponse> {
+        consolidatePendingInboxes(profileId)
+        ensureLocalSystemList(profileId)
+        if (pendingLookupCount(profileId) > 0) {
+            ensureLocalPendingInbox(profileId)
+        }
+        val all = listDao.forProfile(profileId)
+            .filter { !it.pendingDelete }
+            .map { it.toResponse() }
+        val hasServerInbox = all.any { it.is_pending_inbox && !it.id.startsWith("local-pending-inbox-") }
+        return all.filter { list ->
+            !list.id.startsWith("local-pending-inbox-") || !hasServerInbox
+        }
+    }
+
+    suspend fun ensureLocalSystemList(profileId: String): CachedListEntity {
+        listDao.forProfile(profileId).firstOrNull { it.isSystem && !it.pendingDelete }?.let { return it }
+        val entity = CachedListEntity(
+            id = "local-system-learning",
+            profileId = profileId,
+            name = SYSTEM_LIST_NAME,
+            isSystem = true,
+            isPendingInbox = false,
+            wordCount = 0,
+            createdAt = Instant.now().toString(),
+            updatedAt = System.currentTimeMillis(),
+        )
+        listDao.upsertAll(listOf(entity))
+        return entity
     }
 
     suspend fun ensureLocalPendingInbox(profileId: String): CachedListEntity {

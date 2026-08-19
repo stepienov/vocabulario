@@ -177,8 +177,5 @@ class TokenStore @Inject constructor(
         _accessToken.value = null
         _activeProfileId.value = null
         cachedAppLang.set(null)
-        scope.launch {
-            runCatching { context.dataStore.edit { it.clear() } }
-        }
     }
 }

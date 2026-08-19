@@ -1,5 +1,6 @@
 package com.vocabulario.app.ui.auth
 
+import com.vocabulario.app.BuildConfig
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -59,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vocabulario.app.R
+import com.vocabulario.app.data.ApiBaseUrl
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.AppGrayField
@@ -98,6 +100,7 @@ fun AuthScreen(
         else viewModel.login(email, password, onAuthenticated)
     }
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val debugLoginError by viewModel.debugLoginError.collectAsState()
     val scheme = MaterialTheme.colorScheme
     val dark = scheme.background.luminance() < 0.5f
     val fieldFill = if (dark) scheme.surfaceVariant else Color.White
@@ -184,6 +187,15 @@ fun AuthScreen(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (BuildConfig.DEBUG) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "DEBUG API: ${ApiBaseUrl.resolve()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
                 Spacer(Modifier.height(24.dp))
 
                 GoogleSignInButton(
@@ -274,6 +286,15 @@ fun AuthScreen(
                 errorMessage?.let {
                     Spacer(Modifier.height(12.dp))
                     Text(it, color = scheme.error, textAlign = TextAlign.Center)
+                }
+                debugLoginError?.let {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         }
