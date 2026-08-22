@@ -319,14 +319,6 @@
 
     <string name="import_other_file">Scegli un altro file</string>
 
-    <string name="import_how">Come importare?</string>
-
-    <string name="import_vocab_mode">Schede Vocabulario</string>
-
-    <string name="import_preserve_mode">Mantieni il contenuto delle mie flashcard</string>
-
-    <string name="import_vocab_hint">Schede Vocabulario: migliori per parole singole — generate automaticamente con significati, esempi, forme, modelli, sinonimi e antonimi.</string>
-
     <string name="import_invalid_title">Parole non valide</string>
 
     <string name="import_file_errors">Il file contiene errori — controllalo.</string>
@@ -487,8 +479,6 @@
     <string name="status_new">nuovo</string>
 
     <string name="status_learning">apprendimento</string>
-
-    <string name="card_badge_import">Importata</string>
 
     <string name="status_mastered">appreso</string>
 

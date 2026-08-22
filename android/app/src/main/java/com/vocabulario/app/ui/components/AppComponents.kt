@@ -686,8 +686,6 @@ fun WordListItem(
                 )
             } else {
                 when {
-                    pos.equals("imported", ignoreCase = true) ->
-                        TagChip(stringResource(R.string.card_badge_import))
                     !pos.isNullOrBlank() -> TagChip(pos)
                 }
             }

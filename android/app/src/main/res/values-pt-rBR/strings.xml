@@ -292,14 +292,6 @@
 
     <string name="import_other_file">Escolher outro arquivo</string>
 
-    <string name="import_how">Como importar?</string>
-
-    <string name="import_vocab_mode">Cartões Vocabulario</string>
-
-    <string name="import_preserve_mode">Manter o conteúdo do meu flashcard</string>
-
-    <string name="import_vocab_hint">Cartões Vocabulario: ideais para palavras isoladas — gerados automaticamente com significados, exemplos, formas, padrões, sinônimos e antônimos.</string>
-
     <string name="import_invalid_title">Palavras inválidas</string>
 
     <string name="import_file_errors">O arquivo tem erros — verifique.</string>
@@ -460,8 +452,6 @@
     <string name="status_new">nova</string>
 
     <string name="status_learning">aprendendo</string>
-
-    <string name="card_badge_import">Importada</string>
 
     <string name="status_mastered">dominada</string>
 

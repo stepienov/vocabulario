@@ -1,5 +1,6 @@
 package com.vocabulario.app.data.local
 
+import com.vocabulario.app.data.EnrichmentStatus
 import com.vocabulario.app.data.api.DashboardForecastDay
 import com.vocabulario.app.data.api.DashboardStatsResponse
 import com.vocabulario.app.data.local.db.CachedCardEntity
@@ -20,7 +21,7 @@ object LocalDashboard {
         periodDays: Int = 7,
         newDoneToday: Int = 0,
     ): DashboardStatsResponse {
-        val ready = learningCards.filter { it.enrichmentStatus == "ready" }
+        val ready = learningCards.filter { EnrichmentStatus.isStudyable(it.enrichmentStatus) }
         val due = ready.filter { isDue(it, nowMs) }
         val newCards = ready.filter { it.status == "new" }
         val learning = learningCards.count { it.status == "learning" }

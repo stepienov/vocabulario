@@ -25,9 +25,6 @@ from app.schemas import (
     SelfEditValidateResponse,
     DashboardForecastDay,
     DashboardStatsResponse,
-    ImportDisplayCommitRequest,
-    ImportDisplayCommitResponse,
-    ImportDisplayResponse,
     ImportIngestRequest,
     ImportValidateRequest,
     ImportValidateResponse,
@@ -64,12 +61,10 @@ from app.services.card_corrections import (
     _validate_sections,
 )
 from app.services.card_jobs import (
-    STATUS_FAILED,
     STATUS_PENDING,
-    STATUS_READY,
-    build_import_display_content,
+    STATUS_PREPARING,
+    STUDYABLE_STATUSES,
     build_pending_content,
-    content_is_complete,
     hydrate_from_lexical_cache,
     request_manual_enrichment_retry,
     spawn_enrich,
@@ -77,10 +72,9 @@ from app.services.card_jobs import (
 from app.services.distractors import generate_choice_options
 from app.services.import_ai import resolve_import_words
 from app.services.import_classify import resolve_import_vocabulario_entries
-from app.services.import_display import resolve_import_display_cards
 from app.services.import_package import ImportPackageError, load_raw_import, load_text_import
 from app.services.import_urls import ImportUrlError, detect_import_url, fetch_words_from_url
-from app.services.lexical import LexicalService
+from app.services.lexical import LexicalService, LookupOutcome
 from app.services.lookup_candidates import has_confident_match
 from app.services.similar_words import ensure_similar_words
 from app.services.srs import apply_review
@@ -127,10 +121,44 @@ async def lookup(
 ):
     service = LexicalService(db)
     try:
-        raw, source = await service.lookup(user, body.profile_id, body.text)
+        outcome = await service.lookup(user, body.profile_id, body.text)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await db.commit()
+    return _lookup_http(outcome, body.text)
 
+
+@router.post("/lookup/cached", response_model=LookupResponse)
+async def lookup_cached(
+    body: LookupRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = LexicalService(db)
+    try:
+        outcome = await service.lookup_cached(user, body.profile_id, body.text)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await db.commit()
+    return _lookup_http(outcome, body.text)
+
+
+@router.post("/lookup/expand", response_model=LookupResponse)
+async def lookup_expand(
+    body: LookupRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = LexicalService(db)
+    try:
+        outcome = await service.lookup_expand(user, body.profile_id, body.text)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await db.commit()
+    return _lookup_http(outcome, body.text)
+
+
+def _lookup_http(outcome: LookupOutcome, text: str) -> LookupResponse:
     candidates = [
         LookupCandidate(
             lemma=c["lemma"],
@@ -143,11 +171,14 @@ async def lookup(
             list_name=c.get("list_name"),
             enrichment_status=c.get("enrichment_status"),
         )
-        for c in raw
+        for c in outcome.candidates
     ]
-    confident = has_confident_match(raw, body.text)
-    await db.commit()
-    return LookupResponse(candidates=candidates, source=source, confident=confident)
+    return LookupResponse(
+        candidates=candidates,
+        source=outcome.source,
+        confident=has_confident_match(outcome.candidates, text),
+        ai_complete=outcome.ai_complete,
+    )
 
 
 def _import_validate_response(valid_raw: list[dict], invalid: list[str]) -> ImportValidateResponse:
@@ -191,28 +222,10 @@ async def ingest_import_text(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Wklejka: URL Quizlet/AnkiWeb albo tekst.
-
-    mode=vocabulario → klasyfikacja + bogate karty (słowa/zwroty/konstrukcje)
-    mode=preserve → fiszki z layoutem UI (bez enrichmentu słownikowego)
-    """
+    """Wklejka: URL Quizlet/AnkiWeb albo tekst → karty Vocabulario (enrichment)."""
     service = LexicalService(db)
-    mode = (body.mode or "vocabulario").strip().lower()
     url = detect_import_url(body.text)
     try:
-        if mode == "preserve":
-            if url:
-                raise api_error(400, "import_preserve_no_url", "Preserve-cards mode works with paste/file, not a URL.")
-            profile = await service.get_profile(user.id, body.profile_id)
-            deck = load_text_import(body.text)
-            result = await resolve_import_display_cards(
-                deck,
-                app_lang=profile.app_lang,
-                learning_lang=profile.learning_lang,
-            )
-            await db.commit()
-            return ImportDisplayResponse(**result)
-
         if url:
             words = await fetch_words_from_url(url)
             if not words:
@@ -243,27 +256,16 @@ async def ingest_import_text(
 @router.post("/imports/file")
 async def ingest_import_file(
     profile_id: UUID = Form(...),
-    mode: str = Form("vocabulario"),
     file: UploadFile = File(...),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Import z pliku. mode=vocabulario|preserve."""
+    """Import z pliku → karty Vocabulario (enrichment)."""
     data = await file.read()
     service = LexicalService(db)
-    mode_n = (mode or "vocabulario").strip().lower()
     try:
         profile = await service.get_profile(user.id, profile_id)
         deck = load_raw_import(file.filename, data)
-        if mode_n == "preserve":
-            result = await resolve_import_display_cards(
-                deck,
-                app_lang=profile.app_lang,
-                learning_lang=profile.learning_lang,
-            )
-            await db.commit()
-            return ImportDisplayResponse(**result)
-
         valid_raw, invalid = await resolve_import_vocabulario_entries(
             deck,
             app_lang=profile.app_lang,
@@ -277,78 +279,6 @@ async def ingest_import_file(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     await db.commit()
     return _import_validate_response(valid_raw, invalid)
-
-
-@router.post("/imports/commit-display", response_model=ImportDisplayCommitResponse)
-async def commit_import_display(
-    body: ImportDisplayCommitRequest,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Zapisuje fiszki import_display.v1 na listę — bez enrichmentu AI."""
-    profile = await _active_profile(db, user.id, body.profile_id)
-    result = await db.execute(
-        select(WordList).where(
-            WordList.id == body.list_id,
-            WordList.profile_id == profile.id,
-            WordList.user_id == user.id,
-            WordList.deleted_at.is_(None),
-        )
-    )
-    wl = result.scalar_one_or_none()
-    if wl is None:
-        raise api_error(404, "list_not_found", "List not found")
-
-    created = 0
-    skipped = 0
-    for card_in in body.cards:
-        lemma = (card_in.lemma_l2 or "").strip()
-        if not lemma:
-            skipped += 1
-            continue
-        existing = await find_card_anywhere(db, user.id, profile.id, lemma, "imported")
-        if existing is not None:
-            # ta sama lista → skip; inna lista też skip (reguła jak dziś)
-            skipped += 1
-            continue
-        content = build_import_display_content(
-            lemma=lemma,
-            gloss=card_in.gloss_primary,
-            learning_lang=profile.learning_lang,
-            display=card_in.display.model_dump(),
-        )
-        if wl.is_system:
-            card = LearningCard(
-                user_id=user.id,
-                profile_id=profile.id,
-                lemma_l2=lemma,
-                pos="imported",
-                gloss_primary=card_in.gloss_primary,
-                content=content,
-                enrichment_status=STATUS_READY,
-            )
-            db.add(card)
-            await db.flush()
-            db.add(SrsState(card_id=card.id, scope="main", status="new"))
-        else:
-            card = LearningCard(
-                user_id=user.id,
-                profile_id=profile.id,
-                deck_id=wl.id,
-                lemma_l2=lemma,
-                pos="imported",
-                gloss_primary=card_in.gloss_primary,
-                content=content,
-                enrichment_status=STATUS_READY,
-            )
-            db.add(card)
-            await db.flush()
-        created += 1
-
-    await db.commit()
-    return ImportDisplayCommitResponse(
-        created=created, skipped=skipped, list_id=wl.id
-    )
 
 
 @router.post("/cards", response_model=CardResponse, status_code=201)
@@ -436,25 +366,44 @@ async def list_cards(
     return list(result.scalars().all())
 
 
+@router.get("/cards/{card_id}", response_model=CardResponse)
+async def get_card(
+    card_id: UUID,
+    profile_id: UUID = Query(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Pojedyncza karta — poll enrichment bez ściągania całej listy."""
+    profile = await _active_profile(db, user.id, profile_id)
+    result = await db.execute(
+        select(LearningCard).where(
+            LearningCard.id == card_id,
+            LearningCard.user_id == user.id,
+            LearningCard.profile_id == profile.id,
+            LearningCard.deleted_at.is_(None),
+        )
+    )
+    card = result.scalar_one_or_none()
+    if card is None:
+        raise api_error(404, "card_not_found", "Card not found")
+    now = datetime.now(UTC)
+    if card.enrichment_status == STATUS_PENDING:
+        spawn_enrich(card.id)
+    elif card.enrichment_status == STATUS_PREPARING:
+        retry_at = card.enrichment_retry_at
+        if retry_at is None or retry_at <= now:
+            spawn_enrich(card.id)
+    srs_q = await db.execute(
+        select(SrsState).where(SrsState.card_id == card.id, SrsState.scope == "main")
+    )
+    return _card_response(card, srs_q.scalar_one_or_none())
+
+
 def _resolve_direction(settings: UserSettings) -> str:
     pref = settings.practice_direction
     if pref == "random":
         return random.choice(["l2_to_l1", "l1_to_l2"])
     return pref
-
-
-def _card_queue_direction(settings: UserSettings, content: dict | None) -> str:
-    """Preserve cards with bidirectional=false always practice L2→L1."""
-    display = (content or {}).get("display") if isinstance(content, dict) else None
-    if isinstance(display, dict) and display.get("bidirectional") is False:
-        return "l2_to_l1"
-    if (content or {}).get("schema_version") == "import_display.v1":
-        # Missing flag → treat as unidirectional.
-        if not isinstance(display, dict) or "bidirectional" not in display:
-            return "l2_to_l1"
-        if not display.get("bidirectional"):
-            return "l2_to_l1"
-    return _resolve_direction(settings)
 
 
 @router.get("/srs/queue", response_model=SrsQueueResponse)
@@ -479,7 +428,7 @@ async def srs_queue(
             LearningCard.profile_id == profile_id,
             LearningCard.deck_id.is_(None),
             LearningCard.deleted_at.is_(None),
-            LearningCard.enrichment_status == STATUS_READY,
+            LearningCard.enrichment_status.in_(STUDYABLE_STATUSES),
             SrsState.scope == "main",
             SrsState.status.in_(["learning", "review", "relearning"]),
             SrsState.next_review_at.is_not(None),
@@ -490,7 +439,6 @@ async def srs_queue(
     direction = _resolve_direction(settings)
     items: list[SrsQueueItem] = []
     for card, state in due_result.all():
-        card_direction = _card_queue_direction(settings, card.content)
         items.append(
             SrsQueueItem(
                 card_id=card.id,
@@ -498,7 +446,7 @@ async def srs_queue(
                 gloss_primary=card.gloss_primary,
                 content=card.content,
                 status=state.status,
-                direction=card_direction,
+                direction=direction,
                 card_activity_status=card.card_activity_status,
                 has_content_changes=bool(card.has_content_changes),
             )
@@ -533,7 +481,7 @@ async def srs_queue(
             LearningCard.profile_id == profile_id,
             LearningCard.deck_id.is_(None),
             LearningCard.deleted_at.is_(None),
-            LearningCard.enrichment_status == STATUS_READY,
+            LearningCard.enrichment_status.in_(STUDYABLE_STATUSES),
             SrsState.scope == "main",
             SrsState.status == "new",
         )
@@ -543,7 +491,6 @@ async def srs_queue(
     new_result = await db.execute(new_query)
     new_items = []
     for card, state in new_result.all():
-        card_direction = _card_queue_direction(settings, card.content)
         new_items.append(
             SrsQueueItem(
                 card_id=card.id,
@@ -551,7 +498,7 @@ async def srs_queue(
                 gloss_primary=card.gloss_primary,
                 content=card.content,
                 status=state.status,
-                direction=card_direction,
+                direction=direction,
                 card_activity_status=card.card_activity_status,
                 has_content_changes=bool(card.has_content_changes),
             )
@@ -1278,7 +1225,7 @@ async def dashboard_stats(
         .join(LearningCard, LearningCard.id == SrsState.card_id)
         .where(
             *srs_base,
-            LearningCard.enrichment_status == STATUS_READY,
+            LearningCard.enrichment_status.in_(STUDYABLE_STATUSES),
             SrsState.status.in_(["learning", "review", "relearning"]),
             SrsState.next_review_at.is_not(None),
             SrsState.next_review_at <= now,
@@ -1292,7 +1239,7 @@ async def dashboard_stats(
         .join(LearningCard, LearningCard.id == SrsState.card_id)
         .where(
             *srs_base,
-            LearningCard.enrichment_status == STATUS_READY,
+            LearningCard.enrichment_status.in_(STUDYABLE_STATUSES),
             SrsState.status == "new",
         )
     )
@@ -1387,7 +1334,7 @@ async def dashboard_stats(
             .join(LearningCard, LearningCard.id == SrsState.card_id)
             .where(
                 *srs_base,
-                LearningCard.enrichment_status == STATUS_READY,
+                LearningCard.enrichment_status.in_(STUDYABLE_STATUSES),
                 SrsState.status.in_(["learning", "review", "relearning"]),
                 SrsState.next_review_at.is_not(None),
                 SrsState.next_review_at >= day_start,

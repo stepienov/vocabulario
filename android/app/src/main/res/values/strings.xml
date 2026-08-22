@@ -305,14 +305,6 @@
 
     <string name="import_other_file">Choose another file</string>
 
-    <string name="import_how">How to import?</string>
-
-    <string name="import_vocab_mode">Vocabulario cards</string>
-
-    <string name="import_preserve_mode">Keep my flashcard content</string>
-
-    <string name="import_vocab_hint">Vocabulario cards: best for single words — auto-generated with meanings, examples, forms, patterns, synonyms and antonyms.</string>
-
     <string name="import_invalid_title">Invalid words</string>
 
     <string name="import_file_errors">The file has errors — check it.</string>
@@ -482,8 +474,6 @@
 
     <string name="status_learning">learning</string>
 
-    <string name="card_badge_import">Imported</string>
-
     <string name="status_mastered">mastered</string>
 
     <string name="kind_lemma">word</string>
@@ -573,6 +563,8 @@
     <string name="err_list_words">Couldn’t load list words</string>
 
     <string name="err_search">Search failed</string>
+
+    <string name="err_lookup_expand">Couldn’t find more suggestions. Showing what we have.</string>
 
     <string name="err_import_empty">No words to import</string>
 

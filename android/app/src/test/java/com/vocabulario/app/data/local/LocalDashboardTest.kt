@@ -11,6 +11,20 @@ class LocalDashboardTest {
     private val today = LocalDashboard.startOfDayMs(now)
 
     @Test
+    fun learnableCountsAsReadyToStudy() {
+        val cards = listOf(
+            card("due", status = "review", nextReviewAt = now - 1_000, enrichment = "learnable"),
+            card("new1", status = "new", enrichment = "learnable"),
+            card("pending", status = "new", enrichment = "pending"),
+        )
+        val stats = LocalDashboard.build(cards, newLimit = 20, nowMs = now, newDoneToday = 0)
+        assertEquals(1, stats.due_count)
+        assertEquals(1, stats.srs_new)
+        assertEquals(2, stats.ready_count)
+        assertEquals(3, stats.cards_total)
+    }
+
+    @Test
     fun dueAndNewMatchQueueRules() {
         val cards = listOf(
             card("due", status = "review", nextReviewAt = now - 1_000),

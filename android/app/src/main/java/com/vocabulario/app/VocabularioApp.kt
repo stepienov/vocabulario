@@ -6,7 +6,6 @@ import androidx.work.Configuration
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.sync.SyncScheduler
-import com.vocabulario.app.i18n.AppLocale
 import com.vocabulario.app.notifications.NotificationHelper
 import com.vocabulario.app.notifications.NotificationScheduler
 import dagger.hilt.android.HiltAndroidApp
@@ -38,7 +37,7 @@ class VocabularioApp : Application(), Configuration.Provider {
         runBlocking {
             runCatching {
                 tokenStore.awaitReady()
-                AppLocale.apply(tokenStore.peekAppLang())
+                learningRepository.applyAppLocaleFromActiveProfile()
             }
         }
         NotificationHelper.ensureChannels(this)
@@ -54,9 +53,6 @@ class VocabularioApp : Application(), Configuration.Provider {
                     minute = notificationScheduler.reminderMinute(),
                 )
             }
-        }
-        appScope.launch {
-            runCatching { AppLocale.apply(tokenStore.peekAppLang()) }
         }
     }
 }

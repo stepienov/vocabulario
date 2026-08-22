@@ -79,12 +79,4 @@ class ApiErrorsTest {
         assertEquals("Email already registered", parsed?.message)
         assertNull(parsed?.code)
     }
-
-    @Test
-    fun foldsPolishQuotesInPreserveImportMessage() {
-        assertEquals(
-            "import_preserve_no_url",
-            resolveErrorCode(apiMessage = "Tryb „zachowaj fiszki” działa z wklejką/plikiem, nie z URL."),
-        )
-    }
 }

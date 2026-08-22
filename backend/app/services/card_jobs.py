@@ -1,8 +1,9 @@
 """Enrichment poza cyklem żądania.
 
-Karta zapisuje się natychmiast ze statusem `pending`, więc użytkownik może dalej
-korzystać z aplikacji. Pełną treść — znaczenia, przykłady, dystraktory,
-koniugację — dociąga zadanie w tle i przestawia status na `ready`.
+Karta zapisuje się natychmiast ze statusem `pending`. Po rdzeniu leksykalnym
+(znaczenia + przykłady) status idzie na `learnable` — karta jest w kolejce SRS.
+Dystraktory i odmianę dociąga tło; dopiero pełna treść to `ready` i wpis
+do wspólnego cache `lexical_entries`.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from app.ai.schemas.similar_words import MIN_SIMILAR_FOR_QUIZ
 from app.core.deps import lang_pair_key, normalize_text
 from app.core.lemma_keys import cache_lookup_keys, canonical_lemma
 from app.db.session import async_session_factory
+from app.lsp.enrichment import finish_side_jobs, run_lemma_enrichment
 from app.lsp.lang_utils import articles_for
 from app.models import LanguageProfile, LearningCard, LexicalEntry, User
 from app.services.distractors import in_learning_lemma, lemma_keys
@@ -33,8 +35,27 @@ logger = logging.getLogger(__name__)
 STATUS_PENDING = "pending"
 STATUS_PREPARING = "preparing"
 STATUS_PREPARATION_PROBLEM = "prep_problem"
+STATUS_LEARNABLE = "learnable"
 STATUS_READY = "ready"
 STATUS_FAILED = "failed"
+
+# Kolejka SRS / dashboard: nauka po rdzeniu, nie dopiero po pełnym słowniku.
+STUDYABLE_STATUSES = (STATUS_READY, STATUS_LEARNABLE)
+
+ADAPTIVE_ENTRY_KINDS = frozenset({"phrase", "construction", "sentence", "other"})
+
+
+def resolve_enrichment_entry_kind(content: dict | None, *, pos: str | None = None) -> str:
+    """Lemma vs adaptive: entry_kind z content, a gdy brak — POS (import zapisywał construction bez kind)."""
+    data = content or {}
+    kind = str(data.get("entry_kind") or "").strip().lower()
+    if kind in ADAPTIVE_ENTRY_KINDS:
+        return kind
+    pos_kind = str(data.get("pos") or pos or "").strip().lower()
+    if pos_kind in ADAPTIVE_ENTRY_KINDS:
+        return pos_kind
+    return kind or "lemma"
+
 
 _MAX_MANUAL_ENRICH_RETRIES = 3
 _AUTO_RETRY_DELAY = timedelta(minutes=15)
@@ -89,7 +110,7 @@ async def _mark_enrich_failed(card_id: UUID, error: str) -> None:
             card = (
                 await db.execute(select(LearningCard).where(LearningCard.id == card_id))
             ).scalar_one_or_none()
-            if card is None or card.enrichment_status == STATUS_READY:
+            if card is None or card.enrichment_status in STUDYABLE_STATUSES:
                 return
             _apply_enrich_retry(card, RuntimeError(error))
             await db.commit()
@@ -98,8 +119,24 @@ async def _mark_enrich_failed(card_id: UUID, error: str) -> None:
 
 
 def _apply_enrich_retry(card: LearningCard, exc: BaseException) -> None:
-    """Jeden auto-retry za 15 min, potem prep_problem; ręcznie max 3×."""
+    """Jeden auto-retry za 15 min, potem prep_problem; ręcznie max 3×.
+
+    Learnable nie schodzi z kolejki — dociągamy tylko brakujące sekcje.
+    """
     err = public_enrichment_error(exc)
+
+    if card.enrichment_status == STATUS_LEARNABLE:
+        card.enrichment_error = err
+        card.enrichment_retry_at = datetime.now(UTC) + _AUTO_RETRY_DELAY
+        if not bool(getattr(card, "enrichment_auto_retry_used", False)):
+            card.enrichment_auto_retry_used = True
+        logger.info(
+            "Enrichment karty %s zostaje learnable; retry side-jobs za %s (%s)",
+            card.id,
+            _AUTO_RETRY_DELAY,
+            card.lemma_l2,
+        )
+        return
 
     if bool(getattr(card, "enrichment_manual_triggered", False)):
         card.enrichment_manual_triggered = False
@@ -211,94 +248,39 @@ def build_pending_content(
     return base
 
 
-def build_import_display_content(
-    *,
-    lemma: str,
-    gloss: str | None,
-    learning_lang: str,
-    display: dict,
-) -> dict:
-    """Treść fiszki zachowanej z importu — gotowa do renderu bloków, bez enrichmentu."""
-    lemma_from_sem, gloss_from_sem, has_both_semantics = _extract_semantic_l2_l1(display)
-    lemma_out = (lemma_from_sem or lemma or "").strip() or lemma
-    gloss_out = ((gloss_from_sem or gloss or "").strip() or None)
-    display_out = dict(display or {})
-    # Dwustronność tylko gdy AI pewnie otagowało L2/L1 (semantic) — inaczej false.
-    flag = display_out.get("bidirectional")
-    display_out["bidirectional"] = bool(
-        has_both_semantics and (True if flag is None else bool(flag))
-    )
-
-    return {
-        "schema_version": "import_display.v1",
-        "card_kind": "imported",
-        "lemma": lemma_out,
-        "lemma_l2": lemma_out,
-        "gloss_primary": gloss_out,
-        "language": learning_lang,
-        "pos": "imported",
-        "ipa": None,
-        "meanings": (
-            [{"gloss_l1": gloss_out, "synonyms_l1": [], "examples": [], "usages": []}]
-            if gloss_out
-            else []
-        ),
-        "synonyms_l2": [],
-        "antonyms_l2": [],
-        "word_family_l2": [],
-        "similar_words": [],
-        "conjugation": None,
-        "display": display_out,
-    }
-
-
-def _extract_semantic_l2_l1(display: dict | None) -> tuple[str | None, str | None, bool]:
-    """Pull lemma (headword) and gloss (translation) from display blocks."""
-    if not isinstance(display, dict):
-        return None, None, False
-    blocks: list[dict] = []
-    for side in ("prompt", "answer"):
-        side_obj = display.get(side) or {}
-        if isinstance(side_obj, dict):
-            for b in side_obj.get("blocks") or []:
-                if isinstance(b, dict):
-                    blocks.append(b)
-                    for ch in b.get("children") or []:
-                        if isinstance(ch, dict):
-                            blocks.append(ch)
-    headword = None
-    translation = None
-    for b in blocks:
-        sem = (b.get("semantic") or "").strip()
-        text = (b.get("text") or "").strip()
-        if not text:
-            continue
-        if sem == "headword" and not headword:
-            headword = text
-        elif sem == "translation" and not translation:
-            translation = text
-    return headword, translation, bool(headword and translation)
-
-
-def content_is_complete(content: dict | None) -> bool:
-    """Gotowa treść ma znaczenia z przykładami i pełny zestaw dystraktorów."""
-    if not content:
-        return False
+def _meanings_have_examples(content: dict) -> bool:
     meanings = content.get("meanings") or []
     if not meanings:
         return False
-    if not all(isinstance(m, dict) and m.get("examples") for m in meanings):
+    return all(isinstance(m, dict) and m.get("examples") for m in meanings)
+
+
+def content_is_learnable(content: dict | None) -> bool:
+    """Można ćwiczyć fiszką / wpisywaniem: znaczenia z przykładami (bez similar/odmiany)."""
+    if not content:
         return False
+    return _meanings_have_examples(content)
+
+
+def _has_verb_inflection(content: dict) -> bool:
+    inf = content.get("inflection") or {}
+    verbs = inf.get("verbs") if isinstance(inf, dict) else None
+    has_inflection = isinstance(verbs, dict) and (
+        verbs.get("tenses") or verbs.get("non_finite")
+    )
+    return bool(has_inflection or content.get("conjugation"))
+
+
+def content_is_complete(content: dict | None) -> bool:
+    """Pełna treść do cache: learnable + dystraktory (+ odmiana czasownika)."""
+    if not content_is_learnable(content):
+        return False
+    assert content is not None
     # Adaptive: bez similar_words / conjugation
     if content.get("schema_version") == "vocabulario.adaptive.v1":
         return True
     if content.get("schema_version") == "vocabulario.card.v1":
-        inf = content.get("inflection") or {}
-        verbs = inf.get("verbs") if isinstance(inf, dict) else None
-        has_inflection = isinstance(verbs, dict) and (
-            verbs.get("tenses") or verbs.get("non_finite")
-        )
-        if content.get("pos") == "verb" and not has_inflection and not content.get("conjugation"):
+        if content.get("pos") == "verb" and not _has_verb_inflection(content):
             return False
         return len(content.get("similar_words") or []) >= MIN_SIMILAR_FOR_QUIZ
     return len(content.get("similar_words") or []) >= MIN_SIMILAR_FOR_QUIZ
@@ -566,40 +548,24 @@ async def _find_ready_entry(
     )
 
 
-async def _resolve_content(
+async def _store_lexical_entry(
     db: AsyncSession,
     profile: LanguageProfile,
-    lemma: str,
-    pos: str | None,
+    content: dict,
     *,
     user_id: UUID | None,
-    gloss_hint: str | None = None,
+    requested_pos: str | None = None,
 ) -> tuple[dict, LexicalEntry | None]:
-    """Zwraca gotową treść — z bazy, jeśli ktoś już to słowo wzbogacił."""
+    """Zapisuje pełną kartę do wspólnego cache. Nie wołać z treścią niekompletną."""
+    if not content_is_complete(content):
+        return content, None
     pair = lang_pair_key(profile.app_lang, profile.learning_lang)
-
-    cached = await find_ready_entry(
-        db,
-        lang_pair=pair,
-        lemma=lemma,
-        pos=pos,
-        learning_lang=profile.learning_lang,
-    )
-    if cached is not None:
-        cached.usage_count = (cached.usage_count or 0) + 1
-        return dict(cached.content), cached
-
-    content = await enrich_card_content(profile, lemma, pos, gloss_hint=gloss_hint)
-    content = await ensure_similar_words(
-        content, profile, content.get("lemma") or lemma, content.get("pos") or pos
-    )
-
-    final_lemma = content.get("lemma") or lemma
-    final_pos = content.get("pos") or pos
-    if pos and final_pos and not same_pos_bucket(pos, final_pos):
+    final_lemma = content.get("lemma")
+    final_pos = content.get("pos") or requested_pos
+    if requested_pos and final_pos and not same_pos_bucket(requested_pos, final_pos):
         content = dict(content)
-        content["pos"] = pos
-        final_pos = pos
+        content["pos"] = requested_pos
+        final_pos = requested_pos
     cached = await find_ready_entry(
         db,
         lang_pair=pair,
@@ -641,6 +607,38 @@ async def _resolve_content(
         if existing is not None:
             return dict(existing.content), existing
         raise
+
+
+async def _resolve_content(
+    db: AsyncSession,
+    profile: LanguageProfile,
+    lemma: str,
+    pos: str | None,
+    *,
+    user_id: UUID | None,
+    gloss_hint: str | None = None,
+) -> tuple[dict, LexicalEntry | None]:
+    """Zwraca gotową treść — z bazy, jeśli ktoś już to słowo wzbogacił."""
+    pair = lang_pair_key(profile.app_lang, profile.learning_lang)
+
+    cached = await find_ready_entry(
+        db,
+        lang_pair=pair,
+        lemma=lemma,
+        pos=pos,
+        learning_lang=profile.learning_lang,
+    )
+    if cached is not None:
+        cached.usage_count = (cached.usage_count or 0) + 1
+        return dict(cached.content), cached
+
+    content = await enrich_card_content(profile, lemma, pos, gloss_hint=gloss_hint)
+    content = await ensure_similar_words(
+        content, profile, content.get("lemma") or lemma, content.get("pos") or pos
+    )
+    return await _store_lexical_entry(
+        db, profile, content, user_id=user_id, requested_pos=pos
+    )
 
 
 async def enrich_card(card_id: UUID) -> None:
@@ -693,28 +691,20 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
             return
         if card.enrichment_status == STATUS_READY and content_is_complete(card.content):
             return
-        if card.enrichment_status == STATUS_PREPARING:
-            retry_at = card.enrichment_retry_at
-            if retry_at is not None and retry_at > datetime.now(UTC):
-                return
         if card.enrichment_status == STATUS_FAILED:
             return
         if card.enrichment_status == STATUS_PREPARATION_PROBLEM:
             return
+        if card.enrichment_status == STATUS_LEARNABLE:
+            retry_at = card.enrichment_retry_at
+            if retry_at is not None and retry_at > datetime.now(UTC):
+                return
 
-        card.enrichment_status = STATUS_PENDING
-        await db.flush()
+        if card.enrichment_status not in STUDYABLE_STATUSES:
+            card.enrichment_status = STATUS_PENDING
+            await db.flush()
 
         content0 = dict(card.content or {})
-        if content0.get("schema_version") == "import_display.v1":
-            card.enrichment_status = STATUS_READY
-            _clear_enrich_retry(card)
-            await db.commit()
-            from app.services.push import notify_cards_ready
-
-            await notify_cards_ready(db, card.user_id)
-            return
-
         profile = (
             await db.execute(
                 select(LanguageProfile).where(LanguageProfile.id == card.profile_id)
@@ -728,7 +718,7 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                 await db.commit()
                 from app.services.push import notify_cards_ready
 
-                await notify_cards_ready(db, card.user_id)
+                await notify_cards_ready(db, card.user_id, card_id=card.id)
                 return
 
             if not _card_lookup_resolved(card):
@@ -767,14 +757,9 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                         )
                         content0 = dict(card.content or {})
 
-            entry_kind = (content0.get("entry_kind") or "lemma").strip().lower()
+            entry_kind = resolve_enrichment_entry_kind(content0, pos=card.pos)
             schema0 = content0.get("schema_version") or "vocabulario.card.v1"
-            if schema0 == "vocabulario.adaptive.v1" or entry_kind in {
-                "phrase",
-                "construction",
-                "sentence",
-                "other",
-            }:
+            if schema0 == "vocabulario.adaptive.v1" or entry_kind in ADAPTIVE_ENTRY_KINDS:
                 src = content0.get("source_import") or {}
                 content = await enrich_adaptive_card_content(
                     profile,
@@ -785,16 +770,14 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                     base_lemma=src.get("base_lemma") or content0.get("related_lemma"),
                     pattern=src.get("pattern") or content0.get("pattern"),
                 )
-                entry = None
-            else:
-                content, entry = await _resolve_content(
-                    db,
-                    profile,
-                    card.lemma_l2,
-                    card.pos,
-                    user_id=card.user_id,
-                    gloss_hint=card.gloss_primary,
+                content = _guard_enrichment_lemma(card, content)
+                await _persist_enrichment_result(
+                    db, card, profile, content, entry=None, notified=False
                 )
+                return
+
+            await _enrich_lemma_staged(db, card, profile, content0)
+            return
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -818,24 +801,119 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
             await db.commit()
             return
 
-        meanings = content.get("meanings") or []
-        card.content = content
-        card.pos = content.get("pos") or card.pos
-        card.gloss_primary = (
-            meanings[0].get("gloss_l1") if meanings else card.gloss_primary
-        )
+
+def _guard_enrichment_lemma(card: LearningCard, content: dict) -> dict:
+    """Hasło karty zostaje; LLM nie może podmienić go tłumaczeniem."""
+    content = dict(content)
+    returned = content.get("lemma")
+    if not card.lemma_l2:
+        return content
+    if not returned:
+        content["lemma"] = card.lemma_l2
+        return content
+    if same_headword(returned, card.lemma_l2):
+        return content
+    kind = resolve_enrichment_entry_kind(content, pos=card.pos)
+    if kind in ADAPTIVE_ENTRY_KINDS or content.get("schema_version") == "vocabulario.adaptive.v1":
+        raise ValueError("adaptive_lemma_mismatch")
+    content["lemma"] = card.lemma_l2
+    return content
+
+
+def _apply_content_fields(card: LearningCard, content: dict) -> None:
+    content = _guard_enrichment_lemma(card, content)
+    meanings = content.get("meanings") or []
+    card.content = content
+    card.pos = content.get("pos") or card.pos
+    card.gloss_primary = (
+        meanings[0].get("gloss_l1") if meanings else card.gloss_primary
+    )
+
+
+async def _persist_enrichment_result(
+    db: AsyncSession,
+    card: LearningCard,
+    profile: LanguageProfile,
+    content: dict,
+    *,
+    entry: LexicalEntry | None,
+    notified: bool,
+) -> None:
+    """Zapisuje treść: ready+cache gdy kompletna, learnable gdy jest rdzeń."""
+    from app.services.push import notify_cards_ready
+
+    content = _guard_enrichment_lemma(card, content)
+    if content_is_complete(content):
+        if entry is None:
+            content, entry = await _store_lexical_entry(
+                db, profile, content, user_id=card.user_id, requested_pos=card.pos
+            )
+        _apply_content_fields(card, content)
         if entry is not None:
             card.lexical_entry_id = entry.id
         card.enrichment_status = STATUS_READY
         _clear_enrich_retry(card)
         await db.commit()
-        from app.services.push import notify_cards_ready
+        if not notified:
+            await notify_cards_ready(db, card.user_id, card_id=card.id)
+        return
 
-        await notify_cards_ready(db, card.user_id)
+    if content_is_learnable(content):
+        _apply_content_fields(card, content)
+        card.enrichment_status = STATUS_LEARNABLE
+        if card.enrichment_retry_at is None or card.enrichment_retry_at <= datetime.now(UTC):
+            card.enrichment_retry_at = datetime.now(UTC) + _AUTO_RETRY_DELAY
+        await db.commit()
+        if not notified:
+            await notify_cards_ready(db, card.user_id, card_id=card.id)
+        return
+
+    raise ValueError("enrichment_core_incomplete")
+
+
+async def _enrich_lemma_staged(
+    db: AsyncSession,
+    card: LearningCard,
+    profile: LanguageProfile,
+    content0: dict,
+) -> None:
+    """Rdzeń → learnable (SRS), potem similar+odmiana → ready + LexicalEntry."""
+    from app.services.push import notify_cards_ready
+
+    notified = False
+
+    if content_is_learnable(content0) and not content_is_complete(content0):
+        content = await finish_side_jobs(profile, dict(content0))
+        await _persist_enrichment_result(
+            db, card, profile, content, entry=None, notified=False
+        )
+        return
+
+    async def on_core(core_card: dict) -> None:
+        nonlocal notified
+        if not content_is_learnable(core_card):
+            return
+        _apply_content_fields(card, core_card)
+        card.enrichment_status = STATUS_LEARNABLE
+        await db.commit()
+        await notify_cards_ready(db, card.user_id, card_id=card.id)
+        notified = True
+
+    content = await run_lemma_enrichment(
+        profile,
+        card.lemma_l2,
+        card.pos,
+        gloss_hint=card.gloss_primary,
+        on_core=on_core,
+        require_similar=False,
+    )
+    await _persist_enrichment_result(
+        db, card, profile, content, entry=None, notified=notified
+    )
 
 
 async def resume_pending_enrichment(*, stale_only: bool = False) -> None:
-    """Wznowienie pending/preparing. Failed nie jest retry'owany — backoff w preparing."""
+    """Wznowienie pending/preparing/learnable. Failed nie jest retry'owany — backoff w preparing."""
     if _resume_lock.locked():
         return
     async with _resume_lock:
@@ -853,17 +931,29 @@ async def _resume_pending_enrichment(*, stale_only: bool = False) -> None:
         LearningCard.enrichment_retry_at.isnot(None),
         LearningCard.enrichment_retry_at <= now,
     )
+    learnable_due = and_(
+        LearningCard.enrichment_status == STATUS_LEARNABLE,
+        or_(
+            LearningCard.enrichment_retry_at.is_(None),
+            LearningCard.enrichment_retry_at <= now,
+        ),
+    )
     if stale_only:
         cutoff = datetime.now(UTC) - timedelta(seconds=_ENRICH_STALE_S)
         pending_stuck = and_(
             LearningCard.enrichment_status == STATUS_PENDING,
             LearningCard.updated_at < cutoff,
         )
-        eligible = or_(pending_stuck, preparing_due)
+        learnable_stuck = and_(
+            learnable_due,
+            LearningCard.updated_at < cutoff,
+        )
+        eligible = or_(pending_stuck, preparing_due, learnable_stuck)
     else:
         eligible = or_(
             LearningCard.enrichment_status == STATUS_PENDING,
-            preparing_due,
+            LearningCard.enrichment_status == STATUS_PREPARING,
+            learnable_due,
         )
     stmt = (
         select(LearningCard.id)

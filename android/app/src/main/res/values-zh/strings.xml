@@ -292,14 +292,6 @@
 
     <string name="import_other_file">选择其他文件</string>
 
-    <string name="import_how">如何导入？</string>
-
-    <string name="import_vocab_mode">Vocabulario 卡片</string>
-
-    <string name="import_preserve_mode">保留我的闪卡内容</string>
-
-    <string name="import_vocab_hint">Vocabulario 卡片：最适合单个单词 — 自动生成释义、例句、词形、句式、同义词与反义词。</string>
-
     <string name="import_invalid_title">无效单词</string>
 
     <string name="import_file_errors">文件有错误 — 请检查。</string>
@@ -460,8 +452,6 @@
     <string name="status_new">新词</string>
 
     <string name="status_learning">学习中</string>
-
-    <string name="card_badge_import">导入</string>
 
     <string name="status_mastered">已掌握</string>
 

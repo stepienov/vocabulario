@@ -314,6 +314,21 @@ _STATEMENTS = (
     "CREATE INDEX IF NOT EXISTS ix_learning_cards_enrichment_retry_at "
     "ON learning_cards (enrichment_retry_at) "
     "WHERE enrichment_status = 'preparing'",
+    """
+    CREATE TABLE IF NOT EXISTS lookup_query_cache (
+        id UUID PRIMARY KEY,
+        lang_pair VARCHAR(16) NOT NULL,
+        input_norm VARCHAR(200) NOT NULL,
+        candidates JSONB NOT NULL DEFAULT '[]'::jsonb,
+        ai_complete BOOLEAN NOT NULL DEFAULT false,
+        hit_count INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (lang_pair, input_norm)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_lookup_query_cache_lang_pair "
+    "ON lookup_query_cache (lang_pair)",
 )
 
 

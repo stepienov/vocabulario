@@ -324,14 +324,6 @@
 
     <string name="import_other_file">別のファイルを選択</string>
 
-    <string name="import_how">インポート方法は？</string>
-
-    <string name="import_vocab_mode">Vocabularioカード</string>
-
-    <string name="import_preserve_mode">フラッシュカードの内容を保持</string>
-
-    <string name="import_vocab_hint">Vocabularioカード: 単語に最適 — 意味、例、形、パターン、同義語、反義語が自動生成されます。</string>
-
     <string name="import_invalid_title">無効な単語</string>
 
     <string name="import_file_errors">ファイルにエラーがあります — 確認してください。</string>
@@ -492,8 +484,6 @@
     <string name="status_new">新しい</string>
 
     <string name="status_learning">学習中</string>
-
-    <string name="card_badge_import">インポート</string>
 
     <string name="status_mastered">習得済み</string>
 

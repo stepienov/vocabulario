@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import com.vocabulario.app.ui.theme.ActionConfirm
 import com.vocabulario.app.ui.theme.ActionTeal
 
@@ -330,10 +331,14 @@ fun AppAlertDialog(
 }
 
 @Composable
-fun AppDialogWindowChrome(dimAlpha: Float = 0.28f, blurDp: Int = 10) {
+fun AppDialogWindowChrome(
+    dimAlpha: Float = 0.28f,
+    blurDp: Int = 10,
+    edgeToEdge: Boolean = false,
+) {
     val view = LocalView.current
     val density = LocalDensity.current
-    DisposableEffect(view, dimAlpha, blurDp) {
+    DisposableEffect(view, dimAlpha, blurDp, edgeToEdge) {
         val window = dialogWindowOf(view)
         if (window != null) {
             window.setDimAmount(dimAlpha)
@@ -342,6 +347,9 @@ fun AppDialogWindowChrome(dimAlpha: Float = 0.28f, blurDp: Int = 10) {
                 val params = window.attributes
                 params.blurBehindRadius = with(density) { blurDp.dp.roundToPx() }
                 window.attributes = params
+            }
+            if (edgeToEdge) {
+                WindowCompat.setDecorFitsSystemWindows(window, false)
             }
         }
         onDispose { }

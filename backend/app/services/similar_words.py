@@ -8,6 +8,19 @@ from app.ai.schemas.similar_words import (
 from app.models import LanguageProfile
 from app.services.llm import LLMService
 
+SKIP_SIMILAR_KINDS = frozenset({"phrase", "construction", "sentence", "other"})
+
+
+def skips_similar_words(content: dict | None = None, pos: str | None = None) -> bool:
+    """Dystraktory są do lematów; construction/phrase nie wołają similar_words."""
+    data = content or {}
+    if data.get("schema_version") == "vocabulario.adaptive.v1":
+        return True
+    for raw in (data.get("entry_kind"), data.get("pos"), pos):
+        if str(raw or "").strip().lower() in SKIP_SIMILAR_KINDS:
+            return True
+    return False
+
 
 def _clean_lemma(value: object) -> str:
     return value.strip() if isinstance(value, str) else ""
@@ -86,6 +99,8 @@ async def fetch_similar_words(
 ) -> list[dict]:
     """Jedno zapytanie o 12 dystraktorów; gdy któryś wypadnie po deduplikacji,
     brakujące pozycje bierzemy z awaryjnej puli słów."""
+    if skips_similar_words(pos=pos):
+        return []
     pos_val = pos or "unknown"
 
     similar = await llm.generate_similar_words(
@@ -117,6 +132,9 @@ async def ensure_similar_words(
 ) -> dict:
     """Gwarantuje 12 dystraktorów w content — przy dodawaniu / odświeżaniu karty."""
     updated = dict(content or {})
+    if skips_similar_words(updated, pos):
+        updated.setdefault("similar_words", [])
+        return updated
     pos_val = pos or "unknown"
 
     existing = _collect(

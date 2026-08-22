@@ -146,7 +146,7 @@ fun CardDetailContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         when (enrichmentStatus) {
-            "pending" -> {
+            "pending", "preparing" -> {
                 AppCard {
                     Text(
                         stringResource(R.string.card_preparing),
@@ -166,7 +166,7 @@ fun CardDetailContent(
                     )
                 }
             }
-            "ready" -> if (!hasMeaningContent) {
+            "ready", "learnable" -> if (!hasMeaningContent) {
                 AppCard {
                     Text(
                         stringResource(R.string.card_preparing),
@@ -225,7 +225,7 @@ fun CardDetailContent(
                     textAlign = TextAlign.Center,
                 )
             }
-            if (pos != null && !pos.equals("imported", ignoreCase = true)) {
+            if (pos != null && !pos.equals("unknown", ignoreCase = true)) {
                 val label = localizedPosLabel(pos)
                 if (label.isNotBlank()) {
                     Spacer(modifier = Modifier.height(10.dp))

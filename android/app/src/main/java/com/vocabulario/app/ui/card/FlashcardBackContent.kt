@@ -166,7 +166,7 @@ fun FlashcardBackContent(
                     textAlign = TextAlign.Center,
                 )
             }
-            if (!pos.isNullOrBlank() && !pos.equals("imported", ignoreCase = true)) {
+            if (!pos.isNullOrBlank() && !pos.equals("unknown", ignoreCase = true)) {
                 Spacer(Modifier.height(10.dp))
                 TagChip(localizedPosLabel(pos).ifBlank { pos })
             }

@@ -293,14 +293,6 @@
 
     <string name="import_other_file">Elegir otro archivo</string>
 
-    <string name="import_how">¿Cómo importar?</string>
-
-    <string name="import_vocab_mode">Tarjetas Vocabulario</string>
-
-    <string name="import_preserve_mode">Conservar el contenido de mi tarjeta</string>
-
-    <string name="import_vocab_hint">Tarjetas Vocabulario: ideales para palabras sueltas — generadas automáticamente con significados, ejemplos, formas, patrones, sinónimos y antónimos.</string>
-
     <string name="import_invalid_title">Palabras no válidas</string>
 
     <string name="import_file_errors">El archivo tiene errores — revísalo.</string>
@@ -460,8 +452,6 @@
 <string name="status_new">nueva</string>
 
     <string name="status_learning">aprendiendo</string>
-
-    <string name="card_badge_import">Importada</string>
 
     <string name="status_mastered">dominada</string>
 

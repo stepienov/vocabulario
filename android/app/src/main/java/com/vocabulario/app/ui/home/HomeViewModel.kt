@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
+import com.vocabulario.app.data.EnrichmentStatus
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.SYSTEM_LIST_NAME
@@ -27,6 +28,7 @@ import com.vocabulario.app.ui.card.RelatedWord
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,7 +45,10 @@ enum class HomeKind { Empty, Session, CaughtUp }
 data class HomeUiState(
     val tab: HomeTab = HomeTab.DASHBOARD,
     val query: String = "",
-    val loading: Boolean = false,
+    /** Spinner wyszukiwania — tylko zakładka „dodaj”, nie mylić z ładowaniem list. */
+    val searchLoading: Boolean = false,
+    /** OpenAI jeszcze uzupełnia listę — mały spinner pod propozycjami. */
+    val expanding: Boolean = false,
     val candidates: List<LookupCandidate> = emptyList(),
     val activeProfile: LanguageProfileResponse? = null,
     val error: String? = null,
@@ -135,6 +140,7 @@ class HomeViewModel @Inject constructor(
     val connectivity: StateFlow<Boolean> = networkMonitor.isOnline
 
     private var pollJob: Job? = null
+    private var searchJob: Job? = null
     private var boundProfileId: String? = null
     private var listsObserverJob: Job? = null
     private var cardsObserverJob: Job? = null
@@ -261,21 +267,23 @@ class HomeViewModel @Inject constructor(
         val words = selected?.let { runCatching { repository.cachedListWords(it) }.getOrNull() }
         val stats = runCatching { repository.dashboardStats(7) }.getOrNull()
         val learningLemmas = runCatching { repository.learningLemmaSet() }.getOrNull()
+        val publishedWords = words ?: _state.value.listWords
         _state.value = _state.value.copy(
-            loading = false,
             lists = visible,
             selectedListId = selected ?: _state.value.selectedListId,
-            listWords = words ?: _state.value.listWords,
+            listWords = publishedWords,
             selectedWordIds = if (clearSelection) emptySet() else _state.value.selectedWordIds,
             stats = stats ?: _state.value.stats,
             learningLemmas = learningLemmas ?: _state.value.learningLemmas,
-            detailCard = syncDetailCard(words ?: _state.value.listWords, _state.value.detailCard),
+            detailCard = syncDetailCard(publishedWords, _state.value.detailCard),
         )
+        syncCandidatesFromRoom(visible, selected)
     }
 
     /** Drop pair-scoped UI state immediately, then reload lists/cards/stats. */
     private fun onLanguagePairChanged(wipeUi: Boolean = true) {
         pollJob?.cancel()
+        searchJob?.cancel()
         if (wipeUi) {
             val keepTab = _state.value.tab
             val online = networkMonitor.isCurrentlyOnline()
@@ -337,12 +345,15 @@ class HomeViewModel @Inject constructor(
     }
     fun selectTab(tab: HomeTab) {
         val leavingAdd = _state.value.tab == HomeTab.ADD && tab != HomeTab.ADD
+        if (leavingAdd) searchJob?.cancel()
         _state.value = _state.value.copy(
             tab = tab,
             error = null,
             selectedWordIds = if (tab != HomeTab.LISTS) emptySet() else _state.value.selectedWordIds,
             query = if (leavingAdd) "" else _state.value.query,
             candidates = if (leavingAdd) emptyList() else _state.value.candidates,
+            expanding = if (leavingAdd) false else _state.value.expanding,
+            searchLoading = if (leavingAdd) false else _state.value.searchLoading,
             addTarget = if (leavingAdd) null else _state.value.addTarget,
             pickListOpen = if (leavingAdd) false else _state.value.pickListOpen,
             showCreateListPrompt = if (leavingAdd) false else _state.value.showCreateListPrompt,
@@ -504,17 +515,16 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { words ->
                     val lemmas = runCatching { repository.learningLemmaSet() }.getOrNull()
                     _state.value = _state.value.copy(
-                        loading = false,
                         listWords = words,
                         error = null,
                         learningLemmas = lemmas ?: _state.value.learningLemmas,
                         detailCard = syncDetailCard(words, _state.value.detailCard),
                     )
+                    syncCandidatesFromRoom(_state.value.lists, listId)
                     startPollingIfNeeded()
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        loading = false,
                         error = it.userMessage(strings, R.string.err_list_words),
                     )
                 }
@@ -544,9 +554,12 @@ class HomeViewModel @Inject constructor(
     }
 
     fun prepareVoiceSearch() {
+        searchJob?.cancel()
         _state.value = _state.value.copy(
             query = "",
             candidates = emptyList(),
+            expanding = false,
+            searchLoading = false,
             error = null,
             notice = null,
         )
@@ -558,66 +571,114 @@ class HomeViewModel @Inject constructor(
         if (text.isBlank()) return
         if (!networkMonitor.isCurrentlyOnline()) {
             viewModelScope.launch {
-                _state.value = _state.value.copy(loading = true, error = null, notice = null, tab = HomeTab.ADD)
-                runCatching { repository.enqueueOfflineLookup(text) }
-                    .onSuccess { added ->
-                        _state.value = _state.value.copy(
-                            loading = false,
-                            query = "",
-                            candidates = emptyList(),
-                            notice = if (added) {
-                                strings.get(R.string.offline_lookup_queued)
-                            } else {
-                                strings.get(R.string.offline_lookup_duplicate)
-                            },
-                        )
-                        loadLists()
-                    }
-                    .onFailure {
-                        _state.value = _state.value.copy(
-                            loading = false,
-                            error = it.userMessage(strings, R.string.err_search),
-                        )
-                    }
+                _state.value = _state.value.copy(
+                    searchLoading = true,
+                    expanding = false,
+                    error = null,
+                    notice = null,
+                    tab = HomeTab.ADD,
+                )
+                try {
+                    runCatching { repository.enqueueOfflineLookup(text) }
+                        .onSuccess { added ->
+                            _state.value = _state.value.copy(
+                                query = "",
+                                candidates = emptyList(),
+                                expanding = false,
+                                notice = if (added) {
+                                    strings.get(R.string.offline_lookup_queued)
+                                } else {
+                                    strings.get(R.string.offline_lookup_duplicate)
+                                },
+                            )
+                            loadLists()
+                        }
+                        .onFailure {
+                            _state.value = _state.value.copy(
+                                error = it.userMessage(strings, R.string.err_search),
+                            )
+                        }
+                } finally {
+                    _state.value = _state.value.copy(searchLoading = false)
+                }
             }
             return
         }
-        viewModelScope.launch {
-            _state.value = _state.value.copy(loading = true, error = null, notice = null, tab = HomeTab.ADD)
-            runCatching { repository.lookup(text) }
-                .onSuccess { response ->
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            _state.value = _state.value.copy(
+                expanding = true,
+                searchLoading = false,
+                error = null,
+                notice = null,
+                candidates = emptyList(),
+                tab = HomeTab.ADD,
+            )
+            try {
+                val cachedDeferred = async { runCatching { repository.lookupCached(text) } }
+                val expandDeferred = async { runCatching { repository.lookupExpand(text) } }
+
+                val cached = cachedDeferred.await()
+                if (!isActive) return@launch
+                cached.onSuccess { response ->
+                    if (response.candidates.isNotEmpty()) {
+                        _state.value = _state.value.copy(
+                            candidates = mergeLookupCandidates(
+                                _state.value.candidates,
+                                response.candidates,
+                            ),
+                        )
+                        startPollingIfNeeded()
+                    }
+                    if (response.ai_complete) {
+                        expandDeferred.cancel()
+                        _state.value = _state.value.copy(expanding = false)
+                        return@launch
+                    }
+                }
+
+                val expand = expandDeferred.await()
+                if (!isActive) return@launch
+                expand.onSuccess { response ->
                     _state.value = _state.value.copy(
-                        loading = false,
-                        candidates = response.candidates,
+                        candidates = mergeLookupCandidates(
+                            _state.value.candidates,
+                            response.candidates,
+                        ),
+                        expanding = false,
                     )
                     startPollingIfNeeded()
-                }
-                .onFailure {
+                }.onFailure {
+                    val has = _state.value.candidates.isNotEmpty()
                     _state.value = _state.value.copy(
-                        loading = false,
-                        error = it.userMessage(strings, R.string.err_search),
+                        expanding = false,
+                        error = if (!has) it.userMessage(strings, R.string.err_search) else null,
+                        notice = if (has) strings.get(R.string.err_lookup_expand) else null,
                     )
                 }
+            } finally {
+                if (isActive) {
+                    _state.value = _state.value.copy(expanding = false)
+                }
+            }
         }
     }
 
     fun startImportFromFile(
         bytes: ByteArray,
         filename: String,
-        mode: String,
         listId: String,
         listName: String,
     ) {
-        importController.startFromFile(bytes, filename, mode, listId, listName)
+        importController.startFromFile(bytes, filename, "vocabulario", listId, listName)
     }
 
     fun startImportFromPaste(
         text: String,
-        mode: String,
         listId: String,
         listName: String,
     ) {
-        importController.startFromPaste(text, mode, listId, listName)
+        importController.startFromPaste(text, "vocabulario", listId, listName)
     }
 
     fun requestImportCancel() = importController.requestCancel()
@@ -638,7 +699,6 @@ class HomeViewModel @Inject constructor(
         bytes: ByteArray?,
         filename: String?,
         pasteText: String?,
-        mode: String,
         listId: String?,
         newListName: String?,
     ) {
@@ -646,9 +706,9 @@ class HomeViewModel @Inject constructor(
             val resolved = resolveImportTarget(listId, newListName) ?: return@launch
             when {
                 bytes != null && filename != null ->
-                    importController.startFromFile(bytes, filename, mode, resolved.first, resolved.second)
+                    importController.startFromFile(bytes, filename, "vocabulario", resolved.first, resolved.second)
                 !pasteText.isNullOrBlank() ->
-                    importController.startFromPaste(pasteText, mode, resolved.first, resolved.second)
+                    importController.startFromPaste(pasteText, "vocabulario", resolved.first, resolved.second)
             }
         }
     }
@@ -798,17 +858,19 @@ class HomeViewModel @Inject constructor(
             return
         }
         val candidate = _state.value.addTarget ?: return
-        beginCreating(candidate, name, null)
+        dismissAddSheet()
         viewModelScope.launch {
             runCatching {
                 val list = repository.createWordList(name)
-                repository.addWordToList(
+                beginCreating(candidate, list.name, list.id)
+                val card = repository.addWordToList(
                     list.id,
                     candidate.lemma,
                     candidate.pos,
                     candidate.gloss,
                     candidate.lexical_entry_id,
-                ) to list
+                )
+                card to list
             }.onSuccess { (card, list) ->
                 markCandidateOnList(
                     candidate,
@@ -1043,11 +1105,14 @@ class HomeViewModel @Inject constructor(
     /** „Szukaj ponownie" — przenosi do zakładki Dodaj z wpisanym słowem, bez uruchamiania szukania. */
     fun retryReviewSearch() {
         val word = _state.value.reviewWord.orEmpty()
+        searchJob?.cancel()
         closePendingReview()
         _state.value = _state.value.copy(
             tab = HomeTab.ADD,
             query = word,
             candidates = emptyList(),
+            expanding = false,
+            searchLoading = false,
             error = null,
         )
     }
@@ -1057,35 +1122,15 @@ class HomeViewModel @Inject constructor(
         val cardId = _state.value.reviewCardId ?: return
         val index = _state.value.reviewSelectedIndex ?: return
         val candidate = _state.value.reviewSuggestions.getOrNull(index) ?: return
-        // 1) Zamknij modal i podmień kafelek NATYCHMIAST (bez czekania na sieć).
-        //    Optymistyczna karta: ta sama zaznaczona propozycja, status pending + spinner „Tworzę kartę".
-        val optimistic = CardResponse(
-            id = cardId,
-            lemma_l2 = candidate.lemma,
-            pos = candidate.pos,
-            gloss_primary = candidate.gloss.takeIf { it.isNotBlank() },
-            content = kotlinx.serialization.json.JsonObject(emptyMap()),
-            lexical_entry_id = candidate.lexical_entry_id,
-            created_at = "",
-            persisted = false,
-            enrichment_status = "pending",
-        )
         closePendingReview()
-        _state.value = _state.value.copy(
-            listWords = _state.value.listWords.map { if (it.id == cardId) optimistic else it },
-        )
-        // 2) Sieć w tle.
         viewModelScope.launch {
             runCatching { repository.approvePendingReview(cardId, candidate) }
                 .onSuccess {
-                    _state.value.selectedListId?.let { loadListWords(it, background = true) }
-                    loadLists(_state.value.selectedListId)
+                    publishListsFromCache(_state.value.selectedListId)
                     startPollingIfNeeded()
                 }
                 .onFailure {
-                    // Cofnij optymistyczny kafelek i pokaż błąd.
                     _state.value = _state.value.copy(
-                        listWords = _state.value.listWords.filterNot { it.id == cardId },
                         error = it.userMessage(strings, R.string.err_add_to_list),
                     )
                 }
@@ -1240,17 +1285,6 @@ class HomeViewModel @Inject constructor(
 
     private fun beginCreating(candidate: LookupCandidate, listName: String, listId: String?) {
         dismissAddSheet()
-        val optimistic = CardResponse(
-            id = pendingCardId(candidate.lemma, candidate.pos),
-            lemma_l2 = candidate.lemma,
-            pos = candidate.pos,
-            gloss_primary = candidate.gloss,
-            content = kotlinx.serialization.json.JsonObject(emptyMap()),
-            lexical_entry_id = candidate.lexical_entry_id,
-            created_at = "",
-            enrichment_status = "pending",
-        )
-        val onCurrentList = listId == null || listId == _state.value.selectedListId
         val addedKeys = if (isLearningListName(listName)) lemmaKeys(candidate.lemma) else emptySet()
         _state.value = _state.value.copy(
             learningLemmas = _state.value.learningLemmas + addedKeys,
@@ -1263,13 +1297,6 @@ class HomeViewModel @Inject constructor(
                         enrichment_status = "pending",
                     )
                 } else it
-            },
-            listWords = if (onCurrentList) {
-                listOf(optimistic) + _state.value.listWords.filterNot {
-                    sameLemmaAndPos(it.lemma_l2, it.pos, candidate.lemma, candidate.pos)
-                }
-            } else {
-                _state.value.listWords
             },
         )
     }
@@ -1315,62 +1342,89 @@ class HomeViewModel @Inject constructor(
                     )
                 } else it
             },
-            listWords = _state.value.listWords.map {
-                if (it.id.startsWith("pending-") &&
-                    sameLemmaAndPos(it.lemma_l2, it.pos, candidate.lemma, candidate.pos)
-                ) {
-                    it.copy(id = cardId, enrichment_status = enrichmentStatus)
-                } else it
-            },
         )
     }
 
     /**
-     * Polling TYLKO obserwuje serwerowy enrichment (pending → ready). NIE wywołuje flushu —
-     * flush leci dokładnie raz (przy wejściu na listę / przejściu online), serializowany mutexem
-     * w repo. Dzięki temu nie ma lawiny zapytań LLM ani duplikatów kart.
+     * Polling TYLKO obserwuje serwerowy enrichment (pending → learnable → ready).
+     * GET pojedynczych kart, nie całej listy. Flush lookupów nie jest tu wołany.
      */
     private fun startPollingIfNeeded() {
-        val pendingCandidates = _state.value.candidates.any {
-            it.enrichment_status == "pending" || it.enrichment_status == "preparing"
-        }
-        val pendingWords = _state.value.listWords.any {
-            it.enrichment_status == "pending" || it.enrichment_status == "preparing"
-        }
-        val hasActivity = _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
-        if (!pendingCandidates && !pendingWords && !hasActivity) {
+        val needsPoll = _state.value.candidates.any { EnrichmentStatus.needsPoll(it.enrichment_status) } ||
+            _state.value.listWords.any { EnrichmentStatus.needsPoll(it.enrichment_status) } ||
+            _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
+        if (!needsPoll) {
             pollJob?.cancel()
             return
         }
         if (pollJob?.isActive == true) return
         repository.requestBackgroundSync()
         pollJob = viewModelScope.launch {
-            var iterations = 0
             while (isActive) {
-                delay(2_500)
-                if (++iterations > 40) break
-                val listId = _state.value.selectedListId
-                if (listId != null) {
-                    runCatching { repository.refreshListWordsFromServer(listId) }
-                        .onSuccess { words ->
-                            _state.value = _state.value.copy(listWords = words)
-                            syncCandidatesFromWords(words)
-                        }
-                }
-                val stillPending =
-                    _state.value.candidates.any {
-                        it.enrichment_status == "pending" || it.enrichment_status == "preparing"
-                    } ||
-                        _state.value.listWords.any {
-                            it.enrichment_status == "pending" || it.enrichment_status == "preparing"
-                        } ||
-                        _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
-                if (!stillPending) {
+                val cardIds = enrichmentPollCardIds()
+                if (cardIds.isEmpty()) {
                     runCatching { repository.evaluateReadyBatches() }
                     break
                 }
+                val fetched = runCatching { repository.refreshCardsFromServer(cardIds) }.getOrNull().orEmpty()
+                val listId = _state.value.selectedListId
+                if (listId != null) {
+                    val words = runCatching { repository.listWords(listId) }.getOrNull()
+                    if (words != null) {
+                        _state.value = _state.value.copy(listWords = words)
+                    }
+                }
+                if (fetched.isNotEmpty()) {
+                    syncCandidatesFromWords(fetched.distinctBy { it.id })
+                }
+                val stillPolling =
+                    _state.value.candidates.any { EnrichmentStatus.needsPoll(it.enrichment_status) } ||
+                        _state.value.listWords.any { EnrichmentStatus.needsPoll(it.enrichment_status) } ||
+                        _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
+                if (!stillPolling) {
+                    runCatching { repository.evaluateReadyBatches() }
+                    break
+                }
+                delay(2_500)
             }
         }
+    }
+
+    /** Karty w toku enrichmentu — GET /cards/{id} zamiast całej listy. */
+    private fun enrichmentPollCardIds(): List<String> {
+        val ids = linkedSetOf<String>()
+        _state.value.listWords.forEach { card ->
+            val watch = EnrichmentStatus.needsPoll(card.enrichment_status) ||
+                !card.card_activity_status.isNullOrBlank()
+            if (watch) ids.add(card.id)
+        }
+        _state.value.candidates.forEach { c ->
+            if (EnrichmentStatus.needsPoll(c.enrichment_status)) {
+                c.learning_card_id?.let { ids.add(it) }
+            }
+        }
+        return ids.toList()
+    }
+
+    /** Room-first: zsynchronizuj status kandydatów z kartami w cache (bez sieci). */
+    private suspend fun syncCandidatesFromRoom(
+        lists: List<WordListResponse>,
+        selectedListId: String?,
+    ) {
+        if (_state.value.candidates.isEmpty()) return
+        val listIds = linkedSetOf<String>()
+        selectedListId?.let { listIds.add(it) }
+        _state.value.candidates.forEach { c ->
+            c.list_id?.let { listIds.add(it) }
+            if (c.in_learning || c.learning_card_id != null) {
+                lists.firstOrNull { it.is_system }?.id?.let { listIds.add(it) }
+            }
+        }
+        if (listIds.isEmpty()) return
+        val allWords = listIds.flatMap { id ->
+            runCatching { repository.cachedListWords(id) }.getOrDefault(emptyList())
+        }.distinctBy { it.id }
+        syncCandidatesFromWords(allWords)
     }
 
     private fun maybeStartActivityPoll() {
@@ -1723,12 +1777,55 @@ internal fun sameLemmaAndPos(
     if (!lemmaA.equals(lemmaB, ignoreCase = true)) return false
     val a = normalizePosKey(posA)
     val b = normalizePosKey(posB)
-    if (a == "unknown" || b == "unknown") return false
-    return a == b
+    if (a != "unknown" && b != "unknown" && a != b) return false
+    return true
+}
+
+internal fun mergeLookupCandidates(
+    current: List<LookupCandidate>,
+    incoming: List<LookupCandidate>,
+): List<LookupCandidate> {
+    if (current.isEmpty()) return incoming
+    if (incoming.isEmpty()) return current
+    val used = BooleanArray(current.size)
+    val out = ArrayList<LookupCandidate>(incoming.size + current.size)
+    for (inc in incoming) {
+        val idx = current.indexOfFirst { sameLemmaAndPos(it.lemma, it.pos, inc.lemma, inc.pos) }
+        if (idx >= 0) {
+            used[idx] = true
+            out.add(preferCurrentMembership(current[idx], inc))
+        } else {
+            out.add(inc)
+        }
+    }
+    current.forEachIndexed { i, candidate ->
+        if (!used[i]) out.add(candidate)
+    }
+    return out
+}
+
+private fun preferCurrentMembership(
+    current: LookupCandidate,
+    incoming: LookupCandidate,
+): LookupCandidate {
+    if (!current.onList && !current.isCreating && current.learning_card_id.isNullOrBlank()) {
+        return incoming
+    }
+    return incoming.copy(
+        in_learning = current.in_learning || incoming.in_learning,
+        learning_card_id = current.learning_card_id ?: incoming.learning_card_id,
+        list_id = current.list_id ?: incoming.list_id,
+        list_name = current.list_name ?: incoming.list_name,
+        enrichment_status = current.enrichment_status ?: incoming.enrichment_status,
+        lexical_entry_id = incoming.lexical_entry_id ?: current.lexical_entry_id,
+    )
 }
 
 /** Ten sam lemat w innym POS to inna karta — nie zlewaj play/verb z play/noun. */
 internal fun candidateMatchesCard(candidate: LookupCandidate, card: CardResponse): Boolean {
+    if (!candidate.learning_card_id.isNullOrBlank() && candidate.learning_card_id == card.id) {
+        return true
+    }
     return sameLemmaAndPos(card.lemma_l2, card.pos, candidate.lemma, candidate.pos)
 }
 

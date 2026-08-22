@@ -11,6 +11,9 @@ from app.services.pos_normalize import (
     normalize_pos_bucket,
 )
 
+# Soft cap for a stored lookup list. Ranking never drops extras below this.
+LOOKUP_CACHE_LIMIT = 16
+
 
 def _normalize_lemma(lemma: str) -> str:
     return " ".join(lemma.lower().split())
@@ -92,6 +95,14 @@ def _fold(text: str) -> str:
     """
     t = _strip_stray_punct(_norm_token(text)).translate(_STROKE_MAP)
     return _strip_diacritics(t)
+
+
+def normalize_lookup_query(text: str) -> str:
+    """Cache key for a typed lookup: folded query, fallback to trimmed casefold."""
+    folded = _fold(text)
+    if folded:
+        return folded[:200]
+    return _norm_token(text)[:200]
 
 
 def edit_distance(a: str, b: str) -> int:
@@ -411,9 +422,10 @@ def cached_lookup_covers_query(
     *,
     learning_lang: str | None = None,
 ) -> bool:
-    """Skip AI only when this query already has 2+ distinct POS in cache.
+    """Whether a lemma list already has 2+ distinct POS for this query.
 
-    One cached reading (play/verb) must not hide the other (play/noun).
+    Kept as a helper/test contract. Interactive lookup no longer uses this to skip
+    OpenAI — query cache (`lookup_query_cache.ai_complete`) owns that decision.
     """
     if not has_confident_match(candidates, query, learning_lang=learning_lang):
         return False
@@ -482,10 +494,64 @@ def merge_candidates(
     return dedupe_lookup_candidates(combined, learning_lang=learning_lang, limit=limit)
 
 
+def _payload_candidate(item: dict) -> dict:
+    return {
+        "lemma": (item.get("lemma") or "").strip(),
+        "pos": item.get("pos"),
+        "gloss": (item.get("gloss") or "").strip(),
+    }
+
+
+def append_lookup_candidates(
+    existing: list[dict],
+    incoming: list[dict],
+    *,
+    learning_lang: str = "en",
+    limit: int | None = LOOKUP_CACHE_LIMIT,
+) -> tuple[list[dict], int]:
+    """Union by lemma+POS. Never overwrites an existing gloss/lemma form.
+
+    Returns (merged_payload, n_added).
+    """
+    incoming_clean = sanitize_lookup_candidates(
+        incoming, learning_lang=learning_lang, limit=None
+    )
+    by_key: dict[tuple[str, str], dict] = {}
+    order: list[tuple[str, str]] = []
+    for item in existing:
+        payload = _payload_candidate(item)
+        if not payload["lemma"]:
+            continue
+        key = lookup_dedup_key(
+            payload["lemma"], payload.get("pos"), learning_lang=learning_lang
+        )
+        if key in by_key:
+            continue
+        order.append(key)
+        by_key[key] = payload
+    added = 0
+    for item in incoming_clean:
+        payload = _payload_candidate(item)
+        if not payload["lemma"]:
+            continue
+        key = lookup_dedup_key(
+            payload["lemma"], payload.get("pos"), learning_lang=learning_lang
+        )
+        if key in by_key:
+            continue
+        if limit is not None and len(order) >= limit:
+            break
+        order.append(key)
+        by_key[key] = payload
+        added += 1
+    return [by_key[k] for k in order], added
+
+
 def sanitize_lookup_candidates(
     candidates: list[dict],
     *,
     learning_lang: str = "en",
+    limit: int | None = LOOKUP_CACHE_LIMIT,
 ) -> list[dict]:
     cleaned: list[dict] = []
     articles = _article_set(learning_lang)
@@ -535,4 +601,4 @@ def sanitize_lookup_candidates(
             continue
         cleaned.append(item)
 
-    return dedupe_lookup_candidates(cleaned, learning_lang=learning_lang, limit=8)
+    return dedupe_lookup_candidates(cleaned, learning_lang=learning_lang, limit=limit)

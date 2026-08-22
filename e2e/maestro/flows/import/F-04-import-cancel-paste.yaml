@@ -10,7 +10,7 @@ tags:
 - tapOn:
     id: tab_add
 - tapOn:
-    id: btn_import_paste
+    id: btn_import
 - extendedWaitUntil:
     visible:
       id: "dialog_cancel|import_paste_input|dialog_confirm"
@@ -20,4 +20,4 @@ tags:
 - assertVisible:
     id: search_input
 - assertVisible:
-    id: btn_import_paste
+    id: btn_import

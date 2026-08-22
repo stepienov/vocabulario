@@ -910,7 +910,7 @@ private fun AddTab(
     onPrepareVoiceSearch: () -> Unit,
     onAdd: (LookupCandidate) -> Unit,
     onOpenWord: (LookupCandidate) -> Unit,
-    onStartImport: (ByteArray?, String?, String?, String, String?, String?) -> Unit,
+    onStartImport: (ByteArray?, String?, String?, String?, String?) -> Unit,
     onImportError: (String) -> Unit,
     onAbortImport: () -> Unit,
     onConfirmImport: () -> Unit,
@@ -922,7 +922,6 @@ private fun AddTab(
     val scheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     var showStartDialog by remember { mutableStateOf(false) }
-    var pasteMode by remember { mutableStateOf(false) }
     var pasteDraft by remember { mutableStateOf("") }
     var pendingFileBytes by remember { mutableStateOf<ByteArray?>(null) }
     var pendingFileName by remember { mutableStateOf<String?>(null) }
@@ -959,7 +958,7 @@ private fun AddTab(
         }.onSuccess { (name, bytes) ->
             pendingFileName = name
             pendingFileBytes = bytes
-            pasteMode = false
+            pasteDraft = ""
             showStartDialog = true
         }.onFailure {
             showStartDialog = true
@@ -1014,42 +1013,20 @@ private fun AddTab(
                 Spacer(modifier = Modifier.height(16.dp))
             }
             if (isOnline) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                OutlinedButton(
+                    onClick = {
+                        pendingFileBytes = null
+                        pendingFileName = null
+                        pasteDraft = ""
+                        showStartDialog = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .testTag(TestTags.BTN_IMPORT),
+                    shape = AppButtonShape,
                 ) {
-                    OutlinedButton(
-                        onClick = {
-                            pendingFileBytes = null
-                            pendingFileName = null
-                            pasteMode = false
-                            pasteDraft = ""
-                            showStartDialog = true
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .testTag(TestTags.BTN_IMPORT_FILE),
-                        shape = AppButtonShape,
-                    ) {
-                        Text(stringResource(R.string.import_from_file), maxLines = 1)
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            pendingFileBytes = null
-                            pendingFileName = null
-                            pasteMode = true
-                            pasteDraft = ""
-                            showStartDialog = true
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .testTag(TestTags.BTN_IMPORT_PASTE),
-                        shape = AppButtonShape,
-                    ) {
-                        Text(stringResource(R.string.import_paste), maxLines = 1)
-                    }
+                    Text(stringResource(R.string.import_action_start), maxLines = 1)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -1131,7 +1108,7 @@ private fun AddTab(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        if (state.loading && !importBusy) {
+        if ((state.searchLoading || (state.expanding && state.candidates.isEmpty())) && !importBusy) {
             CircularProgressIndicator(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
@@ -1156,7 +1133,23 @@ private fun AddTab(
                         onOpenWord = onOpenWord,
                     )
                 }
-                if (state.candidates.isEmpty() && !state.loading && state.query.isBlank()) {
+                if (state.expanding && state.candidates.isNotEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(28.dp),
+                                color = scheme.primary,
+                                strokeWidth = 3.dp,
+                            )
+                        }
+                    }
+                }
+                if (state.candidates.isEmpty() && !state.searchLoading && !state.expanding && state.query.isBlank()) {
                     item {
                         if (isOnline) {
                             Text(
@@ -1179,10 +1172,13 @@ private fun AddTab(
         ImportStartDialog(
             lists = state.lists,
             sourceLabel = pendingFileName,
-            pasteMode = pasteMode,
             pasteDraft = pasteDraft,
             onPasteDraftChange = { pasteDraft = it },
             onPickFile = { launchFilePicker() },
+            onClearFile = {
+                pendingFileBytes = null
+                pendingFileName = null
+            },
             onDismiss = {
                 if (pickingFile) return@ImportStartDialog
                 showStartDialog = false
@@ -1190,15 +1186,15 @@ private fun AddTab(
                 pendingFileName = null
                 pasteDraft = ""
             },
-            onStart = { mode, listId, newListName ->
+            onStart = { listId, newListName ->
                 showStartDialog = false
                 val bytes = pendingFileBytes
                 val name = pendingFileName
-                val paste = pasteDraft.takeIf { pasteMode }
+                val paste = if (bytes == null) pasteDraft.takeIf { it.isNotBlank() } else null
                 pendingFileBytes = null
                 pendingFileName = null
                 pasteDraft = ""
-                onStartImport(bytes, name, paste, mode, listId, newListName)
+                onStartImport(bytes, name, paste, listId, newListName)
             },
             listDisplayName = { listDisplayName(it) },
         )
@@ -1209,7 +1205,7 @@ private fun AddTab(
         nativeLang = nativeLang,
         learningLang = learningLang,
         candidates = state.candidates,
-        loading = state.loading,
+        loading = state.searchLoading || state.expanding,
         searchError = state.error,
         onDismiss = { showVoiceSheet = false },
         onResult = { text ->
@@ -1397,8 +1393,8 @@ private fun ListsTab(
     val selectionMode = state.selectionMode
     val visibleWords = state.visibleListWords
 
-    LaunchedEffect(state.focusWordId, state.focusLemma, state.listWords, state.loading) {
-        if (state.loading) return@LaunchedEffect
+    LaunchedEffect(state.focusWordId, state.focusLemma, state.listWords, state.searchLoading) {
+        if (state.searchLoading) return@LaunchedEffect
         if (state.focusWordId == null && state.focusLemma.isNullOrBlank()) return@LaunchedEffect
         val targetId = state.focusWordId
             ?: state.focusLemma?.let { lemma ->
@@ -1514,16 +1510,6 @@ private fun ListsTab(
         )
 
         when {
-            state.loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(40.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(color = scheme.primary, strokeWidth = 3.dp)
-                }
-            }
             state.listWords.isEmpty() -> {
                     Text(
                         stringResource(R.string.list_empty),
@@ -2220,12 +2206,6 @@ private fun ListWordTile(
         else -> null
     }
     val meanings = remember(card.id, card.content) { cardMeaningGlosses(card.content) }
-    val imported = remember(card.id, card.content) {
-        com.vocabulario.app.ui.components.parseImportDisplayFromContent(card.content)
-    }
-    val isImportPreserve = imported != null ||
-        card.pos.equals("imported", ignoreCase = true) ||
-        com.vocabulario.app.ui.components.isImportPreserveContent(card.content)
     val muted = awaitingNetwork || lookupQueued || activityProcessing || needsReview || prepProblem
     val tileColor = when {
         selected -> scheme.primary.copy(alpha = 0.12f)
@@ -2344,25 +2324,13 @@ private fun ListWordTile(
                             modifier = Modifier.size(22.dp),
                         )
                     }
-                    !selectionMode && (statusLabel != null || isImportPreserve) && !prepProblem -> {
+                    !selectionMode && statusLabel != null && !prepProblem -> {
                         Spacer(modifier = Modifier.width(8.dp))
-                        if (isImportPreserve) {
-                            StatusChip(
-                                label = stringResource(R.string.card_badge_import),
-                                failed = false,
-                                muted = false,
-                            )
-                            if (statusLabel != null) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                            }
-                        }
-                        if (statusLabel != null) {
-                            StatusChip(
-                                label = statusLabel,
-                                failed = failed,
-                                muted = awaitingNetwork,
-                            )
-                        }
+                        StatusChip(
+                            label = statusLabel,
+                            failed = failed,
+                            muted = awaitingNetwork,
+                        )
                     }
                 }
             }
@@ -2414,29 +2382,19 @@ private fun ListWordTile(
                             }
                         }
                     } else {
-                    if (imported != null) {
                         key(card.id, expanded) {
-                            com.vocabulario.app.ui.components.ImportDisplayFlip(
-                                display = imported,
-                                showPrompt = false,
-                                enableTts = false,
-                            )
-                        }
-                    } else {
-                        key(card.id, expanded) {
-                            com.vocabulario.app.ui.components.ListRevealAnswer {
+                            ListRevealAnswer {
                                 AdaptiveOrGlossReveal(card = card, meanings = meanings, scheme = scheme)
                             }
                         }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    HorizontalDivider(color = scheme.outline.copy(alpha = 0.5f))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HorizontalDivider(color = scheme.outline.copy(alpha = 0.5f))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                         ListTileIconButton(
                             onClick = onViewCard,
                             icon = Icons.AutoMirrored.Outlined.Article,
@@ -2540,6 +2498,37 @@ private fun cardMeaningGlosses(content: JsonObject): List<String> {
     return meanings.mapNotNull { el ->
         val obj = runCatching { el.jsonObject }.getOrNull() ?: return@mapNotNull null
         obj["gloss_l1"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+    }
+}
+
+@Composable
+private fun ListRevealAnswer(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    var revealed by remember { mutableStateOf(false) }
+    val scheme = MaterialTheme.colorScheme
+    Column(modifier = modifier.fillMaxWidth()) {
+        if (!revealed) {
+            Surface(
+                onClick = { revealed = true },
+                shape = RoundedCornerShape(12.dp),
+                color = scheme.primaryContainer,
+                contentColor = scheme.onPrimaryContainer,
+                modifier = Modifier.fillMaxWidth().testTag(TestTags.BTN_REVEAL),
+            ) {
+                Text(
+                    stringResource(R.string.action_reveal),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        } else {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                content()
+            }
+        }
     }
 }
 

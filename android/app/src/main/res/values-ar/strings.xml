@@ -292,14 +292,6 @@
 
     <string name="import_other_file">اختيار ملف آخر</string>
 
-    <string name="import_how">كيف تستورد؟</string>
-
-    <string name="import_vocab_mode">بطاقات Vocabulario</string>
-
-    <string name="import_preserve_mode">الاحتفاظ بمحتوى بطاقتي</string>
-
-    <string name="import_vocab_hint">بطاقات Vocabulario: الأفضل للكلمات المفردة — تُنشأ تلقائيًا مع المعاني والأمثلة والصيغ والأنماط والمرادفات والأضداد.</string>
-
     <string name="import_invalid_title">كلمات غير صالحة</string>
 
     <string name="import_file_errors">الملف يحتوي على أخطاء — راجعه.</string>
@@ -460,8 +452,6 @@
     <string name="status_new">جديدة</string>
 
     <string name="status_learning">قيد التعلّم</string>
-
-    <string name="card_badge_import">مستوردة</string>
 
     <string name="status_mastered">مُتقنة</string>
 

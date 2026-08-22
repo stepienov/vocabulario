@@ -5,9 +5,9 @@ Pairs (6 distinct languages):
   pl → es, en → fr, de → ja
 
 Runs for each pair:
-  1) preserve import (paste + CSV file) → commit-display → DB/API check
-  2) vocabulario import (paste + CSV) → create cards → wait enrichment → check
-  3) lookup L2 lemmas (exact + typo) and L1 glosses (exact + typo)
+  1) vocabulario import (paste + CSV) → create cards → wait enrichment → check
+     (schema vocabulario.card.v1, pos != imported, similar_words for quiz)
+  2) lookup L2 lemmas (exact + typo) and L1 glosses (exact + typo)
 
 Usage (from repo root, backend up):
   backend\\.venv\\Scripts\\python scripts\\e2e_lang_pairs_test.py
@@ -182,13 +182,6 @@ class Api:
             raise RuntimeError(f"file import {r.status_code}: {r.text[:500]}")
         return r.json()
 
-    def commit_preserve(self, profile_id: str, list_id: str, cards: list):
-        return self._req(
-            "POST",
-            "/imports/commit-display",
-            {"profile_id": profile_id, "list_id": list_id, "cards": cards},
-        )
-
     def create_card(self, profile_id: str, entry: dict):
         return self._req(
             "POST",
@@ -227,40 +220,21 @@ def strip_csv_comments(text: str) -> str:
     return "\n".join(lines)
 
 
-def _is_preserve(card: dict) -> bool:
-    return ((card.get("content") or {}).get("schema_version") or "") == "import_display.v1"
-
-
 def wait_enrichment(api: Api, profile_id: str, lemmas: set[str], timeout_s: int = 180) -> dict:
     deadline = time.time() + timeout_s
     last = []
     while time.time() < deadline:
         cards = api.cards(profile_id)
         last = cards
-        relevant = [
-            c for c in cards if c.get("lemma_l2") in lemmas and not _is_preserve(c)
-        ]
+        relevant = [c for c in cards if c.get("lemma_l2") in lemmas]
         if relevant and all(c.get("enrichment_status") in ("ready", "failed") for c in relevant):
             return {"cards": relevant, "all": cards}
         time.sleep(3)
     return {
-        "cards": [c for c in last if c.get("lemma_l2") in lemmas and not _is_preserve(c)],
+        "cards": [c for c in last if c.get("lemma_l2") in lemmas],
         "all": last,
         "timeout": True,
     }
-
-
-def assert_preserve_cards(cards_resp: dict, label: str, report: list):
-    cards = cards_resp.get("cards") or []
-    if len(cards) < 3:
-        report.append(f"FAIL {label}: preserve returned <3 cards ({len(cards)})")
-        return
-    for c in cards[:3]:
-        disp = (c.get("display") or {})
-        if not disp.get("prompt") or not disp.get("answer"):
-            report.append(f"FAIL {label}: card missing prompt/answer display: {c.get('lemma_l2')}")
-            return
-    report.append(f"OK   {label}: preserve {len(cards)} cards with display blocks")
 
 
 def assert_vocab_cards(api_cards: list, expected_lemmas: set[str], label: str, report: list):
@@ -292,12 +266,23 @@ def assert_vocab_cards(api_cards: list, expected_lemmas: set[str], label: str, r
             ok_bits.append(f"lang={lang}")
         if meanings:
             ok_bits.append(f"meanings={len(meanings)}")
-        # language on enrich should match learning when possible
+        similar = content.get("similar_words") or []
+        ok_bits.append(f"similar={len(similar)}")
         report.append(f"  card {c['lemma_l2']}: {', '.join(ok_bits) or 'minimal'}")
-        if schema == "vocabulario.card.v1" and not meanings and not content.get("similar_words"):
+        if (c.get("pos") or "").lower() == "imported":
+            report.append(f"FAIL {label}: lemma card {c['lemma_l2']} has pos=imported")
+        if schema != "vocabulario.card.v1":
+            report.append(
+                f"FAIL {label}: lemma card {c['lemma_l2']} schema={schema!r} "
+                "(expected vocabulario.card.v1)"
+            )
+        elif not meanings:
             report.append(f"WARN {label}: lemma card {c['lemma_l2']} ready but thin content")
-        elif schema == "1.0" and not meanings and not content.get("similar_words"):
-            report.append(f"WARN {label}: legacy card {c['lemma_l2']} ready but thin content")
+        if len(similar) < 7:
+            report.append(
+                f"FAIL {label}: lemma card {c['lemma_l2']} similar_words={len(similar)} "
+                "(need ≥7 for quiz)"
+            )
     if failed:
         for c in failed:
             report.append(
@@ -422,54 +407,6 @@ def run_pair(pair: dict, report: list) -> None:
     # write cleaned temp csv for upload (no comment lines)
     tmp_csv = FIXTURES / pid / "_upload.csv"
     tmp_csv.write_text(csv_text, encoding="utf-8")
-
-    # --- PRESERVE paste ---
-    try:
-        pres = api.ingest_paste(profile_id, paste, "preserve")
-        cards = pres.get("cards") or []
-        assert_preserve_cards(pres, f"{pid}/preserve-paste", report)
-        if cards:
-            commit = api.commit_preserve(
-                profile_id,
-                list_id,
-                [
-                    {
-                        "key": c.get("key") or f"k{i}",
-                        "lemma_l2": c.get("lemma_l2") or "",
-                        "gloss_primary": c.get("gloss_primary"),
-                        "display": c.get("display"),
-                    }
-                    for i, c in enumerate(cards)
-                ],
-            )
-            report.append(
-                f"OK   {pid}/preserve-paste commit created={commit.get('created')} skipped={commit.get('skipped')}"
-            )
-    except Exception as e:
-        report.append(f"FAIL {pid}/preserve-paste: {e}")
-
-    # --- PRESERVE file ---
-    try:
-        pres_f = api.ingest_file(profile_id, tmp_csv, "preserve")
-        assert_preserve_cards(pres_f, f"{pid}/preserve-file", report)
-        cards = pres_f.get("cards") or []
-        if cards:
-            api.commit_preserve(
-                profile_id,
-                list_id,
-                [
-                    {
-                        "key": c.get("key") or f"f{i}",
-                        "lemma_l2": c.get("lemma_l2") or "",
-                        "gloss_primary": c.get("gloss_primary"),
-                        "display": c.get("display"),
-                    }
-                    for i, c in enumerate(cards[:5])
-                ],
-            )
-            report.append(f"OK   {pid}/preserve-file commit (first 5)")
-    except Exception as e:
-        report.append(f"FAIL {pid}/preserve-file: {e}")
 
     # --- VOCABULARIO paste ---
     expected = set()

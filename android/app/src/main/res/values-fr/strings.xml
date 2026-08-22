@@ -293,14 +293,6 @@
 
     <string name="import_other_file">Choisir un autre fichier</string>
 
-    <string name="import_how">Comment importer ?</string>
-
-    <string name="import_vocab_mode">Cartes Vocabulario</string>
-
-    <string name="import_preserve_mode">Conserver le contenu de ma carte</string>
-
-    <string name="import_vocab_hint">Cartes Vocabulario : idéales pour les mots isolés — générées automatiquement avec sens, exemples, formes, tournures, synonymes et antonymes.</string>
-
     <string name="import_invalid_title">Mots invalides</string>
 
     <string name="import_file_errors">Le fichier contient des erreurs — vérifiez-le.</string>
@@ -461,8 +453,6 @@
     <string name="status_new">nouveau</string>
 
     <string name="status_learning">en cours</string>
-
-    <string name="card_badge_import">Import</string>
 
     <string name="status_mastered">maîtrisé</string>
 

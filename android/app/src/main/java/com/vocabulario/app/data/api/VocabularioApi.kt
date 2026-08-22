@@ -53,14 +53,17 @@ interface VocabularioApi {
     @POST("lookup")
     suspend fun lookup(@Body body: LookupRequest): LookupResponse
 
+    @POST("lookup/cached")
+    suspend fun lookupCached(@Body body: LookupRequest): LookupResponse
+
+    @POST("lookup/expand")
+    suspend fun lookupExpand(@Body body: LookupRequest): LookupResponse
+
     @POST("imports/validate")
     suspend fun validateImport(@Body body: ImportValidateRequest): ImportValidateResponse
 
     @POST("imports/ingest")
     suspend fun ingestImport(@Body body: ImportIngestRequest): ImportValidateResponse
-
-    @POST("imports/ingest")
-    suspend fun ingestImportPreserve(@Body body: ImportIngestRequest): ImportDisplayResponse
 
     @Multipart
     @POST("imports/file")
@@ -69,17 +72,6 @@ interface VocabularioApi {
         @Part("profile_id") profileId: RequestBody,
         @Part("mode") mode: RequestBody,
     ): ImportValidateResponse
-
-    @Multipart
-    @POST("imports/file")
-    suspend fun ingestImportFilePreserve(
-        @Part file: MultipartBody.Part,
-        @Part("profile_id") profileId: RequestBody,
-        @Part("mode") mode: RequestBody,
-    ): ImportDisplayResponse
-
-    @POST("imports/commit-display")
-    suspend fun commitImportDisplay(@Body body: ImportDisplayCommitRequest): ImportDisplayCommitResponse
 
     @POST("imports/jobs")
     suspend fun createImportJob(@Body body: ImportJobCreateRequest): ImportJobProgressResponse
@@ -119,6 +111,12 @@ interface VocabularioApi {
 
     @GET("cards")
     suspend fun listCards(@Query("profile_id") profileId: String): List<CardResponse>
+
+    @GET("cards/{card_id}")
+    suspend fun getCard(
+        @Path("card_id") cardId: String,
+        @Query("profile_id") profileId: String,
+    ): CardResponse
 
     @GET("lists")
     suspend fun listWordLists(@Query("profile_id") profileId: String): List<WordListResponse>

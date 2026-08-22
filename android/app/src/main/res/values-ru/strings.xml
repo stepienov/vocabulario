@@ -292,14 +292,6 @@
 
     <string name="import_other_file">Выбрать другой файл</string>
 
-    <string name="import_how">Как импортировать?</string>
-
-    <string name="import_vocab_mode">Карточки Vocabulario</string>
-
-    <string name="import_preserve_mode">Сохранить содержимое моей карточки</string>
-
-    <string name="import_vocab_hint">Карточки Vocabulario: лучше всего для отдельных слов — автоматически со значениями, примерами, формами, конструкциями, синонимами и антонимами.</string>
-
     <string name="import_invalid_title">Некорректные слова</string>
 
     <string name="import_file_errors">В файле есть ошибки — проверьте.</string>
@@ -460,8 +452,6 @@
     <string name="status_new">новое</string>
 
     <string name="status_learning">изучается</string>
-
-    <string name="card_badge_import">Импорт</string>
 
     <string name="status_mastered">выучено</string>
 

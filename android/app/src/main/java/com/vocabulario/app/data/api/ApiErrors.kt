@@ -60,7 +60,6 @@ private val CODE_TO_RES: Map<String, Int> = mapOf(
     "list_not_editable" to R.string.err_list_not_editable,
     "list_not_deletable" to R.string.err_list_not_deletable,
     "import_empty" to R.string.err_import_empty,
-    "import_preserve_no_url" to R.string.err_import,
     "correction_daily_limit" to R.string.correction_daily_limit,
     "pending_inbox_not_deletable" to R.string.err_pending_inbox_not_deletable,
     "pending_inbox_clear_incomplete" to R.string.err_pending_inbox_clear,
@@ -96,7 +95,6 @@ private val DETAIL_ALIASES: Map<String, String> = mapOf(
     "brak słów do zaimportowania" to "import_empty",
     "brak karty offline" to "offline_card",
     "card not in cache" to "offline_card",
-    "tryb \"zachowaj fiszki\" działa z wklejką/plikiem, nie z url." to "import_preserve_no_url",
 )
 
 fun Throwable.userMessage(strings: UiStrings, @StringRes defaultRes: Int): String {

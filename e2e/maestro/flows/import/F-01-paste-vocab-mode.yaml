@@ -3,14 +3,14 @@ tags:
   - import
   - ai-mock
 ---
-# F-01 · Paste → Vocabulario mode (AI path)
+# F-01 · Paste → Vocabulario cards (no second import mode)
 - launchApp:
     clearState: false
 - runFlow: ../../helpers/ensure-logged-in.yaml
 - tapOn:
     id: tab_add
 - tapOn:
-    id: btn_import_paste
+    id: btn_import
 - extendedWaitUntil:
     visible:
       id: import_paste_input
@@ -19,14 +19,8 @@ tags:
     id: import_paste_input
 - inputText: "casa\nperro\ngato"
 - tapOn:
-    id: dialog_confirm
+    id: import_btn_start
 - extendedWaitUntil:
     visible:
-      id: "import_mode_vocab|import_mode_preserve"
-    timeout: 15000
-- tapOn:
-    id: import_mode_vocab
-- extendedWaitUntil:
-    visible:
-      id: "btn_import_confirm|btn_import_cancel|dialog_cancel|sheet_add_learning"
+      id: "btn_import_confirm|btn_import_cancel|import_status_panel|import_review_modal"
     timeout: 90000

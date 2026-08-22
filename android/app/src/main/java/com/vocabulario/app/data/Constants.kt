@@ -107,7 +107,7 @@ fun normalizePosKey(pos: String?): String {
 
 private val DISTRACTOR_BLOCKLIST = setOf(
     "pos", "noun", "verb", "adj", "adjective", "adverb", "adv", "prep", "conj", "pron",
-    "det", "interj", "imported", "unknown", "lemma", "gloss", "null",
+    "det", "interj", "unknown", "lemma", "gloss", "null",
     "rzeczownik", "czasownik", "przymiotnik", "przysłówek",
     "sustantivo", "verbo", "adjetivo", "adverbio",
 )

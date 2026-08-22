@@ -262,11 +262,11 @@ class OfflineStore @Inject constructor(
             }
         }
 
-    /** Sygnatura kart — id+deck+enrichment+activity (bez content/updatedAt). */
+    /** Sygnatura kart — id+deck+enrichment+activity+długość contentu (sekcje dociągane). */
     fun cardsSignature(profileId: String): Flow<String> =
         cardDao.observeForProfile(profileId).map { rows ->
             rows.sortedBy { it.id }.joinToString(";") {
-                "${it.id}|${it.deckId.orEmpty()}|${it.enrichmentStatus}|${it.cardActivityStatus.orEmpty()}"
+                "${it.id}|${it.deckId.orEmpty()}|${it.enrichmentStatus}|${it.cardActivityStatus.orEmpty()}|${it.contentJson.length}"
             }
         }
 

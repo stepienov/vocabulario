@@ -324,14 +324,6 @@
 
     <string name="import_other_file">Başka bir dosya seçin</string>
 
-    <string name="import_how">Nasıl içe aktarılır?</string>
-
-    <string name="import_vocab_mode">Vocabulario kartları</string>
-
-    <string name="import_preserve_mode">Flashcard içeriğimi koru</string>
-
-    <string name="import_vocab_hint">Vocabulario kartları: tek kelimeler için en iyisi — anlamlar, örnekler, biçimler, kalıplar, eş anlamlılar ve zıt anlamlılarla otomatik olarak oluşturulur.</string>
-
     <string name="import_invalid_title">Geçersiz kelimeler</string>
 
     <string name="import_file_errors">Dosyada hatalar var — kontrol et.</string>
@@ -492,8 +484,6 @@
     <string name="status_new">yeni</string>
 
     <string name="status_learning">öğreniliyor</string>
-
-    <string name="card_badge_import">İçe aktarım</string>
 
     <string name="status_mastered">öğrenildi</string>
 

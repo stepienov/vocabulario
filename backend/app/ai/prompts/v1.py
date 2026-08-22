@@ -167,6 +167,54 @@ Return ONLY JSON:
 }}
 """
 
+LOOKUP_EXPAND_PROMPT_V1 = """You are a bilingual lexicographer for ONE language pair.
+
+{pair_guidance}
+
+L1 (app / native language): {native_name}
+L2 (learning language — every candidate.lemma MUST be in this language): {learning_name}
+CEFR: {cefr}
+User query string: "{text}"
+
+Treat the query ONLY as {native_name} and/or {learning_name} (not a third language).
+
+EXISTING CANDIDATES FOR THIS QUERY
+{already_block}
+
+GOAL — ADD ONLY NEW MATCHING PROPOSALS
+Return DISTINCT L2 headword proposals the user might plausibly mean that are NOT
+already in the list above (same lemma + pos). Do not repeat, rephrase, or replace
+existing rows. If nothing new belongs, return {{"candidates": []}}.
+
+When this is a cold start (no existing rows), return the full high-recall union
+of ALL plausible readings — do NOT stop after the first one (up to 16).
+
+INTERPRET THE QUERY generously: ignore stray punctuation; assume missing/wrong
+diacritics are the SAME word; allow small typos (edit distance ≤ 2, transpositions);
+the query may be inflected (plural, conjugated) — map it to the dictionary headword.
+
+INCLUDE ALL THAT APPLY (each as its own candidate), skipping any already stored:
+1) L2 reading — query is (or is a typo / missing-diacritics form of) an L2 headword.
+2) L1 reading — query is an L1 word (incl. typos/diacritics) → L2 translations.
+3) Both, when the string is a valid word in L1 AND L2 (homographs).
+4) L1 typo / missing-diacritics recovery (ksiazka → książka → L2 translation).
+
+DIACRITIC COMPLETION HAS PRIORITY. Extra plausible candidates are cheap; a missing
+one breaks the app.
+
+{lookup_output_form_rules}
+
+POS FIELD: exactly one English bucket: noun, verb, adj, adv, prep, conj, pron, det, interj.
+Same headword once per pos bucket.
+
+Return ONLY JSON:
+{{
+  "candidates": [
+    {{"lemma": "...", "pos": "...", "gloss": "..."}}
+  ]
+}}
+"""
+
 LOOKUP_L1_TYPO_PROMPT_V1 = """The user typed an L1 (native) word, most likely WITHOUT
 diacritics and/or with a small typo. Recover what they meant. Be high-recall.
 
@@ -672,7 +720,7 @@ IMPORT_CLASSIFY_SYSTEM_V1 = (
     "Dla każdej notatki ustalasz entry_kind i headword_l2 (język uczony). "
     "Cel: wyciągnąć LEMATY słownikowe do pełnych kart Vocabulario (jak lookup). "
     "Dla zwrotów/konstrukcji podaj base_lemma (goły lemat). "
-    "valid=false przy pustce, śmieciach (ppppp, xxx, liczby, symbole) i braku lematu. Tylko JSON."
+    "valid=false przy pustce, śmieciach, braku lematu ORAZ gdy headword nie jest w L2 z profilu. Tylko JSON."
 )
 
 IMPORT_CLASSIFY_PROMPT_V1 = """Użytkownik importuje fiszki do Vocabulario (tryb bogatych kart).
@@ -694,13 +742,14 @@ Dla KAŻDEJ notatki (po indeksie) zwróć wpis:
 - base_lemma — opcjonalnie goły czasownik/rzeczownik bazy (volver)
 - pattern — opcjonalnie wzorzec (volver a + infinitivo)
 - pos — verb|noun|adj|phrase|construction|sentence|…
-- valid — false tylko jeśli brak treści do nauki
-- invalid_reason — gdy valid=false
+- valid — false gdy brak treści do nauki ALBO headword nie jest jednostką L2={learning_name}
+- invalid_reason — gdy valid=false (przy złym języku napisz wprost: nie jest w języku nauki)
 
 WAŻNE:
-- Jednopolowa notatka, która wygląda na prawdziwe słowo / article+noun / krótki zwrot = headword. valid=true nawet gdy tekst jest w L1, nie w L2 z profilu.
-- valid=false gdy to NIE jest lemat: puste, GUID, CSS/JS, same liczby, symbole, powtórzone litery (ppppppppp), bezsamogłoskowy stek, oczywisty śmieć. NIE dopisuj rodzaju (la/el) do śmieci.
-- „volver a hacer algo” = construction + base_lemma=\"volver\" (z tego powstanie karta lematu).
+- Headword MUSI być w L2 z pary (L2={learning_name}). Prawdziwe słowo/zwrot w innym języku (L1 albo trzeci język) = valid=false. Nie twórz karty i nie tłumacz hasła na L2.
+- Jednopolowa notatka, która wygląda na prawdziwe słowo / article+noun / krótki zwrot w L2 = headword. valid=true tylko gdy to L2.
+- valid=false gdy to NIE jest lemat L2: puste, GUID, CSS/JS, same liczby, symbole, powtórzone litery (ppppppppp), bezsamogłoskowy stek, oczywisty śmieć, albo tekst w złym języku. NIE dopisuj rodzaju (la/el) do śmieci.
+- „volver a hacer algo” = construction; headword zostaje cały zwrot (nie redukuj do „volver”).
 - Zdania bez sensownego lematu: entry_kind=sentence; backend odrzuci je z trybu Vocabulario.
 - Pojedyncze słowa / article+noun = lemma.
 Zwróć entries dla wszystkich indeksów 0..N-1.
@@ -708,27 +757,27 @@ rationale po polsku.
 """
 
 IMPORT_VERIFY_LEMMAS_SYSTEM_V1 = (
-    "You check a list of flashcard headwords. "
-    "Return only indexes that are NOT real dictionary lemmas. JSON only."
+    "You check a list of flashcard headwords for one learning language. "
+    "Return indexes that are junk OR not in that learning language. JSON only."
 )
 
-IMPORT_VERIFY_LEMMAS_PROMPT_V1 = """These strings already passed mechanical filters. They will become vocabulary cards.
+IMPORT_VERIFY_LEMMAS_PROMPT_V1 = """These strings already passed mechanical filters. They will become vocabulary cards in the learning language only.
 
 Learning language: {learning_name}
 
 Headwords (index = position):
 {lemmas_json}
 
-Return invalid[] for strings that are NOT real dictionary lemmas in any language:
+Return invalid[] for:
 - keyboard smash, repeated letters (ppppppppp), numbers, symbols, invented letter salad
 - article + junk (la ppppppppp, el 123456)
+- real words or phrases that are NOT in the learning language ({learning_name}) — e.g. Spanish on an English profile
 
 Keep as valid (do NOT list them):
-- real words even if they are not in the learning language
-- article + real noun (el perro, la casa)
-- short real function words
+- real lemmas / article+noun / short function words / constructions IN the learning language
+- article + real noun in the learning language (el perro only if learning Spanish)
 
-If unsure whether it is a real word, keep it valid.
+If it is a real word but in the wrong language, list it as invalid.
 """
 
 IMPORT_ADAPTIVE_SYSTEM_V1 = (
@@ -748,14 +797,16 @@ base_lemma (opcjonalnie): {base_lemma}
 pattern (opcjonalnie): {pattern}
 
 Wymagania:
-1. lemma = headword (dokładnie to, czego się uczymy — nie redukuj do base_lemma)
+1. lemma = headword DOKŁADNIE (ta sama forma; NIE tłumacz hasła na inny język, NIE redukuj do base_lemma)
 2. 1–2 meanings z gloss_l1 (użyj gloss z importu jeśli sensowny)
-3. usages: 2–4 krótkie wskazówki użycia w L1
-4. examples: min. 3 zdania (l2 + l1 + cefr A2/B2/C2) z użyciem headword
-5. pattern — uzupełnij jeśli construction (np. volver a + infinitivo)
-6. related_lemma — base_lemma jeśli pasuje
-7. Bez pełnej conjugation; notes opcjonalnie po polsku
+3. usages: 2–4 krótkie wskazówki użycia w L1 (pole l1 / tekst wskazówki po {native_name}; NIE wkładaj L1 w slot l2)
+4. examples: min. 3 zdania z użyciem headword; example.l2 TYLKO w L2={learning_name}; example.l1 w L1={native_name}; cefr A2/B2/C2
+5. ipa — wymowa headworda w L2, nie w innym języku
+6. pattern — uzupełnij jeśli construction (np. volver a + infinitivo) w L2
+7. related_lemma — base_lemma jeśli pasuje
+8. Bez pełnej conjugation; notes opcjonalnie w L1
 
+Jeśli headword nie da się użyć jako jednostka L2={learning_name} — nie zmyślaj tłumaczenia; zwróć JSON z lemma=headword i pustymi examples (backend i tak nie powinien tu dojść).
 Nie zmyślaj nieistniejących konstrukcji. Tylko JSON.
 """
 
@@ -806,87 +857,3 @@ Strategia:
 l2_field_label: krótka etykieta źródła hasła (np. "kolumna 0 (Quizlet term)",
 "pole Spanish", "class=answer-word").
 """
-
-IMPORT_DISPLAY_SYSTEM_V1 = (
-    "Jesteś warstwą layoutu importu fiszek w Vocabulario. "
-    "Notatki są JUŻ posegmentowane (wcześniejsza analiza formatu / Anki fields). "
-    "Dostajesz próbkę notatek i zwracasz JSON: które pole to hasło (prompt), "
-    "które to odpowiedź, oraz SZABLON bloków UI (front/back) z field_index "
-    "ORAZ intencją prezentacji (align/size/semantic/tts). "
-    "Karta ma wyglądać spójnie ze stylem Vocabulario (czysto, mobilnie). "
-    "Nie kopiujesz CSS/JS Anki. Nie zmyślasz treści — tylko mapowanie i strukturę. "
-    "Tylko JSON."
-)
-
-IMPORT_DISPLAY_PROMPT_V1 = """Użytkownik chce ZACHOWAĆ swoje fiszki (nie wyciągamy samych lematów słownikowych).
-Notatki poniżej są już podzielone na fiszki i pola — NIE dziel ich od nowa.
-
-Para językowa: L1={native_name}, L2={learning_name}
-Format: {kind}
-Liczba notatek: {total_notes}
-Nazwy pól: {field_names}
-
-Próbka notatek (każda = lista pól; może być HTML):
-{sample_json}
-
-Zadanie:
-1. Wykryj języki w próbce (potwierdź L1/L2).
-2. Dla każdego indeksu pola ustaw role:
-   prompt | answer | secondary | example | meta | detail | ignore
-3. Zbuduj prompt_blocks (front) i answer_blocks (tył) jako SZABLON:
-   - Używaj field_index / l2_field_index / l1_field_index zamiast wklejać długi tekst.
-   - type ∈ headword, gloss, bilingual, list, table, note, chip, section, divider, text
-   - section: heading + collapsed + children (1 poziom)
-   - Tabela odmiany/koniugacji w HTML → type=table ALBO section z field_index na pole HTML
-     (NIE type=pre, NIE ściana tekstu)
-   - FRONT: WYŁĄCZNIE 1× headword (align=center, size=lemma, semantic=headword, tts L2).
-     NIE wstawiaj na front: oboczności, chipów meta, przykładów, odmiany, przycisków ▶.
-   - BACK kolejność:
-     (a) gloss = czyste znaczenie L1 (semantic=translation, size=gloss) — BEZ zdań przykładów
-     (b) opcjonalnie chip oboczności / irregularity (meta) — TYLKO na answer
-     (c) section „Przykłady” z bilingual (ES+PL) gdy przykłady są w tym samym polu co gloss
-         albo w osobnych polach example
-     (d) section „Odmiana” collapsed z tabelami z pola conjugation/HTML
-   - Jeśli jedno pole zawiera „znaczenie + przykłady” (Meanings_Block):
-     ustaw je jako gloss (field_index) — backend rozdzieli pierwszą linię / pary przykładów.
-   - Usuń Anki chrome: <script>, play-btn / ▶ → to NIE jest tekst karty; użyj tts na headword.
-   - Dla każdego bloku ustaw: align, size, semantic, tts (lub null)
-4. prompt_style: word | phrase | sentence | html_block
-5. answer_needs_structure=true tylko gdy prawa strona jest długa i NIE masz osobnego pola HTML tabel
-6. bidirectional=true TYLKO gdy pewnie: headword=L2 + gloss=czyste L1; inaczej false
-7. rationale po polsku
-
-Przykład A (Anki 4 pola: Spanish, Meanings_Block, Irregularity, Conjugation):
-- roles: prompt, answer, meta, detail
-- prompt: headword(Spanish)
-- answer: gloss(Meanings_Block) + chip(Irregularity) + section Odmiana[field Conjugation → tables]
-- bidirectional=true
-
-Przykład B (Quizlet term/definition):
-- prompt: headword(term) · answer: gloss(definition) · bidirectional=true
-"""
-
-IMPORT_LAYOUT_SYSTEM_V1 = IMPORT_DISPLAY_SYSTEM_V1
-IMPORT_LAYOUT_PROMPT_V1 = IMPORT_DISPLAY_PROMPT_V1
-
-IMPORT_ANSWER_STRUCTURE_SYSTEM_V1 = (
-    "Dzielisz treść prawej strony fiszki na czytelne bloki UI (JSON). "
-    "Nie dodajesz nowych faktów — tylko nagłówki, sekcje, zwijanie. Tylko JSON."
-)
-
-IMPORT_ANSWER_STRUCTURE_PROMPT_V1 = """Poniżej próbki prawej strony fiszki (po oczyszczeniu HTML).
-Zaproponuj strategię podziału na bloki mobilne.
-
-Para: L1={native_name}, L2={learning_name}
-
-Próbki:
-{samples_json}
-
-Zwróć:
-- strategy: paragraphs | headings | keep_pre | sections_from_sample
-- heading_hints: typowe nagłówki jeśli widać
-- sample_blocks: layout DLA PIERWSZEJ próbki z wypełnionym text (nie field_index)
-- Nieużywane pola bloku = null
-- rationale po polsku
-"""
-

@@ -323,14 +323,6 @@
 
     <string name="import_other_file">Chọn tệp khác</string>
 
-    <string name="import_how">Cách nhập?</string>
-
-    <string name="import_vocab_mode">Thẻ Vocabulario</string>
-
-    <string name="import_preserve_mode">Giữ nội dung thẻ flashcard của tôi</string>
-
-    <string name="import_vocab_hint">Thẻ Vocabulario: tốt nhất cho các từ đơn — tự động tạo với nghĩa, ví dụ, hình thức, cách diễn đạt, từ đồng nghĩa và trái nghĩa.</string>
-
     <string name="import_invalid_title">Từ không hợp lệ</string>
 
     <string name="import_file_errors">Tệp có lỗi — kiểm tra lại.</string>
@@ -491,8 +483,6 @@
     <string name="status_new">mới</string>
 
     <string name="status_learning">đang học</string>
-
-    <string name="card_badge_import">Nhập</string>
 
     <string name="status_mastered">đã học</string>
 

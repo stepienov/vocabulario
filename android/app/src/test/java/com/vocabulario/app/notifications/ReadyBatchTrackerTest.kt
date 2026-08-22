@@ -24,6 +24,14 @@ class ReadyBatchTrackerTest {
     }
 
     @Test
+    fun learnableCountsAsReadyAndCompletesBatch() {
+        val watched = setOf("a", "b")
+        val status = mapOf("a" to "learnable", "b" to "ready")
+        assertTrue(batchComplete(watched, status))
+        assertEquals(2, readyCount(watched, status))
+    }
+
+    @Test
     fun allReady_isComplete() {
         val watched = setOf("a", "b")
         val status = mapOf("a" to "ready", "b" to "ready")
@@ -35,6 +43,11 @@ class ReadyBatchTrackerTest {
     fun missingCardIsStillWaiting() {
         assertFalse(batchComplete(setOf("gone", "b"), mapOf("b" to "ready")))
         assertEquals(1, readyCount(setOf("gone", "b"), mapOf("b" to "ready")))
+    }
+
+    @Test
+    fun preparingIsStillBusy() {
+        assertFalse(batchComplete(setOf("a"), mapOf("a" to "preparing")))
     }
 
     @Test

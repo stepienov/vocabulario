@@ -60,7 +60,7 @@ class ReadyBatchTracker @Inject constructor(
 
 internal fun isBusyStatus(status: String?): Boolean {
     val s = status?.trim()?.lowercase().orEmpty()
-    return s == "pending" || s == "awaiting_network"
+    return s == "pending" || s == "awaiting_network" || s == "preparing"
 }
 
 internal fun batchComplete(watched: Set<String>, statusById: Map<String, String>): Boolean {
@@ -72,4 +72,4 @@ internal fun batchComplete(watched: Set<String>, statusById: Map<String, String>
 }
 
 internal fun readyCount(watched: Set<String>, statusById: Map<String, String>): Int =
-    watched.count { statusById[it]?.equals("ready", ignoreCase = true) == true }
+    watched.count { com.vocabulario.app.data.EnrichmentStatus.isStudyable(statusById[it]) }

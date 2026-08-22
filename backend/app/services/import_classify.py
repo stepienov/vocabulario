@@ -95,10 +95,14 @@ async def resolve_import_vocabulario_entries(
         seen.add(key)
 
         kind = (item.get("entry_kind") or "lemma").strip().lower()
+        if kind not in {"lemma", "phrase", "construction", "other"}:
+            kind = "lemma"
         pos = item.get("pos")
         # Po remapie na base_lemma nie ufamy POS z klasyfikacji zwrotu.
         if kind != "lemma" and lemma_out.casefold() != head.casefold():
             pos = None
+        if kind != "lemma" and not pos:
+            pos = kind
 
         valid.append(
             {
@@ -107,9 +111,9 @@ async def resolve_import_vocabulario_entries(
                 "pos": pos,
                 "gloss": (item.get("gloss_l1") or "").strip(),
                 "lexical_entry_id": None,
-                "entry_kind": "lemma",
-                "base_lemma": None,
-                "pattern": None,
+                "entry_kind": kind,
+                "base_lemma": item.get("base_lemma"),
+                "pattern": item.get("pattern"),
             }
         )
 

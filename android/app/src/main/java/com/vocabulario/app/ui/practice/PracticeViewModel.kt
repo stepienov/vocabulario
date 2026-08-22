@@ -15,11 +15,10 @@ import com.vocabulario.app.data.lemmaKeys
 import com.vocabulario.app.data.normalizeTenseKeys
 import com.vocabulario.app.i18n.UiStrings
 import com.vocabulario.app.ui.card.RelatedWord
-import com.vocabulario.app.ui.home.listNameConflictMessage
 import com.vocabulario.app.ui.card.CorrectionResultItem
 import com.vocabulario.app.ui.card.CorrectionResultsState
 import com.vocabulario.app.ui.card.HomeUiStateSelfEditActive
-import com.vocabulario.app.ui.components.isImportPreserveContent
+import com.vocabulario.app.ui.home.listNameConflictMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -200,9 +199,6 @@ class PracticeViewModel @Inject constructor(
 
     private fun resolveAnswerMode(): AnswerMode {
         val item = currentItem()
-        if (item != null && isImportPreserveContent(item.content)) {
-            return AnswerMode.FLASHCARD
-        }
         return when (inputPref) {
             "type" -> AnswerMode.TYPE
             "flashcard" -> AnswerMode.FLASHCARD

@@ -104,6 +104,24 @@ class LexicalEntry(Base):
     )
 
 
+class LookupQueryCache(Base):
+    """Shared lookup suggestions keyed by language pair + normalized user query."""
+
+    __tablename__ = "lookup_query_cache"
+    __table_args__ = (UniqueConstraint("lang_pair", "input_norm"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    lang_pair: Mapped[str] = mapped_column(String(16), nullable=False)
+    input_norm: Mapped[str] = mapped_column(String(200), nullable=False)
+    candidates: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    ai_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+    hit_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class LearningCard(Base):
     __tablename__ = "learning_cards"
     # Uniqueness only among live cards — soft-deleted rows are tombstones for sync.

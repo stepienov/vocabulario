@@ -21,4 +21,4 @@ tags:
 - assertVisible:
     id: search_input
 - assertVisible:
-    id: btn_import_paste
+    id: btn_import

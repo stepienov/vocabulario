@@ -119,7 +119,7 @@ async def dev_search(
     user, profile = await _resolve_user_profile(db, email, profile_id)
     service = LexicalService(db)
 
-    candidates, source = await service.lookup(user, profile.id, word)
+    outcome = await service.lookup(user, profile.id, word)
     await db.commit()
     return {
         "query": word,
@@ -131,7 +131,11 @@ async def dev_search(
             "learning_lang": profile.learning_lang,
             "cefr_level": profile.cefr_level,
         },
-        "lookup": {"source": source, "candidates": candidates},
+        "lookup": {
+            "source": outcome.source,
+            "ai_complete": outcome.ai_complete,
+            "candidates": outcome.candidates,
+        },
     }
 
 

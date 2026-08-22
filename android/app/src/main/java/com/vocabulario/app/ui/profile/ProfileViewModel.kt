@@ -56,8 +56,10 @@ class ProfileViewModel @Inject constructor(
                     ?: profiles.firstOrNull { it.is_active }
                     ?: profiles.firstOrNull()
                 AppLocale.applyIfChanged(
-                    tokenStore.peekAppLang().ifBlank { resolvedActive?.appLang ?: "en" },
+                    resolvedActive?.appLang ?: tokenStore.peekAppLang().ifBlank { "en" },
                 )
+                // Keep TokenStore aligned when profile is loaded directly here.
+                resolvedActive?.let { tokenStore.saveAppLang(it.app_lang) }
                 profiles to resolvedActive
             }.onSuccess { (profiles, active) ->
                 _state.value = ProfileUiState(

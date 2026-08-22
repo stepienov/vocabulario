@@ -62,17 +62,13 @@ class AuthRepository @Inject constructor(
             offlineStore.cacheProfiles(profiles)
             val chosen = resolveActiveProfile(storedId, profiles) ?: return
             tokenStore.saveActiveProfile(chosen.id)
-            if (tokenStore.peekAppLang().isBlank()) {
-                tokenStore.saveAppLang(chosen.app_lang)
-            }
+            tokenStore.saveAppLang(chosen.app_lang)
             offlineStore.cacheProfile(chosen)
             return
         }
         offlineStore.cachedActiveProfile()?.let {
             tokenStore.saveActiveProfile(it.id)
-            if (tokenStore.peekAppLang().isBlank()) {
-                tokenStore.saveAppLang(it.app_lang)
-            }
+            tokenStore.saveAppLang(it.app_lang)
         }
     }
 }

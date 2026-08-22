@@ -15,10 +15,6 @@ import com.vocabulario.app.data.api.ChoiceOption
 import com.vocabulario.app.data.api.DashboardStatsResponse
 import com.vocabulario.app.data.api.DistractorsResponse
 import com.vocabulario.app.data.api.DeviceRegisterRequest
-import com.vocabulario.app.data.api.ImportDisplayCard
-import com.vocabulario.app.data.api.ImportDisplayCommitRequest
-import com.vocabulario.app.data.api.ImportDisplayCommitResponse
-import com.vocabulario.app.data.api.ImportDisplayResponse
 import com.vocabulario.app.data.api.ImportIngestRequest
 import com.vocabulario.app.data.api.ImportJobCreateRequest
 import com.vocabulario.app.data.api.ImportJobProgressResponse
@@ -27,6 +23,7 @@ import com.vocabulario.app.data.api.ImportValidateResponse
 import com.vocabulario.app.data.api.LanguageProfileCreate
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.api.LanguageProfileUpdate
+import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.data.api.LookupCandidate
 import com.vocabulario.app.data.api.LookupRequest
 import com.vocabulario.app.data.api.LookupResponse
@@ -59,6 +56,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -134,8 +133,36 @@ class LearningRepository @Inject constructor(
     }
 
     /**
+     * Dociąga pojedyncze karty (pending/learnable) i upsertuje treść w Room.
+     * Zamiast GET całej listy przy pollu enrichment.
+     */
+    suspend fun refreshCardsFromServer(cardIds: Collection<String>): List<CardResponse> {
+        if (!networkMonitor.isCurrentlyOnline() || cardIds.isEmpty()) return emptyList()
+        val profileId = activeProfileId()
+        val fetched = mutableListOf<CardResponse>()
+        coroutineScope {
+            cardIds
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && !it.startsWith("pending-") && !it.startsWith("local:") }
+                .distinct()
+                .map { id ->
+                    async {
+                        apiTry(timeoutMs = API_FAST_TIMEOUT_MS) { api.getCard(id, profileId) }.getOrNull()
+                    }
+                }
+                .forEach { deferred ->
+                    deferred.await()?.let { fetched.add(it) }
+                }
+        }
+        if (fetched.isNotEmpty()) {
+            offlineStore.upsertCards(profileId, fetched)
+        }
+        return fetched
+    }
+
+    /**
      * Dociąga słowa listy z API i upsertuje enrichment/treść w Room.
-     * Tylko do polla pending → ready; nie czyści SRS.
+     * Pełna lista — przy otwarciu listy, nie przy pollu pojedynczej karty.
      */
     suspend fun refreshListWordsFromServer(listId: String): List<CardResponse> {
         if (!networkMonitor.isCurrentlyOnline() || isLocalOnlyListId(listId)) {
@@ -184,6 +211,16 @@ class LearningRepository @Inject constructor(
         return api.lookup(LookupRequest(text = text, profile_id = profileId))
     }
 
+    suspend fun lookupCached(text: String): LookupResponse {
+        val profileId = activeProfileId()
+        return api.lookupCached(LookupRequest(text = text, profile_id = profileId))
+    }
+
+    suspend fun lookupExpand(text: String): LookupResponse {
+        val profileId = activeProfileId()
+        return api.lookupExpand(LookupRequest(text = text, profile_id = profileId))
+    }
+
     suspend fun validateImport(words: List<String>): ImportValidateResponse {
         val profileId = activeProfileId()
         return api.validateImport(ImportValidateRequest(words = words, profile_id = profileId))
@@ -193,13 +230,6 @@ class LearningRepository @Inject constructor(
     suspend fun ingestImport(text: String, mode: String = "vocabulario"): ImportValidateResponse {
         val profileId = activeProfileId()
         return api.ingestImport(ImportIngestRequest(text = text, profile_id = profileId, mode = mode))
-    }
-
-    suspend fun ingestImportPreserve(text: String): ImportDisplayResponse {
-        val profileId = activeProfileId()
-        return api.ingestImportPreserve(
-            ImportIngestRequest(text = text, profile_id = profileId, mode = "preserve"),
-        )
     }
 
     /** Plik: CSV/TSV/TXT albo Anki .apkg / .colpkg. */
@@ -214,15 +244,6 @@ class LearningRepository @Inject constructor(
         val profilePart = profileId.toRequestBody("text/plain".toMediaType())
         val modePart = mode.toRequestBody("text/plain".toMediaType())
         return api.ingestImportFile(part, profilePart, modePart)
-    }
-
-    suspend fun ingestImportFilePreserve(bytes: ByteArray, filename: String): ImportDisplayResponse {
-        val profileId = activeProfileId()
-        val body = bytes.toRequestBody("application/octet-stream".toMediaType())
-        val part = MultipartBody.Part.createFormData("file", filename, body)
-        val profilePart = profileId.toRequestBody("text/plain".toMediaType())
-        val modePart = "preserve".toRequestBody("text/plain".toMediaType())
-        return api.ingestImportFilePreserve(part, profilePart, modePart)
     }
 
     suspend fun createImportJob(text: String, listId: String, mode: String): ImportJobProgressResponse {
@@ -270,15 +291,6 @@ class LearningRepository @Inject constructor(
 
     suspend fun cancelImportJob(jobId: String): ImportJobProgressResponse =
         api.cancelImportJob(jobId)
-
-    suspend fun commitImportDisplay(listId: String, cards: List<ImportDisplayCard>): ImportDisplayCommitResponse {
-        val profileId = activeProfileId()
-        val result = api.commitImportDisplay(
-            ImportDisplayCommitRequest(profile_id = profileId, list_id = listId, cards = cards),
-        )
-        runCatching { refreshLocalAfterImport(listId) }
-        return result
-    }
 
     /**
      * Import commit pisze karty na serwerze. UI czyta tylko Room — bez tego import
@@ -1305,7 +1317,7 @@ class LearningRepository @Inject constructor(
             .ifEmpty { listOf(target.copy(is_active = true)) }
         offlineStore.cacheProfiles(updated)
         val active = target.copy(is_active = true)
-        syncActiveProfileToLocal(active, overwriteLang = true)
+        syncActiveProfileToLocal(active)
         requestBackgroundSync()
         return active
     }
@@ -1341,22 +1353,20 @@ class LearningRepository @Inject constructor(
 
     suspend fun hasCachedProfile(): Boolean = offlineStore.cachedActiveProfile() != null
 
-    private suspend fun syncActiveProfileToLocal(
-        profile: LanguageProfileResponse,
-        overwriteLang: Boolean = false,
-    ) {
+    private suspend fun syncActiveProfileToLocal(profile: LanguageProfileResponse) {
         tokenStore.saveActiveProfile(profile.id)
-        if (overwriteLang || tokenStore.peekAppLang().isBlank()) {
-            tokenStore.saveAppLang(profile.app_lang)
-        }
+        tokenStore.saveAppLang(profile.app_lang)
         offlineStore.cacheProfile(profile)
     }
 
-    /** Apply UI locale. TokenStore is the source of truth (survives Activity recreate). */
+    /** Room profile is UI locale source of truth; TokenStore mirrors it for early boot. */
     suspend fun applyAppLocaleFromActiveProfile(): String {
+        val fromProfile = offlineStore.cachedActiveProfile()?.appLang?.trim()?.lowercase().orEmpty()
         val stored = tokenStore.peekAppLang().trim().lowercase()
-        val fromProfile = offlineStore.cachedActiveProfile()?.app_lang?.trim()?.lowercase().orEmpty()
-        val appLang = stored.ifBlank { fromProfile }.ifBlank { "en" }
+        val appLang = fromProfile.ifBlank { stored }.ifBlank { "en" }
+        if (fromProfile.isNotBlank() && fromProfile != stored) {
+            tokenStore.saveAppLang(fromProfile)
+        }
         com.vocabulario.app.i18n.AppLocale.applyIfChanged(appLang)
         return appLang
     }
@@ -1385,7 +1395,7 @@ class LearningRepository @Inject constructor(
 
     suspend fun activateProfile(profileId: String): LanguageProfileResponse {
         val profile = api.activateProfile(profileId)
-        syncActiveProfileToLocal(profile, overwriteLang = true)
+        syncActiveProfileToLocal(profile)
         return profile
     }
 
@@ -1403,7 +1413,7 @@ class LearningRepository @Inject constructor(
             app_lang = appLang ?: current.app_lang,
             native_lang = appLang ?: current.native_lang,
         )
-        syncActiveProfileToLocal(optimistic, overwriteLang = appLang != null)
+        syncActiveProfileToLocal(optimistic)
         val body = LanguageProfileUpdate(
             cefr_level = cefr,
             selected_tenses = tenses,
@@ -1417,7 +1427,7 @@ class LearningRepository @Inject constructor(
             applyRemoteProfiles(api.listProfiles())
             api.updateProfile(activeProfileId(), body)
         }
-        syncActiveProfileToLocal(profile, overwriteLang = true)
+        syncActiveProfileToLocal(profile)
         return profile
     }
 

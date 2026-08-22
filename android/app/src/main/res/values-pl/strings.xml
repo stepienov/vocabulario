@@ -305,14 +305,6 @@
 
     <string name="import_other_file">Wybierz inny plik</string>
 
-    <string name="import_how">Jak zaimportować?</string>
-
-    <string name="import_vocab_mode">Karty Vocabulario</string>
-
-    <string name="import_preserve_mode">Zachowaj treść mojej fiszki</string>
-
-    <string name="import_vocab_hint">Karty vocabulario: najlepsze dla pojedynczych słów, automatycznie generowane, bogate w treść, przykłady, zdania, odmianę, peryfrazy, synonimy i przeciwieństwa.</string>
-
     <string name="import_invalid_title">Błędne słowa</string>
 
     <string name="import_file_errors">Plik zawiera błędy - sprawdź.</string>
@@ -482,8 +474,6 @@
 
     <string name="status_learning">w nauce</string>
 
-    <string name="card_badge_import">Import</string>
-
     <string name="status_mastered">opanowane</string>
 
     <string name="kind_lemma">słowo</string>
@@ -573,6 +563,8 @@
     <string name="err_list_words">Błąd słów listy</string>
 
     <string name="err_search">Błąd wyszukiwania</string>
+
+    <string name="err_lookup_expand">Nie udało się dodać kolejnych propozycji. Pokazujemy to, co już jest.</string>
 
     <string name="err_import_empty">Brak słów do zaimportowania</string>
 

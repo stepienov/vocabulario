@@ -10,19 +10,14 @@ from openai import AsyncOpenAI
 from app.ai.prompts.v1 import (
     IMPORT_ADAPTIVE_PROMPT_V1,
     IMPORT_ADAPTIVE_SYSTEM_V1,
-    IMPORT_ANSWER_STRUCTURE_PROMPT_V1,
-    IMPORT_ANSWER_STRUCTURE_SYSTEM_V1,
     IMPORT_CLASSIFY_PROMPT_V1,
     IMPORT_CLASSIFY_SYSTEM_V1,
     IMPORT_VERIFY_LEMMAS_PROMPT_V1,
     IMPORT_VERIFY_LEMMAS_SYSTEM_V1,
-    IMPORT_DISPLAY_PROMPT_V1,
-    IMPORT_DISPLAY_SYSTEM_V1,
     IMPORT_FORMAT_PROMPT_V1,
     IMPORT_FORMAT_SYSTEM_V1,
-    IMPORT_LAYOUT_PROMPT_V1,
-    IMPORT_LAYOUT_SYSTEM_V1,
     IMPORT_STRUCTURE_SYSTEM_V1,
+    LOOKUP_EXPAND_PROMPT_V1,
     LOOKUP_L1_TYPO_PROMPT_V1,
     LOOKUP_PROMPT_V1,
     LOOKUP_SYSTEM_V1,
@@ -45,11 +40,6 @@ from app.ai.schemas.import_classify import (
     import_adaptive_enrich_schema,
     import_classify_schema,
     import_verify_lemmas_schema,
-)
-from app.ai.schemas.import_display import (
-    import_answer_structure_schema,
-    import_display_schema,
-    validate_import_display_payload,
 )
 from app.ai.schemas.import_format import import_format_schema
 from app.ai.schemas.import_structure import import_structure_schema
@@ -496,6 +486,50 @@ class LLMService:
         )
         return data.get("candidates", [])
 
+    @staticmethod
+    def _already_block(already: list[dict[str, Any]]) -> str:
+        rows = [
+            c
+            for c in already
+            if isinstance(c, dict) and (c.get("lemma") or "").strip()
+        ]
+        if not rows:
+            return (
+                "None yet — this is a cold start. Return the full high-recall "
+                "union of all plausible readings (up to 16)."
+            )
+        lines = ["Already stored (do NOT repeat these lemma+pos pairs):"]
+        for c in rows:
+            lines.append(
+                f"- lemma={c.get('lemma')}; pos={c.get('pos')}; gloss={c.get('gloss')}"
+            )
+        return "\n".join(lines)
+
+    async def lookup_expand(
+        self,
+        text: str,
+        native: str,
+        learning: str,
+        cefr: str,
+        already: list[dict[str, Any]] | None = None,
+    ) -> list[dict[str, Any]]:
+        """One-shot lookup: full union on cold start, only new rows when cache exists."""
+        prompt = LOOKUP_EXPAND_PROMPT_V1.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            text=text,
+            cefr=cefr,
+            pair_guidance=language_pair_guidance(native=native, learning=learning),
+            lookup_output_form_rules=lookup_output_form_rules_text(native, learning),
+            already_block=self._already_block(already or []),
+        )
+        data = await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=LOOKUP_SYSTEM_V1,
+        )
+        return data.get("candidates", [])
+
     async def lookup_l1_typo(
         self, text: str, native: str, learning: str, cefr: str
     ) -> list[dict[str, Any]]:
@@ -912,148 +946,6 @@ class LLMService:
             json.dumps(result, ensure_ascii=False, indent=2),
         )
         return result
-
-    async def analyze_import_display(
-        self,
-        *,
-        native: str,
-        learning: str,
-        kind: str,
-        field_names: list[str] | None,
-        sample_notes: list[list[str]],
-        total_notes: int,
-    ) -> dict:
-        """Mapa ról pól + szablon bloków UI (front/back) dla trybu preserve."""
-        compact = []
-        for note in sample_notes:
-            row = []
-            for cell in note:
-                row.append(cell[:400] if "<" in cell else cell)
-            compact.append(row)
-        prompt = IMPORT_DISPLAY_PROMPT_V1.format(
-            native_name=lang_name_en(native),
-            learning_name=lang_name_en(learning),
-            kind=kind,
-            total_notes=total_notes,
-            field_names=json.dumps(field_names, ensure_ascii=False)
-            if field_names
-            else "nieznane",
-            sample_json=json.dumps(compact, ensure_ascii=False, indent=2),
-        )
-        _log_import_llm(
-            f"IMPORT DISPLAY → PROMPT (model={self.lookup_model}, kind={kind})",
-            f"--- SYSTEM ---\n{IMPORT_DISPLAY_SYSTEM_V1}\n\n--- USER ---\n{prompt}",
-        )
-        result = await self._chat_json(
-            self.lookup_model,
-            prompt,
-            system=IMPORT_DISPLAY_SYSTEM_V1,
-            json_schema=import_display_schema(),
-            max_tokens=3500,
-            temperature=0.1,
-        )
-        _log_import_llm(
-            "IMPORT DISPLAY ← RESPONSE",
-            json.dumps(result, ensure_ascii=False, indent=2),
-        )
-        return result
-
-    async def analyze_import_layout(
-        self,
-        *,
-        native: str,
-        learning: str,
-        kind: str,
-        field_names: list[str] | None,
-        sample_notes: list[list[str]],
-        total_notes: int,
-    ) -> dict:
-        """One-shot layout analysis for preserve import (display v2).
-
-        Uses llm_import_layout_model / llm_import_provider. Validates output;
-        raises ValueError on invalid payload so caller can fall back to heuristics.
-        """
-        compact = []
-        for note in sample_notes:
-            row = []
-            for cell in note:
-                row.append(cell[:800] if "<" in cell else cell)
-            compact.append(row)
-        prompt = IMPORT_LAYOUT_PROMPT_V1.format(
-            native_name=lang_name_en(native),
-            learning_name=lang_name_en(learning),
-            kind=kind,
-            total_notes=total_notes,
-            field_names=json.dumps(field_names, ensure_ascii=False)
-            if field_names
-            else "nieznane",
-            sample_json=json.dumps(compact, ensure_ascii=False, indent=2),
-        )
-        model = self.import_layout_model
-        provider = self.import_provider
-        _log_import_llm(
-            f"IMPORT LAYOUT → PROMPT (model={model}, provider={provider}, kind={kind})",
-            f"--- SYSTEM ---\n{IMPORT_LAYOUT_SYSTEM_V1}\n\n--- USER ---\n{prompt}",
-        )
-
-        last_err: Exception | None = None
-        for attempt in range(2):
-            try:
-                result = await self._chat_json(
-                    model,
-                    prompt,
-                    system=IMPORT_LAYOUT_SYSTEM_V1,
-                    json_schema=import_display_schema(),
-                    max_tokens=4500,
-                    temperature=0.1,
-                    provider=provider,
-                )
-                ok, reason = validate_import_display_payload(result)
-                if not ok:
-                    raise ValueError(f"invalid import layout payload: {reason}")
-                if "bidirectional" not in result:
-                    result["bidirectional"] = False
-                _log_import_llm(
-                    f"IMPORT LAYOUT ← RESPONSE (attempt={attempt + 1})",
-                    json.dumps(result, ensure_ascii=False, indent=2),
-                )
-                return result
-            except Exception as exc:
-                last_err = exc
-                logger.warning("import layout attempt %s failed: %s", attempt + 1, exc)
-        raise ValueError(f"import layout failed: {last_err}") from last_err
-
-    async def analyze_import_answer_structure(
-        self,
-        *,
-        native: str,
-        learning: str,
-        samples: list[str],
-    ) -> dict:
-        """Jak podzielić grubą prawą stronę na sekcje/bloki."""
-        prompt = IMPORT_ANSWER_STRUCTURE_PROMPT_V1.format(
-            native_name=lang_name_en(native),
-            learning_name=lang_name_en(learning),
-            samples_json=json.dumps(samples, ensure_ascii=False, indent=2),
-        )
-        _log_import_llm(
-            "IMPORT ANSWER STRUCTURE → PROMPT",
-            f"--- SYSTEM ---\n{IMPORT_ANSWER_STRUCTURE_SYSTEM_V1}\n\n--- USER ---\n{prompt}",
-        )
-        result = await self._chat_json(
-            self.lookup_model,
-            prompt,
-            system=IMPORT_ANSWER_STRUCTURE_SYSTEM_V1,
-            json_schema=import_answer_structure_schema(),
-            max_tokens=3000,
-            temperature=0.1,
-        )
-        _log_import_llm(
-            "IMPORT ANSWER STRUCTURE ← RESPONSE",
-            json.dumps(result, ensure_ascii=False, indent=2),
-        )
-        return result
-
 
     async def verify_card_correction(
         self,

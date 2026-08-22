@@ -55,7 +55,12 @@ async def send_push_to_user(
     )
 
 
-async def notify_cards_ready(db: AsyncSession, user_id: UUID, count: int = 1) -> None:
+async def notify_cards_ready(
+    db: AsyncSession,
+    user_id: UUID,
+    count: int = 1,
+    card_id: UUID | None = None,
+) -> None:
     if not await _cards_ready_enabled(db, user_id):
         return
     await send_push_to_user(
@@ -64,6 +69,7 @@ async def notify_cards_ready(db: AsyncSession, user_id: UUID, count: int = 1) ->
         title="Cards ready",
         body=f"{count} word(s) ready to study",
         data_type="cards_ready",
+        card_id=card_id,
     )
 
 

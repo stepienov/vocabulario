@@ -1,19 +1,22 @@
 import asyncio
 import re
-from uuid import UUID
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from uuid import UUID, uuid4
 
 from sqlalchemy import or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.deps import lang_pair_key, normalize_text
-from app.models import LanguageProfile, LearningCard, LexicalEntry, User
+from app.models import LanguageProfile, LearningCard, LexicalEntry, LookupQueryCache, User
 from app.services.llm import LLMService
 from app.services.enrichment import enrich_card_content
 from app.services.lookup_candidates import (
-    cached_lookup_covers_query,
+    append_lookup_candidates,
     gloss_query_score,
-    has_confident_match,
-    merge_candidates,
+    normalize_lookup_query,
     rank_lookup_candidates,
     sanitize_lookup_candidates,
     token_similarity,
@@ -28,6 +31,13 @@ from app.services.word_persistence import (
 
 
 LexicalEntryLike = LexicalEntry | EphemeralLexicalEntry
+
+
+@dataclass(frozen=True)
+class LookupOutcome:
+    candidates: list[dict]
+    source: str
+    ai_complete: bool
 
 
 def lexical_entry_for_candidate(
@@ -276,8 +286,6 @@ class LexicalService:
             ).limit(400)
         )
         for card in card_result.scalars().all():
-            if (card.content or {}).get("schema_version") == "import_display.v1":
-                continue
             gloss = (card.gloss_primary or "").strip()
             if not gloss:
                 meanings = (card.content or {}).get("meanings") or []
@@ -345,82 +353,148 @@ class LexicalService:
             cands, text, learning_lang=profile.learning_lang
         )
 
-    async def lookup(self, user: User, profile_id: UUID, text: str) -> tuple[list[dict], str]:
-        """Candidates from AI (+ DB fuzzy L1 typo recovery); membership annotated.
+    def _query_cache_key(self, text: str) -> str:
+        return normalize_lookup_query(text) or (text.strip().casefold()[:200] or "_")
 
-        PG-first: if the shared PostgreSQL lexicon already holds a *confident* reading of
-        the query (exact / diacritic-completed L2 headword), serve it directly and skip the
-        (paid, slower) AI call. Otherwise fall back to the high-recall AI union below — the
-        lookup is this app's core feature, so a missed suggestion is a fatal bug while an
-        extra plausible one is harmless.
-        """
+    async def _fetch_query_cache(
+        self, lang_pair: str, input_norm: str, *, for_update: bool = False
+    ) -> LookupQueryCache | None:
+        stmt = select(LookupQueryCache).where(
+            LookupQueryCache.lang_pair == lang_pair,
+            LookupQueryCache.input_norm == input_norm,
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def _ensure_query_cache_row(
+        self, lang_pair: str, input_norm: str
+    ) -> LookupQueryCache:
+        await self.db.execute(
+            pg_insert(LookupQueryCache)
+            .values(
+                id=uuid4(),
+                lang_pair=lang_pair,
+                input_norm=input_norm,
+                candidates=[],
+                ai_complete=False,
+                hit_count=0,
+            )
+            .on_conflict_do_nothing(index_elements=["lang_pair", "input_norm"])
+        )
+        row = await self._fetch_query_cache(lang_pair, input_norm, for_update=True)
+        if row is None:
+            raise RuntimeError("lookup_query_cache row missing after insert")
+        return row
+
+    async def _present_lookup(
+        self,
+        user: User,
+        profile: LanguageProfile,
+        text: str,
+        stored: list[dict],
+        source: str,
+        ai_complete: bool,
+    ) -> LookupOutcome:
+        ranked = self._rank_lookup_candidates(
+            stored, text, learning_lang=profile.learning_lang
+        )
+        attached = await self._attach_lexical_ids(profile, ranked)
+        annotated = await self._annotate_candidates(user.id, profile.id, attached)
+        return LookupOutcome(annotated, source, ai_complete)
+
+    async def lookup_cached(
+        self, user: User, profile_id: UUID, text: str
+    ) -> LookupOutcome:
+        """Read-only query cache. Does not call OpenAI or create a row on miss."""
         profile = await self.get_profile(user.id, profile_id)
+        pair = lang_pair_key(profile.app_lang, profile.learning_lang)
+        key = self._query_cache_key(text)
+        row = await self._fetch_query_cache(pair, key)
+        if row is None:
+            return LookupOutcome([], "db", False)
+        row.hit_count = (row.hit_count or 0) + 1
+        return await self._present_lookup(
+            user,
+            profile,
+            text,
+            list(row.candidates or []),
+            "db",
+            bool(row.ai_complete),
+        )
 
-        # PG-first short-circuit — only when the DB match is confident, never on a guess.
-        db_first = await self._db_first_candidates(profile, text)
-        if db_first and cached_lookup_covers_query(
-            db_first, text, learning_lang=profile.learning_lang
-        ):
-            attached = await self._attach_lexical_ids(profile, db_first)
-            return (
-                await self._annotate_candidates(user.id, profile_id, attached),
+    async def lookup_expand(
+        self, user: User, profile_id: UUID, text: str
+    ) -> LookupOutcome:
+        """Ask OpenAI for new suggestions, append to cache, return the full ranked list."""
+        profile = await self.get_profile(user.id, profile_id)
+        pair = lang_pair_key(profile.app_lang, profile.learning_lang)
+        key = self._query_cache_key(text)
+
+        existing = await self._fetch_query_cache(pair, key)
+        if existing is not None and existing.ai_complete:
+            existing.hit_count = (existing.hit_count or 0) + 1
+            return await self._present_lookup(
+                user,
+                profile,
+                text,
+                list(existing.candidates or []),
                 "db",
+                True,
             )
 
-        raw = await self.llm.lookup(
-            text, profile.app_lang, profile.learning_lang, profile.cefr_level
-        )
-        candidates = self._rank_lookup_candidates(
-            merge_candidates(
-                db_first,
-                self._raw_to_candidates(raw),
-                limit=12,
-                learning_lang=profile.learning_lang,
-            ),
+        already = list(existing.candidates or []) if existing is not None else []
+        raw = await self.llm.lookup_expand(
             text,
+            profile.app_lang,
+            profile.learning_lang,
+            profile.cefr_level,
+            already,
+        )
+        incoming = self._raw_to_candidates(raw)
+
+        row = await self._ensure_query_cache_row(pair, key)
+        if row.ai_complete:
+            row.hit_count = (row.hit_count or 0) + 1
+            return await self._present_lookup(
+                user,
+                profile,
+                text,
+                list(row.candidates or []),
+                "db",
+                True,
+            )
+
+        merged, added = append_lookup_candidates(
+            list(row.candidates or []),
+            incoming,
             learning_lang=profile.learning_lang,
         )
+        row.candidates = merged
+        flag_modified(row, "candidates")
+        if added == 0:
+            row.ai_complete = True
+        row.hit_count = (row.hit_count or 0) + 1
+        row.updated_at = datetime.now(UTC)
+        await self.db.flush()
+        return await self._present_lookup(
+            user, profile, text, merged, "ai", bool(row.ai_complete)
+        )
 
-        db_fuzzy = await self._fuzzy_l1_db_candidates(profile, text)
-        if db_fuzzy:
-            candidates = self._rank_lookup_candidates(
-                merge_candidates(candidates, db_fuzzy, limit=12, learning_lang=profile.learning_lang),
-                text,
-                learning_lang=profile.learning_lang,
-            )
-
-        # Recovery pass whenever we have no exact/diacritic-completed reading yet.
-        # This catches the classic "ksiazka → książka → libro" case the model may miss
-        # on the first pass because it latched onto a different-word typo (kiszka).
-        if not has_confident_match(candidates, text, learning_lang=profile.learning_lang):
-            raw2 = await self.llm.lookup_l1_typo(
-                text, profile.app_lang, profile.learning_lang, profile.cefr_level
-            )
-            recovery = self._rank_lookup_candidates(
-                self._raw_to_candidates(raw2),
-                text,
-                learning_lang=profile.learning_lang,
-            )
-            if recovery:
-                # Recovery first so the diacritic-completed intent wins the size cap,
-                # then rank restores the correct ordering across the whole union.
-                candidates = self._rank_lookup_candidates(
-                    merge_candidates(
-                        recovery, candidates, limit=12, learning_lang=profile.learning_lang
-                    ),
-                    text,
-                    learning_lang=profile.learning_lang,
-                )
-
-        candidates = await self._attach_lexical_ids(profile, candidates)
-        return await self._annotate_candidates(user.id, profile_id, candidates), "ai"
+    async def lookup(self, user: User, profile_id: UUID, text: str) -> LookupOutcome:
+        """Full path for offline flush / one-shot clients: cache if complete, else expand."""
+        cached = await self.lookup_cached(user, profile_id, text)
+        if cached.ai_complete:
+            return cached
+        return await self.lookup_expand(user, profile_id, text)
 
     async def best_lookup_candidate(
         self, user: User, profile_id: UUID, text: str
     ) -> dict | None:
         """Top-ranked lookup reading for offline-queued headwords (L1 or L2)."""
-        candidates, _ = await self.lookup(user, profile_id, text)
-        return candidates[0] if candidates else None
+        outcome = await self.lookup(user, profile_id, text)
+        return outcome.candidates[0] if outcome.candidates else None
 
     async def _exact_db_entry(
         self, profile: LanguageProfile, text: str

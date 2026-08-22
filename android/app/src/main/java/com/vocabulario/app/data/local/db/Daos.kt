@@ -28,7 +28,7 @@ interface CachedCardDao {
         """
         SELECT * FROM cached_cards
         WHERE profileId = :profileId
-          AND enrichmentStatus = 'ready'
+          AND enrichmentStatus IN ('ready', 'learnable')
           AND (deckId IS NULL OR deckId = '')
         """,
     )

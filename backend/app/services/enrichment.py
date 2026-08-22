@@ -8,6 +8,7 @@ from app.lsp.lang_utils import articles_for, lemma_preps_for
 from app.services.pos_normalize import normalize_pos_bucket
 from app.models import LanguageProfile
 from app.services.llm import LLMService
+from app.core.lemma_keys import canonical_lemma
 
 # Jedno zdanie na pasmo poziomów: A2 widzi A1–A2, B2 widzi B1–B2, C2 widzi C1–C2.
 EXAMPLE_CEFR_LEVELS = ["A2", "B2", "C2"]
@@ -320,10 +321,16 @@ async def enrich_adaptive_card_content(
         if not isinstance(m.get("usages"), list):
             m["usages"] = []
 
+    returned = data.get("lemma") or headword
+    a = canonical_lemma(headword)
+    b = canonical_lemma(returned)
+    if a and b and a != b:
+        raise ValueError("adaptive_lemma_mismatch")
+
     return {
         "schema_version": "vocabulario.adaptive.v1",
         "entry_kind": kind,
-        "lemma": data.get("lemma") or headword,
+        "lemma": headword,
         "language": profile.learning_lang,
         "pos": _resolve_pos(data.get("pos")) or _resolve_pos(pos) or kind,
         "ipa": data.get("ipa"),

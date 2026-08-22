@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from app.services.card_jobs import (
     STATUS_FAILED,
+    STATUS_LEARNABLE,
     STATUS_PREPARATION_PROBLEM,
     STATUS_PREPARING,
     _apply_enrich_retry,
@@ -62,6 +63,13 @@ def test_third_manual_fail_is_terminal():
     _apply_enrich_retry(card, RuntimeError("boom"))
     assert card.enrichment_status == STATUS_FAILED
     assert card.enrichment_retry_count == 3
+
+
+def test_learnable_fail_does_not_leave_queue():
+    card = _card(enrichment_status=STATUS_LEARNABLE)
+    _apply_enrich_retry(card, RuntimeError("inflection_timeout"))
+    assert card.enrichment_status == STATUS_LEARNABLE
+    assert card.enrichment_retry_at is not None
 
 
 def test_clear_enrich_retry():

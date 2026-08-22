@@ -57,8 +57,6 @@ import com.vocabulario.app.ui.card.cardActivityStatusLabel
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.data.langDisplayName
 import com.vocabulario.app.ui.card.FlashcardBackContent
-import com.vocabulario.app.ui.components.ImportDisplayFlip
-import com.vocabulario.app.ui.components.parseImportDisplayFromContent
 import com.vocabulario.app.ui.components.AddToListSheet
 import com.vocabulario.app.ui.components.AppAlertDialog
 import com.vocabulario.app.ui.components.AppButtonShape
@@ -332,34 +330,24 @@ fun PracticeScreen(
                                                 )
                                             }
                                         }
-                                        val importDisplay = parseImportDisplayFromContent(item.content)
-                                        if (importDisplay != null) {
-                                            ImportDisplayFlip(
-                                                display = importDisplay,
-                                                enableTts = true,
-                                                learningLang = state.learningLang,
-                                                revealed = true,
-                                            )
-                                        } else {
-                                            FlashcardBackContent(
-                                                content = item.content,
-                                                lemmaFallback = item.lemma_l2,
-                                                userTenses = state.userTenses,
-                                                userCefr = state.userCefr,
-                                                showUsages = state.showUsages,
-                                                showExampleSentences = state.showExampleSentences,
-                                                showSynonyms = state.showSynonyms,
-                                                showAntonyms = state.showAntonyms,
-                                                showWordFamily = state.showWordFamily,
-                                                showPeriphrases = state.showPeriphrases,
-                                                showConjugation = state.showConjugation,
-                                                conjugationExpandedDefault = state.conjugationExpandedDefault,
-                                                relatedWordsExpandedDefault = state.relatedWordsExpandedDefault,
-                                                profile = state.activeProfile,
-                                                onAddRelated = viewModel::openAddRelated,
-                                                learningLemmas = state.learningLemmas,
-                                            )
-                                        }
+                                        FlashcardBackContent(
+                                            content = item.content,
+                                            lemmaFallback = item.lemma_l2,
+                                            userTenses = state.userTenses,
+                                            userCefr = state.userCefr,
+                                            showUsages = state.showUsages,
+                                            showExampleSentences = state.showExampleSentences,
+                                            showSynonyms = state.showSynonyms,
+                                            showAntonyms = state.showAntonyms,
+                                            showWordFamily = state.showWordFamily,
+                                            showPeriphrases = state.showPeriphrases,
+                                            showConjugation = state.showConjugation,
+                                            conjugationExpandedDefault = state.conjugationExpandedDefault,
+                                            relatedWordsExpandedDefault = state.relatedWordsExpandedDefault,
+                                            profile = state.activeProfile,
+                                            onAddRelated = viewModel::openAddRelated,
+                                            learningLemmas = state.learningLemmas,
+                                        )
                                         Spacer(Modifier.height(8.dp))
                                     }
                                     val activityLabel = cardActivityStatusLabel(item.card_activity_status)

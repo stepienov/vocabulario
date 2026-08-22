@@ -11,9 +11,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -28,7 +28,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,9 +41,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vocabulario.app.R
 import com.vocabulario.app.data.api.ImportJobItemResponse
@@ -541,16 +540,15 @@ fun ImportErrorDialog(
 fun ImportStartDialog(
     lists: List<WordListResponse>,
     sourceLabel: String?,
-    pasteMode: Boolean,
     pasteDraft: String,
     onPasteDraftChange: (String) -> Unit,
     onPickFile: () -> Unit,
+    onClearFile: () -> Unit,
     onDismiss: () -> Unit,
-    onStart: (mode: String, listId: String?, newListName: String?) -> Unit,
+    onStart: (listId: String?, newListName: String?) -> Unit,
     listDisplayName: @Composable (WordListResponse) -> String,
 ) {
     val scheme = MaterialTheme.colorScheme
-    var mode by remember { mutableStateOf("vocabulario") }
     var listExpanded by remember { mutableStateOf(false) }
     var selectedListId by remember {
         mutableStateOf(lists.firstOrNull { it.is_system }?.id ?: lists.firstOrNull()?.id)
@@ -558,11 +556,10 @@ fun ImportStartDialog(
     var creatingNew by remember { mutableStateOf(false) }
     var newListName by remember { mutableStateOf("") }
 
-    val canStart = if (pasteMode) {
-        pasteDraft.isNotBlank() && (creatingNew && newListName.isNotBlank() || !creatingNew && selectedListId != null)
-    } else {
-        sourceLabel != null && (creatingNew && newListName.isNotBlank() || !creatingNew && selectedListId != null)
-    }
+    val hasFile = sourceLabel != null
+    val hasPaste = pasteDraft.isNotBlank()
+    val listReady = creatingNew && newListName.isNotBlank() || !creatingNew && selectedListId != null
+    val canStart = (hasFile || hasPaste) && listReady
 
     AppAlertDialog(
         onDismissRequest = onDismiss,
@@ -575,58 +572,57 @@ fun ImportStartDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                if (pasteMode) {
-                    AppGrayField(
-                        value = pasteDraft,
-                        onValueChange = onPasteDraftChange,
-                        modifier = Modifier
-                            .height(140.dp)
-                            .testTag(TestTags.IMPORT_PASTE_INPUT),
-                        placeholder = stringResource(R.string.import_paste_hint),
-                        singleLine = false,
-                        minLines = 5,
-                        maxLines = 8,
-                    )
-                } else {
-                    if (sourceLabel != null) {
-                        Text(
-                            stringResource(R.string.import_file_label, sourceLabel),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = scheme.primary,
-                        )
-                    }
-                    OutlinedButton(
-                        onClick = onPickFile,
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = AppButtonShape,
+                AppGrayField(
+                    value = pasteDraft,
+                    onValueChange = onPasteDraftChange,
+                    modifier = Modifier
+                        .height(140.dp)
+                        .testTag(TestTags.IMPORT_PASTE_INPUT),
+                    enabled = !hasFile,
+                    placeholder = stringResource(R.string.import_paste_hint),
+                    singleLine = false,
+                    minLines = 5,
+                    maxLines = 8,
+                )
+                if (sourceLabel != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            if (sourceLabel == null) {
-                                stringResource(R.string.import_add_file)
-                            } else {
-                                stringResource(R.string.import_other_file)
-                            },
+                            stringResource(R.string.import_file_label, sourceLabel),
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = scheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
+                        IconButton(
+                            onClick = onClearFile,
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = stringResource(R.string.action_cancel),
+                                tint = scheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
-
-                Text(
-                    stringResource(R.string.import_how),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                ModeRadio(
-                    selected = mode == "vocabulario",
-                    label = stringResource(R.string.import_vocab_mode),
-                    tag = TestTags.IMPORT_MODE_VOCAB,
-                    onClick = { mode = "vocabulario" },
-                )
-                ModeRadio(
-                    selected = mode == "preserve",
-                    label = stringResource(R.string.import_preserve_mode),
-                    tag = TestTags.IMPORT_MODE_PRESERVE,
-                    onClick = { mode = "preserve" },
-                )
+                OutlinedButton(
+                    onClick = onPickFile,
+                    enabled = !hasPaste,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = AppButtonShape,
+                ) {
+                    Text(
+                        if (sourceLabel == null) {
+                            stringResource(R.string.import_add_file)
+                        } else {
+                            stringResource(R.string.import_other_file)
+                        },
+                    )
+                }
 
                 Text(
                     stringResource(R.string.import_pick_list),
@@ -687,10 +683,9 @@ fun ImportStartDialog(
                 secondaryText = stringResource(R.string.action_cancel),
                 onSecondary = onDismiss,
                 secondaryModifier = Modifier.testTag(TestTags.DIALOG_CANCEL),
-                primaryText = stringResource(R.string.action_ok),
+                primaryText = stringResource(R.string.import_action_start),
                 onPrimary = {
                     onStart(
-                        mode,
                         if (creatingNew) null else selectedListId,
                         if (creatingNew) newListName.trim() else null,
                     )
@@ -702,21 +697,3 @@ fun ImportStartDialog(
     )
 }
 
-@Composable
-private fun ModeRadio(
-    selected: Boolean,
-    label: String,
-    tag: String,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(tag)
-            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = onClick)
-        Text(label, modifier = Modifier.padding(start = 4.dp))
-    }
-}

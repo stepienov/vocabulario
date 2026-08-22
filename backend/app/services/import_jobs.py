@@ -33,7 +33,6 @@ from app.models import (
 from app.services.card_jobs import (
     STATUS_PENDING,
     STATUS_READY,
-    build_import_display_content,
     build_pending_content,
     hydrate_from_lexical_cache,
     spawn_enrich,
@@ -45,7 +44,6 @@ from app.services.import_classify import (
     _vocabulario_lemma,
     classify_notes_detailed,
 )
-from app.services.import_display import resolve_import_display_cards
 from app.services.import_format import ensure_deck_segmented
 from app.services.import_package import (
     ImportPackageError,
@@ -163,9 +161,7 @@ async def create_job_from_text(
     text: str,
     mode: str,
 ) -> ImportJob:
-    mode_n = (mode or "vocabulario").strip().lower()
-    if mode_n not in {"vocabulario", "preserve"}:
-        mode_n = "vocabulario"
+    mode_n = "vocabulario"
     url = detect_import_url(text)
     source_kind = "url" if url else "paste"
     source_name = "paste"
@@ -174,8 +170,6 @@ async def create_job_from_text(
     kind = "raw_text"
     field_names: list[str] | None = None
     if url:
-        if mode_n == "preserve":
-            raise ImportPackageError("Preserve-cards mode works with paste/file, not a URL.")
         words = await fetch_words_from_url(url)
         if not words:
             raise ImportPackageError("No words to import")
@@ -218,9 +212,7 @@ async def create_job_from_file(
     data: bytes,
     mode: str,
 ) -> ImportJob:
-    mode_n = (mode or "vocabulario").strip().lower()
-    if mode_n not in {"vocabulario", "preserve"}:
-        mode_n = "vocabulario"
+    mode_n = "vocabulario"
     deck = load_raw_import(filename, data)
     if not deck.notes and not (deck.raw_text or "").strip():
         raise ImportPackageError("No words to import")
@@ -659,10 +651,7 @@ async def _run_analyze(db: AsyncSession, job: ImportJob) -> None:
         return
 
     try:
-        if job.mode == "preserve":
-            await _analyze_preserve(db, job, profile, deck, llm)
-        else:
-            await _analyze_vocabulario(db, job, profile, items, llm)
+        await _analyze_vocabulario(db, job, profile, items, llm)
     except Exception as exc:
         logger.exception("import analyze failed job=%s", job.id)
         from app.services.app_log import log_event
@@ -904,13 +893,7 @@ def _reject_garbage_lemma(item: ImportJobItem, raw: dict[str, Any], head: str) -
 def _apply_vocab_item(item: ImportJobItem, raw: dict[str, Any], learning_lang: str) -> None:
     head = (raw.get("headword_l2") or item.input_label or "").strip()
     if not raw.get("valid", True) or not head:
-        fallback = _plain_import_headword(head or item.input_label or "")
-        if fallback:
-            item.lemma = fallback
-            item.input_label = item.input_label or fallback
-            item.entry_kind = "lemma"
-            item.verdict = "pending"
-            return
+        # LLM invalid (zły język, śmieć, brak L2) zostaje failed — nie wskrzeszać „bo wygląda na słowo”.
         _reject_garbage_lemma(item, raw, head)
         return
     lemma = _vocabulario_lemma(raw, learning_lang=learning_lang)
@@ -924,99 +907,15 @@ def _apply_vocab_item(item: ImportJobItem, raw: dict[str, Any], learning_lang: s
     if _plain_import_headword(lemma) is None:
         _reject_garbage_lemma(item, raw, lemma)
         return
+    kind = (raw.get("entry_kind") or "lemma").strip().lower()
+    if kind not in {"lemma", "phrase", "construction", "other"}:
+        kind = "lemma"
     item.lemma = lemma
     item.gloss = (raw.get("gloss_l1") or "").strip() or None
-    item.pos = raw.get("pos")
-    item.entry_kind = "lemma"
+    item.pos = raw.get("pos") or (kind if kind != "lemma" else None)
+    item.entry_kind = kind
     item.input_label = raw.get("input") or item.input_label or _note_input(list(item.raw_note or []))
     item.verdict = "pending"
-
-
-async def _analyze_preserve(
-    db: AsyncSession,
-    job: ImportJob,
-    profile: LanguageProfile,
-    deck: RawImportDeck,
-    llm: LLMService,
-) -> None:
-    await _touch(db, job, stage="layout", processed=0)
-    await _add_event(db, job.id, "llm_call", payload={"phase": "layout"})
-    await db.commit()
-    result = await resolve_import_display_cards(
-        deck,
-        app_lang=profile.app_lang,
-        learning_lang=profile.learning_lang,
-        llm=llm,
-    )
-    cards = list(result.get("cards") or [])
-    await _add_event(db, job.id, "llm_ok", payload={"phase": "layout", "n": len(cards)})
-    if await _cancelled(db, job):
-        return
-
-    await _replace_items_from_notes(db, job, deck.notes)
-    items = (
-        await db.execute(
-            select(ImportJobItem)
-            .where(ImportJobItem.job_id == job.id)
-            .order_by(ImportJobItem.ordinal)
-        )
-    ).scalars().all()
-    await _touch(db, job, stage="dedup", processed=0, total=len(items))
-    await db.commit()
-
-    seen: set[str] = set()
-    for idx, item in enumerate(items):
-        if await _cancelled(db, job):
-            return
-        card = cards[idx] if idx < len(cards) else None
-        await _touch(
-            db, job, processed=idx, current_ordinal=idx,
-            current_label=item.input_label, stage="dedup",
-        )
-        if card is None:
-            item.verdict = "failed"
-            item.reason_code = "llm_invalid"
-            item.reason_detail = "no display card"
-            item.verdict_phase = "analyze"
-            continue
-        lemma = (card.get("lemma_l2") or "").strip()
-        item.lemma = lemma or None
-        item.gloss = card.get("gloss_primary")
-        item.display = card.get("display")
-        item.entry_kind = "imported"
-        if not lemma:
-            item.verdict = "failed"
-            item.reason_code = "no_lemma"
-            item.verdict_phase = "analyze"
-            continue
-        if _plain_import_headword(lemma) is None:
-            item.verdict = "failed"
-            item.reason_code = "llm_invalid"
-            item.reason_detail = "not a dictionary headword"
-            item.verdict_phase = "analyze"
-            continue
-        key = lemma.casefold()
-        if key in seen:
-            item.verdict = "duplicate"
-            item.reason_code = "in_file_duplicate"
-            item.verdict_phase = "analyze"
-            continue
-        existing = await find_card_anywhere(
-            db, job.user_id, job.profile_id, lemma, "imported"
-        )
-        if existing is not None:
-            item.verdict = "duplicate"
-            item.reason_code = "already_on_list"
-            item.existing_card_id = existing.id
-            item.verdict_phase = "analyze"
-            continue
-        item.verdict = "ready"
-        item.verdict_phase = "analyze"
-        seen.add(key)
-        if idx % 10 == 0:
-            await db.commit()
-    await _refresh_counts(job, list(items))
-    await db.commit()
 
 
 async def _run_commit(db: AsyncSession, job: ImportJob) -> None:
@@ -1111,7 +1010,7 @@ async def _run_commit(db: AsyncSession, job: ImportJob) -> None:
                 existing = await find_card_anywhere(
                     db, job.user_id, job.profile_id,
                     (item.lemma or "").strip(),
-                    item.pos if job.mode != "preserve" else "imported",
+                    item.pos,
                 )
                 job = await _load_job(db, job.id) or job
                 item = (
@@ -1217,28 +1116,20 @@ async def _create_card_for_item(
     lemma = (item.lemma or "").strip()
     if not lemma:
         raise ValueError("empty lemma")
-    pos = item.pos if job.mode != "preserve" else "imported"
+    pos = item.pos
     existing = await find_card_anywhere(db, job.user_id, job.profile_id, lemma, pos)
     if existing is not None:
         raise DuplicateImportError(existing.id)
 
-    if job.mode == "preserve":
-        content = build_import_display_content(
-            lemma=lemma,
-            gloss=item.gloss,
-            learning_lang=profile.learning_lang,
-            display=item.display or {},
-        )
-        status = STATUS_READY
-    else:
-        content = build_pending_content(
-            lemma=lemma,
-            pos=item.pos,
-            gloss=item.gloss,
-            learning_lang=profile.learning_lang,
-            entry_kind=item.entry_kind or "lemma",
-        )
-        status = STATUS_PENDING
+    kind = (item.entry_kind or "lemma").strip().lower()
+    content = build_pending_content(
+        lemma=lemma,
+        pos=item.pos,
+        gloss=item.gloss,
+        learning_lang=profile.learning_lang,
+        entry_kind=kind,
+    )
+    status = STATUS_PENDING
 
     card = LearningCard(
         user_id=job.user_id,

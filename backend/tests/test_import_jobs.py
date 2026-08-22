@@ -80,6 +80,8 @@ def test_apply_vocab_item_phrase_keeps_headword():
     )
     assert item.verdict == "pending"
     assert item.lemma == "tener prisa"
+    assert item.entry_kind == "phrase"
+    assert item.pos == "phrase"
 
 
 def test_apply_vocab_item_construction_keeps_headword():
@@ -96,6 +98,8 @@ def test_apply_vocab_item_construction_keeps_headword():
     )
     assert item.verdict == "pending"
     assert item.lemma == "volver a hacer algo"
+    assert item.entry_kind == "construction"
+    assert item.pos == "construction"
 
 
 def test_apply_vocab_item_llm_invalid():
@@ -154,7 +158,7 @@ def test_apply_vocab_item_rejects_symbol_junk():
     assert item.reason_code == "llm_invalid"
 
 
-def test_apply_vocab_item_accepts_plain_word_despite_l1_mismatch():
+def test_apply_vocab_item_rejects_plain_word_on_l1_mismatch():
     item = _item(input_label="evaluar", raw_note=["evaluar"])
     _apply_vocab_item(
         item,
@@ -165,8 +169,40 @@ def test_apply_vocab_item_accepts_plain_word_despite_l1_mismatch():
         },
         "fr",
     )
-    assert item.verdict == "pending"
+    assert item.verdict == "failed"
+    assert item.reason_code == "llm_invalid"
     assert item.lemma == "evaluar"
+
+
+def test_apply_vocab_item_construction_wrong_language_stays_failed():
+    item = _item(input_label="volver a hacer algo", raw_note=["volver a hacer algo"])
+    _apply_vocab_item(
+        item,
+        {
+            "valid": False,
+            "headword_l2": "volver a hacer algo",
+            "entry_kind": "construction",
+            "invalid_reason": "not a headword in the language you’re learning",
+        },
+        "en",
+    )
+    assert item.verdict == "failed"
+    assert item.reason_code == "llm_invalid"
+    assert item.entry_kind != "lemma"
+
+
+def test_import_prompts_gate_non_l2():
+    from app.ai.prompts.v1 import (
+        IMPORT_ADAPTIVE_PROMPT_V1,
+        IMPORT_CLASSIFY_PROMPT_V1,
+        IMPORT_VERIFY_LEMMAS_PROMPT_V1,
+    )
+
+    assert "innym języku" in IMPORT_CLASSIFY_PROMPT_V1
+    assert "valid=true tylko gdy to L2" in IMPORT_CLASSIFY_PROMPT_V1
+    assert "NOT in the learning language" in IMPORT_VERIFY_LEMMAS_PROMPT_V1
+    assert "NIE tłumacz hasła" in IMPORT_ADAPTIVE_PROMPT_V1
+    assert "example.l2 TYLKO w L2" in IMPORT_ADAPTIVE_PROMPT_V1
 
 
 def test_admin_user_rejects_plain_user():
@@ -258,3 +294,81 @@ def test_vocabulario_lemma_keeps_phrase_not_base():
         )
         == "ir a casa"
     )
+
+
+def test_import_commit_content_is_vocabulario_card():
+    from app.ai.schemas.similar_words import MIN_SIMILAR_FOR_QUIZ
+    from app.services.card_jobs import build_pending_content
+
+    content = build_pending_content(
+        lemma="casa",
+        pos="noun",
+        gloss="dom",
+        learning_lang="es",
+        entry_kind="lemma",
+    )
+    assert content["schema_version"] == "vocabulario.card.v1"
+    assert content["pos"] == "noun"
+    assert content["pos"] != "imported"
+    assert "similar_words" in content
+    assert content["similar_words"] == []
+    assert MIN_SIMILAR_FOR_QUIZ >= 7
+
+
+def test_import_commit_construction_uses_adaptive_schema():
+    from app.services.card_jobs import build_pending_content, resolve_enrichment_entry_kind
+
+    content = build_pending_content(
+        lemma="ir a hacer algo",
+        pos="construction",
+        gloss="zamierzać coś zrobić",
+        learning_lang="es",
+        entry_kind="construction",
+    )
+    assert content["schema_version"] == "vocabulario.adaptive.v1"
+    assert content["entry_kind"] == "construction"
+    assert content["pos"] == "construction"
+    assert resolve_enrichment_entry_kind(content) == "construction"
+
+
+def test_enrichment_routes_construction_pos_without_entry_kind():
+    from app.services.card_jobs import resolve_enrichment_entry_kind
+
+    stale_import = {
+        "schema_version": "vocabulario.card.v1",
+        "lemma": "ir a hacer algo",
+        "pos": "construction",
+        "meanings": [{"gloss_l1": "zamierzać coś zrobić", "examples": []}],
+    }
+    assert resolve_enrichment_entry_kind(stale_import) == "construction"
+    assert resolve_enrichment_entry_kind({"lemma": "casa"}, pos="noun") == "lemma"
+
+
+def test_skips_similar_words_for_construction():
+    from app.services.similar_words import skips_similar_words
+
+    assert skips_similar_words({"entry_kind": "construction"}, "construction")
+    assert skips_similar_words({"schema_version": "vocabulario.adaptive.v1"}, "verb")
+    assert skips_similar_words({"pos": "phrase"}, None)
+    assert not skips_similar_words({"pos": "noun"}, "noun")
+
+
+def test_ensure_similar_words_does_not_fetch_for_construction(monkeypatch):
+    import asyncio
+
+    from app.services import similar_words as sw
+
+    async def boom(*args, **kwargs):
+        raise AssertionError("must not fetch similar_words for construction")
+
+    monkeypatch.setattr(sw, "fetch_similar_words", boom)
+    profile = SimpleNamespace(app_lang="pl", learning_lang="en")
+    content = asyncio.run(
+        sw.ensure_similar_words(
+            {"schema_version": "vocabulario.adaptive.v1", "lemma": "ir a hacer algo"},
+            profile,
+            "ir a hacer algo",
+            "construction",
+        )
+    )
+    assert content["similar_words"] == []

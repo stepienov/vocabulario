@@ -1,10 +1,10 @@
 package com.vocabulario.app.data.api
 
+import com.vocabulario.app.data.EnrichmentStatus
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNames
-import kotlinx.serialization.json.JsonObject
 
 @Serializable
 data class TokenResponse(
@@ -126,7 +126,7 @@ data class LookupCandidate(
     val enrichment_status: String? = null,
 ) {
     val onList: Boolean get() = !list_name.isNullOrBlank()
-    val isCreating: Boolean get() = enrichment_status == "pending" || enrichment_status == "preparing"
+    val isCreating: Boolean get() = EnrichmentStatus.isCreating(enrichment_status)
 }
 
 @Serializable
@@ -134,6 +134,7 @@ data class LookupResponse(
     val candidates: List<LookupCandidate>,
     val source: String,
     val confident: Boolean = false,
+    val ai_complete: Boolean = false,
 )
 
 @Serializable
@@ -223,73 +224,6 @@ data class ImportJobProgressResponse(
     val error_message: String? = null,
     val heartbeat_at: String? = null,
     val items: List<ImportJobItemResponse> = emptyList(),
-)
-
-@Serializable
-data class ImportTts(
-    val enabled: Boolean = false,
-    val lang: String? = null,
-)
-
-@Serializable
-data class ImportDisplayBlock(
-    val type: String,
-    val text: String? = null,
-    val emphasis: String? = null,
-    val heading: String? = null,
-    val collapsed: Boolean? = null,
-    val items: List<String>? = null,
-    val headers: List<String>? = null,
-    val rows: List<List<String>>? = null,
-    val children: List<ImportDisplayBlock>? = null,
-    val align: String? = null,
-    val size: String? = null,
-    val semantic: String? = null,
-    val tts: ImportTts? = null,
-)
-
-@Serializable
-data class ImportDisplaySide(
-    val blocks: List<ImportDisplayBlock> = emptyList(),
-)
-
-@Serializable
-data class ImportDisplayPayload(
-    val prompt: ImportDisplaySide = ImportDisplaySide(),
-    val answer: ImportDisplaySide = ImportDisplaySide(),
-    val prompt_style: String = "word",
-    val bidirectional: Boolean = false,
-)
-
-@Serializable
-data class ImportDisplayCard(
-    val key: String,
-    val lemma_l2: String,
-    val gloss_primary: String? = null,
-    val display: ImportDisplayPayload,
-)
-
-@Serializable
-data class ImportDisplayResponse(
-    val mode: String = "preserve",
-    val cards: List<ImportDisplayCard> = emptyList(),
-    val field_roles: List<JsonObject> = emptyList(),
-    val rationale: String = "",
-    val total_notes: Int = 0,
-)
-
-@Serializable
-data class ImportDisplayCommitRequest(
-    val profile_id: String,
-    val list_id: String,
-    val cards: List<ImportDisplayCard>,
-)
-
-@Serializable
-data class ImportDisplayCommitResponse(
-    val created: Int = 0,
-    val skipped: Int = 0,
-    val list_id: String,
 )
 
 @Serializable

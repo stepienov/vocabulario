@@ -3,6 +3,7 @@ package com.vocabulario.app.ui.learning
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
+import com.vocabulario.app.data.EnrichmentStatus
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.WordListResponse
@@ -226,13 +227,17 @@ class LearningViewModel @Inject constructor(
 
     private fun startPollingIfNeeded(cards: List<CardResponse>) {
         pollJob?.cancel()
-        if (cards.none { it.enrichment_status == "pending" || it.enrichment_status == "preparing" }) return
+        val pollIds = cards.mapNotNull { card ->
+            card.id.takeIf { EnrichmentStatus.needsPoll(card.enrichment_status) }
+        }
+        if (pollIds.isEmpty()) return
         repository.requestBackgroundSync()
         pollJob = viewModelScope.launch {
             var iterations = 0
+            var ids = pollIds
             while (isActive) {
-                delay(3_000)
-                if (++iterations > 20) break
+                if (ids.isEmpty()) break
+                runCatching { repository.refreshCardsFromServer(ids) }
                 val refreshed = runCatching { repository.listCards() }.getOrNull() ?: continue
                 val current = _state.value
                 _state.value = current.copy(
@@ -241,8 +246,12 @@ class LearningViewModel @Inject constructor(
                     learningLemmas = refreshed.flatMap { lemmaKeys(it.lemma_l2) }.toSet() +
                         current.learningLemmas,
                 )
-                if (refreshed.none { it.enrichment_status == "pending" || it.enrichment_status == "preparing" }) break
-                if (iterations % 3 == 0) repository.requestBackgroundSync()
+                ids = refreshed.mapNotNull { card ->
+                    card.id.takeIf { EnrichmentStatus.needsPoll(card.enrichment_status) }
+                }
+                if (ids.isEmpty()) break
+                if (++iterations > 20) break
+                delay(3_000)
             }
         }
     }

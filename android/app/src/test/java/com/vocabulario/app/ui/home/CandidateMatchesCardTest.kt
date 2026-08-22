@@ -44,6 +44,76 @@ class CandidateMatchesCardTest {
         assertFalse(sameLemmaAndPos("play", "verb", "play", "noun"))
     }
 
+    @Test
+    fun sameLemmaAndPos_allowsUnknownPosMatch() {
+        assertTrue(sameLemmaAndPos("casa", null, "casa", "noun"))
+        assertTrue(sameLemmaAndPos("casa", "noun", "casa", null))
+    }
+
+    @Test
+    fun candidateMatchesCard_byLearningCardId() {
+        val candidate = LookupCandidate(
+            lemma = "casa",
+            pos = null,
+            gloss = "dom",
+            learning_card_id = "card-42",
+        )
+        val card = CardResponse(
+            id = "card-42",
+            lemma_l2 = "casa",
+            pos = "noun",
+            gloss_primary = "dom",
+            content = buildJsonObject { },
+            created_at = "",
+            enrichment_status = "ready",
+        )
+        assertTrue(candidateMatchesCard(candidate, card))
+    }
+
+    @Test
+    fun mergeLookupCandidates_keepsCurrentAndAppendsNew() {
+        val cached = listOf(candidate(pos = "verb", entry = null))
+        val expanded = listOf(
+            candidate(pos = "verb", entry = "lex-verb"),
+            candidate(pos = "noun", entry = null).copy(gloss = "sztuka"),
+        )
+        val merged = mergeLookupCandidates(cached, expanded)
+        assertEquals(2, merged.size)
+        assertEquals("verb", merged[0].pos)
+        assertEquals("noun", merged[1].pos)
+        assertEquals("sztuka", merged[1].gloss)
+    }
+
+    @Test
+    fun mergeLookupCandidates_doesNotDropUnseenCurrent() {
+        val current = listOf(
+            candidate(pos = "verb", entry = null),
+            candidate(pos = "noun", entry = null).copy(gloss = "sztuka"),
+        )
+        val incoming = listOf(candidate(pos = "verb", entry = "lex-verb"))
+        val merged = mergeLookupCandidates(current, incoming)
+        assertEquals(2, merged.size)
+        assertTrue(merged.any { it.pos == "noun" && it.gloss == "sztuka" })
+    }
+
+    @Test
+    fun mergeLookupCandidates_preservesOnListMembership() {
+        val current = listOf(
+            candidate(pos = "verb", entry = null).copy(
+                list_name = "Uczę się",
+                learning_card_id = "card-1",
+                enrichment_status = "pending",
+            ),
+        )
+        val incoming = listOf(candidate(pos = "verb", entry = "lex-verb"))
+        val merged = mergeLookupCandidates(current, incoming)
+        assertEquals(1, merged.size)
+        assertEquals("Uczę się", merged[0].list_name)
+        assertEquals("card-1", merged[0].learning_card_id)
+        assertEquals("pending", merged[0].enrichment_status)
+        assertEquals("lex-verb", merged[0].lexical_entry_id)
+    }
+
     private fun candidate(pos: String?, entry: String?) = LookupCandidate(
         lemma = "play",
         pos = pos,

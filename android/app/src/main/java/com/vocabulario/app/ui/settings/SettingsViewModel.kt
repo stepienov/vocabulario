@@ -143,9 +143,7 @@ class SettingsViewModel @Inject constructor(
                     ?: profiles.firstOrNull { it.is_active }
                     ?: profiles.firstOrNull()
                 resolvedActive?.let { tokenStore.saveActiveProfile(it.id) }
-                AppLocale.applyIfChanged(
-                    resolvedActive?.appLang ?: tokenStore.peekAppLang().ifBlank { "en" },
-                )
+                repository.applyAppLocaleFromActiveProfile()
                 Triple(settings, profiles, resolvedActive)
             }.onSuccess { (_, profilesIn, _) ->
                 if (writeGen != genAtStart) {

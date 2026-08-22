@@ -292,14 +292,6 @@
 
     <string name="import_other_file">दूसरी फ़ाइल चुनें</string>
 
-    <string name="import_how">कैसे आयात करें?</string>
-
-    <string name="import_vocab_mode">Vocabulario कार्ड</string>
-
-    <string name="import_preserve_mode">मेरे फ्लैशकार्ड की सामग्री रखें</string>
-
-    <string name="import_vocab_hint">Vocabulario कार्ड: एकल शब्दों के लिए सर्वोत्तम — अर्थ, उदाहरण, रूप, पैटर्न, पर्याय और विलोम के साथ स्वतः उत्पन्न।</string>
-
     <string name="import_invalid_title">अमान्य शब्द</string>
 
     <string name="import_file_errors">फ़ाइल में त्रुटियाँ हैं — जाँचें।</string>
@@ -460,8 +452,6 @@
     <string name="status_new">नया</string>
 
     <string name="status_learning">सीख रहा</string>
-
-    <string name="card_badge_import">आयातित</string>
 
     <string name="status_mastered">निपुण</string>
 

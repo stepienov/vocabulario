@@ -192,6 +192,8 @@ class LookupResponse(BaseModel):
     # Klient używa tego, by słowa-śmieci z trybu offline oznaczyć jako „wymaga sprawdzenia"
     # zamiast tworzyć kartę i palić tokeny na enrichment.
     confident: bool = False
+    # True gdy ostatnie uzupełnienie OpenAI nie dodało nowych par lemat+POS.
+    ai_complete: bool = False
 
 
 class ImportValidateRequest(BaseModel):
@@ -216,66 +218,12 @@ class ImportValidateResponse(BaseModel):
     mode: str = "vocabulario"
 
 
-class ImportDisplayBlock(BaseModel):
-    type: str
-    text: str | None = None
-    emphasis: str | None = None
-    heading: str | None = None
-    collapsed: bool | None = None
-    items: list[str] | None = None
-    headers: list[str] | None = None
-    rows: list[list[str]] | None = None
-    children: list["ImportDisplayBlock"] | None = None
-    align: str | None = None
-    size: str | None = None
-    semantic: str | None = None
-    tts: dict | None = None
-
-
-class ImportDisplaySide(BaseModel):
-    blocks: list[ImportDisplayBlock] = Field(default_factory=list)
-
-
-class ImportDisplayPayload(BaseModel):
-    prompt: ImportDisplaySide = Field(default_factory=ImportDisplaySide)
-    answer: ImportDisplaySide = Field(default_factory=ImportDisplaySide)
-    prompt_style: str = "word"
-    bidirectional: bool = False
-
-
-class ImportDisplayCard(BaseModel):
-    key: str
-    lemma_l2: str
-    gloss_primary: str | None = None
-    display: ImportDisplayPayload
-
-
-class ImportDisplayResponse(BaseModel):
-    mode: str = "preserve"
-    cards: list[ImportDisplayCard]
-    field_roles: list[dict] = Field(default_factory=list)
-    rationale: str = ""
-    total_notes: int = 0
-
-
-class ImportDisplayCommitRequest(BaseModel):
-    profile_id: UUID
-    list_id: UUID
-    cards: list[ImportDisplayCard] = Field(min_length=1, max_length=50)
-
-
-class ImportDisplayCommitResponse(BaseModel):
-    created: int
-    skipped: int
-    list_id: UUID
-
-
 class ImportIngestRequest(BaseModel):
     """Wklejka: surowy tekst albo pojedynczy URL Quizlet/AnkiWeb."""
 
     text: str = Field(min_length=1, max_length=500_000)
     profile_id: UUID
-    mode: str = Field(default="vocabulario", description="vocabulario | preserve")
+    mode: str = Field(default="vocabulario", description="Ignored; import always creates Vocabulario cards.")
 
 
 class ImportJobCreateRequest(BaseModel):
@@ -728,6 +676,3 @@ class SyncPushResponse(BaseModel):
     moves_applied: int = 0
     moves_skipped: int = 0
     moves: list[SyncMoveResult] = []
-
-
-ImportDisplayBlock.model_rebuild()

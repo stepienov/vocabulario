@@ -1,16 +1,18 @@
 package com.vocabulario.app.ui.components
 
+import android.app.Activity
+import android.content.ContextWrapper
+import android.view.View
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -25,19 +27,25 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.vocabulario.app.ui.TestTags
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.vocabulario.app.R
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.ui.home.NameListDialog
 import com.vocabulario.app.ui.home.isReservedListNameMessage
+import kotlin.math.max
 
 private val SheetControlHeight = 52.dp
 private val SheetControlSpacing = 10.dp
@@ -66,6 +74,11 @@ fun AddToListSheet(
     val customLists = remember(lists) { lists.filterNot { it.is_system } }
     val context = LocalContext.current
     val reservedName = isReservedListNameMessage(context, createListName)
+    // Read nav-bar inset from the Activity, not from the Dialog window.
+    // Compose Dialog + edge-to-edge (targetSdk 35) reports 0 navigationBars
+    // insets, so Modifier.navigationBarsPadding() inside Dialog is a no-op
+    // and the sheet sits under the 3-button / gesture bar.
+    val navigationBarBottom = rememberNavigationBarsBottomPadding()
 
     if (showCreateListPrompt) {
         NameListDialog(
@@ -92,9 +105,12 @@ fun AddToListSheet(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+        ),
     ) {
-        AppDialogWindowChrome()
+        AppDialogWindowChrome(edgeToEdge = true)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -111,8 +127,8 @@ fun AddToListSheet(
                 tonalElevation = 0.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .padding(horizontal = 8.dp)
+                    .padding(bottom = 8.dp + navigationBarBottom)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -259,4 +275,25 @@ private fun SheetListRow(
             )
         }
     }
+}
+
+@Composable
+private fun rememberNavigationBarsBottomPadding(): Dp {
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val composeBottomPx = WindowInsets.navigationBars.getBottom(density)
+    val activityBottomPx = activityNavigationBarBottomPx(view)
+    return with(density) { max(composeBottomPx, activityBottomPx).toDp() }
+}
+
+private fun activityNavigationBarBottomPx(view: View): Int {
+    var ctx = view.context
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) {
+            val insets = ViewCompat.getRootWindowInsets(ctx.window.decorView)
+            return insets?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0
+        }
+        ctx = ctx.baseContext
+    }
+    return 0
 }
