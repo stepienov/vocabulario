@@ -1,6 +1,9 @@
 package com.vocabulario.app.ui.practice
 
+import com.vocabulario.app.data.RelatedMembership
+import com.vocabulario.app.data.RelatedMembershipIndex
 import com.vocabulario.app.data.api.ChoiceOption
+import com.vocabulario.app.data.lemmaKeys
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -46,14 +49,82 @@ class PracticeChoiceAddTest {
         )
     }
 
+    @Test
+    fun onListHiddenUntilRevealedWrong() {
+        val learned = wrong(text = "pensativo", lemma = "pensativo", inLearning = true)
+        assertFalse(learned.showQuizOnList(revealedWrong = false, learningLemmas = emptySet()))
+        assertTrue(learned.showQuizOnList(revealedWrong = true, learningLemmas = emptySet()))
+        assertNull(learned.quizListChipLabel(false, emptySet(), RelatedMembershipIndex.Empty, "Uczę się"))
+        assertEquals(
+            "Uczę się",
+            learned.quizListChipLabel(true, emptySet(), RelatedMembershipIndex.Empty, "Uczę się"),
+        )
+    }
+
+    @Test
+    fun onListHiddenForCorrectAnswer() {
+        val correct = ChoiceOption(
+            text = "limitado",
+            lemma_l2 = "limitado",
+            in_learning = true,
+            is_correct = true,
+        )
+        assertFalse(correct.showQuizOnList(revealedWrong = true, learningLemmas = emptySet()))
+        assertNull(correct.quizListChipLabel(true, emptySet(), RelatedMembershipIndex.Empty, "Uczę się"))
+    }
+
+    @Test
+    fun onListUsesCustomListNameFromMembership() {
+        val choice = wrong(text = "torpe", lemma = "torpe", pos = "adj")
+        val membership = RelatedMembershipIndex(
+            listOf(
+                RelatedMembership(
+                    displayLemma = "torpe",
+                    listName = "Przymiotniki",
+                    isSystemList = false,
+                    cardId = "c1",
+                    pos = "adj",
+                    lemmaKeys = lemmaKeys("torpe"),
+                ),
+            ),
+        )
+        assertEquals(
+            "Przymiotniki",
+            choice.quizListChipLabel(true, emptySet(), membership, "Uczę się"),
+        )
+    }
+
+    @Test
+    fun onListUsesLocalizedSystemListName() {
+        val choice = wrong(text = "específico", lemma = "específico", pos = "adj", inLearning = true)
+        val membership = RelatedMembershipIndex(
+            listOf(
+                RelatedMembership(
+                    displayLemma = "específico",
+                    listName = "Learning",
+                    isSystemList = true,
+                    cardId = "c1",
+                    pos = "adj",
+                    lemmaKeys = lemmaKeys("específico"),
+                ),
+            ),
+        )
+        assertEquals(
+            "Uczę się",
+            choice.quizListChipLabel(true, emptySet(), membership, "Uczę się"),
+        )
+    }
+
     private fun wrong(
         text: String,
         lemma: String?,
         inLearning: Boolean = false,
+        pos: String? = null,
     ) = ChoiceOption(
         text = text,
         lemma_l2 = lemma,
         gloss = text,
+        pos = pos,
         in_learning = inLearning,
         is_correct = false,
     )

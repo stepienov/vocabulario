@@ -480,19 +480,39 @@ fun ChoiceTile(
     gloss: String? = null,
     showActions: Boolean = false,
     onAddLearning: (() -> Unit)? = null,
+    listChip: String? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
     if (showActions) {
+        val chipText = listChip?.takeIf { it.isNotBlank() }
         LemmaActionRow(
             lemma = text,
             gloss = gloss,
             modifier = Modifier.testTag(TestTags.PRACTICE_CHOICE),
+            belowGloss = if (chipText != null) {
+                {
+                    Spacer(Modifier.height(8.dp))
+                    TagChip(chipText)
+                }
+            } else {
+                null
+            },
             trailing = {
-                if (onAddLearning != null) {
-                    LemmaAddButton(
-                        onClick = onAddLearning,
-                        contentDescription = stringResource(R.string.cd_add_to_list),
-                    )
+                when {
+                    onAddLearning != null -> {
+                        LemmaAddButton(
+                            onClick = onAddLearning,
+                            contentDescription = stringResource(R.string.cd_add_to_list),
+                        )
+                    }
+                    chipText != null -> {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = stringResource(R.string.cd_on_list),
+                            tint = scheme.primary,
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
                 }
             },
         )

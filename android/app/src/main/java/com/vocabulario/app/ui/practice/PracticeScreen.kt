@@ -239,6 +239,7 @@ fun PracticeScreen(
                                     AnswerMode.CHOICE -> {
                                         prompt?.let { PromptCard(it) }
                                         Spacer(Modifier.height(20.dp))
+                                        val learningListLabel = stringResource(R.string.list_learning)
                                         LazyColumn(
                                             verticalArrangement = Arrangement.spacedBy(10.dp),
                                             modifier = Modifier.weight(1f),
@@ -255,6 +256,12 @@ fun PracticeScreen(
                                                     revealedWrong = disabled,
                                                     learningLemmas = state.learningLemmas,
                                                 )
+                                                val listChip = choice.quizListChipLabel(
+                                                    revealedWrong = disabled,
+                                                    learningLemmas = state.learningLemmas,
+                                                    membership = state.relatedMembership,
+                                                    systemListLabel = learningListLabel,
+                                                )
                                                 ChoiceTile(
                                                     text = displayText,
                                                     selected = false,
@@ -268,6 +275,7 @@ fun PracticeScreen(
                                                     } else {
                                                         null
                                                     },
+                                                    listChip = listChip,
                                                     onClick = { viewModel.submitChoice(choice) },
                                                 )
                                             }
