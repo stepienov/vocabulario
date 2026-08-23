@@ -86,6 +86,7 @@ fun LearningScreen(
                         profile = state.activeProfile,
                         onAddRelated = viewModel::openAddRelated,
                         learningLemmas = state.learningLemmas,
+                        relatedMembership = state.relatedMembership,
                     )
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = viewModel::clearSelection) {

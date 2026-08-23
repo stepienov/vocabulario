@@ -20,7 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,7 +49,8 @@ import androidx.compose.ui.res.stringResource
 import com.vocabulario.app.R
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.LanguagePacks
-import com.vocabulario.app.data.containsLemma
+import com.vocabulario.app.data.RelatedMembershipIndex
+import com.vocabulario.app.data.formatLemmaWithArticle
 import com.vocabulario.app.data.conjugationFromContent
 import com.vocabulario.app.data.asJsonArray
 import com.vocabulario.app.data.asJsonObject
@@ -89,6 +90,7 @@ fun FlashcardBackContent(
     profile: LanguageProfileResponse? = null,
     onAddRelated: ((RelatedWord) -> Unit)? = null,
     learningLemmas: Set<String> = emptySet(),
+    relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
 ) {
     val lemma = content["lemma"].asJsonString() ?: lemmaFallback
     val pos = content["pos"].asJsonString()
@@ -321,7 +323,7 @@ fun FlashcardBackContent(
                     expanded = synExpanded,
                     onToggle = { synExpanded = !synExpanded },
                 ) {
-                    RelatedWordsList(synonymsL2, onAddRelated, learningLemmas)
+                    RelatedWordsList(synonymsL2, onAddRelated, learningLemmas, relatedMembership)
                 }
             }
             if (showAntonyms && antonymsL2.isNotEmpty()) {
@@ -330,7 +332,7 @@ fun FlashcardBackContent(
                     expanded = antExpanded,
                     onToggle = { antExpanded = !antExpanded },
                 ) {
-                    RelatedWordsList(antonymsL2, onAddRelated, learningLemmas)
+                    RelatedWordsList(antonymsL2, onAddRelated, learningLemmas, relatedMembership)
                 }
             }
         }
@@ -341,7 +343,7 @@ fun FlashcardBackContent(
                 expanded = familyExpanded,
                 onToggle = { familyExpanded = !familyExpanded },
             ) {
-                RelatedWordsList(wordFamilyL2, onAddRelated, learningLemmas)
+                RelatedWordsList(wordFamilyL2, onAddRelated, learningLemmas, relatedMembership)
             }
         }
 
@@ -428,24 +430,43 @@ private fun RelatedWordsList(
     words: List<RelatedWord>,
     onAdd: ((RelatedWord) -> Unit)?,
     learningLemmas: Set<String> = emptySet(),
+    relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         words.forEach { word ->
+            val hit = relatedMembership.find(word.lemma, word.pos)
             LemmaActionRow(
-                lemma = word.lemma,
+                lemma = hit?.displayLemma ?: formatLemmaWithArticle(word.lemma, word.article),
                 gloss = word.glossL1,
                 belowGloss = {
-                    word.pos?.takeIf { it.isNotBlank() }?.let { pos ->
-                        Spacer(Modifier.height(8.dp))
-                        TagChip(localizedPosLabel(pos).ifBlank { pos })
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        word.pos?.takeIf { it.isNotBlank() }?.let { pos ->
+                            TagChip(localizedPosLabel(pos).ifBlank { pos })
+                        }
+                        if (hit != null) {
+                            TagChip(
+                                if (hit.isSystemList) stringResource(R.string.list_learning)
+                                else hit.listName,
+                            )
+                        }
                     }
                 },
                 trailing = {
-                    if (onAdd != null && !learningLemmas.containsLemma(word.lemma)) {
-                        LemmaAddButton(
-                            onClick = { onAdd(word) },
-                            contentDescription = stringResource(R.string.action_add),
-                        )
+                    when {
+                        hit != null -> {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = stringResource(R.string.cd_on_list),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+                        onAdd != null -> {
+                            LemmaAddButton(
+                                onClick = { onAdd(word) },
+                                contentDescription = stringResource(R.string.action_add),
+                            )
+                        }
                     }
                 },
             )
@@ -464,6 +485,7 @@ private fun parseFlashRelatedWords(raw: JsonArray?): List<RelatedWord> {
                     lemma = lemma,
                     glossL1 = el["gloss_l1"].asJsonString() ?: el["gloss"].asJsonString(),
                     pos = el["pos"].asJsonString(),
+                    article = el["article"].asJsonString(),
                 )
             }
             is JsonPrimitive -> {

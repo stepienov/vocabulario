@@ -9,6 +9,7 @@ import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.api.isWordAlreadyOnList
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.RelatedMembershipIndex
 import com.vocabulario.app.data.containsLemma
 import com.vocabulario.app.data.lemmaKeys
 import com.vocabulario.app.data.normalizeTenseKeys
@@ -36,6 +37,7 @@ data class LearningUiState(
     val error: String? = null,
     val message: String? = null,
     val learningLemmas: Set<String> = emptySet(),
+    val relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
     val addTarget: RelatedWord? = null,
     val lists: List<WordListResponse> = emptyList(),
     val pickListOpen: Boolean = false,
@@ -71,6 +73,8 @@ class LearningViewModel @Inject constructor(
                         activeProfile = profile,
                         learningLemmas = cards.flatMap { lemmaKeys(it.lemma_l2) }.toSet() +
                             _state.value.learningLemmas,
+                        relatedMembership = runCatching { repository.relatedMembershipIndex() }
+                            .getOrDefault(RelatedMembershipIndex.Empty),
                     )
                     startPollingIfNeeded(cards)
                 }
@@ -92,7 +96,9 @@ class LearningViewModel @Inject constructor(
     }
 
     fun openAddRelated(word: RelatedWord) {
-        if (_state.value.learningLemmas.containsLemma(word.lemma)) {
+        if (_state.value.relatedMembership.find(word.lemma, word.pos) != null ||
+            _state.value.learningLemmas.containsLemma(word.lemma)
+        ) {
             markLemmaAdded(word.lemma)
             return
         }

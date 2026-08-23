@@ -301,13 +301,13 @@ Zwróć WYŁĄCZNIE JSON:
     }}
   ],
   "synonyms_l2": [
-    {{"lemma": "synonim w L2", "pos": "ta sama część mowy co lemat", "gloss_l1": "tłumaczenie na {native}"}}
+    {{"lemma": "synonim w L2 bez rodzajnika w lemma", "pos": "ta sama część mowy co lemat", "article": null, "gloss_l1": "tłumaczenie na {native}"}}
   ],
   "antonyms_l2": [
-    {{"lemma": "antonim w L2", "pos": "ta sama część mowy co lemat", "gloss_l1": "tłumaczenie na {native}"}}
+    {{"lemma": "antonim w L2", "pos": "ta sama część mowy co lemat", "article": null, "gloss_l1": "tłumaczenie na {native}"}}
   ],
   "word_family_l2": [
-    {{"lemma": "wyraz pokrewny w L2 (inny od lematu)", "pos": "noun|verb|adj|...", "gloss_l1": "tłumaczenie na {native}"}}
+    {{"lemma": "wyraz pokrewny w L2 (stem, bez rodzajnika)", "pos": "noun|verb|adj|...", "article": "el|la|l'|ال|null", "gloss_l1": "tłumaczenie na {native}"}}
   ],
   "notes": null,
   "confidence": 0.95
@@ -355,7 +355,12 @@ Synonim = inne słowo TEJ SAMEJ części mowy, które w tym znaczeniu można uż
 ZAMIAST gloss_l1 (L1) lub lematu (L2).
 
 synonyms_l1: tylko {native}, ta sama POS co gloss_l1.
-synonyms_l2 / antonyms_l2: obiekty {{lemma, pos, gloss_l1}}, ta sama POS co lemat.
+synonyms_l2 / antonyms_l2: obiekty {{lemma, pos, article, gloss_l1}}, ta sama POS co lemat.
+Pole article: tylko rzeczowniki w es/fr/de/it/pt-br/pt-pt/ar — dokładny rodzajnik słownikowy
+  (es el/la/los/las, fr le/la/les/l', de der/die/das, it il/lo/la/l'/i/gli/le,
+  pt o/a/os/as, ar ال). lemma BEZ rodzajnika. Czasownik/przymiotnik/przysłówek: article=null.
+en/pl/ru/zh/ja/ko/hi/tr/vi: article zawsze null (nawet dla rzeczownika).
+NIE zgaduj rodzajnika z końcówki. Jeśli nie znasz — article=null (wpis może zostać pominięty).
 ZAKAZ w synonyms_l2 / antonyms_l2: inna POS, derywaty z tej samej rodziny
   wyrazów, ogólniki, powtórzenia lematu.
 
@@ -369,8 +374,9 @@ Wyrazy pokrewne (word_family_l2) — rodzina wyrazów / wspólny rdzeń:
 - ZAKAZ: powtórzenie lematu karty, synonimy/antonimy bez wspólnego rdzenia,
   formy fleksyjne tego samego lematu (odmiana → conjugation, nie tu),
   kolokacje wielowyrazowe, hapaxy i neologizmy.
-- Format: obiekty {{lemma, pos, gloss_l1}} — pole pos OBOWIĄZKOWE
-  (noun|verb|adj|adv|…), nigdy puste.
+- Format: obiekty {{lemma, pos, article, gloss_l1}} — pole pos OBOWIĄZKOWE
+  (noun|verb|adj|adv|…), nigdy puste. article jak wyżej (rzeczownik z rodzajnikiem
+  w językach cytacji; w przeciwnym razie null). lemma bez powtórzonego rodzajnika.
 """
 
 ENRICHMENT_CORE_DYNAMIC_V1 = """SŁOWO DO PRZYGOTOWANIA:

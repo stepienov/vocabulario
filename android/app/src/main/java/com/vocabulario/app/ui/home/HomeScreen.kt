@@ -281,6 +281,7 @@ fun HomeScreen(
             onDismiss = viewModel::dismissCardDetail,
             onAddRelated = viewModel::openAddRelated,
             learningLemmas = state.learningLemmas,
+            relatedMembership = state.relatedMembership,
             addSheet = { HomeAddToListSheet(state = state, viewModel = viewModel) },
         )
     }

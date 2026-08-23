@@ -16,4 +16,12 @@ class RelatedWordAddTest {
         assertEquals("noun", candidate.pos)
         assertEquals(false, candidate.onList)
     }
+
+    @Test
+    fun relatedNounJoinsArticleIntoCandidateLemma() {
+        val candidate = relatedWordToCandidate(
+            RelatedWord(lemma = "alcance", glossL1 = "zasięg", pos = "noun", article = "el"),
+        )
+        assertEquals("el alcance", candidate.lemma)
+    }
 }

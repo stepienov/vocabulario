@@ -586,6 +586,34 @@ class LLMService:
             prompt_dynamic=dynamic,
         )
 
+    async def repair_related_articles(
+        self,
+        items: list[dict],
+        learning_lang: str | None,
+    ) -> dict[str, Any]:
+        """Return {articles: {lemma: article}} for nouns still missing a citation article."""
+        if self.mock or not items:
+            return {"articles": {}}
+        lines = "\n".join(
+            f"- lemma={item.get('lemma')!r} pos={item.get('pos')!r}"
+            for item in items
+        )
+        prompt = (
+            f"Language: {learning_lang}\n"
+            "For each noun, give the dictionary citation article only "
+            "(es: el/la/los/las; fr: le/la/les/l'; de: der/die/das; "
+            "it: il/lo/la/l'/i/gli/le; pt: o/a/os/as; ar: ال). "
+            "Copy the real article — do not invent from gender charts. "
+            "If unsure, omit that lemma.\n"
+            f"{lines}\n"
+            'JSON: {"articles": {"lemma": "article"}}'
+        )
+        return await self._chat_json(
+            self.light_model,
+            prompt,
+            system="Return only JSON with an articles object. Never invent articles.",
+        )
+
     async def generate_examples(
         self,
         lemma: str,

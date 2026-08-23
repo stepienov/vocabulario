@@ -1,5 +1,6 @@
 package com.vocabulario.app.data
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,5 +23,13 @@ class LemmaKeysTest {
         val lemmas = lemmaKeys("banco")
         assertTrue(lemmas.containsLemma("el banco"))
         assertTrue(lemmas.containsLemma("la banco"))
+    }
+
+    @Test
+    fun lemmaKey_stripsArabicDefiniteArticle() {
+        assertEquals("كتاب", lemmaKey("الكتاب"))
+        val keys = lemmaKeys("الكتاب")
+        assertTrue(keys.containsLemma("كتاب"))
+        assertTrue(keys.containsLemma("الكتاب"))
     }
 }

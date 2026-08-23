@@ -109,17 +109,22 @@ def _normalize_related_words(
     raw: object,
     *,
     fallback_pos: str | None,
+    learning_lang: str | None = None,
 ) -> list[dict]:
-    """synonyms_l2 / antonyms_l2 zawsze jako {lemma, pos, gloss_l1}."""
+    """synonyms_l2 / antonyms_l2 / word_family_l2 as {lemma, pos, gloss_l1, article}."""
+    from app.services.related_articles import attach_article, drop_related_missing_articles
+
     if not isinstance(raw, list):
         return []
     result: list[dict] = []
     seen: set[str] = set()
     for item in raw:
+        raw_article: object = None
         if isinstance(item, dict) and item.get("lemma"):
             lemma = str(item["lemma"]).strip()
             gloss = str(item.get("gloss_l1") or item.get("gloss") or "").strip()
             pos = _resolve_pos(item.get("pos")) or _resolve_pos(fallback_pos)
+            raw_article = item.get("article")
         elif isinstance(item, str) and item.strip():
             lemma = item.strip()
             gloss = ""
@@ -133,8 +138,8 @@ def _normalize_related_words(
         entry = {"lemma": lemma, "gloss_l1": gloss or "?"}
         if pos:
             entry["pos"] = pos
-        result.append(entry)
-    return result
+        result.append(attach_article(entry, raw_article, learning_lang))
+    return drop_related_missing_articles(result, learning_lang)
 
 
 def _normalize_usages(meanings: list[dict]) -> None:

@@ -358,6 +358,14 @@ class LearningRepository @Inject constructor(
             .toSet()
     }
 
+    suspend fun relatedMembershipIndex(): RelatedMembershipIndex {
+        val profileId = activeProfileId()
+        return buildRelatedMembershipIndex(
+            offlineStore.allCards(profileId),
+            offlineStore.localLists(profileId),
+        )
+    }
+
     suspend fun isLemmaOnLearningList(lemma: String): Boolean =
         learningLemmaSet().containsLemma(lemma)
 
@@ -685,16 +693,27 @@ class LearningRepository @Inject constructor(
         )
     }
 
-    suspend fun getDistractors(cardId: String, direction: String): DistractorsResponse {
+    data class DistractorsPick(
+        val response: DistractorsResponse,
+        val usedListKeys: List<String>,
+        val unusedPoolWasEmpty: Boolean,
+    )
+
+    suspend fun getDistractors(
+        cardId: String,
+        direction: String,
+        usedKeys: Set<String> = emptySet(),
+    ): DistractorsPick {
         val profileId = activeProfileId()
-        return localDistractors(profileId, cardId, direction)
+        return localDistractors(profileId, cardId, direction, usedKeys)
     }
 
     private suspend fun localDistractors(
         profileId: String,
         cardId: String,
         direction: String,
-    ): DistractorsResponse {
+        usedKeys: Set<String>,
+    ): DistractorsPick {
         val card = offlineStore.cardById(cardId) ?: error("offline_card")
         val content = offlineStore.parseContent(card.contentJson)
         val correctText = if (direction == "l2_to_l1") {
@@ -702,93 +721,43 @@ class LearningRepository @Inject constructor(
         } else {
             card.lemmaL2
         }
-        val others = offlineStore.allCards(profileId).filter { it.id != cardId }
-        fun findLearning(lemma: String?) =
-            lemmaKeys(lemma).takeIf { it.isNotEmpty() }?.let { keys ->
-                others.firstOrNull { lemmaKeys(it.lemmaL2).any { key -> key in keys } }
-            }
-        data class DistSeed(val text: String, val lemmaL2: String?, val gloss: String?, val pos: String?)
-        val seeds = linkedMapOf<String, DistSeed>()
-        fun maybeAdd(text: String?, lemmaL2: String?, gloss: String?, pos: String?) {
-            val t = text?.trim().orEmpty()
-            if (t.isBlank() || !isValidPracticeDistractor(t)) return
-            if (t.equals(correctText, ignoreCase = true)) return
-            seeds.putIfAbsent(t.lowercase(), DistSeed(t, lemmaL2, gloss, pos))
-        }
-        others.forEach { o ->
-            val text = if (direction == "l2_to_l1") o.glossPrimary ?: o.lemmaL2 else o.lemmaL2
-            maybeAdd(text, o.lemmaL2, o.glossPrimary, o.pos)
-        }
-        content["similar_words"].asJsonArray()?.forEach { el ->
-            val lemma = when (el) {
-                is kotlinx.serialization.json.JsonObject -> el["lemma"].asJsonString()
-                is kotlinx.serialization.json.JsonPrimitive -> el.content
-                else -> null
-            }
-            val gloss = (el as? kotlinx.serialization.json.JsonObject)?.get("gloss_l1")?.asJsonString()
-            val pos = (el as? kotlinx.serialization.json.JsonObject)?.get("pos")?.asJsonString()
-            val text = if (direction == "l2_to_l1") {
-                gloss?.takeIf { it.isNotBlank() } ?: lemma
-            } else {
-                lemma
-            }
-            maybeAdd(text, lemma, gloss, pos)
-        }
-        val options = buildList {
-            add(
-                ChoiceOption(
-                    text = correctText,
-                    lemma_l2 = card.lemmaL2,
-                    gloss = card.glossPrimary,
-                    pos = card.pos,
-                    card_id = card.id,
-                    in_learning = true,
-                    is_correct = true,
-                ),
-            )
-            val used = mutableSetOf(correctText.lowercase())
-            for (seed in seeds.values) {
-                if (size >= 8) break
-                if (!used.add(seed.text.lowercase())) continue
-                val source = findLearning(seed.lemmaL2)
+        val listCards = offlineStore.learningCards(profileId)
+            .filter { it.id != cardId }
+            .map { DistractorCard(it.id, it.lemmaL2, it.glossPrimary, it.pos) }
+        val similar = buildList {
+            content["similar_words"].asJsonArray()?.forEach { el ->
+                val obj = el as? kotlinx.serialization.json.JsonObject
+                val lemma = when (el) {
+                    is kotlinx.serialization.json.JsonObject -> el["lemma"].asJsonString()
+                    is kotlinx.serialization.json.JsonPrimitive -> el.content
+                    else -> null
+                }?.trim().orEmpty()
+                if (lemma.isEmpty()) return@forEach
                 add(
-                    ChoiceOption(
-                        text = seed.text,
-                        lemma_l2 = distractorLemmaL2(
-                            direction,
-                            source?.lemmaL2 ?: seed.lemmaL2,
-                            seed.text,
-                        ),
-                        gloss = seed.gloss ?: source?.glossPrimary,
-                        pos = seed.pos ?: source?.pos,
-                        card_id = source?.id,
-                        in_learning = source != null,
-                        is_correct = false,
+                    SimilarWordSeed(
+                        lemma = lemma,
+                        glossL1 = obj?.get("gloss_l1")?.asJsonString(),
+                        pos = obj?.get("pos")?.asJsonString(),
                     ),
                 )
             }
-            for (o in others.shuffled()) {
-                if (size >= 8) break
-                val text = if (direction == "l2_to_l1") {
-                    o.glossPrimary ?: o.lemmaL2
-                } else {
-                    o.lemmaL2
-                }
-                if (text.isBlank() || !isValidPracticeDistractor(text) || !used.add(text.lowercase())) continue
-                add(
-                    ChoiceOption(
-                        text = text,
-                        lemma_l2 = o.lemmaL2,
-                        gloss = o.glossPrimary,
-                        pos = o.pos,
-                        card_id = o.id,
-                        in_learning = true,
-                        is_correct = false,
-                    ),
-                )
-            }
-        }.shuffled()
-        return DistractorsResponse(options = options, direction = direction)
+        }
+        val picked = pickChoiceDistractors(
+            direction = direction,
+            correctText = correctText,
+            correctLemmaL2 = card.lemmaL2,
+            correctGloss = card.glossPrimary,
+            correctPos = card.pos,
+            correctCardId = card.id,
+            listCards = listCards,
+            similar = similar,
+            usedKeys = usedKeys,
+        )
+        return DistractorsPick(
+            response = DistractorsResponse(options = picked.options, direction = direction),
+            usedListKeys = picked.usedListKeys,
+            unusedPoolWasEmpty = picked.unusedPoolWasEmpty,
+        )
     }
 
     suspend fun cardSrsSnapshot(cardId: String): SyncSrsState? =

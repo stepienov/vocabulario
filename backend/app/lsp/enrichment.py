@@ -177,13 +177,16 @@ def assemble_core_card(
     )
     meanings = meanings[:MAX_MEANINGS]
     pos_for_related = pos_final if pos_final != "unknown" else None
+    lang = profile.learning_lang
     synonyms = _normalize_related_words(
-        core.get("synonyms_l2"), fallback_pos=pos_for_related
+        core.get("synonyms_l2"), fallback_pos=pos_for_related, learning_lang=lang
     )
     antonyms = _normalize_related_words(
-        core.get("antonyms_l2"), fallback_pos=pos_for_related
+        core.get("antonyms_l2"), fallback_pos=pos_for_related, learning_lang=lang
     )
-    family = _normalize_related_words(core.get("word_family_l2"), fallback_pos=None)
+    family = _normalize_related_words(
+        core.get("word_family_l2"), fallback_pos=None, learning_lang=lang
+    )
     lemma_key = lemma_final.casefold().strip()
     family = [w for w in family if (w.get("lemma") or "").casefold().strip() != lemma_key][:10]
 
@@ -330,6 +333,9 @@ async def run_lemma_enrichment(
         _cancel_if_pending(inflection_task)
         raise
 
+    from app.services.related_articles import fill_related_articles_on_core
+
+    await fill_related_articles_on_core(llm, core, profile.learning_lang)
     card = assemble_core_card(profile, lemma, pos_lookup, core)
     lemma_final = card.get("lemma") or lemma
     pos_final = card.get("pos") or pos_lookup

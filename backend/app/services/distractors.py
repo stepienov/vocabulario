@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.lsp.lang_utils import articles_for
 from app.models import LanguageProfile, LearningCard
+from app.services.pos_normalize import normalize_pos_bucket
 
 
 def _lemma_key(raw: str | None, articles: frozenset[str]) -> str:
@@ -16,7 +17,7 @@ def _lemma_key(raw: str | None, articles: frozenset[str]) -> str:
         return ""
     parts = lower.split()
     rest = " ".join(parts[1:]) if len(parts) > 1 and parts[0] in articles else lower
-    return rest.removeprefix("l'").removeprefix("l’")
+    return rest.removeprefix("l'").removeprefix("l’").removeprefix("ال")
 
 
 def lemma_keys(raw: str | None, articles: frozenset[str]) -> set[str]:
@@ -50,10 +51,16 @@ async def generate_choice_options(
 ) -> list[dict]:
     """Zawsze 8 opcji: 1 poprawna + do 3 z nauki (ta sama POS) + reszta z similar_words (12 z karty)."""
     content = card.content or {}
+    want_pos = normalize_pos_bucket(card.pos)
     similar_pool = [
         s
         for s in similar_words_from_content(content)
         if s.get("lemma", "").lower() != card.lemma_l2.lower()
+        and (
+            want_pos == "unknown"
+            or not s.get("pos")
+            or normalize_pos_bucket(s.get("pos")) in (want_pos, "unknown")
+        )
     ]
     random.shuffle(similar_pool)
 
@@ -65,7 +72,13 @@ async def generate_choice_options(
         )
     )
     others = list(result.scalars().all())
-    same_pos = [c for c in others if c.pos == card.pos] if card.pos else list(others)
+    if want_pos == "unknown" or not card.pos:
+        same_pos = list(others)
+    else:
+        same_pos = [
+            c for c in others
+            if (bucket := normalize_pos_bucket(c.pos)) == want_pos or bucket == "unknown"
+        ]
     articles = articles_for(profile.learning_lang)
     learning_keys: set[str] = set()
     for learned in others:

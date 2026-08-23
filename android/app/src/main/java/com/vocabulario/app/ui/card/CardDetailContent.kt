@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.Icon
@@ -32,7 +33,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vocabulario.app.R
 import com.vocabulario.app.data.LanguagePacks
-import com.vocabulario.app.data.containsLemma
+import com.vocabulario.app.data.RelatedMembershipIndex
+import com.vocabulario.app.data.formatLemmaWithArticle
 import com.vocabulario.app.data.conjugationFromContent
 import com.vocabulario.app.data.asJsonArray
 import com.vocabulario.app.data.asJsonObject
@@ -54,6 +56,7 @@ data class RelatedWord(
     val lemma: String,
     val glossL1: String?,
     val pos: String?,
+    val article: String? = null,
 )
 
 private fun parseRelatedWords(raw: JsonArray?): List<RelatedWord> {
@@ -67,6 +70,7 @@ private fun parseRelatedWords(raw: JsonArray?): List<RelatedWord> {
                     lemma = lemma,
                     glossL1 = el["gloss_l1"].asJsonString() ?: el["gloss"].asJsonString(),
                     pos = el["pos"].asJsonString(),
+                    article = el["article"].asJsonString(),
                 )
             }
             is JsonPrimitive -> {
@@ -93,6 +97,7 @@ fun CardDetailContent(
     profile: LanguageProfileResponse? = null,
     onAddRelated: ((RelatedWord) -> Unit)? = null,
     learningLemmas: Set<String> = emptySet(),
+    relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
     /** Gdy false — przewijanie obsługuje rodzic (np. pełny widok z listy). */
     scrollable: Boolean = true,
 ) {
@@ -247,6 +252,7 @@ fun CardDetailContent(
                 words = synonymsL2,
                 onAdd = onAddRelated,
                 learningLemmas = learningLemmas,
+                relatedMembership = relatedMembership,
             )
         }
 
@@ -274,6 +280,7 @@ fun CardDetailContent(
                 words = synonymsL2,
                 onAdd = onAddRelated,
                 learningLemmas = learningLemmas,
+                relatedMembership = relatedMembership,
             )
         }
 
@@ -283,6 +290,7 @@ fun CardDetailContent(
                 words = antonymsL2,
                 onAdd = onAddRelated,
                 learningLemmas = learningLemmas,
+                relatedMembership = relatedMembership,
             )
         }
 
@@ -292,6 +300,7 @@ fun CardDetailContent(
                 words = wordFamilyL2,
                 onAdd = onAddRelated,
                 learningLemmas = learningLemmas,
+                relatedMembership = relatedMembership,
             )
         }
 
@@ -611,6 +620,7 @@ private fun RelatedWordsSection(
     words: List<RelatedWord>,
     onAdd: ((RelatedWord) -> Unit)?,
     learningLemmas: Set<String> = emptySet(),
+    relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
 ) {
     AppCard {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -633,13 +643,22 @@ private fun RelatedWordsSection(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
+                            val hit = relatedMembership.find(word.lemma, word.pos)
+                            val shownLemma = hit?.displayLemma
+                                ?: formatLemmaWithArticle(word.lemma, word.article)
                             Text(
-                                word.lemma,
+                                shownLemma,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )
                             word.pos?.takeIf { it.isNotBlank() }?.let { pos ->
                                 TagChip(localizedPosLabel(pos).ifBlank { pos })
+                            }
+                            if (hit != null) {
+                                TagChip(
+                                    if (hit.isSystemList) stringResource(R.string.list_learning)
+                                    else hit.listName,
+                                )
                             }
                         }
                         word.glossL1?.takeIf { it.isNotBlank() }?.let {
@@ -653,21 +672,32 @@ private fun RelatedWordsSection(
                             )
                         }
                     }
-                    if (onAdd != null && !learningLemmas.containsLemma(word.lemma)) {
-                        val scheme = MaterialTheme.colorScheme
-                        Surface(
-                            onClick = { onAdd(word) },
-                            shape = CircleShape,
-                            color = scheme.primary,
-                            contentColor = scheme.onPrimary,
-                            modifier = Modifier.size(40.dp),
-                        ) {
-                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = stringResource(R.string.action_add),
-                                    modifier = Modifier.size(22.dp),
-                                )
+                    val hit = relatedMembership.find(word.lemma, word.pos)
+                    when {
+                        hit != null -> {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = stringResource(R.string.cd_on_list),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+                        onAdd != null -> {
+                            val scheme = MaterialTheme.colorScheme
+                            Surface(
+                                onClick = { onAdd(word) },
+                                shape = CircleShape,
+                                color = scheme.primary,
+                                contentColor = scheme.onPrimary,
+                                modifier = Modifier.size(40.dp),
+                            ) {
+                                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                    Icon(
+                                        Icons.Default.Add,
+                                        contentDescription = stringResource(R.string.action_add),
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
                             }
                         }
                     }

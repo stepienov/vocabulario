@@ -8,7 +8,9 @@ import com.vocabulario.app.data.EnrichmentStatus
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.SYSTEM_LIST_NAME
+import com.vocabulario.app.data.RelatedMembershipIndex
 import com.vocabulario.app.data.containsLemma
+import com.vocabulario.app.data.formatLemmaWithArticle
 import com.vocabulario.app.data.isReservedListName
 import com.vocabulario.app.data.lemmaKeys
 import com.vocabulario.app.data.normalizePosKey
@@ -62,6 +64,7 @@ data class HomeUiState(
     val listWords: List<CardResponse> = emptyList(),
     val addTarget: LookupCandidate? = null,
     val learningLemmas: Set<String> = emptySet(),
+    val relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
     val detailCard: CardResponse? = null,
     val pickListOpen: Boolean = false,
     val createListName: String = "",
@@ -267,6 +270,7 @@ class HomeViewModel @Inject constructor(
         val words = selected?.let { runCatching { repository.cachedListWords(it) }.getOrNull() }
         val stats = runCatching { repository.dashboardStats(7) }.getOrNull()
         val learningLemmas = runCatching { repository.learningLemmaSet() }.getOrNull()
+        val relatedMembership = runCatching { repository.relatedMembershipIndex() }.getOrNull()
         val publishedWords = words ?: _state.value.listWords
         _state.value = _state.value.copy(
             lists = visible,
@@ -275,6 +279,7 @@ class HomeViewModel @Inject constructor(
             selectedWordIds = if (clearSelection) emptySet() else _state.value.selectedWordIds,
             stats = stats ?: _state.value.stats,
             learningLemmas = learningLemmas ?: _state.value.learningLemmas,
+            relatedMembership = relatedMembership ?: _state.value.relatedMembership,
             detailCard = syncDetailCard(publishedWords, _state.value.detailCard),
         )
         syncCandidatesFromRoom(visible, selected)
@@ -514,10 +519,12 @@ class HomeViewModel @Inject constructor(
             runCatching { repository.hydrateListIfEmpty(listId) }
                 .onSuccess { words ->
                     val lemmas = runCatching { repository.learningLemmaSet() }.getOrNull()
+                    val membership = runCatching { repository.relatedMembershipIndex() }.getOrNull()
                     _state.value = _state.value.copy(
                         listWords = words,
                         error = null,
                         learningLemmas = lemmas ?: _state.value.learningLemmas,
+                        relatedMembership = membership ?: _state.value.relatedMembership,
                         detailCard = syncDetailCard(words, _state.value.detailCard),
                     )
                     syncCandidatesFromRoom(_state.value.lists, listId)
@@ -754,8 +761,10 @@ class HomeViewModel @Inject constructor(
         _state.value = _state.value.copy(detailCard = card)
         viewModelScope.launch {
             val lemmas = runCatching { repository.learningLemmaSet() }.getOrNull() ?: return@launch
+            val membership = runCatching { repository.relatedMembershipIndex() }.getOrNull()
             _state.value = _state.value.copy(
                 learningLemmas = lemmas + _state.value.learningLemmas,
+                relatedMembership = membership ?: _state.value.relatedMembership,
             )
         }
     }
@@ -767,6 +776,7 @@ class HomeViewModel @Inject constructor(
 
     fun openAddRelated(word: RelatedWord) {
         if (word.lemma.isBlank()) return
+        if (_state.value.relatedMembership.find(word.lemma, word.pos) != null) return
         if (_state.value.learningLemmas.containsLemma(word.lemma)) return
         if (!networkMonitor.isCurrentlyOnline()) {
             _state.value = _state.value.copy(error = strings.get(R.string.import_online_only))
@@ -1830,7 +1840,7 @@ internal fun candidateMatchesCard(candidate: LookupCandidate, card: CardResponse
 }
 
 internal fun relatedWordToCandidate(word: RelatedWord) = LookupCandidate(
-    lemma = word.lemma,
+    lemma = formatLemmaWithArticle(word.lemma, word.article),
     pos = word.pos,
     gloss = word.glossL1.orEmpty(),
 )

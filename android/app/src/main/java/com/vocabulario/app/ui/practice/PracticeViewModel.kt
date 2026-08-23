@@ -10,6 +10,7 @@ import com.vocabulario.app.data.api.SyncSrsState
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.api.isWordAlreadyOnList
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.RelatedMembershipIndex
 import com.vocabulario.app.data.containsLemma
 import com.vocabulario.app.data.lemmaKeys
 import com.vocabulario.app.data.normalizeTenseKeys
@@ -92,6 +93,7 @@ data class PracticeUiState(
     val createListName: String = "",
     val learningLang: String = "es",
     val learningLemmas: Set<String> = emptySet(),
+    val relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
     val lastUndo: UndoFrame? = null,
     val isOnline: Boolean = true,
     val correctionOpen: Boolean = false,
@@ -125,6 +127,7 @@ class PracticeViewModel @Inject constructor(
     private var activityPollJob: Job? = null
 
     private var inputPref: String = "flashcard"
+    private val usedDistractorKeys = mutableSetOf<String>()
 
     init {
         viewModelScope.launch {
@@ -138,6 +141,7 @@ class PracticeViewModel @Inject constructor(
         viewModelScope.launch {
             val keepVisible = append || _state.value.queue.isNotEmpty()
             _state.value = _state.value.copy(loading = !keepVisible, error = null)
+            if (!append) usedDistractorKeys.clear()
             runCatching {
                 val settings = repository.getSettings()
                 val profile = repository.getActiveProfile()
@@ -150,12 +154,15 @@ class PracticeViewModel @Inject constructor(
                 val items = response.due + response.newCards
                 val learningLemmas = runCatching { repository.learningLemmaSet() }.getOrDefault(emptySet()) +
                     _state.value.learningLemmas
+                val relatedMembership = runCatching { repository.relatedMembershipIndex() }
+                    .getOrDefault(RelatedMembershipIndex.Empty)
                 if (items.isEmpty() && !append) {
                     _state.value = PracticeUiState(
                         loading = false,
                         emptyQueue = true,
                         isOnline = networkMonitor.isCurrentlyOnline(),
                         learningLemmas = learningLemmas,
+                        relatedMembership = relatedMembership,
                     )
                     return@onSuccess
                 }
@@ -169,6 +176,7 @@ class PracticeViewModel @Inject constructor(
                     userCefr = profile?.cefr_level ?: "A2",
                     learningLang = profile?.learning_lang ?: "en",
                     learningLemmas = learningLemmas,
+                    relatedMembership = relatedMembership,
                     isOnline = networkMonitor.isCurrentlyOnline(),
                     showUsages = settings.show_usages,
                     showExampleSentences = settings.show_example_sentences,
@@ -226,9 +234,11 @@ class PracticeViewModel @Inject constructor(
         val direction = currentDirection()
         viewModelScope.launch {
             _state.value = _state.value.copy(loadingChoices = true)
-            runCatching { repository.getDistractors(item.card_id, direction) }
-                .onSuccess { response ->
-                    val options = response.options.withLearningFlags(_state.value.learningLemmas)
+            runCatching { repository.getDistractors(item.card_id, direction, usedDistractorKeys) }
+                .onSuccess { pick ->
+                    if (pick.unusedPoolWasEmpty) usedDistractorKeys.clear()
+                    usedDistractorKeys += pick.usedListKeys
+                    val options = pick.response.options.withLearningFlags(_state.value.learningLemmas)
                     when {
                         options.size >= 2 -> {
                             _state.value = _state.value.copy(
@@ -378,7 +388,9 @@ class PracticeViewModel @Inject constructor(
             _state.value = _state.value.copy(error = strings.get(R.string.import_online_only))
             return
         }
-        if (_state.value.learningLemmas.containsLemma(word.lemma)) {
+        if (_state.value.relatedMembership.find(word.lemma, word.pos) != null ||
+            _state.value.learningLemmas.containsLemma(word.lemma)
+        ) {
             markLemmaAdded(word.lemma)
             return
         }

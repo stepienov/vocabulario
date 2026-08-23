@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vocabulario.app.R
+import com.vocabulario.app.data.RelatedMembershipIndex
 import com.vocabulario.app.data.asJsonString
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.LanguageProfileResponse
@@ -40,6 +41,7 @@ fun ListCardDetailOverlay(
     onDismiss: () -> Unit,
     onAddRelated: ((RelatedWord) -> Unit)? = null,
     learningLemmas: Set<String> = emptySet(),
+    relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
     addSheet: @Composable () -> Unit = {},
 ) {
     BackHandler(onBack = onDismiss)
@@ -100,6 +102,7 @@ fun ListCardDetailOverlay(
                         profile = profile,
                         onAddRelated = onAddRelated,
                         learningLemmas = learningLemmas,
+                        relatedMembership = relatedMembership,
                     )
                 }
             }

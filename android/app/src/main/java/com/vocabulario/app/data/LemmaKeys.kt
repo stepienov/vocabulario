@@ -18,7 +18,7 @@ fun lemmaKey(raw: String?): String {
     } else {
         lower
     }
-    return rest.removePrefix("l'").removePrefix("l’")
+    return rest.removePrefix("l'").removePrefix("l’").removePrefix("ال")
 }
 
 fun lemmaKeys(raw: String?): Set<String> {
