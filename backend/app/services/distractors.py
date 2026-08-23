@@ -32,6 +32,23 @@ def in_learning_lemma(raw: str | None, learning_keys: set[str], articles: frozen
     return bool(keys and keys & learning_keys)
 
 
+_VERBAL_QUIZ_POS = frozenset({"verb", "phrase", "construction"})
+_PHRASE_LIKE_QUIZ_POS = frozenset({"phrase", "construction"})
+
+
+def quiz_pos_matches(want_pos: str, candidate_pos: str | None, *, family: bool = False) -> bool:
+    """Unknown never matches everything. Phrase/construction may fill from verbs."""
+    want = normalize_pos_bucket(want_pos)
+    got = normalize_pos_bucket(candidate_pos)
+    if want == "unknown" or got == "unknown":
+        return False
+    if got == want:
+        return True
+    if not family:
+        return False
+    return want in _PHRASE_LIKE_QUIZ_POS and got in _VERBAL_QUIZ_POS
+
+
 def similar_words_from_content(content: dict) -> list[dict]:
     raw = content.get("similar_words") or []
     result: list[dict] = []
@@ -52,17 +69,15 @@ async def generate_choice_options(
     """Zawsze 8 opcji: 1 poprawna + do 3 z nauki (ta sama POS) + reszta z similar_words (12 z karty)."""
     content = card.content or {}
     want_pos = normalize_pos_bucket(card.pos)
-    similar_pool = [
+    similar_all = [
         s
         for s in similar_words_from_content(content)
         if s.get("lemma", "").lower() != card.lemma_l2.lower()
-        and (
-            want_pos == "unknown"
-            or not s.get("pos")
-            or normalize_pos_bucket(s.get("pos")) in (want_pos, "unknown")
-        )
     ]
-    random.shuffle(similar_pool)
+    similar_exact = [s for s in similar_all if quiz_pos_matches(want_pos, s.get("pos"), family=False)]
+    similar_family = [s for s in similar_all if quiz_pos_matches(want_pos, s.get("pos"), family=True)]
+    random.shuffle(similar_exact)
+    random.shuffle(similar_family)
 
     result = await db.execute(
         select(LearningCard).where(
@@ -72,13 +87,8 @@ async def generate_choice_options(
         )
     )
     others = list(result.scalars().all())
-    if want_pos == "unknown" or not card.pos:
-        same_pos = list(others)
-    else:
-        same_pos = [
-            c for c in others
-            if (bucket := normalize_pos_bucket(c.pos)) == want_pos or bucket == "unknown"
-        ]
+    exact_pos = [c for c in others if quiz_pos_matches(want_pos, c.pos, family=False)]
+    family_pos = [c for c in others if quiz_pos_matches(want_pos, c.pos, family=True)]
     articles = articles_for(profile.learning_lang)
     learning_keys: set[str] = set()
     for learned in others:
@@ -144,33 +154,43 @@ async def generate_choice_options(
         used_texts.add(text.lower())
         return True
 
-    from_learning = random.sample(same_pos, min(3, len(same_pos)))
+    from_learning = random.sample(exact_pos, min(3, len(exact_pos)))
     for c in from_learning:
         try_add(from_learned(c))
 
-    for s in similar_pool:
-        if len(distractors) >= 7:
-            break
-        try_add(from_similar(s))
-
-    if len(distractors) < 7:
-        for s in similar_pool:
+    def add_similar(pool: list[dict], *, alt_text: bool = False) -> None:
+        for s in pool:
             if len(distractors) >= 7:
                 break
+            if not alt_text:
+                try_add(from_similar(s))
+                continue
             lemma = s.get("lemma") or "?"
             gloss = s.get("gloss_l1") or "?"
             if direction == "l2_to_l1":
-                alt = f"{gloss} ({lemma})"
                 opt = from_similar(s)
-                opt["text"] = alt
+                opt["text"] = f"{gloss} ({lemma})"
                 try_add(opt)
             else:
                 try_add(from_similar(s))
 
+    add_similar(similar_exact)
+    for c in exact_pos:
+        if len(distractors) >= 7:
+            break
+        try_add(from_learned(c))
+    add_similar(similar_family)
+    for c in family_pos:
+        if len(distractors) >= 7:
+            break
+        try_add(from_learned(c))
+    if len(distractors) < 7:
+        add_similar(similar_exact, alt_text=True)
+
     if len(distractors) < 7:
         raise ValueError(
             f"Karta „{card.lemma_l2}” nie ma wystarczającej listy similar_words "
-            f"({len(similar_pool)} pozycji, potrzeba {7 - len(distractors)} więcej). "
+            f"({len(similar_exact)} pozycji, potrzeba {7 - len(distractors)} więcej). "
             "Dodaj słowo ponownie lub uruchom uzupełnienie karty."
         )
 

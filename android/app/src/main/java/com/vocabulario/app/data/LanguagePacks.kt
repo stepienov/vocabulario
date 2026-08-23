@@ -305,6 +305,10 @@ object LanguagePacks {
         return allTenseAndNonFinite(code).firstOrNull { it.key == n }?.label
             ?: allTenseAndNonFinite(code).firstOrNull { it.key == key }?.label
     }
+
+    /** Person-key order for a tense (LSP grid). Empty if the language has no person table. */
+    fun personKeysForTense(code: String?, tenseKey: String?): List<String> =
+        PersonGrids.keysFor(code, tenseKey)
 }
 
 fun verbTensesFor(learningLang: String?): List<Pair<String, String>> =

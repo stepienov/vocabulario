@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vocabulario.app.R
+import com.vocabulario.app.data.LanguagePacks
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.asJsonArray
 import com.vocabulario.app.data.asJsonObject
@@ -85,19 +86,44 @@ internal fun orderedPersons(
     forms: JsonObject,
     conjugation: JsonObject? = null,
     learningLang: String = "en",
+    tenseKey: String? = null,
 ): List<Pair<String, String>> {
-    val order = personOrderFrom(conjugation, learningLang)
-    val known = order.mapNotNull { person ->
-        val form = resolvePersonForm(forms, person) ?: forms[person].asJsonString()
-        form?.let { personLabel(person, conjugation) to it }
+    val packOrder = LanguagePacks.personKeysForTense(learningLang, tenseKey)
+    val metaOrder = personOrderFrom(conjugation, learningLang)
+    val order = packOrder.ifEmpty { metaOrder }
+    val usedKeys = mutableSetOf<String>()
+    val known = ArrayList<Pair<String, String>>(order.size)
+    for (person in order) {
+        val formKey = matchFormKey(forms, person) ?: continue
+        if (!usedKeys.add(formKey)) continue
+        val form = resolvePersonForm(forms, formKey) ?: forms[formKey].asJsonString() ?: continue
+        val label = personLabel(person, conjugation).let { fromGrid ->
+            if (fromGrid != person) fromGrid else personLabel(formKey, conjugation)
+        }
+        known += label to form
     }
     val rest = forms.entries
-        .filter { it.key !in order }
+        .filter { it.key !in usedKeys }
         .mapNotNull { (key, value) ->
             value.asJsonString()?.let { personLabel(key, conjugation) to it }
         }
     return known + rest
 }
+
+private fun matchFormKey(forms: JsonObject, gridKey: String): String? {
+    if (forms.containsKey(gridKey)) return gridKey
+    val target = normalizePersonKey(gridKey)
+    forms.keys.firstOrNull { normalizePersonKey(it) == target }?.let { return it }
+    return forms.keys.firstOrNull { normalizePersonKey(it).substringBefore('/') == target }
+}
+
+internal fun normalizePersonKey(raw: String): String =
+    raw.trim().lowercase()
+        .replace("á", "a").replace("é", "e").replace("í", "i")
+        .replace("ó", "o").replace("ú", "u").replace("ü", "u").replace("ñ", "n")
+        .replace("ã", "a").replace("õ", "o").replace("ç", "c")
+        .substringBefore('/')
+        .trim()
 
 @Composable
 internal fun SectionLabel(title: String) {
@@ -199,7 +225,7 @@ internal fun ConjugationTenseAccordions(
     }
     finiteKeys.forEach { key ->
         val forms = tenseMap?.get(key).asJsonObject() ?: return@forEach
-        val rows = orderedPersons(forms, conjugation, lang)
+        val rows = orderedPersons(forms, conjugation, lang, tenseKey = key)
         if (rows.isNotEmpty() && rows.all { isPlaceholderForm(it.second) }) {
             return@forEach
         }

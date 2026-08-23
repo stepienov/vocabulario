@@ -41,6 +41,7 @@ class ChoiceDistractorsTest {
         correctId: String = "1",
         correctLemma: String = "limitado",
         correctGloss: String = "ograniczony",
+        correctPos: String? = "adjective",
         usedKeys: Set<String> = emptySet(),
         seed: Int = 1,
         list: List<DistractorCard> = adjList,
@@ -51,7 +52,7 @@ class ChoiceDistractorsTest {
         correctText = if (direction == "l2_to_l1") correctGloss else correctLemma,
         correctLemmaL2 = correctLemma,
         correctGloss = correctGloss,
-        correctPos = "adjective",
+        correctPos = correctPos,
         correctCardId = correctId,
         listCards = list,
         similar = similarWords,
@@ -119,5 +120,109 @@ class ChoiceDistractorsTest {
         assertTrue(result.options.all { normalizePosKey(it.pos) == "adj" })
         assertTrue(result.options.none { it.lemma_l2 == "hablar" || it.lemma_l2 == "el libro" })
         assertTrue(result.options.none { it.text == "correr" })
+    }
+
+    private val phraseList = listOf(
+        card("p1", "quedarse dormido", "zasnąć", "phrase"),
+        card("p2", "tener sueño", "być sennym", "phrase"),
+        card("p3", "tener que", "musieć", "phrase"),
+        card("n1", "la autoridad", "władza", "noun"),
+        card("n2", "el liderazgo", "przywództwo", "noun"),
+        card("a1", "vulnerable", "bezbronny", "adj"),
+        card("a2", "suelto", "luźny", "adj"),
+        card("v1", "prevenir", "zapobiegać", "verb"),
+        card("v2", "comportar", "pociągać za sobą", "verb"),
+        card("v3", "hablar", "mówić", "verb"),
+        card("v4", "comer", "jeść", "verb"),
+        card("v5", "abrir", "otwierać", "verb"),
+        card("v6", "cerrar", "zamykać", "verb"),
+        card("v7", "vivir", "żyć", "verb"),
+        card("v8", "escribir", "pisać", "verb"),
+    )
+
+    @Test
+    fun phrasePrompt_excludesNounsAndAdjectives() {
+        val result = pick(
+            correctId = "p1",
+            correctLemma = "quedarse dormido",
+            correctGloss = "zasnąć",
+            correctPos = "phrase",
+            list = phraseList,
+            similarWords = listOf(
+                similar("percatarse", "zauważyć", "verb"),
+                similar("quemarse", "spalić się", "verb"),
+                similar("averiguar", "ustalić", "verb"),
+                similar("cuidarse", "dbać", "verb"),
+                similar("vulnerable", "bezbronny", "adj"),
+                similar("la autoridad", "władza", "noun"),
+                similar("el liderazgo", "przywództwo", "noun"),
+            ),
+            seed = 6,
+        )
+        assertEquals(8, result.options.size)
+        val lemmas = result.options.map { it.lemma_l2 }.toSet()
+        assertTrue("quedarse dormido" in lemmas)
+        assertTrue(result.options.none { normalizePosKey(it.pos) == "noun" })
+        assertTrue(result.options.none { normalizePosKey(it.pos) == "adj" })
+        assertTrue(result.options.none {
+            it.lemma_l2 in setOf("la autoridad", "el liderazgo", "vulnerable", "suelto")
+        })
+    }
+
+    @Test
+    fun phrasePrompt_prefersOtherPhrasesFromSimilar() {
+        val result = pick(
+            correctId = "p2",
+            correctLemma = "tener sueño",
+            correctGloss = "być sennym",
+            correctPos = "phrase",
+            list = phraseList,
+            similarWords = listOf(
+                similar("estar risueño", "być uśmiechniętym", "phrase"),
+                similar("tener sospechas", "mieć podejrzenia", "phrase"),
+                similar("tener en cuenta", "brać pod uwagę", "phrase"),
+                similar("tener lugar", "odbywać się", "phrase"),
+                similar("tener prisa", "spieszyć się", "phrase"),
+                similar("tener sed", "być spragnionym", "phrase"),
+                similar("tener suerte", "mieć szczęście", "phrase"),
+                similar("suelto", "luźny", "adj"),
+            ),
+            seed = 7,
+        )
+        assertEquals(8, result.options.size)
+        assertTrue(result.options.none { normalizePosKey(it.pos) == "adj" })
+        assertTrue(result.options.none { normalizePosKey(it.pos) == "noun" })
+        assertTrue(result.options.none { it.lemma_l2 == "suelto" })
+        assertTrue(result.options.count { normalizePosKey(it.pos) == "phrase" } >= 3)
+    }
+
+    @Test
+    fun similarWithoutPos_skippedWhenTargetPosKnown() {
+        val result = pick(
+            similarWords = listOf(
+                similar("correr", "biegać", ""),
+                similar("la mesa", "stół", ""),
+                similar("corto", "krótki", "adj"),
+            ),
+            seed = 8,
+        )
+        assertTrue(result.options.all { normalizePosKey(it.pos) == "adj" })
+        assertTrue(result.options.none { it.lemma_l2 == "correr" || it.lemma_l2 == "la mesa" })
+        assertTrue(result.options.any { it.lemma_l2 == "corto" || it.is_correct })
+    }
+
+    @Test
+    fun unknownPos_doesNotDumpTheWholeDeck() {
+        val result = pick(
+            correctId = "x",
+            correctLemma = "xyz",
+            correctGloss = "xyz",
+            correctPos = null,
+            list = phraseList,
+            similarWords = listOf(similar("foo", "foo", "noun")),
+            seed = 9,
+        )
+        val lemmas = result.options.map { it.lemma_l2 }.toSet()
+        assertTrue(lemmas.none { it in setOf("la autoridad", "vulnerable", "hablar", "quedarse dormido") })
     }
 }

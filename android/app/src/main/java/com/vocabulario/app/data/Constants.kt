@@ -100,9 +100,30 @@ fun normalizePosKey(pos: String?): String {
         "przysłówek" in key || "adverbio" in key || "adverbe" in key || "avverbio" in key ||
             "adverb" in key || "нареч" in key || "副词" in key || "副詞" in key ||
             "부사" in key || "zarf" in key || "trạng từ" in key -> "adv"
+        "konstrukcja" in key || "construction" in key -> "construction"
+        "wyrażenie" in key || "zwrot" in key || "idiom" in key ||
+            "phrase" in key || "expression" in key -> "phrase"
         else -> key
     }
     return if (canonical in CANONICAL_POS_KEYS) canonical else "unknown"
+}
+
+private val VERBAL_QUIZ_POS = setOf("verb", "phrase", "construction")
+private val PHRASE_LIKE_QUIZ_POS = setOf("phrase", "construction")
+
+fun isVerbalQuizPos(pos: String?): Boolean = normalizePosKey(pos) in VERBAL_QUIZ_POS
+
+/**
+ * Quiz options must share POS. Unknown never matches everything.
+ * Phrase/construction may fill a shortage from the verbal family (verbs + other phrases).
+ */
+fun quizPosMatches(wantPos: String, candidatePos: String?, family: Boolean = false): Boolean {
+    val want = normalizePosKey(wantPos)
+    val got = normalizePosKey(candidatePos)
+    if (want == "unknown" || got == "unknown") return false
+    if (got == want) return true
+    if (!family) return false
+    return want in PHRASE_LIKE_QUIZ_POS && got in VERBAL_QUIZ_POS
 }
 
 private val DISTRACTOR_BLOCKLIST = setOf(
@@ -130,6 +151,7 @@ private val POS_SHORT_ALIASES = mapOf(
 
 private val CANONICAL_POS_KEYS = setOf(
     "noun", "verb", "adj", "adv", "prep", "conj", "pron", "det", "interj",
+    "phrase", "construction", "particle",
 )
 
 val CEFR_LEVELS = listOf("A1", "A2", "B1", "B2", "C1", "C2")
