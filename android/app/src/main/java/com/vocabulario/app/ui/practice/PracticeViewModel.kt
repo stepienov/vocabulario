@@ -171,7 +171,7 @@ class PracticeViewModel @Inject constructor(
                     loading = false,
                     queue = newQueue,
                     currentIndex = if (append) _state.value.currentIndex else 0,
-                    userTenses = normalizeTenseKeys(profile?.selected_tenses.orEmpty()),
+                    userTenses = normalizeTenseKeys(profile?.selected_tenses.orEmpty(), profile?.learning_lang),
                     activeProfile = profile,
                     userCefr = profile?.cefr_level ?: "A2",
                     learningLang = profile?.learning_lang ?: "en",

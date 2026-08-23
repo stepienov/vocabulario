@@ -106,14 +106,14 @@ class LanguageProfileCreate(BaseModel):
         object.__setattr__(self, "learning_lang", self.learning_lang.strip().lower())
         if self.tense_label_lang not in {"app_lang", "learning_lang"}:
             raise ValueError("tense_label_lang must be app_lang or learning_lang")
-        return self
-
-    @field_validator("selected_tenses")
-    @classmethod
-    def _normalize_create_tenses(cls, value: list[str]) -> list[str]:
         from app.services.tenses import normalize_tense_keys
 
-        return normalize_tense_keys(value)
+        object.__setattr__(
+            self,
+            "selected_tenses",
+            normalize_tense_keys(self.selected_tenses, learning_lang=self.learning_lang),
+        )
+        return self
 
 
 class LanguageProfileResponse(BaseModel):
@@ -139,6 +139,17 @@ class LanguageProfileResponse(BaseModel):
         from app.services.tenses import normalize_tense_keys
 
         return normalize_tense_keys(value)
+
+    @model_validator(mode="after")
+    def _normalize_tenses_for_lang(self) -> "LanguageProfileResponse":
+        from app.services.tenses import normalize_tense_keys
+
+        object.__setattr__(
+            self,
+            "selected_tenses",
+            normalize_tense_keys(self.selected_tenses, learning_lang=self.learning_lang),
+        )
+        return self
 
 
 class LanguageProfileUpdate(BaseModel):

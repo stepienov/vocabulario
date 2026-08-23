@@ -30,9 +30,9 @@ verbs:
     - key: bezokolicznik
       label_l2: Bezokolicznik
     - key: imieslow_przeszly
-      label_l2: Imiesłów przeszły
+      label_l2: Imiesłów przysłówkowy uprzedni
     - key: imieslow_przyszly
-      label_l2: Imiesłów przyszły
+      label_l2: Imiesłów przysłówkowy współczesny
   person_grids:
     present:
       keys: ["ja", "ty", "on", "ona", "ono", "my", "wy", "oni", "one"]
@@ -141,8 +141,8 @@ ui_labels:
     tryb_rozkazujacy: Imperativ
     tryb_przypuszczajacy: Konditional
     bezokolicznik: Infinitiv
-    imieslow_przeszly: Partizip Perfekt
-    imieslow_przyszly: Partizip Futur
+    imieslow_przeszly: Adverbialpartizip (Vorzeitigkeit)
+    imieslow_przyszly: Adverbialpartizip (Gleichzeitigkeit)
   en:
     czas_terazniejszy: Present tense
     czas_przeszly: Past tense
@@ -150,8 +150,8 @@ ui_labels:
     tryb_rozkazujacy: Imperative
     tryb_przypuszczajacy: Conditional
     bezokolicznik: Infinitive
-    imieslow_przeszly: Past participle
-    imieslow_przyszly: Future participle
+    imieslow_przeszly: Anterior adverbial participle
+    imieslow_przyszly: Contemporary adverbial participle
   es:
     czas_terazniejszy: Presente
     czas_przeszly: Pasado
@@ -159,8 +159,8 @@ ui_labels:
     tryb_rozkazujacy: Imperativo
     tryb_przypuszczajacy: Condicional
     bezokolicznik: Infinitivo
-    imieslow_przeszly: Participio pasado
-    imieslow_przyszly: Participio futuro
+    imieslow_przeszly: Participio adverbial anterior
+    imieslow_przyszly: Participio adverbial contemporáneo
   fr:
     czas_terazniejszy: Présent
     czas_przeszly: Passé
@@ -168,8 +168,8 @@ ui_labels:
     tryb_rozkazujacy: Impératif
     tryb_przypuszczajacy: Conditionnel
     bezokolicznik: Infinitif
-    imieslow_przeszly: Participe passé
-    imieslow_przyszly: Participe futur
+    imieslow_przeszly: Gérondif antérieur
+    imieslow_przyszly: Gérondif contemporain
   hi:
     czas_terazniejszy: वर्तमान
     czas_przeszly: भूत
@@ -213,8 +213,8 @@ ui_labels:
     tryb_rozkazujacy: Tryb rozkazujący
     tryb_przypuszczajacy: Tryb przypuszczający
     bezokolicznik: Bezokolicznik
-    imieslow_przeszly: Imiesłów przeszły
-    imieslow_przyszly: Imiesłów przyszły
+    imieslow_przeszly: Imiesłów przysłówkowy uprzedni
+    imieslow_przyszly: Imiesłów przysłówkowy współczesny
   pt-br:
     czas_terazniejszy: Presente
     czas_przeszly: Passado

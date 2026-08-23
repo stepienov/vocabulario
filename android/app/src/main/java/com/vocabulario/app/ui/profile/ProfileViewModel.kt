@@ -66,7 +66,7 @@ class ProfileViewModel @Inject constructor(
                     loading = false,
                     profiles = profiles,
                     activeProfile = active,
-                    selectedTenses = normalizeTenseKeys(active?.selected_tenses.orEmpty()).toSet(),
+                    selectedTenses = normalizeTenseKeys(active?.selected_tenses.orEmpty(), active?.learning_lang).toSet(),
                     cefrLevel = active?.cefr_level ?: "A2",
                 )
                 viewModelScope.launch {
@@ -134,13 +134,14 @@ class ProfileViewModel @Inject constructor(
 
     fun toggleTense(key: String) {
         val current = _state.value.selectedTenses.toMutableSet()
-        val canonicalKey = normalizeTenseKey(key)
+        val lang = _state.value.activeProfile?.learning_lang
+        val canonicalKey = normalizeTenseKey(key, lang)
         if (canonicalKey in current) {
             if (current.size > 1) current.remove(canonicalKey)
         } else {
             current.add(canonicalKey)
         }
-        val canonical = normalizeTenseKeys(current)
+        val canonical = normalizeTenseKeys(current, lang)
         viewModelScope.launch {
             runCatching { repository.updateProfile(tenses = canonical) }
                 .onSuccess {

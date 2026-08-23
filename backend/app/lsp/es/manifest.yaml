@@ -64,14 +64,14 @@ ui_labels:
     preterito_pluscuamperfecto: الماضي الأسبق
     condicional_compuesto: الشرط المركب
     futuro_perfecto: المستقبل التام
-    imperativo_afirmativo: الأمر
-    imperativo_negativo: الأمر
+    imperativo_afirmativo: الأمر المثبت
+    imperativo_negativo: الأمر المنفي
     gerundio: المصدر الحالي
     participio: اسم المفعول
   de:
     presente: Präsens
     preterito_perfecto: Perfekt
-    preterito_indefinido: Indefinido
+    preterito_indefinido: Indefinido / Präteritum
     preterito_imperfecto: Imperfekt
     futuro_simple: Futur
     condicional_simple: Konditional
@@ -149,8 +149,8 @@ ui_labels:
     preterito_pluscuamperfecto: पूर्ण भूत पूर्व
     condicional_compuesto: संभाव्य पूर्ण
     futuro_perfecto: पूर्ण भविष्य
-    imperativo_afirmativo: आज्ञार्थ
-    imperativo_negativo: आज्ञार्थ
+    imperativo_afirmativo: सकारात्मक आज्ञार्थ
+    imperativo_negativo: नकारात्मक आज्ञार्थ
     gerundio: क्रियार्थक संज्ञा
     participio: कृदंत
   it:
@@ -183,8 +183,8 @@ ui_labels:
     preterito_pluscuamperfecto: 大過去
     condicional_compuesto: 複合条件法
     futuro_perfecto: 未来完了
-    imperativo_afirmativo: 命令形
-    imperativo_negativo: 命令形
+    imperativo_afirmativo: 肯定の命令形
+    imperativo_negativo: 否定の命令形
     gerundio: 動名詞
     participio: 分詞
   ko:
@@ -200,21 +200,21 @@ ui_labels:
     preterito_pluscuamperfecto: 대과거
     condicional_compuesto: 복합 조건법
     futuro_perfecto: 미래완료
-    imperativo_afirmativo: 명령
-    imperativo_negativo: 명령
+    imperativo_afirmativo: 명령형 (긍정)
+    imperativo_negativo: 명령형 (부정)
     gerundio: 동명사
     participio: 분사
   pl:
     presente: Czas teraźniejszy
-    preterito_perfecto: Pretérito perfecto
+    preterito_perfecto: Czas przeszły złożony
     preterito_indefinido: Czas przeszły prosty
     preterito_imperfecto: Czas przeszły niedokonany
     futuro_simple: Czas przyszły
     condicional_simple: Tryb warunkowy
-    presente_subjuntivo: Subjuntivo — czas teraźniejszy
-    imperfecto_subjuntivo: Subjuntivo — imperfecto
-    futuro_subjuntivo: Subjuntivo — czas przyszły
-    preterito_pluscuamperfecto: Plusquamperfectum
+    presente_subjuntivo: Tryb łączący — czas teraźniejszy
+    imperfecto_subjuntivo: Tryb łączący — czas przeszły niedokonany
+    futuro_subjuntivo: Tryb łączący — czas przyszły
+    preterito_pluscuamperfecto: Czas zaprzeszły
     condicional_compuesto: Tryb warunkowy złożony
     futuro_perfecto: Czas przyszły dokonany
     imperativo_afirmativo: Tryb rozkazujący (twierdzący)
@@ -285,8 +285,8 @@ ui_labels:
     preterito_pluscuamperfecto: Miş’li geçmiş
     condicional_compuesto: Bileşik koşul
     futuro_perfecto: Gelecek zamanın hikâyesi
-    imperativo_afirmativo: Emir kipi
-    imperativo_negativo: Emir kipi
+    imperativo_afirmativo: Olumlu emir
+    imperativo_negativo: Olumsuz emir
     gerundio: Ulaç
     participio: Ortaç
   vi:
@@ -302,8 +302,8 @@ ui_labels:
     preterito_pluscuamperfecto: Quá khứ hoàn thành xa
     condicional_compuesto: Điều kiện kép
     futuro_perfecto: Tương lai hoàn thành
-    imperativo_afirmativo: Mệnh lệnh
-    imperativo_negativo: Mệnh lệnh
+    imperativo_afirmativo: Mệnh lệnh khẳng định
+    imperativo_negativo: Mệnh lệnh phủ định
     gerundio: Danh động từ
     participio: Phân từ
   zh:

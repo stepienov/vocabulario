@@ -157,7 +157,7 @@ class SettingsViewModel @Inject constructor(
                 val profiles = repository.listProfiles().ifEmpty { profilesIn }
                 val showSyn = if (s.show_synonyms_antonyms) s.show_synonyms else false
                 val showAnt = if (s.show_synonyms_antonyms) s.show_antonyms else false
-                val selected = normalizeTenseKeys(active?.selected_tenses.orEmpty()).toSet()
+                val selected = normalizeTenseKeys(active?.selected_tenses.orEmpty(), active?.learning_lang).toSet()
                 _state.value = SettingsUiState(
                     loading = false,
                     expanded = _state.value.expanded,
@@ -365,7 +365,8 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setCustomTenses(tenses: Set<String>) {
-        val canonical = normalizeTenseKeys(tenses).toSet()
+        val lang = _state.value.activeProfile?.learning_lang
+        val canonical = normalizeTenseKeys(tenses, lang).toSet()
         if (canonical.isEmpty()) return // puste zatwierdzenie = no-op (UI cofa stan)
         persistTenses(canonical, conjugationOn = true, rememberCustom = true)
     }
@@ -375,7 +376,8 @@ class SettingsViewModel @Inject constructor(
         conjugationOn: Boolean,
         rememberCustom: Boolean,
     ) {
-        val canonical = normalizeTenseKeys(tenses).toSet()
+        val lang = _state.value.activeProfile?.learning_lang
+        val canonical = normalizeTenseKeys(tenses, lang).toSet()
         val previous = _state.value
         val gen = ++writeGen
         _state.value = previous.copy(

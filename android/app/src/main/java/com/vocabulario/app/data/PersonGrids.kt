@@ -117,7 +117,7 @@ internal object PersonGrids {
             ?: grids[lang?.lowercase()?.trim()?.substringBefore('-')]
             ?: return emptyList()
         if (tenseKey.isNullOrBlank()) return pack.defaultKeys
-        val normalized = normalizeTenseKey(tenseKey)
+        val normalized = normalizeTenseKey(tenseKey, lang)
         return pack.byTense[normalized]
             ?: pack.byTense[tenseKey]
             ?: pack.defaultKeys

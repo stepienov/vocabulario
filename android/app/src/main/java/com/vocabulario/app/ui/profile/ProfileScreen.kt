@@ -36,7 +36,7 @@ import com.vocabulario.app.R
 import com.vocabulario.app.data.CEFR_LEVELS
 import com.vocabulario.app.data.LanguagePacks
 import com.vocabulario.app.data.api.appLang
-import com.vocabulario.app.data.verbTensesFor
+import com.vocabulario.app.data.tenseHeadingsForPicker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,13 +146,22 @@ fun ProfileScreen(
             if (LanguagePacks.showsTensePicker(learningLang)) {
                 Spacer(Modifier.height(20.dp))
                 Text(stringResource(R.string.profile_tenses), style = MaterialTheme.typography.titleMedium)
-                verbTensesFor(learningLang).forEach { (key, label) ->
+                tenseHeadingsForPicker(state.activeProfile).forEach { (key, heading) ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(
                             checked = key in state.selectedTenses,
                             onCheckedChange = { viewModel.toggleTense(key) },
                         )
-                        Text(label)
+                        Column {
+                            Text(heading.original)
+                            heading.translation?.let { translation ->
+                                Text(
+                                    translation,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                     }
                 }
             }

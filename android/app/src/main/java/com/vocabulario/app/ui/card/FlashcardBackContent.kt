@@ -124,6 +124,7 @@ fun FlashcardBackContent(
             profileTenses = profileTenses,
             tenseMapKeys = allTenseKeys,
             catalogKeys = LanguagePacks.tenseCatalog(lang).map { it.key },
+            learningLang = lang,
         )
     } else {
         emptyList()

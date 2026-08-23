@@ -67,7 +67,7 @@ class LearningViewModel @Inject constructor(
                         loading = false,
                         cards = cards,
                         selectedCard = syncSelected(cards, _state.value.selectedCard),
-                        userTenses = normalizeTenseKeys(profile?.selected_tenses.orEmpty()),
+                        userTenses = normalizeTenseKeys(profile?.selected_tenses.orEmpty(), profile?.learning_lang),
                         userCefr = profile?.cefr_level ?: "A2",
                         learningLang = profile?.learning_lang ?: "en",
                         activeProfile = profile,

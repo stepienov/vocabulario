@@ -71,7 +71,8 @@ import com.vocabulario.app.data.LanguagePacks
 import com.vocabulario.app.data.SUPPORTED_LEARNING_LANGS
 import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.data.langDisplayName
-import com.vocabulario.app.data.verbTensesFor
+import com.vocabulario.app.data.TenseHeading
+import com.vocabulario.app.data.tenseHeadingsForPicker
 import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.AppCard
 import com.vocabulario.app.ui.components.AppDialogButtonRow
@@ -123,7 +124,9 @@ fun SettingsScreen(
     val customTenses = state.selectedTenses.isNotEmpty()
     val learningLang = state.activeProfile?.learning_lang
     val showTensePicker = LanguagePacks.showsTensePicker(learningLang)
-    val tenseOptions = remember(learningLang) { verbTensesFor(learningLang) }
+    val tenseOptions = remember(state.activeProfile?.id, learningLang, state.activeProfile?.appLang) {
+        tenseHeadingsForPicker(state.activeProfile)
+    }
 
     fun openTenseModal() {
         tenseDraft = state.lastCustomTenses.ifEmpty {
@@ -492,7 +495,7 @@ private fun CustomTensesRadioRow(
 
 @Composable
 private fun TensePickerDialog(
-    options: List<Pair<String, String>>,
+    options: List<Pair<String, TenseHeading>>,
     draft: Set<String>,
     onToggle: (String) -> Unit,
     onBack: () -> Unit,
@@ -534,9 +537,10 @@ private fun TensePickerDialog(
                         .verticalScroll(rememberScrollState())
                         .padding(vertical = 4.dp),
                 ) {
-                    options.forEachIndexed { index, (key, label) ->
+                    options.forEachIndexed { index, (key, heading) ->
                         SettingsCheckRow(
-                            label = label,
+                            label = heading.original,
+                            subtitle = heading.translation,
                             checked = key in draft,
                             onCheckedChange = { onToggle(key) },
                             showDivider = index < options.lastIndex,

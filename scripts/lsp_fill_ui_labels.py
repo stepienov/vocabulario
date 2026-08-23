@@ -672,6 +672,7 @@ def patch_kotlin(table_src: str) -> None:
 
 
 def main() -> int:
+    kotlin_only = "--kotlin-only" in sys.argv
     all_labels: dict[str, dict[str, dict[str, str]]] = {}
     missing_report: list[str] = []
     for code in sorted(SUPPORTED_L2_LANGS):
@@ -686,11 +687,12 @@ def main() -> int:
                 ordered.append(k)
         merged = merge_labels(code, ordered)
         all_labels[code] = merged
-        path = LSP_ROOT / code / "manifest.yaml"
-        block = dump_ui_labels(merged, ordered)
-        replace_ui_labels_block(path, block)
-        filled = fill_person_labels(code, path.read_text(encoding="utf-8"))
-        path.write_text(filled, encoding="utf-8")
+        if not kotlin_only:
+            path = LSP_ROOT / code / "manifest.yaml"
+            block = dump_ui_labels(merged, ordered)
+            replace_ui_labels_block(path, block)
+            filled = fill_person_labels(code, path.read_text(encoding="utf-8"))
+            path.write_text(filled, encoding="utf-8")
         for ui in UI_LANGS:
             gap = [k for k in ordered if k not in merged[ui]]
             if gap:

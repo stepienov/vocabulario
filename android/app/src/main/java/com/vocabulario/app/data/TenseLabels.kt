@@ -46,5 +46,13 @@ fun tenseLabelForProfile(
     conjugation: JsonObject? = null,
 ): String = tenseHeadingForProfile(profile, tenseKey, conjugation).original
 
+/** Katalog czasów do pickera: oryginał L2 + tłumaczenie UI. */
+fun tenseHeadingsForPicker(
+    profile: LanguageProfileResponse?,
+): List<Pair<String, TenseHeading>> =
+    LanguagePacks.tenseCatalog(profile?.learning_lang).map { item ->
+        item.key to tenseHeadingForProfile(profile, item.key)
+    }
+
 private fun firstNonBlank(vararg values: String?): String? =
     values.firstOrNull { !it.isNullOrBlank() }

@@ -21,7 +21,7 @@ object LanguagePacks {
             TenseItem("presente", "Presente"),
             TenseItem("preterito_perfecto", "Pretérito perfecto"),
             TenseItem("preterito_indefinido", "Pretérito indefinido"),
-            TenseItem("preterito_imperfecto", "Imperfecto"),
+            TenseItem("preterito_imperfecto", "Pretérito imperfecto"),
             TenseItem("futuro_simple", "Futuro simple"),
             TenseItem("condicional_simple", "Condicional"),
             TenseItem("presente_subjuntivo", "Presente de subjuntivo"),
@@ -137,7 +137,9 @@ object LanguagePacks {
 
     private val ptPt = LanguagePack(
         code = "pt-pt",
-        tenses = ptBr.tenses + TenseItem("infinitivo_pessoal", "Infinitivo pessoal"),
+        tenses = ptBr.tenses.map {
+            if (it.key == "subjuntivo_presente") TenseItem(it.key, "Conjuntivo presente") else it
+        } + TenseItem("infinitivo_pessoal", "Infinitivo pessoal"),
         nonFinite = ptBr.nonFinite,
         defaultSelectedTenses = ptBr.defaultSelectedTenses,
     )
@@ -153,8 +155,8 @@ object LanguagePacks {
         ),
         nonFinite = listOf(
             TenseItem("bezokolicznik", "Bezokolicznik"),
-            TenseItem("imieslow_przeszly", "Imiesłów przeszły"),
-            TenseItem("imieslow_przyszly", "Imiesłów przyszły"),
+            TenseItem("imieslow_przeszly", "Imiesłów przysłówkowy uprzedni"),
+            TenseItem("imieslow_przyszly", "Imiesłów przysłówkowy współczesny"),
         ),
         defaultSelectedTenses = listOf("czas_terazniejszy"),
     )
@@ -278,7 +280,7 @@ object LanguagePacks {
                 TenseItem("future", "भविष्य"),
                 TenseItem("imperative", "आज्ञार्थ"),
             ),
-            nonFinite = listOf(TenseItem("infinitive", "मूलधातु")),
+            nonFinite = listOf(TenseItem("infinitive", "ना रूप")),
             defaultSelectedTenses = listOf("present"),
         ),
     )
@@ -301,7 +303,7 @@ object LanguagePacks {
     }
 
     fun tenseLabel(code: String?, key: String): String? {
-        val n = normalizeTenseKey(key)
+        val n = normalizeTenseKey(key, code)
         return allTenseAndNonFinite(code).firstOrNull { it.key == n }?.label
             ?: allTenseAndNonFinite(code).firstOrNull { it.key == key }?.label
     }

@@ -16,7 +16,7 @@ verbs:
     - { key: future, label_l2: भविष्य, person_grid: hi_6 }
     - { key: imperative, label_l2: आज्ञार्थ, person_grid: hi_imperative }
   non_finite:
-    - { key: infinitive, label_l2: मूलधातु }
+    - { key: infinitive, label_l2: ना रूप }
   person_grids:
     hi_6:
       keys: ["main", "tu", "yeh", "hum", "aap", "ve"]
@@ -72,7 +72,7 @@ ui_labels:
     past: भूत
     future: भविष्य
     imperative: आज्ञार्थ
-    infinitive: मूलधातु
+    infinitive: ना रूप
   it:
     present: Presente
     past: Passato

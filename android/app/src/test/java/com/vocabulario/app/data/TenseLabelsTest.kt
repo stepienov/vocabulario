@@ -73,8 +73,16 @@ class TenseLabelsTest {
             legacy = mapOf("preterito_imperfecto" to "Czas przeszły niedokonany"),
         )
         assertEquals(
-            "Imperfecto",
+            "Pretérito imperfecto",
             tenseLabelForProfile(profile, "preterito_imperfecto", conjugation),
         )
+    }
+
+    @Test
+    fun pickerHeadingsIncludeL2AndUiTranslation() {
+        val headings = tenseHeadingsForPicker(profile)
+        val presente = headings.first { it.first == "presente" }.second
+        assertEquals("Presente", presente.original)
+        assertEquals("Czas teraźniejszy", presente.translation)
     }
 }

@@ -138,6 +138,7 @@ fun CardDetailContent(
         profileTenses = profileTenses,
         tenseMapKeys = tenseMap?.keys.orEmpty(),
         catalogKeys = catalogKeys,
+        learningLang = lang,
     )
     val visibleNonFinite = (nonFinite?.keys?.toList().orEmpty())
         .ifEmpty { LanguagePacks.get(lang).nonFinite.map { it.key } }

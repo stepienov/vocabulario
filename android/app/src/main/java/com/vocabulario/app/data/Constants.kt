@@ -164,31 +164,49 @@ val NON_FINITE_FORMS: List<Pair<String, String>> =
 
 val DEFAULT_CARD_TENSES: List<String> = LanguagePacks.defaultSelectedTenses("es")
 
-val TENSE_KEY_ALIASES = mapOf(
-    // ES legacy
-    "imperfecto" to "preterito_imperfecto",
-    "futuro" to "futuro_simple",
-    "condicional" to "condicional_simple",
-    // PL — LLM often returns English / diacritic variants
-    "present" to "czas_terazniejszy",
-    "present_tense" to "czas_terazniejszy",
+/** Aliasy bezpieczne globalnie (tylko warianty diakrytyczne tego samego klucza). */
+private val DIACRITIC_TENSE_ALIASES = mapOf(
     "czas_teraźniejszy" to "czas_terazniejszy",
-    "past" to "czas_przeszly",
-    "past_tense" to "czas_przeszly",
     "czas_przeszły" to "czas_przeszly",
-    "future" to "czas_przyszly",
-    "future_tense" to "czas_przyszly",
     "czas_przyszły" to "czas_przyszly",
-    "imperative" to "tryb_rozkazujacy",
     "tryb_rozkazujący" to "tryb_rozkazujacy",
-    "conditional" to "tryb_przypuszczajacy",
     "tryb_przypuszczający" to "tryb_przypuszczajacy",
-    "infinitive" to "bezokolicznik",
-    "participle" to "imieslow",
     "imiesłów" to "imieslow",
 )
 
-fun normalizeTenseKey(key: String): String = TENSE_KEY_ALIASES[key] ?: key
+private val ES_TENSE_ALIASES = mapOf(
+    "imperfecto" to "preterito_imperfecto",
+    "futuro" to "futuro_simple",
+    "condicional" to "condicional_simple",
+)
+
+private val PL_TENSE_ALIASES = mapOf(
+    "present" to "czas_terazniejszy",
+    "present_tense" to "czas_terazniejszy",
+    "past" to "czas_przeszly",
+    "past_tense" to "czas_przeszly",
+    "future" to "czas_przyszly",
+    "future_tense" to "czas_przyszly",
+    "imperative" to "tryb_rozkazujacy",
+    "conditional" to "tryb_przypuszczajacy",
+    "infinitive" to "bezokolicznik",
+    "participle" to "imieslow",
+)
+
+fun tenseAliasesFor(learningLang: String?): Map<String, String> {
+    val lang = learningLang?.trim()?.lowercase()
+    val specific = when (lang) {
+        "es" -> ES_TENSE_ALIASES
+        "pl" -> PL_TENSE_ALIASES
+        else -> emptyMap()
+    }
+    return DIACRITIC_TENSE_ALIASES + specific
+}
+
+fun normalizeTenseKey(key: String, learningLang: String? = null): String {
+    val aliases = tenseAliasesFor(learningLang)
+    return aliases[key] ?: key
+}
 
 /**
  * Resolve which tense keys from [tenseMap] should be shown given profile selection.
@@ -199,11 +217,13 @@ fun resolveVisibleTenseKeys(
     profileTenses: List<String>,
     tenseMapKeys: Collection<String>,
     catalogKeys: List<String>,
+    learningLang: String? = null,
 ): List<String> {
     if (tenseMapKeys.isEmpty()) return emptyList()
     val mapKeys = tenseMapKeys.toSet()
+    val aliases = tenseAliasesFor(learningLang)
     val aliasToCanonical = buildMap {
-        for ((alias, canonical) in TENSE_KEY_ALIASES) {
+        for ((alias, canonical) in aliases) {
             put(alias, canonical)
             put(canonical, canonical)
         }
@@ -212,7 +232,7 @@ fun resolveVisibleTenseKeys(
     }
 
     fun resolve(raw: String): String? {
-        val n = normalizeTenseKey(raw)
+        val n = normalizeTenseKey(raw, learningLang)
         if (n in mapKeys) return n
         val via = aliasToCanonical[raw] ?: aliasToCanonical[n]
         if (via != null && via in mapKeys) return via
@@ -229,10 +249,10 @@ fun resolveVisibleTenseKeys(
     return ordered.ifEmpty { tenseMapKeys.toList() }
 }
 
-fun normalizeTenseKeys(keys: Collection<String>): List<String> {
+fun normalizeTenseKeys(keys: Collection<String>, learningLang: String? = null): List<String> {
     val seen = LinkedHashSet<String>()
     for (key in keys) {
-        val n = normalizeTenseKey(key.trim())
+        val n = normalizeTenseKey(key.trim(), learningLang)
         if (n.isNotEmpty()) seen.add(n)
     }
     return seen.toList()

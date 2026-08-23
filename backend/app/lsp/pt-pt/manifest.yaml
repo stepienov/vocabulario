@@ -17,7 +17,7 @@ verbs:
     - { key: preterito_imperfeito, label_l2: Pretérito imperfeito, person_grid: pt_6 }
     - { key: futuro, label_l2: Futuro, person_grid: pt_6 }
     - { key: condicional, label_l2: Condicional, person_grid: pt_6 }
-    - { key: subjuntivo_presente, label_l2: Subjuntivo presente, person_grid: pt_6 }
+    - { key: subjuntivo_presente, label_l2: Conjuntivo presente, person_grid: pt_6 }
     - { key: imperativo, label_l2: Imperativo, person_grid: pt_imperative }
     - { key: infinitivo_pessoal, label_l2: Infinitivo pessoal, person_grid: pt_6 }
   non_finite:
@@ -169,7 +169,7 @@ ui_labels:
     preterito_imperfeito: Pretérito imperfeito
     futuro: Futuro
     condicional: Condicional
-    subjuntivo_presente: Subjuntivo presente
+    subjuntivo_presente: Conjuntivo presente
     imperativo: Imperativo
     infinitivo_pessoal: Infinitivo pessoal
     gerundio: Gerúndio
