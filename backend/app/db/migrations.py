@@ -7,8 +7,17 @@ tutaj — każda instrukcja jest bezpieczna przy wielokrotnym uruchomieniu.
 
 from __future__ import annotations
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncConnection
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from sqlalchemy import MetaData, text
+from sqlalchemy.exc import DBAPIError
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
+
+# Stabilny klucz; sesyjny lock, żeby dwie repliki nie robiły DDL naraz.
+_SCHEMA_LOCK_KEY = 872314559
+_DEADLOCK_RETRIES = 8
 
 _STATEMENTS = (
     "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS "
@@ -332,6 +341,68 @@ _STATEMENTS = (
 )
 
 
+def _is_deadlock(exc: BaseException) -> bool:
+    orig = getattr(exc, "orig", exc)
+    name = orig.__class__.__name__
+    if name == "DeadlockDetectedError":
+        return True
+    return "deadlock detected" in str(orig).lower()
+
+
+@asynccontextmanager
+async def _schema_lock(engine: AsyncEngine) -> AsyncIterator[None]:
+    async with engine.connect() as lock_conn:
+        is_pg = lock_conn.dialect.name == "postgresql"
+        if is_pg:
+            await lock_conn.execute(
+                text("SELECT pg_advisory_lock(:k)"), {"k": _SCHEMA_LOCK_KEY}
+            )
+            await lock_conn.commit()
+        try:
+            yield
+        finally:
+            if is_pg:
+                try:
+                    await lock_conn.execute(
+                        text("SELECT pg_advisory_unlock(:k)"),
+                        {"k": _SCHEMA_LOCK_KEY},
+                    )
+                    await lock_conn.commit()
+                except Exception:
+                    await lock_conn.invalidate()
+
+
+async def _run_statement(engine: AsyncEngine, statement: str) -> None:
+    last_exc: BaseException | None = None
+    for attempt in range(_DEADLOCK_RETRIES):
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(statement))
+            return
+        except DBAPIError as exc:
+            last_exc = exc
+            if not _is_deadlock(exc) or attempt == _DEADLOCK_RETRIES - 1:
+                raise
+            await asyncio.sleep(0.05 * (2**attempt))
+    if last_exc is not None:
+        raise last_exc
+
+
+async def apply_schema(engine: AsyncEngine, metadata: MetaData) -> None:
+    """create_all + migracje pod lockiem, każda instrukcja w osobnej transakcji.
+
+    Dwie repliki startujące razem wcześniej trzymały wszystkie ALTER w jednym
+    `BEGIN` i wpadały w deadlock (`DROP COLUMN ui_lang` vs. locki z create_all).
+    """
+    async with _schema_lock(engine):
+        async with engine.begin() as conn:
+            await conn.run_sync(metadata.create_all)
+        for statement in _STATEMENTS:
+            await _run_statement(engine, statement)
+        async with engine.begin() as conn:
+            await _backfill_lemma_keys(conn)
+
+
 async def run_migrations(conn: AsyncConnection) -> None:
     for statement in _STATEMENTS:
         await conn.execute(text(statement))
@@ -343,7 +414,10 @@ async def _backfill_lemma_keys(conn: AsyncConnection) -> None:
 
     rows = (
         await conn.execute(
-            text("SELECT id, lemma_l2, lemma_l1_primary FROM lexical_entries")
+            text(
+                "SELECT id, lemma_l2, lemma_l1_primary FROM lexical_entries "
+                "WHERE lemma_key_l2 IS NULL OR lemma_key_l1 IS NULL"
+            )
         )
     ).all()
     for row in rows:

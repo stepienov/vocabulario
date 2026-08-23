@@ -14,16 +14,14 @@ from app.api.v1.sync import router as sync_router
 from app.core.app_log_middleware import AppLogMiddleware
 from app.core.config import get_settings
 from app.db.base import Base
-from app.db.migrations import run_migrations
+from app.db.migrations import apply_schema
 from app.db.session import engine
 from app import models  # noqa: F401
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        await run_migrations(conn)
+    await apply_schema(engine, Base.metadata)
     from app.services.card_jobs import resume_pending_enrichment
     from app.services.import_jobs import resume_unfinished_jobs, start_heartbeat_watchdog
 
