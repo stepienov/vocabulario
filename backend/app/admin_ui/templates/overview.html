@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi purple"><div class="label">Użytkownicy</div><div class="value">{{ users_total }}</div><div class="sub">+{{ users_new_24h }} / 24h · aktywni 7d: {{ active_7d }}</div></div>
+  <div class="kpi orange"><div class="label">Karty live</div><div class="value">{{ cards_live }}</div><div class="sub">usunięte: {{ cards_deleted }}</div></div>
+  <div class="kpi green"><div class="label">Koszt LLM 24h</div><div class="value">{{ cost_24h|usd }}</div><div class="sub">{{ calls_24h }} calli · cache {{ '%.0f'|format(cache_24h) }}%</div></div>
+  <div class="kpi red"><div class="label">Błędy 24h</div><div class="value">{{ errors_24h }}</div><div class="sub">enrichment failed: {{ enrich_failed }}</div></div>
+</div>
+<div class="kpis">
+  <div class="kpi"><div class="label">Enrichment gotowe</div><div class="value">{{ enrich_ready }}</div></div>
+  <div class="kpi orange"><div class="label">Enrichment w toku</div><div class="value">{{ enrich_pending }}</div></div>
+  <div class="kpi"><div class="label">Powtórki 24h</div><div class="value">{{ reviews_24h }}</div></div>
+  <div class="kpi"><div class="label">Wyszukiwania 24h</div><div class="value">{{ lookups_24h }}</div></div>
+</div>
+<div class="grid-2">
+  <div class="panel">
+    <h2>Koszt LLM</h2>
+    <p>Dziś: <strong>{{ cost_24h|usd }}</strong> · 7 dni: <strong>{{ cost_7d|usd }}</strong> · 30 dni: <strong>{{ cost_30d|usd }}</strong></p>
+    <p class="muted">Razem: {{ cost_all|usd }} / {{ calls_all }} calli · cache {{ '%.0f'|format(cache_all) }}%</p>
+    <table>
+      <thead><tr><th>Operacja</th><th>Lemma / query</th><th>Calli</th><th>USD</th></tr></thead>
+      <tbody>
+      {% for row in expensive %}
+        <tr class="clickable" data-href="/admin/costs?q={{ row.lemma or row.query or '' }}">
+          <td>{{ row.operation_kind }}</td>
+          <td>{{ row.lemma or row.query or '—' }}</td>
+          <td>{{ row.calls }}</td>
+          <td>{{ row.usd|usd }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="muted">Brak danych z ostatnich 24h</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <h2>Ostatnie błędy</h2>
+    <table>
+      <thead><tr><th>Czas</th><th>Poziom</th><th>Zdarzenie</th></tr></thead>
+      <tbody>
+      {% for log in last_errors %}
+        <tr class="clickable" data-href="/admin/errors">
+          <td>{{ log.created_at|dt }}</td>
+          <td><span class="pill {{ log.level|tone }}">{{ log.level|status }}</span></td>
+          <td>{{ log.event }} · {{ log.message or log.error_message or log.http_path or '' }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3" class="muted">Cisza. Dobra cisza.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="panel">
+  <h2>Ostatni użytkownicy</h2>
+  <table>
+    <thead><tr><th>Email</th><th>Utworzono</th></tr></thead>
+    <tbody>
+    {% for u in last_users %}
+      <tr class="clickable" data-href="/admin/users/{{ u.id }}"><td>{{ u.email }}</td><td>{{ u.created_at|dt }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

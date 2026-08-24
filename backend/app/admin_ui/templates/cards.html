@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_pager.html" import pager with context %}
+{% block content %}
+<form class="filters" method="get">
+  <input name="q" value="{{ q }}" placeholder="Lemma lub gloss…">
+  <select name="status">
+    <option value="">status</option>
+    {% for s in ['pending','preparing','ready','failed','prep_problem','learnable'] %}
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Filtruj</button>
+</form>
+<div class="panel">
+  <table>
+    <thead><tr><th>Lemma</th><th>Gloss</th><th>User</th><th>Status</th><th>Utworzono</th></tr></thead>
+    {% for card, email in rows %}
+      <tr class="clickable" data-href="/admin/cards/{{ card.id }}">
+        <td>{{ card.lemma_l2 }}</td>
+        <td>{{ card.gloss_primary }}</td>
+        <td>{{ email }}</td>
+        <td><span class="pill {{ card.enrichment_status|tone }}">{{ card.enrichment_status|status }}</span></td>
+        <td>{{ card.created_at|dt }}</td>
+      </tr>
+    {% else %}<tr><td colspan="5" class="muted">Brak kart</td></tr>{% endfor %}
+  </table>
+  {{ pager(page, total) }}
+</div>
+{% endblock %}

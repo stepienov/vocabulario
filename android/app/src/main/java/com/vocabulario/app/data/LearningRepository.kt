@@ -345,9 +345,10 @@ class LearningRepository @Inject constructor(
                 lexical_entry_id = lexicalEntryId,
             )
         )
-        offlineStore.upsertCards(profileId, listOf(created), deckId = null)
+        offlineStore.upsertCards(profileId, listOf(created), deckId = null, overwriteDeckId = true)
         watchOfflineIfPending(created)
-        syncScheduler.requestNow()
+        // POST już zapisał PG. Pełny pull tu nie wypełnia karty — może ją wyciąć
+        // (fullReplace gdy lastPulled == null). Enrichment = GET /cards/{id} → Room.
         return created
     }
 
@@ -433,11 +434,17 @@ class LearningRepository @Inject constructor(
                 pattern = pattern,
             ),
         )
-        val deckId = offlineStore.localLists(profileId).find { it.id == listId && it.is_system }?.let { null }
-            ?: listId.takeUnless { it.startsWith("local-") }
-        offlineStore.upsertCards(profileId, listOf(created), deckId = deckId)
+        val lists = offlineStore.localLists(profileId)
+        val isSystem = isSystemListForRoom(listId, lists)
+        offlineStore.upsertCards(
+            profileId,
+            listOf(created),
+            deckId = roomDeckIdForList(listId, isSystem),
+            overwriteDeckId = true,
+        )
         watchOfflineIfPending(created)
-        syncScheduler.requestNow()
+        // POST już zapisał PG. Nie wołaj pełnego pulla: karta ma być w Room od razu,
+        // a syncNow(fullReplace gdy lastPulled == null) czyści profil i może ją zgubić.
         return created
     }
 

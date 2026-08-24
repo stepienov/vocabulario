@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_pager.html" import pager with context %}
+{% block content %}
+<form class="filters" method="get">
+  <input name="q" value="{{ q }}" placeholder="Nazwa / email / błąd">
+  <input name="status" value="{{ status }}" placeholder="status">
+  <button type="submit">Filtruj</button>
+</form>
+<div class="panel">
+  <table>
+    <thead><tr><th>Czas</th><th>User</th><th>Źródło</th><th>Status</th><th>Fail</th><th>Błąd</th></tr></thead>
+    {% for job, email in rows %}
+      <tr class="clickable" data-href="/admin/imports/{{ job.id }}">
+        <td>{{ job.created_at|dt }}</td>
+        <td>{{ email }}</td>
+        <td>{{ job.source_name }}</td>
+        <td>{{ job.status }}</td>
+        <td>{{ job.failed_count }}</td>
+        <td>{{ job.error_message }}</td>
+      </tr>
+    {% else %}<tr><td colspan="6" class="muted">Brak importów</td></tr>{% endfor %}
+  </table>
+  {{ pager(page, total) }}
+</div>
+{% endblock %}

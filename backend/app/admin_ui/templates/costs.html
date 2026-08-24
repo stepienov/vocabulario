@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_pager.html" import pager with context %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi purple"><div class="label">Koszt (filtr)</div><div class="value">{{ summary.cost_usd|usd }}</div></div>
+  <div class="kpi orange"><div class="label">Calle</div><div class="value">{{ summary.total_calls }}</div></div>
+  <div class="kpi green"><div class="label">Cache hit</div><div class="value">{{ '%.0f'|format(summary.cache_pct) }}%</div></div>
+  <div class="kpi red"><div class="label">Błędy LLM</div><div class="value">{{ summary.errors }}</div></div>
+</div>
+<form class="filters" method="get">
+  <input name="q" value="{{ q }}" placeholder="lemma / query / purpose">
+  <input name="purpose" value="{{ purpose }}" placeholder="purpose">
+  <input name="operation_kind" value="{{ operation_kind }}" placeholder="operation_kind">
+  <input name="status" value="{{ status }}" placeholder="status">
+  <input type="date" name="from" value="{{ request.query_params.get('from','') }}">
+  <input type="date" name="to" value="{{ request.query_params.get('to','') }}">
+  <select name="group">
+    {% for g,label in [('purpose','purpose'),('day','dzień'),('user','user'),('lemma','lemma'),('model','model'),('operation_kind','operacja')] %}
+      <option value="{{ g }}" {% if group==g %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Filtruj</button>
+</form>
+<div class="grid-2">
+  <div class="panel">
+    <h2>Agregaty ({{ group }})</h2>
+    <table>
+      <thead><tr><th>Bucket</th><th>Calli</th><th>USD</th><th>Prompt</th><th>Cache</th></tr></thead>
+      {% for row in grouped %}
+        <tr><td>{{ row.bucket }}</td><td>{{ row.calls }}</td><td>{{ row.usd|usd }}</td><td>{{ row.prompt }}</td><td>{{ row.cached }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class="panel">
+    <h2>Tokeny</h2>
+    <p>Prompt: {{ summary.prompt_tokens }} · Completion: {{ summary.completion_tokens }} · Cached: {{ summary.cached_tokens }}</p>
+  </div>
+</div>
+<div class="panel">
+  <h2>Calle</h2>
+  <table>
+    <thead><tr><th>Czas</th><th>Purpose</th><th>Model</th><th>Lemma/query</th><th>User</th><th>Tokeny</th><th>USD</th><th>Status</th></tr></thead>
+    {% for u, email in rows %}
+      <tr>
+        <td>{{ u.created_at|dt }}</td>
+        <td>{{ u.purpose }}</td>
+        <td>{{ u.model }}</td>
+        <td>{{ u.lemma or u.query }}</td>
+        <td>{% if u.user_id %}<a href="/admin/users/{{ u.user_id }}">{{ email or u.user_id }}</a>{% endif %}</td>
+        <td>{{ u.prompt_tokens }}/{{ u.completion_tokens }} c{{ u.cached_tokens }}</td>
+        <td>{{ u.estimated_cost_usd|usd }}</td>
+        <td>{{ u.status }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+  {{ pager(page, total) }}
+</div>
+{% endblock %}

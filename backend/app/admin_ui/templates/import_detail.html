@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="muted">{% if user %}<a href="/admin/users/{{ user.id }}">{{ user.email }}</a>{% endif %} · {{ job.status }} · {{ job.source_kind }} {{ job.source_name }}</p>
+{% if job.error_message %}<p class="error">{{ job.error_code }}: {{ job.error_message }}</p>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="label">Przetworzone</div><div class="value">{{ job.processed }}/{{ job.total }}</div></div>
+  <div class="kpi green"><div class="label">OK</div><div class="value">{{ job.ready_count }}</div></div>
+  <div class="kpi red"><div class="label">Fail</div><div class="value">{{ job.failed_count }}</div></div>
+  <div class="kpi"><div class="label">Utworzone</div><div class="value">{{ job.created_count }}</div></div>
+</div>
+<div class="panel">
+  <h2>Itemy</h2>
+  <table>
+    <thead><tr><th>#</th><th>Label</th><th>Lemma</th><th>Werdykt</th><th>Błąd</th></tr></thead>
+    {% for it in items %}
+      <tr>
+        <td>{{ it.ordinal }}</td>
+        <td>{{ it.input_label }}</td>
+        <td>{{ it.lemma }}</td>
+        <td>{{ it.verdict }}</td>
+        <td>{{ it.last_error or it.reason_detail }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+</div>
+<div class="panel">
+  <h2>Timeline</h2>
+  <table>
+    {% for ev in events %}
+      <tr><td>{{ ev.at|dt }}</td><td>{{ ev.level }}</td><td>{{ ev.event }}</td><td><pre>{{ ev.payload|tojson }}</pre></td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

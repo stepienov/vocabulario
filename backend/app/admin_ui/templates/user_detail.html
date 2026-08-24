@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi"><div class="label">Koszt LLM</div><div class="value">{{ cost_usd|usd }}</div><div class="sub">{{ cost_calls }} calli</div></div>
+  <div class="kpi"><div class="label">Karty</div><div class="value">{{ cards|length }}</div></div>
+  <div class="kpi"><div class="label">Listy</div><div class="value">{{ lists|length }}</div></div>
+  <div class="kpi"><div class="label">Logowanie</div><div class="value">{{ 'Google' if user.google_id else 'Hasło' if user.password_hash else '—' }}</div></div>
+</div>
+<div class="grid-2">
+  <div class="panel">
+    <h2>Profile</h2>
+    <table>
+      <thead><tr><th>Pary</th><th>CEFR</th><th>Aktywny</th><th>Ostatnio</th></tr></thead>
+      <tbody>
+      {% for p in profiles %}
+        <tr><td>{{ p.app_lang }} → {{ p.learning_lang }}</td><td>{{ p.cefr_level }}</td><td>{{ 'tak' if p.is_active else 'nie' }}</td><td>{{ p.last_used_at|dt }}</td></tr>
+      {% else %}
+        <tr><td colspan="4" class="muted">Brak profili</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <h2>Ustawienia</h2>
+    {% if settings %}
+      <p>Tryb: {{ settings.practice_input_pref }} · kierunek {{ settings.practice_direction }}</p>
+      <p>Nowe karty / dzień: {{ settings.new_cards_per_day }} · motyw {{ settings.theme }}</p>
+    {% else %}
+      <p class="muted">Brak rekordu ustawień</p>
+    {% endif %}
+  </div>
+</div>
+<div class="panel">
+  <h2>Listy</h2>
+  <table>
+    {% for lst in lists %}
+      <tr class="clickable" data-href="/admin/lists/{{ lst.id }}"><td>{{ lst.name }}</td><td>{{ 'system' if lst.is_system else '' }} {{ 'inbox' if lst.is_pending_inbox else '' }}</td></tr>
+    {% else %}<tr><td class="muted">Brak list</td></tr>{% endfor %}
+  </table>
+</div>
+<div class="panel">
+  <h2>Ostatnie karty</h2>
+  <table>
+    <thead><tr><th>Lemma</th><th>Gloss</th><th>Status</th></tr></thead>
+    {% for c in cards %}
+      <tr class="clickable" data-href="/admin/cards/{{ c.id }}"><td>{{ c.lemma_l2 }}</td><td>{{ c.gloss_primary }}</td><td><span class="pill {{ c.enrichment_status|tone }}">{{ c.enrichment_status|status }}</span></td></tr>
+    {% endfor %}
+  </table>
+</div>
+<div class="panel">
+  <h2>Wyszukiwania</h2>
+  <table>
+    {% for ev in lookups %}
+      <tr><td>{{ ev.created_at|dt }}</td><td>{{ ev.query }}</td><td>{{ ev.source }}</td><td>{{ ev.candidate_count }}</td></tr>
+    {% else %}<tr><td class="muted">Brak historii (zapis od wdrożenia panelu)</td></tr>{% endfor %}
+  </table>
+</div>
+<div class="panel">
+  <h2>LLM</h2>
+  <table>
+    {% for u in usage_rows %}
+      <tr><td>{{ u.created_at|dt }}</td><td>{{ u.purpose }}</td><td>{{ u.model }}</td><td>{{ u.estimated_cost_usd|usd }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+<div class="panel">
+  <h2>Logi</h2>
+  <table>
+    {% for log in logs %}
+      <tr><td>{{ log.created_at|dt }}</td><td>{{ log.level }}</td><td>{{ log.event }}</td><td>{{ log.message or log.error_message }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

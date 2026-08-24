@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_pager.html" import pager with context %}
+{% block content %}
+<form class="filters" method="get">
+  <input name="q" value="{{ q }}" placeholder="Email lub lemma…">
+  <button type="submit">Filtruj</button>
+</form>
+<div class="panel">
+  <table>
+    <thead><tr><th>Czas</th><th>User</th><th>Lemma</th><th>Ocena</th><th>Tryb</th><th>Kierunek</th><th>OK</th></tr></thead>
+    {% for rev, email, lemma in rows %}
+      <tr>
+        <td>{{ rev.reviewed_at|dt }}</td>
+        <td><a href="/admin/users/{{ rev.user_id }}">{{ email }}</a></td>
+        <td><a href="/admin/cards/{{ rev.card_id }}">{{ lemma }}</a></td>
+        <td>{{ rev.grade }}</td>
+        <td>{{ rev.mode }}</td>
+        <td>{{ rev.direction }}</td>
+        <td>{{ rev.correct }}</td>
+      </tr>
+    {% else %}<tr><td colspan="7" class="muted">Brak powtórek</td></tr>{% endfor %}
+  </table>
+  {{ pager(page, total) }}
+</div>
+{% endblock %}

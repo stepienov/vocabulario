@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, UniqueConstraint, func, text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, Numeric, String, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -460,3 +460,65 @@ class AppLog(Base):
     error_message: Mapped[str | None] = mapped_column(String(4000), nullable=True)
     traceback: Mapped[str | None] = mapped_column(String, nullable=True)
     payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+
+class LlmUsage(Base):
+    """Per-call LLM token/cost meter. No FK to cards — rows outlive deletions."""
+
+    __tablename__ = "llm_usage"
+    __table_args__ = (
+        Index("ix_llm_usage_created_at", "created_at"),
+        Index("ix_llm_usage_operation_id", "operation_id"),
+        Index("ix_llm_usage_lemma_pair", "lemma", "lang_pair"),
+        Index("ix_llm_usage_purpose", "purpose"),
+        Index("ix_llm_usage_user_id", "user_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    provider: Mapped[str] = mapped_column(String(16), nullable=False, default="openai")
+    model: Mapped[str] = mapped_column(String(64), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(32), nullable=False)
+    operation_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    operation_kind: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    query: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    lemma: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    pos: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    lang_pair: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    card_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    profile_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    openai_response_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    prompt_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completion_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cached_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cache_write_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    reasoning_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    estimated_cost_usd: Mapped[float | None] = mapped_column(Numeric(12, 8), nullable=True)
+    pricing_version: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="ok")
+
+
+class LookupEvent(Base):
+    """Per-user lookup history. Cache hits are recorded too (source=cached)."""
+
+    __tablename__ = "lookup_events"
+    __table_args__ = (
+        Index("ix_lookup_events_created_at", "created_at"),
+        Index("ix_lookup_events_user_created", "user_id", "created_at"),
+        Index("ix_lookup_events_query_norm", "query_norm"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    profile_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    query: Mapped[str] = mapped_column(String(200), nullable=False)
+    query_norm: Mapped[str] = mapped_column(String(200), nullable=False)
+    lang_pair: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default="lookup")
+    candidate_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)

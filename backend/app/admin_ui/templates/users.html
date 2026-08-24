@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_pager.html" import pager with context %}
+{% block content %}
+<form class="filters" method="get">
+  <input name="q" value="{{ q }}" placeholder="Szukaj email…">
+  <button type="submit">Filtruj</button>
+</form>
+<div class="panel">
+  <table>
+    <thead><tr><th>Email</th><th>Rola</th><th>Karty</th><th>Listy</th><th>Ostatnia aktywność</th><th>Utworzono</th></tr></thead>
+    <tbody>
+    {% for user, cards, lists, last_activity in rows %}
+      <tr class="clickable" data-href="/admin/users/{{ user.id }}">
+        <td>{{ user.email }}</td>
+        <td>{{ user.role }}</td>
+        <td>{{ cards }}</td>
+        <td>{{ lists }}</td>
+        <td>{{ last_activity|dt }}</td>
+        <td>{{ user.created_at|dt }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="muted">Brak użytkowników</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {{ pager(page, total) }}
+</div>
+{% endblock %}

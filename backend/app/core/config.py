@@ -70,6 +70,18 @@ class Settings(BaseSettings):
     # FCM legacy server key (optional; push helpers no-op when empty)
     fcm_server_key: str = ""
 
+    admin_username: str = ""
+    admin_password: str = ""
+    admin_cookie_secret: str = ""
+
+    @property
+    def panel_enabled(self) -> bool:
+        return bool((self.admin_username or "").strip() and (self.admin_password or "").strip())
+
+    @property
+    def panel_cookie_secret(self) -> str:
+        return (self.admin_cookie_secret or "").strip() or self.jwt_secret
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]

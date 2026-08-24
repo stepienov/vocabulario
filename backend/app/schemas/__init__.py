@@ -337,6 +337,46 @@ class AppLogResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class LlmUsageResponse(BaseModel):
+    id: UUID
+    created_at: datetime
+    provider: str
+    model: str
+    purpose: str
+    operation_id: UUID | None = None
+    operation_kind: str | None = None
+    query: str | None = None
+    lemma: str | None = None
+    pos: str | None = None
+    lang_pair: str | None = None
+    card_id: UUID | None = None
+    user_id: UUID | None = None
+    profile_id: UUID | None = None
+    request_id: UUID | None = None
+    openai_response_id: str | None = None
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    cached_tokens: int
+    cache_write_tokens: int
+    reasoning_tokens: int
+    estimated_cost_usd: float | None = None
+    pricing_version: str | None = None
+    duration_ms: int | None = None
+    status: str
+
+    model_config = {"from_attributes": True}
+
+
+class LlmUsageListResponse(BaseModel):
+    items: list[LlmUsageResponse]
+    total_calls: int
+    total_prompt_tokens: int
+    total_completion_tokens: int
+    total_cached_tokens: int
+    total_estimated_cost_usd: float | None = None
+
+
 class WordListCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     profile_id: UUID

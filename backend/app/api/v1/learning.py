@@ -75,6 +75,7 @@ from app.services.import_classify import resolve_import_vocabulario_entries
 from app.services.import_package import ImportPackageError, load_raw_import, load_text_import
 from app.services.import_urls import ImportUrlError, detect_import_url, fetch_words_from_url
 from app.services.lexical import LexicalService, LookupOutcome
+from app.services.lookup_events import record_lookup_event
 from app.services.lookup_candidates import has_confident_match
 from app.services.similar_words import ensure_similar_words
 from app.services.srs import apply_review
@@ -124,6 +125,14 @@ async def lookup(
         outcome = await service.lookup(user, body.profile_id, body.text)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await record_lookup_event(
+        db,
+        user_id=user.id,
+        profile_id=body.profile_id,
+        query=body.text,
+        source=outcome.source,
+        candidate_count=len(outcome.candidates),
+    )
     await db.commit()
     return _lookup_http(outcome, body.text)
 
@@ -139,6 +148,14 @@ async def lookup_cached(
         outcome = await service.lookup_cached(user, body.profile_id, body.text)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await record_lookup_event(
+        db,
+        user_id=user.id,
+        profile_id=body.profile_id,
+        query=body.text,
+        source=outcome.source or "cached",
+        candidate_count=len(outcome.candidates),
+    )
     await db.commit()
     return _lookup_http(outcome, body.text)
 
@@ -154,6 +171,14 @@ async def lookup_expand(
         outcome = await service.lookup_expand(user, body.profile_id, body.text)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await record_lookup_event(
+        db,
+        user_id=user.id,
+        profile_id=body.profile_id,
+        query=body.text,
+        source=outcome.source or "expand",
+        candidate_count=len(outcome.candidates),
+    )
     await db.commit()
     return _lookup_http(outcome, body.text)
 

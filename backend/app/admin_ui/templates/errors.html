@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "_pager.html" import pager with context %}
+{% block content %}
+<div class="tabs">
+  <a class="{{ 'active' if tab=='logs' else '' }}" href="{{ qs(tab='logs', page=1) }}">Logi</a>
+  <a class="{{ 'active' if tab=='enrichment' else '' }}" href="{{ qs(tab='enrichment', page=1) }}">Enrichment</a>
+  <a class="{{ 'active' if tab=='qa' else '' }}" href="{{ qs(tab='qa', page=1) }}">QA treści</a>
+</div>
+<form class="filters" method="get">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <input name="q" value="{{ q }}" placeholder="Szukaj…">
+  <select name="level">
+    <option value="">poziom</option>
+    {% for lv in ['error','warn','info'] %}
+      <option value="{{ lv }}" {% if level==lv %}selected{% endif %}>{{ lv }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Filtruj</button>
+</form>
+{% if tab == 'enrichment' %}
+<div class="panel">
+  <table>
+    <thead><tr><th>Lemma</th><th>User</th><th>Status</th><th>Błąd</th></tr></thead>
+    {% for card, email in failed %}
+      <tr class="clickable" data-href="/admin/cards/{{ card.id }}">
+        <td>{{ card.lemma_l2 }}</td><td>{{ email }}</td>
+        <td><span class="pill err">{{ card.enrichment_status|status }}</span></td>
+        <td>{{ card.enrichment_error }}</td>
+      </tr>
+    {% else %}<tr><td colspan="4" class="muted">Brak failed enrichment</td></tr>{% endfor %}
+  </table>
+  {{ pager(page, failed_total) }}
+</div>
+{% elif tab == 'qa' %}
+<div class="panel">
+  <table>
+    <thead><tr><th>Czas</th><th>User</th><th>Lemma</th><th>AI</th><th>Admin</th></tr></thead>
+    {% for rev, email, lemma in qa %}
+      <tr>
+        <td>{{ rev.created_at|dt }}</td>
+        <td>{{ email }}</td>
+        <td><a href="/admin/cards/{{ rev.card_id }}">{{ lemma }}</a></td>
+        <td>{{ rev.ai_verdict }}</td>
+        <td>{{ rev.admin_status }}</td>
+      </tr>
+    {% else %}<tr><td colspan="5" class="muted">Kolejka pusta</td></tr>{% endfor %}
+  </table>
+  {{ pager(page, qa_total) }}
+</div>
+{% else %}
+<div class="panel">
+  <table>
+    <thead><tr><th>Czas</th><th>Lvl</th><th>Event</th><th>Path</th><th>User</th><th>Komunikat</th></tr></thead>
+    {% for log in logs %}
+      <tr>
+        <td>{{ log.created_at|dt }}</td>
+        <td><span class="pill {{ log.level|tone }}">{{ log.level }}</span></td>
+        <td>{{ log.event }}</td>
+        <td>{{ log.http_path }} {{ log.http_status or '' }}</td>
+        <td>{% if log.user_id %}<a href="/admin/users/{{ log.user_id }}">{{ log.user_id }}</a>{% endif %}</td>
+        <td>{{ log.message or log.error_message }}</td>
+      </tr>
+      {% if log.traceback %}
+      <tr><td colspan="6"><pre>{{ log.traceback }}</pre></td></tr>
+      {% endif %}
+    {% else %}<tr><td colspan="6" class="muted">Brak logów</td></tr>{% endfor %}
+  </table>
+  {{ pager(page, logs_total) }}
+</div>
+{% endif %}
+{% endblock %}

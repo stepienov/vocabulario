@@ -12,6 +12,7 @@ from app.ai.schemas.similar_words import MIN_SIMILAR_FOR_QUIZ, MIN_SIMILAR_WORDS
 from app.core.lemma_keys import canonical_lemma
 from app.core.text_repair import repair_strings
 from app.lsp.constants import CARD_SCHEMA_VERSION
+from app.lsp.lang_utils import articles_for
 from app.lsp.prompts import build_inflection_prompt_parts
 from app.lsp.registry import get_manifest
 from app.lsp.validate import apply_manifest_ui_labels, inflection_to_legacy_conjugation, validate_inflection
@@ -31,8 +32,6 @@ from app.services.similar_words import fetch_similar_words, skips_similar_words
 
 logger = logging.getLogger(__name__)
 
-INFLECT_POS = frozenset({"verb", "noun", "adj"})
-
 OnCore = Callable[[dict], Awaitable[None]]
 
 
@@ -49,9 +48,21 @@ def _same_headword(left: str | None, right: str | None) -> bool:
     return bool(a and b and a == b)
 
 
-def inflect_pos_key(pos: str | None) -> str | None:
+def inflect_pos_key(pos: str | None, lemma: str = "", learning_lang: str = "") -> str | None:
     bucket = _resolve_pos(pos) or "unknown"
-    return bucket if bucket in INFLECT_POS else None
+    if bucket in {"noun", "adj"}:
+        return bucket
+    if bucket == "verb":
+        return "verb"
+    if bucket == "construction":
+        return "verb"
+    if bucket == "phrase":
+        words = (lemma or "").split()
+        articles = articles_for(learning_lang)
+        if words and words[0].lower().rstrip("'") in articles:
+            return None
+        return "verb"
+    return None
 
 
 def side_jobs_need_retry(
@@ -75,7 +86,8 @@ def side_jobs_need_retry(
     )
     retry_similar = lemma_changed or pos_changed
     retry_inflection = lemma_changed or (
-        inflect_pos_key(lookup_pos) != inflect_pos_key(final_pos)
+        inflect_pos_key(lookup_pos, lemma=lookup_lemma)
+        != inflect_pos_key(final_pos, lemma=final_lemma)
     )
     return retry_similar, retry_inflection
 
@@ -135,7 +147,7 @@ async def fetch_lsp_inflection(
     lemma: str,
     pos: str | None,
 ) -> dict:
-    pos_final = inflect_pos_key(pos)
+    pos_final = inflect_pos_key(pos, lemma=lemma, learning_lang=profile.learning_lang)
     if pos_final is None:
         return {}
     manifest = get_manifest(profile.learning_lang)
@@ -168,7 +180,11 @@ def assemble_core_card(
         lemma_final = lemma
     else:
         lemma_final = core_lemma or lemma
-    pos_final = _resolve_pos(core.get("pos")) or _resolve_pos(pos) or "unknown"
+    pos_lookup = _resolve_pos(pos) or pos or "unknown"
+    if pos_lookup in {"phrase", "construction"}:
+        pos_final = pos_lookup
+    else:
+        pos_final = _resolve_pos(core.get("pos")) or pos_lookup or "unknown"
 
     meanings = [m for m in (core.get("meanings") or []) if isinstance(m, dict)]
     _normalize_usages(meanings)
@@ -195,9 +211,12 @@ def assemble_core_card(
     ui_hints.setdefault("script", manifest.script)
     ui_hints["rtl"] = manifest.rtl
     ui_hints["inflection_kind"] = manifest.inflection_kind
+    if inflect_pos_key(pos_final, lemma=lemma_final, learning_lang=profile.learning_lang) == "verb":
+        ui_hints.setdefault("show_conjugation", True)
 
     return repair_strings({
         "schema_version": CARD_SCHEMA_VERSION,
+        "entry_kind": "lemma",
         "lsp_version": manifest.lsp_version,
         "lemma": lemma_final,
         "language": profile.learning_lang,
@@ -271,7 +290,9 @@ async def finish_side_jobs(
         and len(content.get("similar_words") or []) < MIN_SIMILAR_WORDS
     )
     has_infl = bool(content.get("inflection") or content.get("conjugation"))
-    need_inflection = inflect_pos_key(pos) is not None and not has_infl
+    need_inflection = inflect_pos_key(
+        pos, lemma=lemma, learning_lang=profile.learning_lang
+    ) is not None and not has_infl
 
     similar_task = (
         asyncio.create_task(fetch_similar_words(llm, profile, lemma, pos))

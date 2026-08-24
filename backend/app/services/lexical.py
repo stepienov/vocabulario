@@ -12,6 +12,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from app.core.deps import lang_pair_key, normalize_text
 from app.models import LanguageProfile, LearningCard, LexicalEntry, LookupQueryCache, User
 from app.services.llm import LLMService
+from app.services.llm_usage import bind_llm_usage_context
 from app.services.enrichment import enrich_card_content
 from app.services.lookup_candidates import (
     append_lookup_candidates,
@@ -445,6 +446,15 @@ class LexicalService:
             )
 
         already = list(existing.candidates or []) if existing is not None else []
+        bind_llm_usage_context(
+            overwrite_operation=True,
+            operation_id=uuid4(),
+            operation_kind="lookup",
+            query=text,
+            lang_pair=pair,
+            user_id=user.id,
+            profile_id=profile.id,
+        )
         raw = await self.llm.lookup_expand(
             text,
             profile.app_lang,

@@ -80,6 +80,18 @@ def test_content_is_learnable_without_similar_or_inflection():
     assert not _entry_has_paid_content(SimpleNamespace(content=content))
 
 
+def test_content_complete_phrase_needs_inflection_not_similar():
+    content = {
+        "schema_version": "vocabulario.card.v1",
+        "entry_kind": "lemma",
+        "pos": "phrase",
+        "meanings": [{"gloss_l1": "płacić na raty", "examples": [{"l2": "a", "l1": "b"}]}],
+        "similar_words": [],
+        "conjugation": {"presente": {"yo": "pago a plazos"}},
+    }
+    assert content_is_complete(content)
+
+
 def test_content_complete_verb_needs_inflection_and_similar():
     content = {
         "schema_version": "vocabulario.card.v1",
@@ -95,6 +107,8 @@ def test_assemble_core_keeps_lookup_lemma_not_translation():
     core = _core_payload(lemma="do something gradually", pos="verb")
     card = assemble_core_card(_profile(), "ir haciendo algo", "construction", core)
     assert card["lemma"] == "ir haciendo algo"
+    assert card["pos"] == "construction"
+    assert card["entry_kind"] == "lemma"
 
 
 def test_guard_pins_lemma_on_lemma_path_and_raises_on_adaptive():

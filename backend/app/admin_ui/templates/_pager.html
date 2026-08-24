@@ -1,0 +1,10 @@
+{% macro pager(page, total, size=50) %}
+{% set pages = (total // size) + (1 if total % size else 0) %}
+<div class="pager">
+  <span>Razem {{ total }} · strona {{ page }}{% if pages %} / {{ pages }}{% endif %}</span>
+  <span>
+    {% if page > 1 %}<a href="{{ qs(page=page-1) }}">Poprzednia</a>{% endif %}
+    {% if pages and page < pages %}<a href="{{ qs(page=page+1) }}">Następna</a>{% endif %}
+  </span>
+</div>
+{% endmacro %}

@@ -338,6 +338,58 @@ _STATEMENTS = (
     """,
     "CREATE INDEX IF NOT EXISTS ix_lookup_query_cache_lang_pair "
     "ON lookup_query_cache (lang_pair)",
+    """
+    CREATE TABLE IF NOT EXISTS llm_usage (
+        id UUID PRIMARY KEY,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        provider VARCHAR(16) NOT NULL DEFAULT 'openai',
+        model VARCHAR(64) NOT NULL,
+        purpose VARCHAR(32) NOT NULL,
+        operation_id UUID,
+        operation_kind VARCHAR(32),
+        query VARCHAR(200),
+        lemma VARCHAR(255),
+        pos VARCHAR(32),
+        lang_pair VARCHAR(16),
+        card_id UUID,
+        user_id UUID,
+        profile_id UUID,
+        request_id UUID,
+        openai_response_id VARCHAR(64),
+        prompt_tokens INTEGER NOT NULL DEFAULT 0,
+        completion_tokens INTEGER NOT NULL DEFAULT 0,
+        total_tokens INTEGER NOT NULL DEFAULT 0,
+        cached_tokens INTEGER NOT NULL DEFAULT 0,
+        cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+        reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+        estimated_cost_usd NUMERIC(12, 8),
+        pricing_version VARCHAR(16),
+        duration_ms INTEGER,
+        status VARCHAR(16) NOT NULL DEFAULT 'ok'
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_llm_usage_created_at ON llm_usage (created_at)",
+    "CREATE INDEX IF NOT EXISTS ix_llm_usage_operation_id ON llm_usage (operation_id)",
+    "CREATE INDEX IF NOT EXISTS ix_llm_usage_lemma_pair ON llm_usage (lemma, lang_pair)",
+    "CREATE INDEX IF NOT EXISTS ix_llm_usage_purpose ON llm_usage (purpose)",
+    "CREATE INDEX IF NOT EXISTS ix_llm_usage_user_id ON llm_usage (user_id)",
+    """
+    CREATE TABLE IF NOT EXISTS lookup_events (
+        id UUID PRIMARY KEY,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        user_id UUID,
+        profile_id UUID,
+        query VARCHAR(200) NOT NULL,
+        query_norm VARCHAR(200) NOT NULL,
+        lang_pair VARCHAR(16),
+        source VARCHAR(16) NOT NULL DEFAULT 'lookup',
+        candidate_count INTEGER NOT NULL DEFAULT 0,
+        http_status INTEGER
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_lookup_events_created_at ON lookup_events (created_at)",
+    "CREATE INDEX IF NOT EXISTS ix_lookup_events_user_created ON lookup_events (user_id, created_at)",
+    "CREATE INDEX IF NOT EXISTS ix_lookup_events_query_norm ON lookup_events (query_norm)",
 )
 
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -27,8 +27,9 @@ from app.models import LanguageProfile, LearningCard, LexicalEntry, User
 from app.services.distractors import in_learning_lemma, lemma_keys
 from app.services.enrichment import enrich_adaptive_card_content, enrich_card_content
 from app.services.lexical import LexicalService
+from app.services.llm_usage import bind_llm_usage_context
 from app.services.pos_normalize import normalize_pos_bucket
-from app.services.similar_words import ensure_similar_words
+from app.services.similar_words import ensure_similar_words, skips_similar_words
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,10 @@ def resolve_enrichment_entry_kind(content: dict | None, *, pos: str | None = Non
     """Lemma vs adaptive: entry_kind z content, a gdy brak — POS (import zapisywał construction bez kind)."""
     data = content or {}
     kind = str(data.get("entry_kind") or "").strip().lower()
+    if kind == "lemma":
+        # Lookup może mieć pos=phrase/construction, ale karta ma iść ścieżką lematu
+        # (koniugacja zwrotu). Adaptive tylko przy jawnym entry_kind z importu.
+        return "lemma"
     if kind in ADAPTIVE_ENTRY_KINDS:
         return kind
     pos_kind = str(data.get("pos") or pos or "").strip().lower()
@@ -224,6 +229,7 @@ def build_pending_content(
     kind = (entry_kind or "lemma").strip().lower()
     base: dict = {
         "schema_version": "vocabulario.card.v1" if kind == "lemma" else "vocabulario.adaptive.v1",
+        "entry_kind": kind,
         "lemma": lemma,
         "language": learning_lang,
         "pos": pos,
@@ -237,7 +243,6 @@ def build_pending_content(
         "conjugation": None,
     }
     if kind != "lemma":
-        base["entry_kind"] = kind
         base["pattern"] = pattern
         base["related_lemma"] = base_lemma
         base["source_import"] = {
@@ -280,8 +285,12 @@ def content_is_complete(content: dict | None) -> bool:
     if content.get("schema_version") == "vocabulario.adaptive.v1":
         return True
     if content.get("schema_version") == "vocabulario.card.v1":
-        if content.get("pos") == "verb" and not _has_verb_inflection(content):
+        pos = str(content.get("pos") or "").strip().lower()
+        needs_infl = pos in {"verb", "phrase", "construction"}
+        if needs_infl and not _has_verb_inflection(content):
             return False
+        if skips_similar_words(content, pos):
+            return True
         return len(content.get("similar_words") or []) >= MIN_SIMILAR_FOR_QUIZ
     return len(content.get("similar_words") or []) >= MIN_SIMILAR_FOR_QUIZ
 
@@ -721,6 +730,18 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                 await notify_cards_ready(db, card.user_id, card_id=card.id)
                 return
 
+            bind_llm_usage_context(
+                overwrite_operation=True,
+                operation_id=uuid4(),
+                operation_kind="lemma_enrich",
+                lemma=card.lemma_l2,
+                pos=card.pos,
+                lang_pair=lang_pair_key(profile.app_lang, profile.learning_lang),
+                card_id=card.id,
+                user_id=card.user_id,
+                profile_id=card.profile_id,
+            )
+
             if not _card_lookup_resolved(card):
                 user = (
                     await db.execute(select(User).where(User.id == card.user_id))
@@ -760,6 +781,12 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
             entry_kind = resolve_enrichment_entry_kind(content0, pos=card.pos)
             schema0 = content0.get("schema_version") or "vocabulario.card.v1"
             if schema0 == "vocabulario.adaptive.v1" or entry_kind in ADAPTIVE_ENTRY_KINDS:
+                bind_llm_usage_context(
+                    overwrite_operation=True,
+                    operation_kind="adaptive_enrich",
+                    lemma=card.lemma_l2,
+                    pos=card.pos,
+                )
                 src = content0.get("source_import") or {}
                 content = await enrich_adaptive_card_content(
                     profile,

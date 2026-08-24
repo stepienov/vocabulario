@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · Vocabulario</title>
+  <link rel="stylesheet" href="/admin/static/admin.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">V</span> Vocabulario</div>
+      <nav class="nav">
+        {% for key, href, label in nav_items %}
+          <a href="{{ href }}" class="{{ 'active' if nav == key else '' }}">{{ label }}</a>
+        {% endfor %}
+      </nav>
+      <form method="post" action="/admin/logout" style="padding:16px 10px 0">
+        <button class="secondary" type="submit">Wyloguj</button>
+      </form>
+    </aside>
+    <div class="main">
+      <header class="header">
+        <h1>{{ title }}</h1>
+        <div class="header-right"><span>UTC</span><strong>Admin</strong></div>
+      </header>
+      <div class="content">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </div>
+  <script src="/admin/static/admin.js"></script>
+</body>
+</html>

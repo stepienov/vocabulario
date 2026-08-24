@@ -45,6 +45,9 @@ from app.ai.schemas.import_format import import_format_schema
 from app.ai.schemas.import_structure import import_structure_schema
 from app.ai.schemas.similar_words import similar_words_response_schema
 from app.core.config import get_settings
+from app.core.deps import lang_pair_key
+from app.services.llm_pricing import parse_anthropic_usage, parse_openai_usage
+from app.services.llm_usage import bind_llm_usage_context, record_llm_usage
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +120,7 @@ class LLMService:
         cache_key: str | None = None,
         prompt_static: str | None = None,
         prompt_dynamic: str | None = None,
+        purpose: str = "chat_json",
     ) -> dict[str, Any]:
         if self.mock:
             mock_prompt = prompt
@@ -129,9 +133,10 @@ class LLMService:
         if prompt_static is not None and prompt_dynamic is not None:
             prompt_len = len(prompt_static) + len(prompt_dynamic)
         started = time.perf_counter()
+        usage = None
         try:
             if use_provider == "anthropic" and self._anthropic is not None:
-                data = await self._chat_json_anthropic(
+                data, usage = await self._chat_json_anthropic(
                     model,
                     prompt_static + "\n" + prompt_dynamic
                     if prompt_static and prompt_dynamic
@@ -141,7 +146,7 @@ class LLMService:
                     max_tokens=max_tokens,
                 )
             else:
-                data = await self._chat_json_openai(
+                data, usage = await self._chat_json_openai(
                     model,
                     prompt,
                     system,
@@ -155,12 +160,13 @@ class LLMService:
         except Exception as exc:
             from app.services.app_log import log_event
 
+            duration_ms = int((time.perf_counter() - started) * 1000)
             await log_event(
                 level="error",
                 category="llm",
                 event="llm_call",
                 status="error",
-                duration_ms=int((time.perf_counter() - started) * 1000),
+                duration_ms=duration_ms,
                 message=f"{use_provider}:{model} {schema_name} failed",
                 payload={
                     "provider": use_provider,
@@ -168,18 +174,28 @@ class LLMService:
                     "schema": schema_name,
                     "prompt_chars": prompt_len,
                     "cache_key": cache_key,
+                    "purpose": purpose,
                 },
                 exc=exc,
+            )
+            await record_llm_usage(
+                provider=use_provider,
+                model=model,
+                purpose=purpose,
+                status="error",
+                duration_ms=duration_ms,
+                usage=usage,
             )
             raise
         from app.services.app_log import log_event
 
+        duration_ms = int((time.perf_counter() - started) * 1000)
         await log_event(
             level="info",
             category="llm",
             event="llm_call",
             status="ok",
-            duration_ms=int((time.perf_counter() - started) * 1000),
+            duration_ms=duration_ms,
             message=f"{use_provider}:{model} {schema_name}",
             payload={
                 "provider": use_provider,
@@ -187,7 +203,16 @@ class LLMService:
                 "schema": schema_name,
                 "prompt_chars": prompt_len,
                 "cache_key": cache_key,
+                "purpose": purpose,
             },
+        )
+        await record_llm_usage(
+            provider=use_provider,
+            model=model,
+            purpose=purpose,
+            status="ok",
+            duration_ms=duration_ms,
+            usage=usage,
         )
         return data
 
@@ -203,7 +228,7 @@ class LLMService:
         cache_key: str | None = None,
         prompt_static: str | None = None,
         prompt_dynamic: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> tuple[dict[str, Any], Any]:
         assert self.client is not None
         system_content = system or (
             "Jesteś asystentem językowym. Zwracasz wyłącznie poprawny JSON "
@@ -256,8 +281,9 @@ class LLMService:
             )
             kwargs[limit_key] = max_tokens
         response = await self.client.chat.completions.create(**kwargs)
+        usage = parse_openai_usage(response)
         content = response.choices[0].message.content or "{}"
-        return json.loads(content)
+        return json.loads(content), usage
 
     async def _chat_json_anthropic(
         self,
@@ -267,7 +293,7 @@ class LLMService:
         *,
         json_schema: dict | None = None,
         max_tokens: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> tuple[dict[str, Any], Any]:
         """Anthropic path: force JSON via instruction + parse (no native json_schema)."""
         assert self._anthropic is not None
         schema_hint = ""
@@ -290,7 +316,7 @@ class LLMService:
         if text.startswith("```"):
             text = re.sub(r"^```(?:json)?\s*", "", text)
             text = re.sub(r"\s*```$", "", text)
-        return json.loads(text or "{}")
+        return json.loads(text or "{}"), parse_anthropic_usage(msg)
 
     def _mock_similar_words(self, lemma: str) -> list[dict[str, str]]:
         """Dystraktory — inne słowa, nie odmiany lematu."""
@@ -479,10 +505,12 @@ class LLMService:
             pair_guidance=language_pair_guidance(native=native, learning=learning),
             lookup_output_form_rules=lookup_output_form_rules_text(native, learning),
         )
+        bind_llm_usage_context(query=text, lang_pair=lang_pair_key(native, learning))
         data = await self._chat_json(
             self.lookup_model,
             prompt,
             system=LOOKUP_SYSTEM_V1,
+            purpose="lookup",
         )
         return data.get("candidates", [])
 
@@ -523,10 +551,12 @@ class LLMService:
             lookup_output_form_rules=lookup_output_form_rules_text(native, learning),
             already_block=self._already_block(already or []),
         )
+        bind_llm_usage_context(query=text, lang_pair=lang_pair_key(native, learning))
         data = await self._chat_json(
             self.lookup_model,
             prompt,
             system=LOOKUP_SYSTEM_V1,
+            purpose="lookup_expand",
         )
         return data.get("candidates", [])
 
@@ -551,6 +581,7 @@ class LLMService:
                 "gloss = L1 headword (singular noun / infinitive verb). "
                 "If the typed string is also a valid L2 headword, include that reading too."
             ),
+            purpose="lookup_l1_typo",
         )
         return data.get("candidates", [])
 
@@ -577,6 +608,11 @@ class LLMService:
         )
         prompt = static + "\n" + dynamic
         cache_key = pair_cache_key("enrich", native, learning, extra=cefr)
+        bind_llm_usage_context(
+            lemma=lemma,
+            pos=pos_val,
+            lang_pair=lang_pair_key(native, learning),
+        )
         return await self._chat_json(
             self.lookup_model,
             prompt,
@@ -584,6 +620,7 @@ class LLMService:
             cache_key=cache_key,
             prompt_static=static,
             prompt_dynamic=dynamic,
+            purpose="enrich_core",
         )
 
     async def repair_related_articles(
@@ -612,6 +649,7 @@ class LLMService:
             self.light_model,
             prompt,
             system="Return only JSON with an articles object. Never invent articles.",
+            purpose="article_repair",
         )
 
     async def generate_examples(
@@ -631,6 +669,11 @@ class LLMService:
             glosses=glosses,
             retry=retry,
         )
+        bind_llm_usage_context(
+            lemma=lemma,
+            pos=pos or "unknown",
+            lang_pair=lang_pair_key(native, learning),
+        )
         return await self._chat_json(
             self.light_model,
             prompt,
@@ -640,6 +683,7 @@ class LLMService:
                 "różnić trudnością. ZAKAZ powtarzania tego samego zdania l2 między "
                 "znaczeniami. Tylko poprawny JSON."
             ),
+            purpose="examples",
         )
 
     async def generate_lsp_inflection(
@@ -670,6 +714,7 @@ class LLMService:
             cache_key=cache_key,
             prompt_static=prompt_static,
             prompt_dynamic=prompt_dynamic,
+            purpose="inflection",
         )
         if isinstance(data.get("inflection"), dict):
             return data["inflection"]
@@ -691,7 +736,9 @@ class LLMService:
             pos=pos or "unknown",
             cefr=cefr,
         )
-        return await self._chat_json(self.enrichment_model, prompt)
+        return await self._chat_json(self.enrichment_model, prompt,
+            purpose="enrich",
+        )
 
     def _parse_similar_words(self, data: dict[str, Any]) -> list[dict]:
         raw = data.get("similar_words", [])
@@ -728,6 +775,11 @@ class LLMService:
         )
         prompt = static + "\n" + dynamic
         cache_key = pair_cache_key("similar", native, learning, extra=pos_val)
+        bind_llm_usage_context(
+            lemma=lemma,
+            pos=pos_val,
+            lang_pair=lang_pair_key(native, learning),
+        )
         data = await self._chat_json(
             self.light_model,
             prompt,
@@ -737,6 +789,7 @@ class LLMService:
             cache_key=cache_key,
             prompt_static=static,
             prompt_dynamic=dynamic,
+            purpose="similar_words",
         )
         return self._parse_similar_words(data)
 
@@ -766,6 +819,7 @@ class LLMService:
             system=SIMILAR_WORDS_SYSTEM_V1,
             json_schema=similar_words_response_schema(count=count),
             max_tokens=4000,
+            purpose="filler",
         )
         return self._parse_similar_words(data)
 
@@ -799,6 +853,7 @@ class LLMService:
             json_schema=import_format_schema(),
             max_tokens=3500,
             temperature=0.1,
+            purpose="import_format",
         )
         _log_import_llm(
             "IMPORT FORMAT ← RESPONSE",
@@ -835,6 +890,7 @@ class LLMService:
             json_schema=import_classify_schema(),
             max_tokens=6000,
             temperature=0.1,
+            purpose="import_classify",
         )
         _log_import_llm(
             "IMPORT CLASSIFY ← RESPONSE",
@@ -867,6 +923,7 @@ class LLMService:
             json_schema=import_verify_lemmas_schema(),
             max_tokens=2000,
             temperature=0,
+            purpose="import_verify",
         )
         _log_import_llm(
             "IMPORT VERIFY LEMMAS ← RESPONSE",
@@ -896,6 +953,10 @@ class LLMService:
             base_lemma=base_lemma or "",
             pattern=pattern or "",
         )
+        bind_llm_usage_context(
+            lemma=headword,
+            lang_pair=lang_pair_key(native, learning),
+        )
         return await self._chat_json(
             self.lookup_model,
             prompt,
@@ -903,6 +964,7 @@ class LLMService:
             json_schema=import_adaptive_enrich_schema(),
             max_tokens=3500,
             temperature=0.2,
+            purpose="adaptive",
         )
 
     async def analyze_import_structure(
@@ -968,6 +1030,7 @@ class LLMService:
             json_schema=import_structure_schema(),
             max_tokens=2000,
             temperature=0.1,
+            purpose="import_structure",
         )
         _log_import_llm(
             "IMPORT LLM ← RESPONSE",
@@ -1040,6 +1103,7 @@ class LLMService:
                 "Return strict JSON."
             ),
             temperature=0.2,
+            purpose="correction",
         )
         status = str(data.get("status", "rejected")).lower()
         if status not in {"accepted", "rejected"}:
@@ -1108,6 +1172,7 @@ class LLMService:
                 "Return strict JSON."
             ),
             temperature=0.2,
+            purpose="self_edit_validate",
         )
         ok = bool(data.get("ok", True))
         raw_issues = data.get("issues") if isinstance(data.get("issues"), list) else []
@@ -1152,6 +1217,7 @@ class LLMService:
             prompt,
             system="You review whether a user's flashcard edit is linguistically reasonable. Return strict JSON.",
             temperature=0.2,
+            purpose="self_edit_review",
         )
         verdict = str(data.get("verdict", "self_edit_questionable"))
         if verdict not in {"self_edit_ok", "self_edit_questionable", "self_edit_invalid"}:

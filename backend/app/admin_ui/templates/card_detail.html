@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi"><div class="label">Status</div><div class="value" style="font-size:18px"><span class="pill {{ card.enrichment_status|tone }}">{{ card.enrichment_status|status }}</span></div></div>
+  <div class="kpi"><div class="label">Koszt enrichment</div><div class="value">{{ cost_usd|usd }}</div></div>
+  <div class="kpi"><div class="label">User</div><div class="value" style="font-size:16px">{% if user %}<a href="/admin/users/{{ user.id }}">{{ user.email }}</a>{% endif %}</div></div>
+  <div class="kpi"><div class="label">Retry</div><div class="value" style="font-size:16px">{{ card.enrichment_retry_count }}</div></div>
+</div>
+<form method="post" action="/admin/cards/{{ card.id }}/retry-enrichment">
+  <button type="submit">Ponów enrichment</button>
+</form>
+{% if card.enrichment_error %}<p class="error">{{ card.enrichment_error }}</p>{% endif %}
+<div class="grid-2">
+  <div class="panel">
+    <h2>Karta</h2>
+    <p><strong>{{ card.lemma_l2 }}</strong> · {{ card.pos }} · {{ card.gloss_primary }}</p>
+    {% if srs %}<p>SRS: {{ srs.status }} · następna: {{ srs.next_review_at|dt }}</p>{% endif %}
+    <h2>Treść JSON</h2>
+    <pre>{{ card.content|tojson }}</pre>
+  </div>
+  <div class="panel">
+    <h2>Entry leksykalny</h2>
+    {% if entry %}
+      <p>{{ entry.lemma_l2 }} / {{ entry.lemma_l1_primary }} · {{ entry.lang_pair }} · użycia {{ entry.usage_count }}</p>
+    {% else %}<p class="muted">Brak powiązanego entry</p>{% endif %}
+    <h2>LLM</h2>
+    <table>
+      {% for u in usage %}
+        <tr><td>{{ u.created_at|dt }}</td><td>{{ u.purpose }}</td><td>{{ u.estimated_cost_usd|usd }}</td><td>{{ u.status }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+<div class="panel">
+  <h2>Powtórki</h2>
+  <table>
+    {% for r in reviews %}
+      <tr><td>{{ r.reviewed_at|dt }}</td><td>{{ r.grade }}</td><td>{{ r.mode }}</td><td>{{ r.direction }}</td><td>{{ r.correct }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

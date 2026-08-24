@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Logowanie · Vocabulario</title>
+  <link rel="stylesheet" href="/admin/static/admin.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <form class="login-card" method="post" action="/admin/login">
+      <div class="brand"><span class="brand-mark">V</span> Vocabulario</div>
+      <h1>Panel administracyjny</h1>
+      <p class="muted">Zaloguj się kontem z zmiennych środowiskowych.</p>
+      <input type="hidden" name="next" value="{{ next }}">
+      <label>Użytkownik</label>
+      <input name="username" autocomplete="username" required>
+      <label>Hasło</label>
+      <input name="password" type="password" autocomplete="current-password" required>
+      {% if error %}<div class="error">{{ error }}</div>{% endif %}
+      <button type="submit">Zaloguj</button>
+    </form>
+  </div>
+</body>
+</html>

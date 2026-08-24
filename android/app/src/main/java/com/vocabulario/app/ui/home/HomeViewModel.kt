@@ -349,20 +349,14 @@ class HomeViewModel @Inject constructor(
         }
     }
     fun selectTab(tab: HomeTab) {
-        val leavingAdd = _state.value.tab == HomeTab.ADD && tab != HomeTab.ADD
-        if (leavingAdd) searchJob?.cancel()
         _state.value = _state.value.copy(
             tab = tab,
             error = null,
             selectedWordIds = if (tab != HomeTab.LISTS) emptySet() else _state.value.selectedWordIds,
-            query = if (leavingAdd) "" else _state.value.query,
-            candidates = if (leavingAdd) emptyList() else _state.value.candidates,
-            expanding = if (leavingAdd) false else _state.value.expanding,
-            searchLoading = if (leavingAdd) false else _state.value.searchLoading,
-            addTarget = if (leavingAdd) null else _state.value.addTarget,
-            pickListOpen = if (leavingAdd) false else _state.value.pickListOpen,
-            showCreateListPrompt = if (leavingAdd) false else _state.value.showCreateListPrompt,
-            createListName = if (leavingAdd) "" else _state.value.createListName,
+            addTarget = if (tab != HomeTab.ADD) null else _state.value.addTarget,
+            pickListOpen = if (tab != HomeTab.ADD) false else _state.value.pickListOpen,
+            showCreateListPrompt = if (tab != HomeTab.ADD) false else _state.value.showCreateListPrompt,
+            createListName = if (tab != HomeTab.ADD) "" else _state.value.createListName,
             detailCard = if (tab != HomeTab.LISTS) null else _state.value.detailCard,
         )
         when (tab) {
@@ -1368,7 +1362,6 @@ class HomeViewModel @Inject constructor(
             return
         }
         if (pollJob?.isActive == true) return
-        repository.requestBackgroundSync()
         pollJob = viewModelScope.launch {
             while (isActive) {
                 val cardIds = enrichmentPollCardIds()

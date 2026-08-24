@@ -67,6 +67,10 @@ interface CachedCardDao {
 
     @Query("UPDATE cached_cards SET deckId = :newId WHERE deckId = :oldId")
     suspend fun migrateDeckId(oldId: String, newId: String)
+
+    /** Karty błędnie zapisane z UUID listy systemowej → NULL, żeby weszły do systemListCards. */
+    @Query("UPDATE cached_cards SET deckId = NULL WHERE profileId = :profileId AND deckId = :systemListId")
+    suspend fun clearDeckIdMatchingList(profileId: String, systemListId: String)
 }
 
 @Dao

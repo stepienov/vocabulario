@@ -3,6 +3,7 @@ import re
 import unicodedata
 
 from app.lsp.lang_utils import articles_for
+from app.services.lookup_pos import refine_lookup_pos
 from app.services.pos_normalize import (
     canonicalize_lookup_candidate,
     lemma_stem,
@@ -567,7 +568,9 @@ def sanitize_lookup_candidates(
 
         item = canonicalize_lookup_candidate(item, learning_lang=learning_lang)
         lemma = (item.get("lemma") or "").strip()
-        bucket = normalize_pos_bucket(item.get("pos"))
+        refined = refine_lookup_pos(lemma, item.get("pos"), learning_lang=learning_lang)
+        item["pos"] = refined
+        bucket = normalize_pos_bucket(refined)
         words = lemma.split()
         n = len(words)
 

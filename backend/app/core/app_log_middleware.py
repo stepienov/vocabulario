@@ -15,6 +15,7 @@ from app.services.app_log import (
     log_event,
     should_log_http,
 )
+from app.services.llm_usage import clear_llm_usage_context
 
 
 def _user_id_from_request(request: Request) -> UUID | None:
@@ -49,6 +50,7 @@ class AppLogMiddleware(BaseHTTPMiddleware):
         user_id = _user_id_from_request(request)
         profile_id = _profile_id_from_request(request)
         bind_request_context(request_id=request_id, user_id=user_id, profile_id=profile_id)
+        clear_llm_usage_context()
         path = request.url.path
         method = request.method
         started = time.perf_counter()

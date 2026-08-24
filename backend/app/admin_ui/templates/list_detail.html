@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="muted">Właściciel: {% if user %}<a href="/admin/users/{{ user.id }}">{{ user.email }}</a>{% endif %} · {{ 'systemowa' if list.is_system else 'własna' }}</p>
+<div class="panel">
+  <h2>Słowa na liście ({{ cards|length }})</h2>
+  <table>
+    <thead><tr><th>Lemma</th><th>Gloss</th><th>POS</th><th>Status</th></tr></thead>
+    {% for c in cards %}
+      <tr class="clickable" data-href="/admin/cards/{{ c.id }}">
+        <td>{{ c.lemma_l2 }}</td><td>{{ c.gloss_primary }}</td><td>{{ c.pos }}</td>
+        <td><span class="pill {{ c.enrichment_status|tone }}">{{ c.enrichment_status|status }}</span></td>
+      </tr>
+    {% else %}<tr><td colspan="4" class="muted">Pusta lista</td></tr>{% endfor %}
+  </table>
+</div>
+{% endblock %}

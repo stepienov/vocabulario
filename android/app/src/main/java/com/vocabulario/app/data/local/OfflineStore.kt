@@ -202,13 +202,31 @@ class OfflineStore @Inject constructor(
         )
 
     /**
+     * Karty z `deckId` = UUID listy systemowej są niewidoczne na „Uczę się”
+     * (`systemListCards` = `deckId IS NULL`). Wcześniejszy zapis add tak robił.
+     */
+    suspend fun repairMisplacedSystemDeckIds(profileId: String) {
+        val systemIds = listDao.forProfile(profileId)
+            .filter { it.isSystem && !it.id.startsWith("local-") && !it.id.startsWith("local:") }
+            .map { it.id }
+        for (id in systemIds) {
+            cardDao.clearDeckIdMatchingList(profileId, id)
+        }
+    }
+
+    /**
      * Dopisuje karty bez kasowania reszty decku. [cacheCardsFromList] robi replace
      * i nie wolno go wołać z jedną kartą.
+     *
+     * [overwriteDeckId] = true zapisuje [deckId] nawet gdy jest null (lista systemowa).
+     * Domyślnie null znaczy „zostaw dotychczasowy deck”, żeby poll enrichment
+     * (GET karty bez `deck_id`) nie gubił listy.
      */
     suspend fun upsertCards(
         profileId: String,
         cards: List<CardResponse>,
         deckId: String? = null,
+        overwriteDeckId: Boolean = false,
     ) {
         if (cards.isEmpty()) return
         val entities = cards.map { card ->
@@ -216,7 +234,7 @@ class OfflineStore @Inject constructor(
             CachedCardEntity(
                 id = card.id,
                 profileId = profileId,
-                deckId = deckId ?: existing?.deckId,
+                deckId = if (overwriteDeckId) deckId else deckId ?: existing?.deckId,
                 lemmaL2 = card.lemma_l2,
                 glossPrimary = card.gloss_primary,
                 pos = card.pos,
@@ -489,6 +507,7 @@ class OfflineStore @Inject constructor(
         if (pendingLookupCount(profileId) > 0) {
             ensureLocalPendingInbox(profileId)
         }
+        repairMisplacedSystemDeckIds(profileId)
         val all = listDao.forProfile(profileId)
             .filter { !it.pendingDelete }
             .map { it.toResponse() }
@@ -914,14 +933,14 @@ class OfflineStore @Inject constructor(
         deckId: String? = null,
     ) {
         val newIds = cards.map { it.id }.toSet()
-        val existing = if (deckId == null) {
-            cardDao.systemListCards(profileId)
-        } else {
-            cardDao.cardsForDeck(profileId, deckId)
-        }
-        val stale = existing.filter { it.id !in newIds && !it.id.startsWith("pending-lookup-") }
-        if (stale.isNotEmpty()) {
-            cardDao.deleteIds(stale.map { it.id })
+        // Lista systemowa (deckId == null): tylko upsert. Niepełny GET nie może
+        // skasować kart, które Room już ma — to nie jest restore z serwera.
+        if (deckId != null) {
+            val existing = cardDao.cardsForDeck(profileId, deckId)
+            val stale = existing.filter { it.id !in newIds && !it.id.startsWith("pending-lookup-") }
+            if (stale.isNotEmpty()) {
+                cardDao.deleteIds(stale.map { it.id })
+            }
         }
         if (cards.isEmpty()) return
         val entities = cards.map { card ->

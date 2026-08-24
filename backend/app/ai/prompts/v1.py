@@ -54,6 +54,8 @@ lemma (always in L2={learning_name}):
 - noun → singular dictionary headword; include definite article when the language uses one
   (Spanish el/la, French le/la, German der/die/das, Italian il/la, Portuguese o/a, …)
 - adjective → base citation form (no article)
+- phrase / construction → the FULL multiword headword (pagar a plazos, tener que,
+  look up, be going to). NEVER reduce to the base verb.
 - other POS → standard dictionary headword for that language
 
 gloss (always in L1={native_name}):
@@ -150,7 +152,11 @@ TYPO / DIACRITICS RULES
 {lookup_output_form_rules}
 
 POS FIELD (strict — same for every language pair)
-- pos MUST be exactly one English bucket: noun, verb, adj, adv, prep, conj, pron, det, interj
+- pos MUST be exactly one English bucket:
+  noun, verb, adj, adv, prep, conj, pron, det, interj, phrase, construction, particle
+- phrase = fixed collocation (pagar a plazos, pedir perdón, look up)
+- construction = periphrasis / pattern with a slot (tener que, ir a + inf, have to)
+- NEVER tag a multiword locution or periphrasis as verb
 - NEVER localized names (no "sustantivo", "rzeczownik", "verbo", "Nom", …)
 - NEVER gender or number in pos (no "masculino", "femenino", "męski", "feminine", …)
 - Gender is shown ONLY via the article in lemma (el = masculine, la = feminine, etc.)
@@ -204,7 +210,9 @@ one breaks the app.
 
 {lookup_output_form_rules}
 
-POS FIELD: exactly one English bucket: noun, verb, adj, adv, prep, conj, pron, det, interj.
+POS FIELD: exactly one English bucket:
+noun, verb, adj, adv, prep, conj, pron, det, interj, phrase, construction, particle.
+phrase = locution; construction = periphrasis (tener que, have to). Never verb for those.
 Same headword once per pos bucket.
 
 Return ONLY JSON:
@@ -244,7 +252,8 @@ STEP 3 — for each reading, output L2 translation(s) (max 8 total).
 Also, if "{text}" (or a 1-edit / inflected form) is itself a valid L2 headword,
 include that L2 lemma too (in citation form).
 
-POS: exactly noun|verb|adj|adv|prep|conj|pron|det|interj — English only, no gender.
+POS: exactly noun|verb|adj|adv|prep|conj|pron|det|interj|phrase|construction|particle
+— English only, no gender. Multiword locution = phrase; periphrasis = construction.
 
 Return ONLY JSON:
 {{
@@ -256,9 +265,15 @@ Return ONLY JSON:
 
 
 def lookup_output_form_rules_text(native: str, learning: str) -> str:
-    return LOOKUP_OUTPUT_FORM_RULES.format(
-        native_name=lang_name_en(native),
-        learning_name=lang_name_en(learning),
+    from app.services.lookup_pos import lookup_multiword_pos_rules
+
+    return (
+        LOOKUP_OUTPUT_FORM_RULES.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+        )
+        + "\n"
+        + lookup_multiword_pos_rules(learning)
     )
 
 

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_pager.html" import pager with context %}
+{% block content %}
+<div class="tabs">
+  <a class="{{ 'active' if tab=='events' else '' }}" href="{{ qs(tab='events', page=1) }}">Historia userów</a>
+  <a class="{{ 'active' if tab=='cache' else '' }}" href="{{ qs(tab='cache', page=1) }}">Cache globalny</a>
+</div>
+<form class="filters" method="get">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <input name="q" value="{{ q }}" placeholder="Query…">
+  <button type="submit">Szukaj</button>
+</form>
+{% if tab == 'cache' %}
+<div class="panel">
+  <table>
+    <thead><tr><th>Query</th><th>Para</th><th>Hity</th><th>AI complete</th><th>Kandydaci</th></tr></thead>
+    {% for row in cache %}
+      <tr>
+        <td>{{ row.input_norm }}</td>
+        <td>{{ row.lang_pair }}</td>
+        <td>{{ row.hit_count }}</td>
+        <td>{{ 'tak' if row.ai_complete else 'nie' }}</td>
+        <td>{{ (row.candidates or [])|length }}</td>
+      </tr>
+    {% else %}<tr><td colspan="5" class="muted">Pusty cache</td></tr>{% endfor %}
+  </table>
+  {{ pager(page, cache_total) }}
+</div>
+{% else %}
+<div class="panel">
+  <table>
+    <thead><tr><th>Czas</th><th>User</th><th>Query</th><th>Źródło</th><th>Kandydaci</th><th>Para</th></tr></thead>
+    {% for ev, email in events %}
+      <tr>
+        <td>{{ ev.created_at|dt }}</td>
+        <td>{% if ev.user_id %}<a href="/admin/users/{{ ev.user_id }}">{{ email or ev.user_id }}</a>{% else %}—{% endif %}</td>
+        <td>{{ ev.query }}</td>
+        <td>{{ ev.source }}</td>
+        <td>{{ ev.candidate_count }}</td>
+        <td>{{ ev.lang_pair }}</td>
+      </tr>
+    {% else %}<tr><td colspan="6" class="muted">Brak historii (zapis od wdrożenia panelu)</td></tr>{% endfor %}
+  </table>
+  {{ pager(page, events_total) }}
+</div>
+{% endif %}
+{% endblock %}

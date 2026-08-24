@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.admin_ui.router import mount_admin
 from app.api.v1.admin_logs import router as admin_logs_router
 from app.api.v1.auth import me_router, profiles_router, router as auth_router
 from app.api.v1.devices import router as devices_router
@@ -62,6 +63,8 @@ def create_app() -> FastAPI:
         from app.api.v1.dev_tools import router as dev_router
 
         app.include_router(dev_router, prefix=prefix)
+
+    mount_admin(app)
 
     @app.get("/health")
     async def health():

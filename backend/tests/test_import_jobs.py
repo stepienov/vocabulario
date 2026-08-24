@@ -342,6 +342,12 @@ def test_enrichment_routes_construction_pos_without_entry_kind():
     }
     assert resolve_enrichment_entry_kind(stale_import) == "construction"
     assert resolve_enrichment_entry_kind({"lemma": "casa"}, pos="noun") == "lemma"
+    assert (
+        resolve_enrichment_entry_kind(
+            {"entry_kind": "lemma", "pos": "phrase", "lemma": "pagar a plazos"},
+        )
+        == "lemma"
+    )
 
 
 def test_skips_similar_words_for_construction():

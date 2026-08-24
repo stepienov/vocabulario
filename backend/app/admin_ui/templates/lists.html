@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_pager.html" import pager with context %}
+{% block content %}
+<form class="filters" method="get">
+  <input name="q" value="{{ q }}" placeholder="Nazwa lub email…">
+  <button type="submit">Filtruj</button>
+</form>
+<div class="panel">
+  <table>
+    <thead><tr><th>Nazwa</th><th>User</th><th>Karty</th><th>Typ</th><th>Utworzono</th></tr></thead>
+    {% for lst, email, cards in rows %}
+      <tr class="clickable" data-href="/admin/lists/{{ lst.id }}">
+        <td>{{ lst.name }}</td><td>{{ email }}</td><td>{{ cards }}</td>
+        <td>{{ 'system' if lst.is_system else '' }} {{ 'inbox' if lst.is_pending_inbox else '' }}</td>
+        <td>{{ lst.created_at|dt }}</td>
+      </tr>
+    {% else %}<tr><td colspan="5" class="muted">Brak list</td></tr>{% endfor %}
+  </table>
+  {{ pager(page, total) }}
+</div>
+{% endblock %}

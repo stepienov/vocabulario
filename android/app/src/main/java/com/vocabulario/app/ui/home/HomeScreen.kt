@@ -1402,17 +1402,19 @@ private fun ListsTab(
                 state.listWords.find { it.lemma_l2.equals(lemma, ignoreCase = true) }?.id
             }
         if (targetId == null) {
-            onClearWordFocus()
+            // Karty jeszcze nie ma w listWords (Room dopiero się zaktualizuje) —
+            // nie kasuj focusu, bo wtedy lista otwiera się od góry i nigdy nie doscrolluje.
             return@LaunchedEffect
         }
         val index = visibleWords.indexOfFirst { it.id == targetId }
         if (index >= 0) {
             expandedId = targetId
             listState.scrollToItem(index)
+            onClearWordFocus()
         } else if (state.listWords.any { it.id == targetId }) {
             expandedId = targetId
+            onClearWordFocus()
         }
-        onClearWordFocus()
     }
 
     fun closeListDialogs() {
