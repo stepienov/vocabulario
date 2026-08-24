@@ -811,6 +811,8 @@
     <string name="pos_pron">zaimek</string>
     <string name="pos_det">przedimek</string>
     <string name="pos_interj">wykrzyknik</string>
+    <string name="pos_phrase">zwrot</string>
+    <string name="pos_construction">konstrukcja</string>
     <string name="pos_particle">partykuła</string>
     <string name="err_empty_list_name">Podaj nazwę listy</string>
     <string name="err_list_not_editable">Tej listy nie można edytować</string>

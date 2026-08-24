@@ -783,6 +783,9 @@
     <string name="pos_pron">pronome</string>
     <string name="pos_det">determinante</string>
     <string name="pos_interj">interjeição</string>
+    <string name="pos_phrase">locução</string>
+    <string name="pos_construction">construção</string>
+    <string name="pos_particle">partícula</string>
     <string name="err_empty_list_name">Introduza um nome para a lista</string>
     <string name="err_list_not_editable">Esta lista não pode ser editada</string>
     <string name="err_list_not_deletable">Esta lista não pode ser eliminada</string>

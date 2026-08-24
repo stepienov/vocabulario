@@ -437,10 +437,20 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun switchLangPair(appLang: String, learningLang: String, cefr: String) {
-        val previous = _state.value.activeProfile
+        val previous = _state.value.activeProfile ?: return
         cefrSaveJob?.cancel()
         tokenStore.markReopenSettings()
-        _state.value = _state.value.copy(error = null, expanded = SettingsSection.LANGUAGES)
+        val gen = ++writeGen
+        val optimistic = previous.copy(
+            app_lang = appLang,
+            learning_lang = learningLang,
+            native_lang = appLang,
+        )
+        _state.value = _state.value.copy(
+            activeProfile = optimistic,
+            error = null,
+            expanded = SettingsSection.LANGUAGES,
+        )
         viewModelScope.launch {
             runCatching {
                 pairSession.withSwitch(awaitDataReload = true) {
@@ -449,11 +459,14 @@ class SettingsViewModel @Inject constructor(
                         learningLang = learningLang,
                         cefr = cefr,
                     )
-                    runCatching { repository.syncNow(fullReplace = true) }
                     AppLocale.applyIfChanged(profile.appLang)
                     profile
                 }
             }.onSuccess { profile ->
+                if (writeGen != gen) {
+                    pairSession.markDataReady()
+                    return@onSuccess
+                }
                 _state.value = _state.value.copy(
                     activeProfile = profile,
                     cefrLevel = profile.cefr_level,
@@ -464,11 +477,14 @@ class SettingsViewModel @Inject constructor(
                 pairSession.markDataReady()
             }.onFailure { err ->
                 if (err is CancellationException) throw err
-                _state.value = _state.value.copy(
-                    activeProfile = previous,
-                    error = err.userMessage(strings, R.string.err_learning_lang),
-                    expanded = SettingsSection.LANGUAGES,
-                )
+                if (writeGen == gen) {
+                    _state.value = _state.value.copy(
+                        activeProfile = previous,
+                        error = err.userMessage(strings, R.string.err_learning_lang),
+                        expanded = SettingsSection.LANGUAGES,
+                    )
+                    AppLocale.applyIfChanged(previous.appLang)
+                }
                 pairSession.markDataReady()
             }
         }

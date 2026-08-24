@@ -1283,7 +1283,7 @@ class LearningRepository @Inject constructor(
 
     suspend fun cardCountsByProfile(): Map<String, Int> = offlineStore.cardCountsByProfile()
 
-    /** Przełącza parę języków w Room. Sieć tylko w tle (backup). */
+    /** Przełącza parę języków w Room. PUT /activate dogania PG, gdy jest sieć. */
     suspend fun activateLocalProfile(profileId: String): LanguageProfileResponse {
         val profiles = offlineStore.cachedProfiles()
         val target = profiles.firstOrNull { it.id == profileId }
@@ -1294,34 +1294,27 @@ class LearningRepository @Inject constructor(
         offlineStore.cacheProfiles(updated)
         val active = target.copy(is_active = true)
         syncActiveProfileToLocal(active)
+        if (networkMonitor.isCurrentlyOnline()) {
+            runCatching { api.activateProfile(profileId) }
+        }
         requestBackgroundSync()
         return active
     }
 
     suspend fun refreshProfilesFromNetwork(): List<LanguageProfileResponse> {
         if (!networkMonitor.isCurrentlyOnline()) return listProfiles()
-        return apiTry { api.listProfiles() }
+        apiTry { api.listProfiles() }
             .onSuccess { applyRemoteProfiles(it) }
-            .getOrElse { listProfiles() }
+        return listProfiles()
     }
 
     private suspend fun applyRemoteProfiles(profiles: List<LanguageProfileResponse>) {
         val localActive = offlineStore.cachedActiveProfile()
-        val merged = profiles.map { remote ->
-            if (localActive != null && remote.id == localActive.id) {
-                // GET /profiles nie może cofać czasów / CEFR zapisanych lokalnie.
-                remote.copy(
-                    selected_tenses = localActive.selected_tenses,
-                    cefr_level = localActive.cefr_level,
-                    tense_label_lang = localActive.tense_label_lang,
-                )
-            } else {
-                remote
-            }
-        }
+        val chosenId = tokenStore.activeProfileId.value ?: localActive?.id
+        val merged = mergeRemoteProfiles(profiles, localActive, chosenId)
         offlineStore.cacheProfiles(merged)
-        val chosen = resolveActiveProfile(tokenStore.activeProfileId.value, merged) ?: return
-        syncActiveProfileToLocal(chosen)
+        val chosen = merged.firstOrNull { it.is_active } ?: return
+        syncActiveProfileToLocal(chosen.copy(is_active = true))
     }
 
     suspend fun getActiveProfile(): LanguageProfileResponse? =
@@ -1363,17 +1356,12 @@ class LearningRepository @Inject constructor(
                 tense_label_lang = tenseLabelLang,
             )
         )
-        tokenStore.saveActiveProfile(profile.id)
-        tokenStore.saveAppLang(profile.app_lang)
-        offlineStore.cacheProfile(profile)
+        syncActiveProfileToLocal(profile.copy(is_active = true))
         return profile
     }
 
-    suspend fun activateProfile(profileId: String): LanguageProfileResponse {
-        val profile = api.activateProfile(profileId)
-        syncActiveProfileToLocal(profile)
-        return profile
-    }
+    suspend fun activateProfile(profileId: String): LanguageProfileResponse =
+        activateLocalProfile(profileId)
 
     suspend fun updateProfile(
         cefr: String? = null,
@@ -1414,28 +1402,36 @@ class LearningRepository @Inject constructor(
     ): LanguageProfileResponse {
         val app = appLang.trim().lowercase()
         val learning = learningLang.trim().lowercase()
-        val remote = refreshProfilesFromNetwork()
-        val existing = findLangPair(remote, app, learning)
-        val profile = when (val action = langPairSwitch(existing, tokenStore.activeProfileId.value)) {
-            LangPairSwitch.Keep -> existing!!
-            is LangPairSwitch.Activate -> activateProfile(action.profileId)
-            LangPairSwitch.Create -> try {
-                createProfile(
-                    appLang = app,
-                    learning = learning,
-                    cefr = cefr,
-                    tenses = LanguagePacks.defaultSelectedTenses(learning),
-                )
-            } catch (e: HttpException) {
-                if (e.code() != 409) throw e
-                val again = refreshProfilesFromNetwork()
-                val found = findLangPair(again, app, learning) ?: throw e
-                activateProfile(found.id)
+        val local = listProfiles()
+        val existingLocal = findLangPair(local, app, learning)
+        when (val action = langPairSwitch(existingLocal, tokenStore.activeProfileId.value)) {
+            LangPairSwitch.Keep -> return activateLocalProfile(existingLocal!!.id)
+            is LangPairSwitch.Activate -> return activateLocalProfile(action.profileId)
+            LangPairSwitch.Create -> {
+                val remote = refreshProfilesFromNetwork()
+                val existing = findLangPair(remote, app, learning)
+                val profile = when (val remoteAction = langPairSwitch(existing, tokenStore.activeProfileId.value)) {
+                    LangPairSwitch.Keep -> activateLocalProfile(existing!!.id)
+                    is LangPairSwitch.Activate -> activateLocalProfile(remoteAction.profileId)
+                    LangPairSwitch.Create -> try {
+                        createProfile(
+                            appLang = app,
+                            learning = learning,
+                            cefr = cefr,
+                            tenses = LanguagePacks.defaultSelectedTenses(learning),
+                        )
+                    } catch (e: HttpException) {
+                        if (e.code() != 409) throw e
+                        val again = refreshProfilesFromNetwork()
+                        val found = findLangPair(again, app, learning) ?: throw e
+                        activateLocalProfile(found.id)
+                    }
+                }
+                tokenStore.saveAppLang(profile.app_lang)
+                requestBackgroundSync()
+                return profile
             }
         }
-        tokenStore.saveAppLang(profile.app_lang)
-        requestBackgroundSync()
-        return profile
     }
 
     suspend fun getMe() = api.me()

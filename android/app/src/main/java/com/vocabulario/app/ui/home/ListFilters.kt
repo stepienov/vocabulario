@@ -93,7 +93,8 @@ private val NOUN_SORT_ARTICLES = setOf(
     "het", "de",
 )
 
-/** Canonical POS keys used by list filters (9 + unknown). */
+/** Canonical POS keys used by list filters (12 + unknown). */
 val LIST_FILTER_POS_KEYS = listOf(
-    "noun", "verb", "adj", "adv", "prep", "conj", "pron", "det", "interj", "unknown",
+    "noun", "verb", "adj", "adv", "prep", "conj", "pron", "det", "interj",
+    "phrase", "construction", "particle", "unknown",
 )

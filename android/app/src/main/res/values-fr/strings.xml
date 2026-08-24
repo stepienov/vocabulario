@@ -781,7 +781,10 @@
     <string name="pos_conj">conjonction</string>
     <string name="pos_pron">pronom</string>
     <string name="pos_det">déterminant</string>
-        <string name="pos_interj">interjection</string>
+    <string name="pos_interj">interjection</string>
+    <string name="pos_phrase">locution</string>
+    <string name="pos_construction">construction</string>
+    <string name="pos_particle">particule</string>
 <string name="err_empty_list_name">Saisissez un nom de liste</string>
     <string name="err_list_not_editable">Cette liste ne peut pas être modifiée</string>
     <string name="err_list_not_deletable">Cette liste ne peut pas être supprimée</string>

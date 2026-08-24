@@ -811,6 +811,8 @@
     <string name="pos_pron">pronoun</string>
     <string name="pos_det">determiner</string>
     <string name="pos_interj">interjection</string>
+    <string name="pos_phrase">phrase</string>
+    <string name="pos_construction">construction</string>
     <string name="pos_particle">particle</string>
     <string name="err_empty_list_name">Enter a list name</string>
     <string name="err_list_not_editable">This list can’t be edited</string>

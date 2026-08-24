@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
 import com.vocabulario.app.data.EnrichmentStatus
 import com.vocabulario.app.data.LearningRepository
-import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.SYSTEM_LIST_NAME
 import com.vocabulario.app.data.RelatedMembershipIndex
 import com.vocabulario.app.data.containsLemma
@@ -100,9 +99,6 @@ data class HomeUiState(
     val reviewSelectedIndex: Int? = null,
     val reviewLoading: Boolean = false,
     val reviewSubmitting: Boolean = false,
-    val profiles: List<LanguageProfileResponse> = emptyList(),
-    val cardCounts: Map<String, Int> = emptyMap(),
-    val langMenuOpen: Boolean = false,
 ) {
     val selectionMode: Boolean get() = selectedWordIds.isNotEmpty()
     val visibleListWords: List<CardResponse>
@@ -112,10 +108,6 @@ data class HomeUiState(
         get() = listWords.any { it.id in selectedWordIds && it.isReadyToMove() }
     val sessionDue: Int get() = stats?.due_count ?: 0
     val sessionNew: Int get() = stats?.session_new ?: 0
-    val showLangDropdown: Boolean
-        get() = hasOtherLearningLanguage(profiles, cardCounts, activeProfile?.id)
-    val dropdownProfiles: List<LanguageProfileResponse>
-        get() = dropdownLearningProfiles(profiles, cardCounts, activeProfile?.id)
     val homeKind: HomeKind
         get() {
             val ready = stats?.ready_count ?: 0
@@ -130,7 +122,6 @@ class HomeViewModel @Inject constructor(
     private val tokenStore: TokenStore,
     private val strings: UiStrings,
     private val networkMonitor: com.vocabulario.app.data.NetworkMonitor,
-    private val pairSession: PairSession,
     private val importController: ImportController,
 ) : ViewModel() {
 
@@ -305,49 +296,15 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { repository.getActiveProfile() }
                 .onSuccess { _state.value = _state.value.copy(activeProfile = it) }
-            runCatching { repository.listProfiles() }
-                .onSuccess { profiles ->
-                    val counts = runCatching { repository.cardCountsByProfile() }.getOrDefault(emptyMap())
-                    _state.value = _state.value.copy(profiles = profiles, cardCounts = counts)
-                }
             loadStats()
             loadLists()
-            pairSession.markDataReady()
         }
-    }
-
-    fun setLangMenuOpen(open: Boolean) {
-        _state.value = _state.value.copy(langMenuOpen = open)
-    }
-
-    fun openSettingsLanguages() {
-        tokenStore.markReopenSettings()
     }
 
     fun openSettingsLimits() {
         tokenStore.markExpandLimits()
     }
 
-    fun switchLearningProfile(profile: LanguageProfileResponse) {
-        val current = _state.value.activeProfile ?: return
-        if (profile.id == current.id) {
-            _state.value = _state.value.copy(langMenuOpen = false)
-            return
-        }
-        _state.value = _state.value.copy(langMenuOpen = false)
-        viewModelScope.launch {
-            runCatching {
-                pairSession.withSwitch(awaitDataReload = false) {
-                    repository.activateLocalProfile(profile.id)
-                }
-            }.onFailure {
-                _state.value = _state.value.copy(
-                    error = it.userMessage(strings, R.string.err_learning_lang),
-                )
-                pairSession.markDataReady()
-            }
-        }
-    }
     fun selectTab(tab: HomeTab) {
         _state.value = _state.value.copy(
             tab = tab,

@@ -783,6 +783,9 @@
     <string name="pos_pron">सर्वनाम</string>
     <string name="pos_det">निर्धारक</string>
     <string name="pos_interj">विस्मयादिबोधक</string>
+    <string name="pos_phrase">वाक्यांश</string>
+    <string name="pos_construction">संरचना</string>
+    <string name="pos_particle">निपात</string>
     <string name="err_empty_list_name">सूची का नाम लिखें</string>
     <string name="err_list_not_editable">इस सूची को संपादित नहीं किया जा सकता</string>
     <string name="err_list_not_deletable">इस सूची को हटाया नहीं जा सकता</string>

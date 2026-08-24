@@ -783,6 +783,9 @@
     <string name="pos_pron">ضمير</string>
     <string name="pos_det">أداة</string>
     <string name="pos_interj">تعجب</string>
+    <string name="pos_phrase">عبارة</string>
+    <string name="pos_construction">تركيب</string>
+    <string name="pos_particle">حرف</string>
     <string name="err_empty_list_name">أدخل اسم القائمة</string>
     <string name="err_list_not_editable">لا يمكن تعديل هذه القائمة</string>
     <string name="err_list_not_deletable">لا يمكن حذف هذه القائمة</string>

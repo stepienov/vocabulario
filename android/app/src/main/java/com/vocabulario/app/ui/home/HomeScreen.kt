@@ -53,7 +53,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -69,8 +68,6 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -190,14 +187,7 @@ fun HomeScreen(
             .navigationBarsPadding(),
     ) {
         HomeHeader(
-            state = state,
             onSettings = onSettings,
-            onLanguagesSettings = {
-                viewModel.openSettingsLanguages()
-                onSettings()
-            },
-            onToggleLangMenu = viewModel::setLangMenuOpen,
-            onSwitchProfile = viewModel::switchLearningProfile,
         )
         HomeTabs(
             selected = state.tab,
@@ -351,16 +341,10 @@ fun HomeScreen(
 
 @Composable
 private fun HomeHeader(
-    state: HomeUiState,
     onSettings: () -> Unit,
-    onLanguagesSettings: () -> Unit,
-    onToggleLangMenu: (Boolean) -> Unit,
-    onSwitchProfile: (com.vocabulario.app.data.api.LanguageProfileResponse) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val headerControl = 44.dp
-    val chip = langChipLabel(state.activeProfile, state.dropdownProfiles)
-    val manyLangs = state.showLangDropdown
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -379,74 +363,18 @@ private fun HomeHeader(
                 maxWidth = 200.dp,
             )
         }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Surface(
+            onClick = onSettings,
+            shape = CircleShape,
+            color = scheme.surfaceVariant,
+            modifier = Modifier.size(headerControl).testTag(TestTags.BTN_SETTINGS),
         ) {
-            if (chip.isNotEmpty()) {
-                Box {
-                    Surface(
-                        onClick = {
-                            if (manyLangs) onToggleLangMenu(true) else onLanguagesSettings()
-                        },
-                        shape = AppChipShape,
-                        color = scheme.surfaceVariant,
-                        modifier = Modifier
-                            .height(headerControl)
-                            .testTag(TestTags.CHIP_LANG),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(2.dp),
-                        ) {
-                            Text(
-                                chip,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = scheme.onSurface,
-                            )
-                            if (manyLangs) {
-                                Icon(
-                                    Icons.Filled.ArrowDropDown,
-                                    contentDescription = stringResource(R.string.cd_language),
-                                    tint = scheme.onSurface,
-                                )
-                            }
-                        }
-                    }
-                    DropdownMenu(
-                        expanded = state.langMenuOpen,
-                        onDismissRequest = { onToggleLangMenu(false) },
-                    ) {
-                        state.dropdownProfiles.forEach { profile ->
-                            val selected = profile.id == state.activeProfile?.id
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        langChipLabel(profile, state.dropdownProfiles),
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                    )
-                                },
-                                onClick = { onSwitchProfile(profile) },
-                            )
-                        }
-                    }
-                }
-            }
-            Surface(
-                onClick = onSettings,
-                shape = CircleShape,
-                color = scheme.surfaceVariant,
-                modifier = Modifier.size(headerControl).testTag(TestTags.BTN_SETTINGS),
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        Icons.Outlined.Settings,
-                        contentDescription = stringResource(R.string.cd_settings),
-                        tint = scheme.onSurface,
-                    )
-                }
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Icon(
+                    Icons.Outlined.Settings,
+                    contentDescription = stringResource(R.string.cd_settings),
+                    tint = scheme.onSurface,
+                )
             }
         }
     }

@@ -98,7 +98,6 @@ class ProfileViewModel @Inject constructor(
                 pairSession.withSwitch(awaitDataReload = true) {
                     val profile = repository.activateProfile(profileId)
                     tokenStore.saveAppLang(profile.appLang)
-                    runCatching { repository.syncNow(fullReplace = true) }
                     AppLocale.applyIfChanged(profile.appLang)
                     profile
                 }
@@ -110,6 +109,7 @@ class ProfileViewModel @Inject constructor(
                     _state.value = _state.value.copy(
                         error = it.userMessage(strings, R.string.err_activate),
                     )
+                    pairSession.markDataReady()
                 }
         }
     }

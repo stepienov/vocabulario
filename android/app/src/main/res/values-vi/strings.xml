@@ -870,6 +870,9 @@
     <string name="pos_pron">đại từ</string>
     <string name="pos_det">mạo từ</string>
     <string name="pos_interj">thán từ</string>
+    <string name="pos_phrase">cụm từ</string>
+    <string name="pos_construction">cấu trúc</string>
+    <string name="pos_particle">tiểu từ</string>
     <string name="err_empty_list_name">Nhập tên danh sách</string>
     <string name="err_list_not_editable">Không thể sửa danh sách này</string>
     <string name="err_list_not_deletable">Không thể xóa danh sách này</string>

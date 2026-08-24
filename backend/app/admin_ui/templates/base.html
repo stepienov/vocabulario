@@ -7,8 +7,9 @@
   <link rel="stylesheet" href="/admin/static/admin.css">
 </head>
 <body>
+  <div class="nav-overlay"></div>
   <div class="layout">
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="brand"><span class="brand-mark">V</span> Vocabulario</div>
       <nav class="nav">
         {% for key, href, label in nav_items %}
@@ -21,7 +22,12 @@
     </aside>
     <div class="main">
       <header class="header">
-        <h1>{{ title }}</h1>
+        <div class="header-left">
+          <button type="button" class="menu-btn" aria-label="Otwórz menu" aria-controls="sidebar" aria-expanded="false">
+            <span></span><span></span><span></span>
+          </button>
+          <h1>{{ title }}</h1>
+        </div>
         <div class="header-right"><span>UTC</span><strong>Admin</strong></div>
       </header>
       <div class="content">

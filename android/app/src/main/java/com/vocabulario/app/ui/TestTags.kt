@@ -21,7 +21,6 @@ object TestTags {
     const val BTN_LEARN = "btn_learn"
     const val BTN_ADD_FIRST_WORDS = "btn_add_first_words"
     const val BTN_CHANGE_LIMIT = "btn_change_limit"
-    const val CHIP_LANG = "chip_lang"
     const val BTN_SETTINGS = "btn_settings"
     const val SEARCH_INPUT = "search_input"
     const val SEARCH_SUBMIT = "search_submit"

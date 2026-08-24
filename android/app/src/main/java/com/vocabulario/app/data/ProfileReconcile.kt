@@ -15,6 +15,31 @@ internal fun resolveActiveProfile(
     return remote.firstOrNull { it.is_active } ?: remote.first()
 }
 
+/**
+ * GET /profiles nie może cofać lokalnie wybranej pary.
+ * CEFR / czasy aktywnego id zostają; [is_active] idzie za TokenStore/Room.
+ */
+internal fun mergeRemoteProfiles(
+    remote: List<LanguageProfileResponse>,
+    localActive: LanguageProfileResponse?,
+    chosenId: String?,
+): List<LanguageProfileResponse> {
+    if (remote.isEmpty()) return emptyList()
+    val resolved = resolveActiveProfile(chosenId ?: localActive?.id, remote) ?: return remote
+    return remote.map { remoteProfile ->
+        val withLocalPrefs = if (localActive != null && remoteProfile.id == localActive.id) {
+            remoteProfile.copy(
+                selected_tenses = localActive.selected_tenses,
+                cefr_level = localActive.cefr_level,
+                tense_label_lang = localActive.tense_label_lang,
+            )
+        } else {
+            remoteProfile
+        }
+        withLocalPrefs.copy(is_active = withLocalPrefs.id == resolved.id)
+    }
+}
+
 internal fun overlayAppLang(
     profile: LanguageProfileResponse,
     storedLang: String,

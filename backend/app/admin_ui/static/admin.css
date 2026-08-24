@@ -46,8 +46,15 @@ a:hover { text-decoration: underline; }
   display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
   position: sticky; top: 0; z-index: 5;
 }
-.header h1 { font-size: 20px; margin: 0; }
-.header-right { display: flex; gap: 12px; align-items: center; color: var(--muted); font-size: 14px; }
+.header-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.header h1 { font-size: 20px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-right { display: flex; gap: 12px; align-items: center; color: var(--muted); font-size: 14px; flex-shrink: 0; }
+.menu-btn span {
+  display: block; height: 2px; margin: 5px 0; background: var(--text); border-radius: 1px;
+}
+.nav-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); z-index: 20;
+}
 .content { padding: 24px; }
 .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
 .kpi, .panel {
@@ -78,6 +85,10 @@ button, .btn {
   display: inline-block;
 }
 button.secondary, .btn.secondary { background: #fff; color: var(--text); }
+button.menu-btn {
+  display: none; width: 40px; height: 40px; padding: 8px; flex-shrink: 0;
+  background: #fff; color: var(--text); border: 1px solid var(--line);
+}
 .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #e5e7eb; }
 .pill.ok { background: #dcfce7; color: #166534; }
 .pill.warn { background: #fef3c7; color: #92400e; }
@@ -97,5 +108,25 @@ pre, .json { background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 1100px) {
   .kpis, .grid-2 { grid-template-columns: 1fr 1fr; }
-  .sidebar { display: none; }
+  button.menu-btn { display: inline-block; }
+  .header { z-index: 31; }
+  .sidebar {
+    display: flex; flex-direction: column;
+    position: fixed; left: 0; top: 0; bottom: 0;
+    z-index: 30; height: 100%; overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: none;
+  }
+  body.nav-open .sidebar { transform: translateX(0); box-shadow: 8px 0 24px rgba(15, 23, 42, 0.18); }
+  body.nav-open .nav-overlay { display: block; }
+  body.nav-open { overflow: hidden; }
+  .header { padding: 0 16px; }
+  .content { padding: 16px; }
+  .login-card { width: min(360px, calc(100vw - 32px)); }
+}
+@media (max-width: 640px) {
+  .kpis, .grid-2 { grid-template-columns: 1fr; }
+  .header-right span { display: none; }
+  table { font-size: 13px; }
 }

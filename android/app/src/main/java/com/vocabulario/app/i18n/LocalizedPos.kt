@@ -17,8 +17,8 @@ fun posStringRes(pos: String?): Int? = when (normalizePosKey(pos)) {
     "pron" -> R.string.pos_pron
     "det" -> R.string.pos_det
     "interj" -> R.string.pos_interj
-    "phrase" -> R.string.kind_phrase
-    "construction" -> R.string.kind_construction
+    "phrase" -> R.string.pos_phrase
+    "construction" -> R.string.pos_construction
     "particle" -> R.string.pos_particle
     else -> null
 }

@@ -101,8 +101,12 @@ fun normalizePosKey(pos: String?): String {
             "adverb" in key || "нареч" in key || "副词" in key || "副詞" in key ||
             "부사" in key || "zarf" in key || "trạng từ" in key -> "adv"
         "konstrukcja" in key || "construction" in key -> "construction"
+        "partykuła" in key || "partícula" in key || "particule" in key ||
+            "partikel" in key || "particle" in key || "particella" in key ||
+            "助詞" in key || "조사" in key || "助词" in key -> "particle"
         "wyrażenie" in key || "zwrot" in key || "idiom" in key ||
-            "phrase" in key || "expression" in key -> "phrase"
+            "phrase" in key || "expression" in key || "collocation" in key ||
+            "locution" in key || "locución" in key -> "phrase"
         else -> key
     }
     return if (canonical in CANONICAL_POS_KEYS) canonical else "unknown"
@@ -128,7 +132,7 @@ fun quizPosMatches(wantPos: String, candidatePos: String?, family: Boolean = fal
 
 private val DISTRACTOR_BLOCKLIST = setOf(
     "pos", "noun", "verb", "adj", "adjective", "adverb", "adv", "prep", "conj", "pron",
-    "det", "interj", "unknown", "lemma", "gloss", "null",
+    "det", "interj", "phrase", "construction", "particle", "unknown", "lemma", "gloss", "null",
     "rzeczownik", "czasownik", "przymiotnik", "przysłówek",
     "sustantivo", "verbo", "adjetivo", "adverbio",
 )
@@ -147,6 +151,7 @@ private val POS_SHORT_ALIASES = mapOf(
     "n" to "noun", "nn" to "noun", "v" to "verb", "vb" to "verb",
     "a" to "adj", "adv" to "adv", "prep" to "prep", "conj" to "conj",
     "pron" to "pron", "det" to "det", "interj" to "interj",
+    "phrase" to "phrase", "construction" to "construction", "particle" to "particle",
 )
 
 private val CANONICAL_POS_KEYS = setOf(
