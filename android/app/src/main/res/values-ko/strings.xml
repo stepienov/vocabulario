@@ -236,7 +236,7 @@
 
     <string name="practice_spelling_warn">철자를 확인하세요!</string>
 
-    <string name="practice_spelling_detail">입력한 내용: %1$s — 올바른 철자: %2$s</string>
+    <string name="practice_spelling_correct">올바른:</string>
 
     <string name="practice_correct_answer">정답: %1$s</string>
 
@@ -656,6 +656,8 @@
 
     <string name="section_antonyms_short">반의어</string>
     <string name="section_word_family">어족</string>
+
+    <string name="action_show_more">더보기</string>
 
     <string name="section_conjugation_short">활용</string>
 

@@ -236,7 +236,7 @@
 
     <string name="practice_spelling_warn">Yazımınızı kontrol edin!</string>
 
-    <string name="practice_spelling_detail">%1$s yazdınız — doğru yazım: %2$s</string>
+    <string name="practice_spelling_correct">Doğru:</string>
 
     <string name="practice_correct_answer">Doğru cevap: %1$s</string>
 
@@ -656,6 +656,8 @@
 
     <string name="section_antonyms_short">Zıt anlamlılar</string>
     <string name="section_word_family">Kelime ailesi</string>
+
+    <string name="action_show_more">Daha fazla</string>
 
     <string name="section_conjugation_short">Çekim</string>
 

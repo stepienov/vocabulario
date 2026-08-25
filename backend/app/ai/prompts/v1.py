@@ -4,6 +4,7 @@ from app.ai.language_typology import (
     LANG_NAMES_EN,
     lang_name_en,
     language_pair_guidance,
+    word_family_guidance,
 )
 
 # Alias PL dla kompatybilności (nazwy w promptach PL UI historycznie).
@@ -380,15 +381,25 @@ ZAKAZ w synonyms_l2 / antonyms_l2: inna POS, derywaty z tej samej rodziny
   wyrazów, ogólniki, powtórzenia lematu.
 
 Wyrazy pokrewne (word_family_l2) — rodzina wyrazów / wspólny rdzeń:
-- Inne lematy L2 z TEGO SAMEGO rdzenia morfologicznego co hasło karty
-  (np. trabajar → trabajo, trabajador; escribir → escritura, escritor;
-  aguantar → aguante, aguantador, aguantado, inaguantable).
+- Inne lematy L2 z TEGO SAMEGO rdzenia morfologicznego co hasło karty.
+  Tylko derywacja sufiksalna i konwersja (rzeczownik/czasownik/przymiotnik
+  od tego tematu). Allomorfia tematu jest dozwolona (influir / influencia;
+  wziąć / wzięty jako osobny lemat przymiotnikowy).
 - DOZWOLONA (i oczekiwana) inna część mowy niż lemat — tu trafiają derywaty.
+- Zleksykalizowany imiesłów jako INNA POS (adj/noun) wolno; ten sam czasownik
+  w gerundium/imiesłowie → conjugation, nie rodzina.
 - Dla produktywnych rodzin podaj 4–10 NAJCZĘSTSZYCH, realnych lematów.
 - Jeśli brak wyraźnej rodziny → pusta tablica [].
-- ZAKAZ: powtórzenie lematu karty, synonimy/antonimy bez wspólnego rdzenia,
-  formy fleksyjne tego samego lematu (odmiana → conjugation, nie tu),
-  kolokacje wielowyrazowe, hapaxy i neologizmy.
+- ZAKAZ: powtórzenie lematu karty (ten sam lemma+POS), synonimy/antonimy bez
+  wspólnego rdzenia, formy fleksyjne, kolokacje wielowyrazowe, hapaxy,
+  neologizmy, zapożyczenia spoza derywacji (np. influencer).
+- ZAKAZ prefiksów negujących (relevante ↛ irrelevante, happy ↛ unhappy) —
+  to antonyms_l2 przy tej samej POS, nigdy word_family_l2.
+- ZAKAZ prefiksów zmieniających znaczenie (pisać ↛ przepisać; schließen ↛
+  ausschließen) i zrostów, które tylko dzielą człon (Haus ↛ Krankenhaus).
+- ZAKAZ par podobnych zapisem/brzmieniem z INNYM rdzeniem (libro ↛ libre,
+  flower ↛ flour, 橋 ↛ 箸) — to similar_words (dystraktor quizu), nie rodzina.
+{family_guidance}
 - Format: obiekty {{lemma, pos, article, gloss_l1}} — pole pos OBOWIĄZKOWE
   (noun|verb|adj|adv|…), nigdy puste. article jak wyżej (rzeczownik z rodzajnikiem
   w językach cytacji; w przeciwnym razie null). lemma bez powtórzonego rodzajnika.
@@ -505,6 +516,7 @@ def build_enrichment_core_prompt_parts(
         learning=learning,
         cefr=cefr,
         pair_guidance=language_pair_guidance(native=native, learning=learning),
+        family_guidance=word_family_guidance(learning),
     )
     dynamic = ENRICHMENT_CORE_DYNAMIC_V1.format(
         lemma=lemma,

@@ -213,7 +213,7 @@
 
     <string name="practice_spelling_warn">Confira a ortografia!</string>
 
-    <string name="practice_spelling_detail">Você digitou %1$s — ortografia correta: %2$s</string>
+    <string name="practice_spelling_correct">Correto:</string>
 
     <string name="practice_correct_answer">Resposta correta: %1$s</string>
 
@@ -624,6 +624,8 @@
 
     <string name="section_antonyms_short">Antônimos</string>
     <string name="section_word_family">Família de palavras</string>
+
+    <string name="action_show_more">Mais</string>
 
     <string name="section_conjugation_short">Conjugação</string>
 

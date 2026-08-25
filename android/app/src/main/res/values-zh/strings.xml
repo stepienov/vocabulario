@@ -213,7 +213,7 @@
 
     <string name="practice_spelling_warn">请检查拼写！</string>
 
-    <string name="practice_spelling_detail">你输入了 %1$s — 正确拼写：%2$s</string>
+    <string name="practice_spelling_correct">正确：</string>
 
     <string name="practice_correct_answer">正确答案：%1$s</string>
 
@@ -624,6 +624,8 @@
 
     <string name="section_antonyms_short">反义词</string>
     <string name="section_word_family">词族</string>
+
+    <string name="action_show_more">更多</string>
 
     <string name="section_conjugation_short">变位</string>
 

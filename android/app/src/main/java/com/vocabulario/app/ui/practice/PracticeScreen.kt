@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -38,11 +39,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vocabulario.app.R
@@ -72,6 +78,7 @@ import com.vocabulario.app.ui.home.listNameConflictMessage
 import com.vocabulario.app.ui.theme.GradeAgain
 import com.vocabulario.app.ui.theme.GradeKnown
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -318,16 +325,9 @@ fun PracticeScreen(
                                     ) {
                                         when {
                                             state.typoWarning -> {
-                                                Text(
-                                                    stringResource(R.string.practice_spelling_warn),
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = com.vocabulario.app.ui.theme.GradeLearning,
-                                                )
-                                                Text(
-                                                    stringResource(R.string.practice_spelling_detail, state.typedAnswer, state.expectedAnswer ?: "?"),
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                SpellingWarningBanner(
+                                                    typedAnswer = state.typedAnswer,
+                                                    expectedAnswer = state.expectedAnswer ?: "?",
                                                 )
                                             }
                                             state.lastCorrect == false && state.answerMode == AnswerMode.TYPE -> {
@@ -504,6 +504,75 @@ fun PracticeScreen(
             onDismiss = viewModel::dismissCardHistory,
             onRestore = viewModel::restoreFromHistory,
         )
+    }
+}
+
+private val SpellingWarnBanner = Color(0xFFF2C14B)
+private val SpellingWarnOnBanner = Color(0xFF1A1408)
+private val SpellingWarnTyped = Color(0xFF7A1E3A)
+private val SpellingWarnCorrect = Color(0xFF2A7A3E)
+
+@Composable
+private fun SpellingWarningBanner(
+    typedAnswer: String,
+    expectedAnswer: String,
+    modifier: Modifier = Modifier,
+) {
+    val locale = LocalContext.current.resources.configuration.locales[0] ?: Locale.getDefault()
+    val title = stringResource(R.string.practice_spelling_warn).uppercase(locale)
+    val correctLabel = stringResource(R.string.practice_spelling_correct)
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(TestTags.PRACTICE_SPELLING_WARN),
+        color = SpellingWarnBanner,
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_spelling_warning),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(22.dp),
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = SpellingWarnOnBanner,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            Text(
+                text = typedAnswer,
+                style = MaterialTheme.typography.bodyLarge,
+                color = SpellingWarnTyped,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = buildAnnotatedString {
+                    withStyle(SpanStyle(color = SpellingWarnCorrect)) {
+                        append(correctLabel)
+                        append(" ")
+                    }
+                    withStyle(SpanStyle(color = SpellingWarnCorrect, fontWeight = FontWeight.Bold)) {
+                        append(expectedAnswer)
+                    }
+                },
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 

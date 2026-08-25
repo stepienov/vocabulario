@@ -390,6 +390,39 @@ _STATEMENTS = (
     "CREATE INDEX IF NOT EXISTS ix_lookup_events_created_at ON lookup_events (created_at)",
     "CREATE INDEX IF NOT EXISTS ix_lookup_events_user_created ON lookup_events (user_id, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_lookup_events_query_norm ON lookup_events (query_norm)",
+    """
+    CREATE TABLE IF NOT EXISTS word_families (
+        id UUID PRIMARY KEY,
+        lang_pair VARCHAR(16) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_word_families_lang_pair ON word_families (lang_pair)",
+    """
+    CREATE TABLE IF NOT EXISTS word_family_members (
+        id UUID PRIMARY KEY,
+        family_id UUID NOT NULL REFERENCES word_families(id) ON DELETE CASCADE,
+        lang_pair VARCHAR(16) NOT NULL,
+        lemma_key VARCHAR(255) NOT NULL,
+        lemma VARCHAR(255) NOT NULL,
+        pos VARCHAR(32) NOT NULL,
+        article VARCHAR(16),
+        gloss_l1 VARCHAR(255),
+        rank INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (family_id, lemma_key, pos),
+        UNIQUE (lang_pair, lemma_key, pos)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_word_family_members_family_id "
+    "ON word_family_members (family_id)",
+    "CREATE INDEX IF NOT EXISTS ix_word_family_members_lookup "
+    "ON word_family_members (lang_pair, lemma_key, pos)",
+    "ALTER TABLE lexical_entries ADD COLUMN IF NOT EXISTS word_family_id UUID "
+    "REFERENCES word_families(id) ON DELETE SET NULL",
+    "CREATE INDEX IF NOT EXISTS ix_lexical_entries_word_family_id "
+    "ON lexical_entries (word_family_id)",
 )
 
 

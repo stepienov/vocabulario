@@ -26,6 +26,7 @@ from app.services.enrichment import (
     examples_unique_across_meanings,
     strip_prepositional_construction_meanings,
 )
+from app.services.word_family_quality import filter_word_family
 from app.services.llm import LLMService
 from app.services.pos_normalize import normalize_pos_bucket
 from app.services.similar_words import fetch_similar_words, skips_similar_words
@@ -203,8 +204,9 @@ def assemble_core_card(
     family = _normalize_related_words(
         core.get("word_family_l2"), fallback_pos=None, learning_lang=lang
     )
-    lemma_key = lemma_final.casefold().strip()
-    family = [w for w in family if (w.get("lemma") or "").casefold().strip() != lemma_key][:10]
+    family, antonyms = filter_word_family(
+        lemma_final, pos_final, family, antonyms, lang
+    )
 
     ui_hints = core.get("ui_hints") if isinstance(core.get("ui_hints"), dict) else {}
     ui_hints = dict(ui_hints)

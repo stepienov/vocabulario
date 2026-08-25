@@ -24,7 +24,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -51,6 +56,8 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+
+const val WORD_FAMILY_PAGE_SIZE = 4
 
 data class RelatedWord(
     val lemma: String,
@@ -302,6 +309,7 @@ fun CardDetailContent(
                 onAdd = onAddRelated,
                 learningLemmas = learningLemmas,
                 relatedMembership = relatedMembership,
+                pageSize = WORD_FAMILY_PAGE_SIZE,
             )
         }
 
@@ -622,11 +630,16 @@ private fun RelatedWordsSection(
     onAdd: ((RelatedWord) -> Unit)?,
     learningLemmas: Set<String> = emptySet(),
     relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
+    pageSize: Int = 0,
 ) {
+    var visibleCount by remember(words, pageSize) {
+        mutableIntStateOf(if (pageSize > 0) minOf(pageSize, words.size) else words.size)
+    }
+    val shown = words.take(visibleCount)
     AppCard {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            words.forEachIndexed { index, word ->
+            shown.forEachIndexed { index, word ->
                 if (index > 0) {
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 12.dp),
@@ -702,6 +715,11 @@ private fun RelatedWordsSection(
                             }
                         }
                     }
+                }
+            }
+            if (pageSize > 0 && visibleCount < words.size) {
+                TextButton(onClick = { visibleCount = minOf(visibleCount + pageSize, words.size) }) {
+                    Text(stringResource(R.string.action_show_more))
                 }
             }
         }

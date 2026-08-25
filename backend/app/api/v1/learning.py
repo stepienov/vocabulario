@@ -79,6 +79,7 @@ from app.services.lookup_events import record_lookup_event
 from app.services.lookup_candidates import has_confident_match
 from app.services.similar_words import ensure_similar_words
 from app.services.srs import apply_review
+from app.services.word_families import backfill_card_word_family
 from app.services.word_lists import (
     RESERVED_LIST_NAMES,
     ensure_pending_inbox_list,
@@ -418,6 +419,8 @@ async def get_card(
         retry_at = card.enrichment_retry_at
         if retry_at is None or retry_at <= now:
             spawn_enrich(card.id)
+    if card.enrichment_status in STUDYABLE_STATUSES:
+        await backfill_card_word_family(db, profile, card)
     srs_q = await db.execute(
         select(SrsState).where(SrsState.card_id == card.id, SrsState.scope == "main")
     )

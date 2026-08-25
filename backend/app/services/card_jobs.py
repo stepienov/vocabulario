@@ -30,6 +30,7 @@ from app.services.lexical import LexicalService
 from app.services.llm_usage import bind_llm_usage_context
 from app.services.pos_normalize import normalize_pos_bucket
 from app.services.similar_words import ensure_similar_words, skips_similar_words
+from app.services.word_families import sync_word_family
 
 logger = logging.getLogger(__name__)
 
@@ -489,6 +490,10 @@ async def hydrate_from_lexical_cache(
         if pinned is not None and entry_compatible_with_card(card, pinned):
             try:
                 async with db.begin_nested():
+                    content = await sync_word_family(
+                        db, profile, dict(pinned.content or {}), pinned
+                    )
+                    pinned.content = content
                     _apply_entry_to_card(card, pinned, profile)
                     pinned.usage_count = (pinned.usage_count or 0) + 1
                     await db.flush()
@@ -507,6 +512,10 @@ async def hydrate_from_lexical_cache(
         return False
     try:
         async with db.begin_nested():
+            content = await sync_word_family(
+                db, profile, dict(cached.content or {}), cached
+            )
+            cached.content = content
             _apply_entry_to_card(card, cached, profile)
             cached.usage_count = (cached.usage_count or 0) + 1
             await db.flush()
@@ -584,6 +593,8 @@ async def _store_lexical_entry(
     )
     if cached is not None:
         cached.usage_count = (cached.usage_count or 0) + 1
+        synced = await sync_word_family(db, profile, dict(cached.content or {}), cached)
+        cached.content = synced
         return dict(cached.content), cached
 
     meanings = content.get("meanings") or []
@@ -604,7 +615,9 @@ async def _store_lexical_entry(
         async with db.begin_nested():
             db.add(entry)
             await db.flush()
-        return content, entry
+        synced = await sync_word_family(db, profile, content, entry)
+        entry.content = synced
+        return synced, entry
     except IntegrityError:
         existing = await find_ready_entry(
             db,
@@ -614,6 +627,10 @@ async def _store_lexical_entry(
             learning_lang=profile.learning_lang,
         )
         if existing is not None:
+            synced = await sync_word_family(
+                db, profile, dict(existing.content or {}), existing
+            )
+            existing.content = synced
             return dict(existing.content), existing
         raise
 
@@ -639,6 +656,8 @@ async def _resolve_content(
     )
     if cached is not None:
         cached.usage_count = (cached.usage_count or 0) + 1
+        synced = await sync_word_family(db, profile, dict(cached.content or {}), cached)
+        cached.content = synced
         return dict(cached.content), cached
 
     content = await enrich_card_content(profile, lemma, pos, gloss_hint=gloss_hint)

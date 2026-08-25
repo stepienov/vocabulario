@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -344,7 +345,13 @@ fun FlashcardBackContent(
                 expanded = familyExpanded,
                 onToggle = { familyExpanded = !familyExpanded },
             ) {
-                RelatedWordsList(wordFamilyL2, onAddRelated, learningLemmas, relatedMembership)
+                RelatedWordsList(
+                    wordFamilyL2,
+                    onAddRelated,
+                    learningLemmas,
+                    relatedMembership,
+                    pageSize = WORD_FAMILY_PAGE_SIZE,
+                )
             }
         }
 
@@ -432,9 +439,14 @@ private fun RelatedWordsList(
     onAdd: ((RelatedWord) -> Unit)?,
     learningLemmas: Set<String> = emptySet(),
     relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
+    pageSize: Int = 0,
 ) {
+    var visibleCount by remember(words, pageSize) {
+        mutableIntStateOf(if (pageSize > 0) minOf(pageSize, words.size) else words.size)
+    }
+    val shown = words.take(visibleCount)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        words.forEach { word ->
+        shown.forEach { word ->
             val hit = relatedMembership.find(word.lemma, word.pos)
             LemmaActionRow(
                 lemma = hit?.displayLemma ?: formatLemmaWithArticle(word.lemma, word.article),
@@ -471,6 +483,11 @@ private fun RelatedWordsList(
                     }
                 },
             )
+        }
+        if (pageSize > 0 && visibleCount < words.size) {
+            TextButton(onClick = { visibleCount = minOf(visibleCount + pageSize, words.size) }) {
+                Text(stringResource(R.string.action_show_more))
+            }
         }
     }
 }

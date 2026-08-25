@@ -235,7 +235,7 @@
 
     <string name="practice_spelling_warn">Kiểm tra chính tả của bạn!</string>
 
-    <string name="practice_spelling_detail">Bạn đã gõ %1$s — chính tả đúng: %2$s</string>
+    <string name="practice_spelling_correct">Đúng:</string>
 
     <string name="practice_correct_answer">Câu trả lời đúng: %1$s</string>
 
@@ -655,6 +655,8 @@
 
     <string name="section_antonyms_short">Từ trái nghĩa</string>
     <string name="section_word_family">Họ từ</string>
+
+    <string name="action_show_more">Thêm</string>
 
     <string name="section_conjugation_short">Chia động từ</string>
 

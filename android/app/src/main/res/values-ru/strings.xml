@@ -213,7 +213,7 @@
 
     <string name="practice_spelling_warn">Проверьте написание!</string>
 
-    <string name="practice_spelling_detail">Вы ввели %1$s — правильное написание: %2$s</string>
+    <string name="practice_spelling_correct">Правильно:</string>
 
     <string name="practice_correct_answer">Правильный ответ: %1$s</string>
 
@@ -624,6 +624,8 @@
 
     <string name="section_antonyms_short">Антонимы</string>
     <string name="section_word_family">Родственные слова</string>
+
+    <string name="action_show_more">Ещё</string>
 
     <string name="section_conjugation_short">Спряжение</string>
 

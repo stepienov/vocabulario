@@ -214,7 +214,7 @@
 
     <string name="practice_spelling_warn">Check your spelling!</string>
 
-    <string name="practice_spelling_detail">You typed %1$s — correct spelling: %2$s</string>
+    <string name="practice_spelling_correct">Correct:</string>
 
     <string name="practice_correct_answer">Correct answer: %1$s</string>
 
@@ -648,6 +648,8 @@
 
     <string name="section_antonyms_short">Antonyms</string>
     <string name="section_word_family">Word family</string>
+
+    <string name="action_show_more">More</string>
 
     <string name="section_conjugation_short">Conjugation</string>
 

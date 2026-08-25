@@ -236,7 +236,7 @@
 
     <string name="practice_spelling_warn">スペルを確認してください！</string>
 
-    <string name="practice_spelling_detail">あなたが入力したのは %1$s — 正しいスペル: %2$s</string>
+    <string name="practice_spelling_correct">正しい:</string>
 
     <string name="practice_correct_answer">正しい答え: %1$s</string>
 
@@ -656,6 +656,8 @@
 
     <string name="section_antonyms_short">反義語</string>
     <string name="section_word_family">語族</string>
+
+    <string name="action_show_more">もっと見る</string>
 
     <string name="section_conjugation_short">活用</string>
 

@@ -81,6 +81,7 @@ object TestTags {
     const val PRACTICE_EMPTY_BACK = "practice_empty_back"
     const val PRACTICE_WRONG_DISMISS = "practice_wrong_dismiss"
     const val PRACTICE_CHOICE = "practice_choice"
+    const val PRACTICE_SPELLING_WARN = "practice_spelling_warn"
     const val GRADE_AGAIN = "grade_again"
     const val GRADE_HARD = "grade_hard"
     const val GRADE_GOOD = "grade_good"

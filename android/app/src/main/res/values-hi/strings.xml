@@ -213,7 +213,7 @@
 
     <string name="practice_spelling_warn">वर्तनी जाँचें!</string>
 
-    <string name="practice_spelling_detail">आपने %1$s लिखा — सही वर्तनी: %2$s</string>
+    <string name="practice_spelling_correct">सही:</string>
 
     <string name="practice_correct_answer">सही उत्तर: %1$s</string>
 
@@ -624,6 +624,8 @@
 
     <string name="section_antonyms_short">विलोम</string>
     <string name="section_word_family">शब्द परिवार</string>
+
+    <string name="action_show_more">और</string>
 
     <string name="section_conjugation_short">क्रिया रूप</string>
 

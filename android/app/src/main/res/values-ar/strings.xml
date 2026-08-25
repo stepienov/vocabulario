@@ -213,7 +213,7 @@
 
     <string name="practice_spelling_warn">تحقق من الإملاء!</string>
 
-    <string name="practice_spelling_detail">كتبت %1$s — الإملاء الصحيح: %2$s</string>
+    <string name="practice_spelling_correct">الصحيح:</string>
 
     <string name="practice_correct_answer">الإجابة الصحيحة: %1$s</string>
 
@@ -624,6 +624,8 @@
 
     <string name="section_antonyms_short">أضداد</string>
     <string name="section_word_family">عائلة الكلمات</string>
+
+    <string name="action_show_more">المزيد</string>
 
     <string name="section_conjugation_short">تصريف</string>
 

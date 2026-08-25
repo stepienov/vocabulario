@@ -657,6 +657,12 @@ class LexicalService:
                 got = normalize_pos_bucket(entry.pos)
                 if want == "unknown" or got == "unknown" or want == got:
                     entry.usage_count += 1
+                    from app.services.word_families import sync_word_family
+
+                    synced = await sync_word_family(
+                        self.db, profile, dict(entry.content or {}), entry
+                    )
+                    entry.content = synced
                     return entry
 
         from app.services.card_jobs import apply_lexical_keys, find_ready_entry
@@ -670,6 +676,12 @@ class LexicalService:
         )
         if existing:
             existing.usage_count += 1
+            from app.services.word_families import sync_word_family
+
+            synced = await sync_word_family(
+                self.db, profile, dict(existing.content or {}), existing
+            )
+            existing.content = synced
             return existing
 
         content = await enrich_card_content(profile, lemma, pos)
@@ -692,5 +704,9 @@ class LexicalService:
         apply_lexical_keys(entry)
         self.db.add(entry)
         await self.db.flush()
+        from app.services.word_families import sync_word_family
+
+        synced = await sync_word_family(self.db, profile, content, entry)
+        entry.content = synced
         return entry
 

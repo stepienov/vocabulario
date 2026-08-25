@@ -214,7 +214,7 @@
 
     <string name="practice_spelling_warn">Uważaj na pisownię!</string>
 
-    <string name="practice_spelling_detail">Wpisałeś %1$s — prawidłowa pisownia: %2$s</string>
+    <string name="practice_spelling_correct">Prawidłowe:</string>
 
     <string name="practice_correct_answer">Poprawna odpowiedź: %1$s</string>
 
@@ -648,6 +648,8 @@
 
     <string name="section_antonyms_short">Przeciwieństwa</string>
     <string name="section_word_family">Wyrazy pokrewne</string>
+
+    <string name="action_show_more">Więcej</string>
 
     <string name="section_conjugation_short">Odmiana</string>
 

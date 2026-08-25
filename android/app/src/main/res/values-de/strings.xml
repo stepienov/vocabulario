@@ -214,7 +214,7 @@
 
     <string name="practice_spelling_warn">Rechtschreibung prüfen!</string>
 
-    <string name="practice_spelling_detail">Du hast %1$s getippt — richtige Schreibweise: %2$s</string>
+    <string name="practice_spelling_correct">Richtig:</string>
 
     <string name="practice_correct_answer">Richtige Antwort: %1$s</string>
 
@@ -624,6 +624,8 @@
 
     <string name="section_antonyms_short">Antonyme</string>
     <string name="section_word_family">Wortfamilie</string>
+
+    <string name="action_show_more">Mehr</string>
 
     <string name="section_conjugation_short">Konjugation</string>
 

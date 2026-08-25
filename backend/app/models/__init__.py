@@ -80,6 +80,45 @@ class UserSettings(Base):
     user: Mapped["User"] = relationship(back_populates="settings")
 
 
+class WordFamily(Base):
+    __tablename__ = "word_families"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    lang_pair: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    members: Mapped[list["WordFamilyMember"]] = relationship(
+        back_populates="family", cascade="all, delete-orphan"
+    )
+
+
+class WordFamilyMember(Base):
+    __tablename__ = "word_family_members"
+    __table_args__ = (
+        UniqueConstraint("family_id", "lemma_key", "pos"),
+        UniqueConstraint("lang_pair", "lemma_key", "pos"),
+        Index("ix_word_family_members_lookup", "lang_pair", "lemma_key", "pos"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    family_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("word_families.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    lang_pair: Mapped[str] = mapped_column(String(16), nullable=False)
+    lemma_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    lemma: Mapped[str] = mapped_column(String(255), nullable=False)
+    pos: Mapped[str] = mapped_column(String(32), nullable=False)
+    article: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    gloss_l1: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    rank: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    family: Mapped["WordFamily"] = relationship(back_populates="members")
+
+
 class LexicalEntry(Base):
     __tablename__ = "lexical_entries"
     __table_args__ = (UniqueConstraint("lang_pair", "lemma_l2", "pos"),)
@@ -94,6 +133,9 @@ class LexicalEntry(Base):
     cefr: Mapped[str | None] = mapped_column(String(8), nullable=True)
     content: Mapped[dict] = mapped_column(JSONB, nullable=False)
     source: Mapped[str] = mapped_column(String(16), default="ai")
+    word_family_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("word_families.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

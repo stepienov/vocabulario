@@ -182,6 +182,96 @@ def morphology_hint(code: str) -> str:
     )
 
 
+# Compact per-L2 rules for word_family_l2. Inserted into enrich_core.
+# Look-alikes (libro/libre) are similar_words, never family.
+WORD_FAMILY_HINTS: dict[str, str] = {
+    "es": (
+        "Suffixal derivation + conversion only: trabajar → trabajo, trabajador; "
+        "escribir → escritura, escritor; influir → influencia, influyente. "
+        "Allomorphy OK (influir / influencia). Lexicalized participle as adj/noun OK "
+        "(influido). NOT family: in-/ir-/im-/des- negation (relevante ↛ irrelevante → antonyms); "
+        "inflection (influyendo); look-alikes (libro ↛ libre)."
+    ),
+    "it": (
+        "Suffixal derivation: lavorare → lavoro, lavoratore. "
+        "NOT family: in-/ir-/s- negation; inflected forms; look-alikes with another root."
+    ),
+    "fr": (
+        "Suffixal derivation: travailler → travail, travailleur. "
+        "NOT family: in-/im-/dé- negation (juste ↛ injuste → antonyms); "
+        "inflection; look-alikes."
+    ),
+    "pt-br": (
+        "Suffixal derivation: trabalhar → trabalho, trabalhador. "
+        "NOT family: in-/im-/des- negation; inflection; look-alikes (livro ↛ livre)."
+    ),
+    "pt-pt": (
+        "Suffixal derivation: trabalhar → trabalho, trabalhador. "
+        "NOT family: in-/im-/des- negation; inflection; look-alikes (livro ↛ livre)."
+    ),
+    "en": (
+        "Suffixal derivation: work → worker, workplace; nation → national, nationality. "
+        "NOT family: un-/in-/non- negation (happy ↛ unhappy → antonyms); "
+        "gerund/participle of the same verb (working); look-alikes (flower ↛ flour)."
+    ),
+    "de": (
+        "Suffixal derivation: arbeiten → Arbeit, Arbeiter. "
+        "NOT family: un- negation; inflected forms; separable-prefix verbs with a new meaning "
+        "(schließen ↛ ausschließen); compounds that only share a stem (Haus ↛ Krankenhaus)."
+    ),
+    "pl": (
+        "Suffixal derivation + conversion: pisać → pismo, pisarz, pisemny; "
+        "wziąć → wzięty (adj) — allomorphy OK. "
+        "NOT family: nie- negation; lexical prefixes (pisać ↛ przepisać / zapisać); "
+        "pure inflection (wziął, biorę)."
+    ),
+    "ru": (
+        "Suffixal derivation: писать → письмо, писатель. "
+        "NOT family: не- negation; lexical prefixes (писать ↛ записать); inflection."
+    ),
+    "tr": (
+        "Derivational suffixes: yapmak → yapı, yapıcı. "
+        "NOT family: person/tense agglutination (yapıyorum); negative -me- of the same verb."
+    ),
+    "hi": (
+        "Dictionary derivatives of the same stem. "
+        "NOT family: inflected forms (करना ↛ किया); look-alikes."
+    ),
+    "ar": (
+        "Only the most frequent derivatives of this root "
+        "(كتب → كتاب, كاتب, مكتب) — not the entire binyan chart. "
+        "NOT family: purely inflectional forms; every pattern from the 3 consonants."
+    ),
+    "zh": (
+        "Close pedagogical compounds only (学 → 学生, 学习). "
+        "Sharing one character is not enough (好 ↛ 子). Empty list is fine."
+    ),
+    "vi": (
+        "Close pedagogical compounds (học → học sinh). "
+        "Shared syllable coincidence is not a family. Empty list is fine."
+    ),
+    "ja": (
+        "Derivatives of the citation lemma in kanji (書く → 書き方, 書物). "
+        "NOT family: inflection (書いた); homophones with a different character (橋 ↛ 箸). "
+        "Return lemmas in the dictionary script (kanji), not kana-only homophones."
+    ),
+    "ko": (
+        "Derivatives (공부 → 공부하다). "
+        "NOT family: agglutinative endings as separate words; hangul homophones of another lexeme."
+    ),
+}
+
+
+def word_family_guidance(learning: str) -> str:
+    c = (learning or "").strip().lower()
+    hint = WORD_FAMILY_HINTS.get(
+        c,
+        "Same morphological root: suffixal derivation and conversion only. "
+        "Not inflection, not negative prefixes, not look-alikes, not meaning-changing prefixes.",
+    )
+    return f"L2-specific word-family guidance ({c}): {hint}"
+
+
 def language_pair_guidance(*, native: str, learning: str) -> str:
     """Blok wstrzykiwany do promptów — para L1/L2 + jak sygnalizować UI."""
     n, l = (native or "").strip().lower(), (learning or "").strip().lower()

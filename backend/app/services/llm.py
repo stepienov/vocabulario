@@ -56,8 +56,10 @@ ENRICH_CORE_SYSTEM = (
     "stylistic variants of the same sense go to synonyms, not meanings. "
     "Periphrases belong to THIS L2 only (never invent Spanish acabar de / ir a "
     "for other L2) and are NOT lemma meanings — omit them from meanings. "
-    "Synonyms/antonyms must match POS of the lemma; same-root derivatives go to "
-    "word_family_l2 (other POS allowed), not synonyms. "
+    "Synonyms/antonyms must match POS of the lemma; same-root suffixal derivatives "
+    "go to word_family_l2 (other POS allowed), not synonyms. Negative prefixes "
+    "(irrelevante, unhappy) are antonyms, not word family. Look-alikes with "
+    "another root are not word family. "
     "Each meaning needs exactly 3 example sentences (A2, B2, C2). "
     "No conjugation, no similar_words. JSON only."
 )
