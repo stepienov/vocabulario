@@ -820,5 +820,7 @@
     <string name="enrichment_retry_requires_online">Requiere conexión a internet.</string>
     <string name="enrichment_retry_failed">No se pudo reintentar la preparación.</string>
 
+    <string name="practice_almost">¡Casi!</string>
+
 </resources>
 

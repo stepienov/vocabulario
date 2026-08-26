@@ -512,7 +512,8 @@
     "status_prep_problem": "problema al preparar",
     "cd_retry_enrichment": "Reintentar preparación",
     "enrichment_retry_requires_online": "Requiere conexión a internet.",
-    "enrichment_retry_failed": "No se pudo reintentar la preparación."
+    "enrichment_retry_failed": "No se pudo reintentar la preparación.",
+    "practice_almost": "¡Casi!"
   },
   "fr": {
     "action_abort": "Interrompre",
@@ -1027,7 +1028,8 @@
     "status_prep_problem": "problème de préparation",
     "cd_retry_enrichment": "Relancer la préparation",
     "enrichment_retry_requires_online": "Connexion internet requise.",
-    "enrichment_retry_failed": "Impossible de relancer la préparation."
+    "enrichment_retry_failed": "Impossible de relancer la préparation.",
+    "practice_almost": "Presque !"
   },
   "de": {
     "action_abort": "Abbrechen",
@@ -1542,7 +1544,8 @@
     "status_prep_problem": "Vorbereitungsproblem",
     "cd_retry_enrichment": "Vorbereitung wiederholen",
     "enrichment_retry_requires_online": "Internetverbindung erforderlich.",
-    "enrichment_retry_failed": "Vorbereitung konnte nicht wiederholt werden."
+    "enrichment_retry_failed": "Vorbereitung konnte nicht wiederholt werden.",
+    "practice_almost": "Fast!"
   },
   "it": {
     "action_abort": "Interrompi",
@@ -2057,7 +2060,8 @@
     "status_prep_problem": "problema di preparazione",
     "cd_retry_enrichment": "Riprova preparazione",
     "enrichment_retry_requires_online": "Connessione internet richiesta.",
-    "enrichment_retry_failed": "Impossibile riprovare la preparazione."
+    "enrichment_retry_failed": "Impossibile riprovare la preparazione.",
+    "practice_almost": "Quasi!"
   },
   "pt-br": {
     "action_abort": "Interromper",
@@ -2572,7 +2576,8 @@
     "status_prep_problem": "problema na preparação",
     "cd_retry_enrichment": "Tentar preparação de novo",
     "enrichment_retry_requires_online": "Requer conexão com a internet.",
-    "enrichment_retry_failed": "Não foi possível tentar a preparação de novo."
+    "enrichment_retry_failed": "Não foi possível tentar a preparação de novo.",
+    "practice_almost": "Quase!"
   },
   "pt-pt": {
     "action_abort": "Interromper",
@@ -3087,7 +3092,8 @@
     "status_prep_problem": "problema na preparação",
     "cd_retry_enrichment": "Repetir preparação",
     "enrichment_retry_requires_online": "Requer ligação à internet.",
-    "enrichment_retry_failed": "Não foi possível repetir a preparação."
+    "enrichment_retry_failed": "Não foi possível repetir a preparação.",
+    "practice_almost": "Quase!"
   },
   "zh": {
     "action_abort": "中止",
@@ -3602,7 +3608,8 @@
     "status_prep_problem": "准备出错",
     "cd_retry_enrichment": "重试准备",
     "enrichment_retry_requires_online": "需要网络连接。",
-    "enrichment_retry_failed": "无法重试准备。"
+    "enrichment_retry_failed": "无法重试准备。",
+    "practice_almost": "接近了！"
   },
   "ja": {
     "action_abort": "中止",
@@ -4117,7 +4124,8 @@
     "status_prep_problem": "準備の問題",
     "cd_retry_enrichment": "準備を再試行",
     "enrichment_retry_requires_online": "インターネット接続が必要です。",
-    "enrichment_retry_failed": "準備を再試行できませんでした。"
+    "enrichment_retry_failed": "準備を再試行できませんでした。",
+    "practice_almost": "おしい！"
   },
   "ko": {
     "action_abort": "중단",
@@ -4632,7 +4640,8 @@
     "status_prep_problem": "준비 문제",
     "cd_retry_enrichment": "준비 다시 시도",
     "enrichment_retry_requires_online": "인터넷 연결이 필요합니다.",
-    "enrichment_retry_failed": "준비를 다시 시도할 수 없습니다."
+    "enrichment_retry_failed": "준비를 다시 시도할 수 없습니다.",
+    "practice_almost": "거의 맞아요!"
   },
   "ar": {
     "action_abort": "إيقاف",
@@ -5147,7 +5156,8 @@
     "status_prep_problem": "مشكلة في التحضير",
     "cd_retry_enrichment": "إعادة محاولة التحضير",
     "enrichment_retry_requires_online": "يتطلب اتصالاً بالإنترنت.",
-    "enrichment_retry_failed": "تعذرت إعادة محاولة التحضير."
+    "enrichment_retry_failed": "تعذرت إعادة محاولة التحضير.",
+    "practice_almost": "تقريباً!"
   },
   "ru": {
     "action_abort": "Прервать",
@@ -5662,7 +5672,8 @@
     "status_prep_problem": "проблема подготовки",
     "cd_retry_enrichment": "Повторить подготовку",
     "enrichment_retry_requires_online": "Требуется подключение к интернету.",
-    "enrichment_retry_failed": "Не удалось повторить подготовку."
+    "enrichment_retry_failed": "Не удалось повторить подготовку.",
+    "practice_almost": "Почти!"
   },
   "hi": {
     "action_abort": "रोकें",
@@ -6177,7 +6188,8 @@
     "status_prep_problem": "तैयारी में समस्या",
     "cd_retry_enrichment": "तैयारी फिर से करें",
     "enrichment_retry_requires_online": "इंटरनेट कनेक्शन आवश्यक है।",
-    "enrichment_retry_failed": "तैयारी दोबारा नहीं हो सकी।"
+    "enrichment_retry_failed": "तैयारी दोबारा नहीं हो सकी।",
+    "practice_almost": "लगभग सही!"
   },
   "tr": {
     "action_abort": "Durdur",
@@ -6692,7 +6704,8 @@
     "status_prep_problem": "hazırlık sorunu",
     "cd_retry_enrichment": "Hazırlığı yeniden dene",
     "enrichment_retry_requires_online": "İnternet bağlantısı gerekli.",
-    "enrichment_retry_failed": "Hazırlık yeniden denenemedi."
+    "enrichment_retry_failed": "Hazırlık yeniden denenemedi.",
+    "practice_almost": "Neredeyse!"
   },
   "vi": {
     "action_abort": "Hủy giữa chừng",
@@ -7207,6 +7220,7 @@
     "status_prep_problem": "lỗi chuẩn bị",
     "cd_retry_enrichment": "Thử chuẩn bị lại",
     "enrichment_retry_requires_online": "Cần kết nối internet.",
-    "enrichment_retry_failed": "Không thể thử chuẩn bị lại."
+    "enrichment_retry_failed": "Không thể thử chuẩn bị lại.",
+    "practice_almost": "Gần đúng!"
   }
 }

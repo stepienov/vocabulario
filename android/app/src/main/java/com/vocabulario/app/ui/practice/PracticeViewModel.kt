@@ -85,6 +85,7 @@ data class PracticeUiState(
     val conjugationExpandedDefault: Boolean = false,
     val relatedWordsExpandedDefault: Boolean = false,
     val showCorrectToast: Boolean = false,
+    val showAlmostToast: Boolean = false,
     val showWrongToast: Boolean = false,
     val addTarget: RelatedWord? = null,
     val lists: List<WordListResponse> = emptyList(),
@@ -318,6 +319,10 @@ class PracticeViewModel @Inject constructor(
         _state.value = _state.value.copy(showCorrectToast = false)
     }
 
+    fun dismissAlmostToast() {
+        _state.value = _state.value.copy(showAlmostToast = false)
+    }
+
     fun dismissWrongToast() {
         _state.value = _state.value.copy(showWrongToast = false)
     }
@@ -340,12 +345,25 @@ class PracticeViewModel @Inject constructor(
                 repository.checkAnswer(item.card_id, _state.value.typedAnswer, currentDirection())
             }.onSuccess { result ->
                 when {
+                    result.correct && result.accepted_as_typo -> {
+                        _state.value = _state.value.copy(
+                            lastCorrect = true,
+                            typoWarning = true,
+                            expectedAnswer = result.expected,
+                            showAlmostToast = true,
+                            showCorrectToast = false,
+                            showWrongToast = false,
+                            phase = PracticePhase.SHOW_CARD,
+                        )
+                    }
                     result.correct -> {
                         _state.value = _state.value.copy(
                             lastCorrect = true,
-                            typoWarning = result.accepted_as_typo,
+                            typoWarning = false,
                             expectedAnswer = result.expected,
                             showCorrectToast = true,
+                            showAlmostToast = false,
+                            showWrongToast = false,
                             phase = PracticePhase.SHOW_CARD,
                         )
                     }
@@ -355,6 +373,8 @@ class PracticeViewModel @Inject constructor(
                             expectedAnswer = result.expected,
                             typoWarning = false,
                             showWrongToast = true,
+                            showCorrectToast = false,
+                            showAlmostToast = false,
                             phase = PracticePhase.SHOW_CARD,
                         )
                     }
@@ -633,6 +653,7 @@ class PracticeViewModel @Inject constructor(
                     selectedChoice = null,
                     disabledChoiceTexts = emptySet(),
                     showCorrectToast = false,
+                    showAlmostToast = false,
                     showWrongToast = false,
                 )
                 prepareCard()

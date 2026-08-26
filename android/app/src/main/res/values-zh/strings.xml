@@ -806,5 +806,7 @@
     <string name="enrichment_retry_requires_online">需要网络连接。</string>
     <string name="enrichment_retry_failed">无法重试准备。</string>
 
+    <string name="practice_almost">接近了！</string>
+
 </resources>
 

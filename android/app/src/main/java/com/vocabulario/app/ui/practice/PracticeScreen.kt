@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -25,6 +26,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
@@ -42,18 +45,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vocabulario.app.R
 import com.vocabulario.app.ui.card.CardActivitySpinner
@@ -81,6 +83,7 @@ import com.vocabulario.app.ui.components.PromptCard
 import com.vocabulario.app.ui.home.listNameConflictMessage
 import com.vocabulario.app.ui.theme.GradeAgain
 import com.vocabulario.app.ui.theme.GradeKnown
+import com.vocabulario.app.ui.theme.GradeLearning
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,6 +101,13 @@ fun PracticeScreen(
         if (state.showCorrectToast) {
             delay(1100)
             viewModel.dismissCorrectToast()
+        }
+    }
+
+    LaunchedEffect(state.showAlmostToast) {
+        if (state.showAlmostToast) {
+            delay(1100)
+            viewModel.dismissAlmostToast()
         }
     }
 
@@ -451,51 +461,24 @@ fun PracticeScreen(
             )
         }
 
-        AnimatedVisibility(
+        PracticeResultToast(
             visible = state.showCorrectToast,
-            enter = fadeIn(tween(280)) + scaleIn(initialScale = 0.92f, animationSpec = tween(320)),
-            exit = fadeOut(tween(450)),
+            text = stringResource(R.string.practice_well_done),
+            color = GradeKnown,
             modifier = Modifier.align(Alignment.Center),
-        ) {
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-                shadowElevation = 8.dp,
-                tonalElevation = 2.dp,
-            ) {
-                Text(
-                    stringResource(R.string.practice_well_done),
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = GradeKnown,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 20.dp),
-                )
-            }
-        }
-
-        AnimatedVisibility(
+        )
+        PracticeResultToast(
+            visible = state.showAlmostToast,
+            text = stringResource(R.string.practice_almost),
+            color = GradeLearning,
+            modifier = Modifier.align(Alignment.Center),
+        )
+        PracticeResultToast(
             visible = state.showWrongToast,
-            enter = fadeIn(tween(280)) + scaleIn(initialScale = 0.92f, animationSpec = tween(320)),
-            exit = fadeOut(tween(450)),
+            text = stringResource(R.string.practice_error_title),
+            color = GradeAgain,
             modifier = Modifier.align(Alignment.Center),
-        ) {
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-                shadowElevation = 8.dp,
-                tonalElevation = 2.dp,
-            ) {
-                Text(
-                    stringResource(R.string.practice_error_title),
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = GradeAgain,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 20.dp),
-                )
-            }
-        }
+        )
 
         CardCorrectionReportSheet(
             visible = state.correctionOpen,
@@ -534,6 +517,37 @@ fun PracticeScreen(
     }
 }
 
+@Composable
+private fun PracticeResultToast(
+    visible: Boolean,
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(280)) + scaleIn(initialScale = 0.92f, animationSpec = tween(320)),
+        exit = fadeOut(tween(450)),
+        modifier = modifier,
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+            shadowElevation = 8.dp,
+            tonalElevation = 2.dp,
+        ) {
+            Text(
+                text,
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = color,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 32.dp, vertical = 20.dp),
+            )
+        }
+    }
+}
+
 private val AnswerWarnGradientCenter = Color(0xFFEBDBA4)
 private val AnswerWarnGradientEdge = Color(0xFFDFC159)
 private val AnswerWarnTyped = Color(0xFF892100)
@@ -546,8 +560,7 @@ private fun AnswerWarningBanner(
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(20.dp)
-    val correctLabel = stringResource(R.string.practice_spelling_correct)
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
@@ -559,45 +572,61 @@ private fun AnswerWarningBanner(
                 ),
             )
             .testTag(TestTags.PRACTICE_SPELLING_WARN)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+        AnswerWarningRow(
+            icon = Icons.Default.Close,
+            iconTint = AnswerWarnTyped,
+            text = typedAnswer,
+            textColor = AnswerWarnTyped,
+            fontWeight = FontWeight.Medium,
+        )
+        AnswerWarningRow(
+            icon = Icons.Default.Check,
+            iconTint = AnswerWarnCorrect,
+            text = expectedAnswer,
+            textColor = AnswerWarnCorrect,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun AnswerWarningRow(
+    icon: ImageVector,
+    iconTint: Color,
+    text: String,
+    textColor: Color,
+    fontWeight: FontWeight,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(44.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier.size(28.dp),
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_spelling_warning),
+                imageVector = icon,
                 contentDescription = null,
-                tint = Color.Unspecified,
-                modifier = Modifier.size(26.dp),
+                tint = iconTint,
+                modifier = Modifier.size(24.dp),
             )
-            Column(
-                modifier = Modifier.weight(1f, fill = false),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = typedAnswer,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = AnswerWarnTyped,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(SpanStyle(color = AnswerWarnCorrect)) {
-                            append(correctLabel)
-                            append(" ")
-                        }
-                        withStyle(SpanStyle(color = AnswerWarnCorrect, fontWeight = FontWeight.Bold)) {
-                            append(expectedAnswer)
-                        }
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                )
-            }
         }
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = text,
+            color = textColor,
+            fontSize = 22.sp,
+            fontWeight = fontWeight,
+            lineHeight = 26.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

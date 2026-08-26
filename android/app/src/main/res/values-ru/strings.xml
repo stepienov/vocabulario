@@ -806,5 +806,7 @@
     <string name="enrichment_retry_requires_online">Требуется подключение к интернету.</string>
     <string name="enrichment_retry_failed">Не удалось повторить подготовку.</string>
 
+    <string name="practice_almost">Почти!</string>
+
 </resources>
 

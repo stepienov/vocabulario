@@ -893,4 +893,6 @@
     <string name="enrichment_retry_requires_online">Cần kết nối internet.</string>
     <string name="enrichment_retry_failed">Không thể thử chuẩn bị lại.</string>
 
+    <string name="practice_almost">Gần đúng!</string>
+
 </resources>

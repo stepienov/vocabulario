@@ -888,4 +888,6 @@
     <string name="enrichment_retry_requires_online">Connessione internet richiesta.</string>
     <string name="enrichment_retry_failed">Impossibile riprovare la preparazione.</string>
 
+    <string name="practice_almost">Quasi!</string>
+
 </resources>

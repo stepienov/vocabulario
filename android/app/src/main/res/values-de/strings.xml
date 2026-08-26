@@ -806,5 +806,7 @@
     <string name="enrichment_retry_requires_online">Internetverbindung erforderlich.</string>
     <string name="enrichment_retry_failed">Vorbereitung konnte nicht wiederholt werden.</string>
 
+    <string name="practice_almost">Fast!</string>
+
 </resources>
 

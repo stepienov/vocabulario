@@ -806,5 +806,7 @@
     <string name="enrichment_retry_requires_online">يتطلب اتصالاً بالإنترنت.</string>
     <string name="enrichment_retry_failed">تعذرت إعادة محاولة التحضير.</string>
 
+    <string name="practice_almost">تقريباً!</string>
+
 </resources>
 

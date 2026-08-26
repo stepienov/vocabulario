@@ -806,5 +806,7 @@
     <string name="enrichment_retry_requires_online">इंटरनेट कनेक्शन आवश्यक है।</string>
     <string name="enrichment_retry_failed">तैयारी दोबारा नहीं हो सकी।</string>
 
+    <string name="practice_almost">लगभग सही!</string>
+
 </resources>
 

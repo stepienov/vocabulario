@@ -902,4 +902,6 @@
     <string name="enrichment_retry_requires_online">インターネット接続が必要です。</string>
     <string name="enrichment_retry_failed">準備を再試行できませんでした。</string>
 
+    <string name="practice_almost">おしい！</string>
+
 </resources>

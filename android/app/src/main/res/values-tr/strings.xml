@@ -895,4 +895,6 @@
     <string name="enrichment_retry_requires_online">İnternet bağlantısı gerekli.</string>
     <string name="enrichment_retry_failed">Hazırlık yeniden denenemedi.</string>
 
+    <string name="practice_almost">Neredeyse!</string>
+
 </resources>
