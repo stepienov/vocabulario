@@ -198,6 +198,7 @@
     <string name="practice_title">练习</string>
 
     <string name="practice_show_answer">显示答案</string>
+    <string name="practice_show_hints">显示提示</string>
 
     <string name="practice_error_title">错误</string>
 

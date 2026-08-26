@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi"><div class="label">Purpose</div><div class="value" style="font-size:18px">{{ usage.purpose }}</div></div>
+  <div class="kpi"><div class="label">Model</div><div class="value" style="font-size:16px">{{ usage.model }}</div></div>
+  <div class="kpi"><div class="label">Koszt</div><div class="value">{{ usage.estimated_cost_usd|usd }}</div></div>
+  <div class="kpi"><div class="label">Status</div><div class="value" style="font-size:16px">{{ usage.status }}</div></div>
+</div>
+<p>
+  {{ usage.created_at|dt }}
+  · lemma {{ usage.lemma or "—" }}
+  · query {{ usage.query or "—" }}
+  · para {{ usage.lang_pair or "—" }}
+  {% if usage.card_id %}· <a href="/admin/cards/{{ usage.card_id }}">karta</a>{% endif %}
+  {% if user %}· <a href="/admin/users/{{ user.id }}">{{ user.email }}</a>{% endif %}
+</p>
+<p class="muted">To surowy JSON z modelu (przed filtrami karty). Prompt statyczny nie jest zapisywany.</p>
+{% if payload %}
+<div class="grid-2">
+  <div class="panel">
+    <h2>Request (dynamiczny)</h2>
+    <pre>{{ payload.request_json|tojson }}</pre>
+  </div>
+  <div class="panel">
+    <h2>Response</h2>
+    <pre>{{ payload.response_json|tojson }}</pre>
+  </div>
+</div>
+{% else %}
+<p class="muted">Brak zapisanego payloadu (starszy wiersz albo LLM_STORE_PAYLOADS=false).</p>
+{% endif %}
+<p><a href="/admin/costs">← Koszty</a></p>
+{% endblock %}

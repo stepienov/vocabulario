@@ -75,7 +75,7 @@ from app.services.import_classify import resolve_import_vocabulario_entries
 from app.services.import_package import ImportPackageError, load_raw_import, load_text_import
 from app.services.import_urls import ImportUrlError, detect_import_url, fetch_words_from_url
 from app.services.lexical import LexicalService, LookupOutcome
-from app.services.lookup_events import record_lookup_event
+from app.services.lookup_events import find_lookup_event_for_card, record_lookup_event
 from app.services.lookup_candidates import has_confident_match
 from app.services.similar_words import ensure_similar_words
 from app.services.srs import apply_review
@@ -133,6 +133,8 @@ async def lookup(
         query=body.text,
         source=outcome.source,
         candidate_count=len(outcome.candidates),
+        candidates=outcome.candidates,
+        ai_complete=outcome.ai_complete,
     )
     await db.commit()
     return _lookup_http(outcome, body.text)
@@ -156,6 +158,8 @@ async def lookup_cached(
         query=body.text,
         source=outcome.source or "cached",
         candidate_count=len(outcome.candidates),
+        candidates=outcome.candidates,
+        ai_complete=outcome.ai_complete,
     )
     await db.commit()
     return _lookup_http(outcome, body.text)
@@ -179,6 +183,8 @@ async def lookup_expand(
         query=body.text,
         source=outcome.source or "expand",
         candidate_count=len(outcome.candidates),
+        candidates=outcome.candidates,
+        ai_complete=outcome.ai_complete,
     )
     await db.commit()
     return _lookup_http(outcome, body.text)
@@ -362,6 +368,15 @@ async def create_card(
     )
     db.add(card)
     await db.flush()
+    matched = await find_lookup_event_for_card(
+        db,
+        user_id=user.id,
+        profile_id=profile.id,
+        lemma=body.lemma,
+        pos=body.pos,
+    )
+    if matched is not None:
+        card.lookup_event_id = matched.id
     db.add(SrsState(card_id=card.id, scope="main", status="new"))
     await hydrate_from_lexical_cache(db, card, profile)
     try:

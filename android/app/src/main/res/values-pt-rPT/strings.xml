@@ -198,6 +198,7 @@
     <string name="practice_title">Prática</string>
 
     <string name="practice_show_answer">Mostrar resposta</string>
+    <string name="practice_show_hints">Mostrar dicas</string>
 
     <string name="practice_error_title">Errado</string>
 

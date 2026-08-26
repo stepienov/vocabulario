@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from app.ai.language_typology import WORD_FAMILY_HINTS, word_family_guidance
+from app.core.lemma_keys import canonical_lemma
 from app.ai.prompts.v1 import build_enrichment_core_prompt_parts
 from app.lsp.constants import SUPPORTED_L2_LANGS
 from app.lsp.enrichment import assemble_core_card
@@ -211,6 +212,58 @@ def test_backfill_unions_bidirectional_influir_family():
     assert shown_influir != shown_influyente
     assert "influyente" not in shown_influyente
     assert "influir" in shown_influyente
+
+
+def test_backfill_unions_conversion_objetivo_adj_noun():
+    """Adj i rzeczownik tej samej formy — bez wzajemnego wymienienia, wspólne derywaty."""
+    adj = _prepared(
+        "objetivo",
+        "adj",
+        [
+            {"lemma": "la objetividad", "pos": "noun", "gloss_l1": "obiektywność"},
+            {"lemma": "objetivamente", "pos": "adv", "gloss_l1": "obiektywnie"},
+            {"lemma": "objetivar", "pos": "verb", "gloss_l1": "obiektywizować"},
+            {"lemma": "la objetivación", "pos": "noun", "gloss_l1": "obiektywizacja"},
+        ],
+        gloss="obiektywny",
+    )
+    noun = _prepared(
+        "el objetivo",
+        "noun",
+        [
+            {"lemma": "objetividad", "pos": "noun", "gloss_l1": "obiektywność"},
+            {"lemma": "objetivamente", "pos": "adv", "gloss_l1": "obiektywnie"},
+            {"lemma": "objetivar", "pos": "verb", "gloss_l1": "obiektywizować"},
+            {"lemma": "objetivación", "pos": "noun", "gloss_l1": "obiektywizacja"},
+        ],
+        gloss="cel",
+    )
+    plans = build_family_plans([adj, noun])
+    assert len(plans) == 1
+    assert len(plans[0].entry_ids) == 2
+    shown_adj = _lemmas_on_card(plans[0], "objetivo", "adj")
+    shown_noun = _lemmas_on_card(plans[0], "el objetivo", "noun")
+    adj_keys = {canonical_lemma(x) for x in shown_adj}
+    noun_keys = {canonical_lemma(x) for x in shown_noun}
+    assert "objetivo" in adj_keys
+    assert "objetivo" in noun_keys
+    assert "objetividad" in adj_keys
+    assert "objetividad" in noun_keys
+    assert "el objetivo" in shown_adj
+    assert "objetivo" in shown_noun
+    assert "objetivo" not in shown_adj
+    assert "el objetivo" not in shown_noun
+
+
+def test_backfill_unions_conversion_even_with_empty_relatives():
+    adj = _prepared("objetivo", "adj", [], gloss="obiektywny")
+    noun = _prepared("el objetivo", "noun", [], gloss="cel")
+    plans = build_family_plans([adj, noun])
+    assert len(plans) == 1
+    shown_adj = _lemmas_on_card(plans[0], "objetivo", "adj")
+    shown_noun = _lemmas_on_card(plans[0], "el objetivo", "noun")
+    assert shown_adj == ["el objetivo"]
+    assert shown_noun == ["objetivo"]
 
 
 def test_backfill_does_not_merge_libro_libre():

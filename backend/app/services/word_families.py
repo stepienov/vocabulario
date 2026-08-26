@@ -116,10 +116,13 @@ async def _families_for_keys(
     db: AsyncSession,
     lang_pair: str,
     keys: set[tuple[str, str]],
+    *,
+    conversion_stems: set[str] | None = None,
 ) -> list[WordFamily]:
-    if not keys:
+    conversion = conversion_stems or set()
+    lemma_keys = {k[0] for k in keys} | conversion
+    if not lemma_keys:
         return []
-    lemma_keys = {k[0] for k in keys}
     result = await db.execute(
         select(WordFamilyMember).where(
             WordFamilyMember.lang_pair == lang_pair,
@@ -129,7 +132,7 @@ async def _families_for_keys(
     family_ids: set[UUID] = set()
     for member in result.scalars().all():
         key = (member.lemma_key, normalize_pos_bucket(member.pos))
-        if key in keys:
+        if key in keys or member.lemma_key in conversion:
             family_ids.add(member.family_id)
     if not family_ids:
         return []
@@ -314,7 +317,9 @@ async def sync_word_family(
     ]
     relative_keys = _keys_of(llm_relatives)
 
-    overlapping = await _families_for_keys(db, pair, cand_keys)
+    overlapping = await _families_for_keys(
+        db, pair, cand_keys, conversion_stems={head_key[0]}
+    )
     head_row = await _member_row(db, pair, head_key[0], head_key[1])
     head_family: WordFamily | None = None
     if head_row is not None:
@@ -337,7 +342,9 @@ async def sync_word_family(
             await db.flush()
             await _delete_empty_family(db, head_family)
             head_family = None
-            overlapping = await _families_for_keys(db, pair, cand_keys)
+            overlapping = await _families_for_keys(
+                db, pair, cand_keys, conversion_stems={head_key[0]}
+            )
 
     target: WordFamily | None = head_family
     if target is None and overlapping:

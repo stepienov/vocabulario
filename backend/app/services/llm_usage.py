@@ -5,13 +5,21 @@ from __future__ import annotations
 import logging
 from contextvars import ContextVar
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
+from sqlalchemy import delete, update
+
+from app.core.config import get_settings
 from app.services.app_log import profile_id_var, request_id_var, user_id_var
 from app.services.llm_pricing import PRICING_VERSION, TokenUsage, estimate_cost_usd
 
 logger = logging.getLogger(__name__)
+
+_PROMPT_CLIP = 100_000
+_PURGE_EVERY_S = 1800
+_last_payload_purge_at = 0.0
 
 
 @dataclass(frozen=True)
@@ -25,6 +33,7 @@ class LlmUsageContext:
     card_id: UUID | None = None
     user_id: UUID | None = None
     profile_id: UUID | None = None
+    lookup_event_id: UUID | None = None
 
 
 _usage_ctx: ContextVar[LlmUsageContext] = ContextVar(
@@ -54,7 +63,10 @@ def bind_llm_usage_context(
             continue
         if keep_op and key in {"operation_id", "operation_kind"}:
             continue
-        data[key] = value
+        if key in {"card_id", "user_id", "profile_id", "lookup_event_id", "operation_id"}:
+            data[key] = _as_uuid(value) or value
+        else:
+            data[key] = value
     _usage_ctx.set(LlmUsageContext(**data))
 
 
@@ -79,6 +91,31 @@ def _clip(value: str | None, limit: int) -> str | None:
     return value if len(value) <= limit else value[: limit - 1] + "…"
 
 
+def build_llm_request_json(
+    *,
+    purpose: str,
+    model: str,
+    schema_name: str | None,
+    prompt: str,
+    prompt_dynamic: str | None = None,
+    cache_key: str | None = None,
+) -> dict[str, Any]:
+    dynamic = prompt_dynamic if prompt_dynamic is not None else prompt
+    return {
+        "purpose": purpose,
+        "model": model,
+        "schema": schema_name,
+        "prompt_dynamic": _clip(dynamic, _PROMPT_CLIP),
+        "cache_key": cache_key,
+    }
+
+
+def payload_cutoff(*, now: datetime | None = None, days: int | None = None) -> datetime:
+    settings = get_settings()
+    ttl = max(1, int(days if days is not None else settings.llm_payload_ttl_days))
+    return (now or datetime.now(UTC)) - timedelta(days=ttl)
+
+
 async def record_llm_usage(
     *,
     provider: str,
@@ -87,16 +124,19 @@ async def record_llm_usage(
     status: str = "ok",
     duration_ms: int | None = None,
     usage: TokenUsage | None = None,
-) -> None:
+    request_json: dict | None = None,
+    response_json: dict | list | None = None,
+) -> UUID | None:
     try:
         from app.db.session import async_session_factory
-        from app.models import LlmUsage
+        from app.models import LlmCallPayload, LlmUsage
 
         ctx = _usage_ctx.get()
         usage = usage or TokenUsage()
         cost = estimate_cost_usd(model, usage) if status == "ok" else None
+        row_id = uuid4()
         row = LlmUsage(
-            id=uuid4(),
+            id=row_id,
             provider=(provider or "openai")[:16],
             model=(model or "")[:64],
             purpose=(purpose or "chat_json")[:32],
@@ -121,9 +161,58 @@ async def record_llm_usage(
             pricing_version=PRICING_VERSION if cost is not None else None,
             duration_ms=duration_ms,
             status=(status or "ok")[:16],
+            lookup_event_id=_as_uuid(ctx.lookup_event_id),
+        )
+        settings = get_settings()
+        store = bool(settings.llm_store_payloads) and (
+            request_json is not None or response_json is not None
         )
         async with async_session_factory() as db:
             db.add(row)
+            if store:
+                db.add(
+                    LlmCallPayload(
+                        llm_usage_id=row_id,
+                        request_json=request_json,
+                        response_json=response_json if isinstance(response_json, (dict, list)) else None,
+                    )
+                )
             await db.commit()
+        return row_id
     except Exception:
         logger.exception("llm_usage write failed purpose=%s model=%s", purpose, model)
+        return None
+
+
+async def purge_expired_llm_payloads(*, force: bool = False) -> dict[str, int]:
+    """Drop raw JSON older than TTL. Keeps llm_usage metric rows."""
+    global _last_payload_purge_at
+    import time
+
+    now = time.monotonic()
+    if not force and _last_payload_purge_at and now - _last_payload_purge_at < _PURGE_EVERY_S:
+        return {"payloads": 0, "lookup_candidates_cleared": 0, "skipped": 1}
+    try:
+        from app.db.session import async_session_factory
+        from app.models import LlmCallPayload, LookupEvent
+
+        cutoff = payload_cutoff()
+        async with async_session_factory() as db:
+            payloads = await db.execute(
+                delete(LlmCallPayload).where(LlmCallPayload.created_at < cutoff)
+            )
+            lookups = await db.execute(
+                update(LookupEvent)
+                .where(LookupEvent.created_at < cutoff)
+                .values(candidates=[])
+            )
+            await db.commit()
+        _last_payload_purge_at = now
+        return {
+            "payloads": int(payloads.rowcount or 0),
+            "lookup_candidates_cleared": int(lookups.rowcount or 0),
+            "skipped": 0,
+        }
+    except Exception:
+        logger.exception("llm payload purge failed")
+        return {"payloads": 0, "lookup_candidates_cleared": 0, "skipped": 0}

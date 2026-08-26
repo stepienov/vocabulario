@@ -198,6 +198,7 @@
     <string name="practice_title">अभ्यास</string>
 
     <string name="practice_show_answer">उत्तर दिखाएँ</string>
+    <string name="practice_show_hints">संकेत दिखाएँ</string>
 
     <string name="practice_error_title">गलत</string>
 

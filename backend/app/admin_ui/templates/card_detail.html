@@ -23,10 +23,21 @@
     {% if entry %}
       <p>{{ entry.lemma_l2 }} / {{ entry.lemma_l1_primary }} · {{ entry.lang_pair }} · użycia {{ entry.usage_count }}</p>
     {% else %}<p class="muted">Brak powiązanego entry</p>{% endif %}
+    <h2>Lookup</h2>
+    {% if lookup_event %}
+      <p>{{ lookup_event.created_at|dt }} · {{ lookup_event.query }} · {{ lookup_event.source }} · {{ lookup_event.candidate_count }} kand.</p>
+      <details><summary>Kandydaci</summary><pre>{{ lookup_event.candidates|tojson }}</pre></details>
+    {% else %}<p class="muted">Brak powiązanego lookup_event</p>{% endif %}
     <h2>LLM</h2>
     <table>
       {% for u in usage %}
-        <tr><td>{{ u.created_at|dt }}</td><td>{{ u.purpose }}</td><td>{{ u.estimated_cost_usd|usd }}</td><td>{{ u.status }}</td></tr>
+        <tr>
+          <td>{{ u.created_at|dt }}</td>
+          <td>{{ u.purpose }}</td>
+          <td>{{ u.estimated_cost_usd|usd }}</td>
+          <td>{{ u.status }}</td>
+          <td>{% if payloads.get(u.id) %}<a href="/admin/llm-usage/{{ u.id }}">JSON</a>{% else %}—{% endif %}</td>
+        </tr>
       {% endfor %}
     </table>
   </div>

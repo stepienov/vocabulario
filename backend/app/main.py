@@ -25,6 +25,9 @@ async def lifespan(app: FastAPI):
     await apply_schema(engine, Base.metadata)
     from app.services.card_jobs import resume_pending_enrichment
     from app.services.import_jobs import resume_unfinished_jobs, start_heartbeat_watchdog
+    from app.services.llm_usage import purge_expired_llm_payloads
+
+    await purge_expired_llm_payloads(force=True)
 
     await resume_unfinished_jobs()
     watchdog = asyncio.create_task(start_heartbeat_watchdog())

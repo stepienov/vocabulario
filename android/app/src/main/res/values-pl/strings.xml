@@ -200,6 +200,8 @@
 
     <string name="practice_show_answer">Pokaż odpowiedź</string>
 
+    <string name="practice_show_hints">Pokaż podpowiedzi</string>
+
     <string name="practice_error_title">Błąd</string>
 
     <string name="practice_bridge_l2">to po %1$s</string>
@@ -214,7 +216,7 @@
 
     <string name="practice_spelling_warn">Uważaj na pisownię!</string>
 
-    <string name="practice_spelling_correct">Prawidłowe:</string>
+    <string name="practice_spelling_correct">prawidłowo:</string>
 
     <string name="practice_correct_answer">Poprawna odpowiedź: %1$s</string>
 

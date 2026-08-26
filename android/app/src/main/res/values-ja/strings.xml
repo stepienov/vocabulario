@@ -221,6 +221,7 @@
     <string name="practice_title">練習</string>
 
     <string name="practice_show_answer">答えを表示</string>
+    <string name="practice_show_hints">ヒントを表示</string>
 
     <string name="practice_error_title">間違い</string>
 

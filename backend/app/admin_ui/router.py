@@ -220,6 +220,23 @@ async def card_page(
     )
 
 
+@router.get("/llm-usage/{usage_id}", response_class=HTMLResponse)
+async def llm_usage_payload_page(
+    request: Request,
+    usage_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _admin: str = Depends(require_panel),
+):
+    data = await q.llm_usage_payload(db, usage_id)
+    if data is None:
+        raise StarletteHTTPException(404, "Nie znaleziono wołania LLM")
+    return templates.TemplateResponse(
+        request,
+        "llm_usage_payload.html",
+        _ctx(request, "costs", data["usage"].purpose, **data),
+    )
+
+
 @router.post("/cards/{card_id}/retry-enrichment")
 async def retry_enrichment(
     card_id: UUID,

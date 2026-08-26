@@ -221,6 +221,7 @@
     <string name="practice_title">Pratik</string>
 
     <string name="practice_show_answer">Cevabı göster</string>
+    <string name="practice_show_hints">İpuçlarını göster</string>
 
     <string name="practice_error_title">Yanlış</string>
 

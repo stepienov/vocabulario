@@ -220,6 +220,7 @@
     <string name="practice_title">Thực hành</string>
 
     <string name="practice_show_answer">Hiện câu trả lời</string>
+    <string name="practice_show_hints">Hiện gợi ý</string>
 
     <string name="practice_error_title">Sai</string>
 

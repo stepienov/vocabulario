@@ -198,6 +198,7 @@
     <string name="practice_title">Практика</string>
 
     <string name="practice_show_answer">Показать ответ</string>
+    <string name="practice_show_hints">Показать подсказки</string>
 
     <string name="practice_error_title">Неверно</string>
 

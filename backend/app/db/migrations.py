@@ -423,6 +423,29 @@ _STATEMENTS = (
     "REFERENCES word_families(id) ON DELETE SET NULL",
     "CREATE INDEX IF NOT EXISTS ix_lexical_entries_word_family_id "
     "ON lexical_entries (word_family_id)",
+    """
+    CREATE TABLE IF NOT EXISTS llm_call_payloads (
+        llm_usage_id UUID PRIMARY KEY REFERENCES llm_usage(id) ON DELETE CASCADE,
+        request_json JSONB,
+        response_json JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_llm_call_payloads_created_at "
+    "ON llm_call_payloads (created_at)",
+    "ALTER TABLE lookup_events ADD COLUMN IF NOT EXISTS request_id UUID",
+    "ALTER TABLE lookup_events ADD COLUMN IF NOT EXISTS candidates JSONB "
+    "NOT NULL DEFAULT '[]'::jsonb",
+    "ALTER TABLE lookup_events ADD COLUMN IF NOT EXISTS ai_complete BOOLEAN "
+    "NOT NULL DEFAULT false",
+    "ALTER TABLE llm_usage ADD COLUMN IF NOT EXISTS lookup_event_id UUID "
+    "REFERENCES lookup_events(id) ON DELETE SET NULL",
+    "CREATE INDEX IF NOT EXISTS ix_llm_usage_lookup_event_id "
+    "ON llm_usage (lookup_event_id)",
+    "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS lookup_event_id UUID "
+    "REFERENCES lookup_events(id) ON DELETE SET NULL",
+    "CREATE INDEX IF NOT EXISTS ix_learning_cards_lookup_event_id "
+    "ON learning_cards (lookup_event_id)",
 )
 
 

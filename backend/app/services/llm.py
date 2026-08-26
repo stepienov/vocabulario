@@ -47,7 +47,7 @@ from app.ai.schemas.similar_words import similar_words_response_schema
 from app.core.config import get_settings
 from app.core.deps import lang_pair_key
 from app.services.llm_pricing import parse_anthropic_usage, parse_openai_usage
-from app.services.llm_usage import bind_llm_usage_context, record_llm_usage
+from app.services.llm_usage import bind_llm_usage_context, build_llm_request_json, record_llm_usage
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +128,24 @@ class LLMService:
             mock_prompt = prompt
             if prompt_static is not None and prompt_dynamic is not None:
                 mock_prompt = prompt_static + "\n" + prompt_dynamic
-            return self._mock_response(mock_prompt)
+            data = self._mock_response(mock_prompt)
+            schema_name = (json_schema or {}).get("name") or "chat_json"
+            await record_llm_usage(
+                provider="mock",
+                model=model,
+                purpose=purpose,
+                status="ok",
+                request_json=build_llm_request_json(
+                    purpose=purpose,
+                    model=model,
+                    schema_name=schema_name,
+                    prompt=prompt,
+                    prompt_dynamic=prompt_dynamic,
+                    cache_key=cache_key,
+                ),
+                response_json=data if isinstance(data, dict) else None,
+            )
+            return data
         use_provider = (provider or "openai").strip().lower()
         schema_name = (json_schema or {}).get("name") or "chat_json"
         prompt_len = len(prompt)
@@ -187,6 +204,14 @@ class LLMService:
                 status="error",
                 duration_ms=duration_ms,
                 usage=usage,
+                request_json=build_llm_request_json(
+                    purpose=purpose,
+                    model=model,
+                    schema_name=schema_name,
+                    prompt=prompt,
+                    prompt_dynamic=prompt_dynamic,
+                    cache_key=cache_key,
+                ),
             )
             raise
         from app.services.app_log import log_event
@@ -215,6 +240,15 @@ class LLMService:
             status="ok",
             duration_ms=duration_ms,
             usage=usage,
+            request_json=build_llm_request_json(
+                purpose=purpose,
+                model=model,
+                schema_name=schema_name,
+                prompt=prompt,
+                prompt_dynamic=prompt_dynamic,
+                cache_key=cache_key,
+            ),
+            response_json=data if isinstance(data, dict) else None,
         )
         return data
 

@@ -200,6 +200,8 @@
 
     <string name="practice_show_answer">Show answer</string>
 
+    <string name="practice_show_hints">Show hints</string>
+
     <string name="practice_error_title">Wrong</string>
 
     <string name="practice_bridge_l2">in %1$s is</string>

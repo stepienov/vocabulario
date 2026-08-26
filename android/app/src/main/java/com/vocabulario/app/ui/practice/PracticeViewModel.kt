@@ -229,7 +229,21 @@ class PracticeViewModel @Inject constructor(
         if (mode == AnswerMode.CHOICE) prepareChoices()
     }
 
-    private fun prepareChoices() {
+    fun showHints() {
+        if (_state.value.phase != PracticePhase.ANSWERING) return
+        if (_state.value.answerMode != AnswerMode.TYPE) return
+        if (_state.value.loadingChoices) return
+        _state.value = _state.value.copy(
+            answerMode = AnswerMode.CHOICE,
+            loadingChoices = true,
+            typedAnswer = "",
+            selectedChoice = null,
+            disabledChoiceTexts = emptySet(),
+        )
+        prepareChoices(fromTypingHints = true)
+    }
+
+    private fun prepareChoices(fromTypingHints: Boolean = false) {
         val item = currentItem() ?: return
         val direction = currentDirection()
         viewModelScope.launch {
@@ -248,18 +262,29 @@ class PracticeViewModel @Inject constructor(
                             )
                         }
                         else -> {
-                            _state.value = _state.value.copy(
-                                loadingChoices = false,
-                                answerMode = AnswerMode.FLASHCARD,
-                                choices = emptyList(),
-                                error = null,
-                            )
+                            _state.value = if (fromTypingHints) {
+                                _state.value.copy(
+                                    loadingChoices = false,
+                                    lastCorrect = false,
+                                    phase = PracticePhase.SHOW_CARD,
+                                    choices = emptyList(),
+                                    error = null,
+                                )
+                            } else {
+                                _state.value.copy(
+                                    loadingChoices = false,
+                                    answerMode = AnswerMode.FLASHCARD,
+                                    choices = emptyList(),
+                                    error = null,
+                                )
+                            }
                         }
                     }
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
                         loadingChoices = false,
+                        answerMode = if (fromTypingHints) AnswerMode.TYPE else _state.value.answerMode,
                         error = it.userMessage(strings, R.string.err_load_options),
                     )
                 }

@@ -199,6 +199,7 @@
     <string name="practice_title">Práctica</string>
 
     <string name="practice_show_answer">Mostrar respuesta</string>
+    <string name="practice_show_hints">Mostrar pistas</string>
 
     <string name="practice_error_title">Incorrecto</string>
 

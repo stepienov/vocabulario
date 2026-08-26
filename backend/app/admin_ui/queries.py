@@ -17,6 +17,7 @@ from app.models import (
     LanguageProfile,
     LearningCard,
     LexicalEntry,
+    LlmCallPayload,
     LlmUsage,
     LookupEvent,
     LookupQueryCache,
@@ -468,17 +469,36 @@ async def card_detail(db: AsyncSession, card_id: UUID) -> dict | None:
         .scalars()
         .all()
     )
+    conds = [LlmUsage.card_id == card.id, LlmUsage.lemma == card.lemma_l2]
+    if card.lookup_event_id:
+        conds.append(LlmUsage.lookup_event_id == card.lookup_event_id)
     usage = (
         (
             await db.execute(
                 select(LlmUsage)
-                .where(or_(LlmUsage.card_id == card.id, LlmUsage.lemma == card.lemma_l2))
+                .where(or_(*conds))
                 .order_by(LlmUsage.created_at.desc())
                 .limit(30)
             )
         )
         .scalars()
         .all()
+    )
+    usage_ids = [u.id for u in usage]
+    payloads: dict[UUID, LlmCallPayload] = {}
+    if usage_ids:
+        payload_rows = (
+            (
+                await db.execute(
+                    select(LlmCallPayload).where(LlmCallPayload.llm_usage_id.in_(usage_ids))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        payloads = {row.llm_usage_id: row for row in payload_rows}
+    lookup_event = (
+        await db.get(LookupEvent, card.lookup_event_id) if card.lookup_event_id else None
     )
     cost = (
         await db.execute(
@@ -494,8 +514,19 @@ async def card_detail(db: AsyncSession, card_id: UUID) -> dict | None:
         "srs": srs,
         "reviews": reviews,
         "usage": usage,
+        "payloads": payloads,
+        "lookup_event": lookup_event,
         "cost_usd": float(cost or 0),
     }
+
+
+async def llm_usage_payload(db: AsyncSession, usage_id: UUID) -> dict | None:
+    usage = await db.get(LlmUsage, usage_id)
+    if usage is None:
+        return None
+    payload = await db.get(LlmCallPayload, usage_id)
+    user = await db.get(User, usage.user_id) if usage.user_id else None
+    return {"usage": usage, "payload": payload, "user": user}
 
 
 async def admin_retry_enrichment(db: AsyncSession, card_id: UUID) -> LearningCard | None:

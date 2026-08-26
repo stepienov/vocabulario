@@ -364,6 +364,7 @@ class LlmUsageResponse(BaseModel):
     pricing_version: str | None = None
     duration_ms: int | None = None
     status: str
+    lookup_event_id: UUID | None = None
 
     model_config = {"from_attributes": True}
 

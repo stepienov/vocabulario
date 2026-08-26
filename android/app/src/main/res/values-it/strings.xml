@@ -216,6 +216,7 @@
     <string name="practice_title">Pratica</string>
 
     <string name="practice_show_answer">Mostra risposta</string>
+    <string name="practice_show_hints">Mostra suggerimenti</string>
 
     <string name="practice_error_title">Sbagliato</string>
 

@@ -39,9 +39,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -78,7 +82,6 @@ import com.vocabulario.app.ui.home.listNameConflictMessage
 import com.vocabulario.app.ui.theme.GradeAgain
 import com.vocabulario.app.ui.theme.GradeKnown
 import kotlinx.coroutines.delay
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,6 +90,8 @@ fun PracticeScreen(
     viewModel: PracticeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     LaunchedEffect(Unit) { viewModel.loadQueue() }
 
     LaunchedEffect(state.showCorrectToast) {
@@ -218,7 +223,6 @@ fun PracticeScreen(
                         ) { Text(stringResource(R.string.action_return)) }
                     }
                     item == null -> BoxCentered { CircularProgressIndicator() }
-                    state.answerMode == AnswerMode.CHOICE && state.loadingChoices -> BoxCentered { CircularProgressIndicator() }
                     else -> {
                         when (state.phase) {
                             PracticePhase.ANSWERING, PracticePhase.WRONG_MODAL -> {
@@ -246,52 +250,64 @@ fun PracticeScreen(
                                     AnswerMode.CHOICE -> {
                                         prompt?.let { PromptCard(it) }
                                         Spacer(Modifier.height(20.dp))
-                                        val learningListLabel = stringResource(R.string.list_learning)
-                                        LazyColumn(
-                                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                                            modifier = Modifier.weight(1f),
-                                        ) {
-                                            items(state.choices) { choice ->
-                                                val disabled = choice.text in state.disabledChoiceTexts
-                                                val tileLemma = choice.lemma_l2 ?: choice.text
-                                                val tileGloss = choice.gloss
-                                                    ?: if (direction == "l2_to_l1") choice.text else null
-                                                val displayText = if (disabled) tileLemma else choice.text
-                                                val displayGloss = if (disabled) tileGloss else null
-                                                val addLemma = choice.quizAddLemma()
-                                                val showAdd = choice.showQuizAdd(
-                                                    revealedWrong = disabled,
-                                                    learningLemmas = state.learningLemmas,
-                                                )
-                                                val listChip = choice.quizListChipLabel(
-                                                    revealedWrong = disabled,
-                                                    learningLemmas = state.learningLemmas,
-                                                    membership = state.relatedMembership,
-                                                    systemListLabel = learningListLabel,
-                                                )
-                                                ChoiceTile(
-                                                    text = displayText,
-                                                    selected = false,
-                                                    isCorrect = null,
-                                                    enabled = !disabled && state.phase == PracticePhase.ANSWERING,
-                                                    dimmed = disabled,
-                                                    gloss = displayGloss,
-                                                    showActions = disabled,
-                                                    onAddLearning = if (showAdd && addLemma != null) {
-                                                        { viewModel.openAddWrongChoice(choice) }
-                                                    } else {
-                                                        null
-                                                    },
-                                                    listChip = listChip,
-                                                    onClick = { viewModel.submitChoice(choice) },
-                                                )
+                                        if (state.loadingChoices) {
+                                            Box(
+                                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                CircularProgressIndicator()
+                                            }
+                                        } else {
+                                            val learningListLabel = stringResource(R.string.list_learning)
+                                            LazyColumn(
+                                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                                modifier = Modifier.weight(1f),
+                                            ) {
+                                                items(state.choices) { choice ->
+                                                    val disabled = choice.text in state.disabledChoiceTexts
+                                                    val tileLemma = choice.lemma_l2 ?: choice.text
+                                                    val tileGloss = choice.gloss
+                                                        ?: if (direction == "l2_to_l1") choice.text else null
+                                                    val displayText = if (disabled) tileLemma else choice.text
+                                                    val displayGloss = if (disabled) tileGloss else null
+                                                    val addLemma = choice.quizAddLemma()
+                                                    val showAdd = choice.showQuizAdd(
+                                                        revealedWrong = disabled,
+                                                        learningLemmas = state.learningLemmas,
+                                                    )
+                                                    val listChip = choice.quizListChipLabel(
+                                                        revealedWrong = disabled,
+                                                        learningLemmas = state.learningLemmas,
+                                                        membership = state.relatedMembership,
+                                                        systemListLabel = learningListLabel,
+                                                    )
+                                                    ChoiceTile(
+                                                        text = displayText,
+                                                        selected = false,
+                                                        isCorrect = null,
+                                                        enabled = !disabled && state.phase == PracticePhase.ANSWERING,
+                                                        dimmed = disabled,
+                                                        gloss = displayGloss,
+                                                        showActions = disabled,
+                                                        onAddLearning = if (showAdd && addLemma != null) {
+                                                            { viewModel.openAddWrongChoice(choice) }
+                                                        } else {
+                                                            null
+                                                        },
+                                                        listChip = listChip,
+                                                        onClick = { viewModel.submitChoice(choice) },
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                     AnswerMode.TYPE -> {
                                         prompt?.let { PromptCard(it) }
                                         Spacer(Modifier.height(20.dp))
-                                        Column(modifier = Modifier.weight(1f)) {
+                                        Column(
+                                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                        ) {
                                             AppGrayField(
                                                 value = state.typedAnswer,
                                                 onValueChange = viewModel::onTypedAnswerChange,
@@ -306,6 +322,23 @@ fun PracticeScreen(
                                                 enabled = state.typedAnswer.isNotBlank(),
                                                 shape = AppButtonShape,
                                             ) { Text(stringResource(R.string.action_check), style = MaterialTheme.typography.titleMedium) }
+                                            Spacer(Modifier.height(16.dp))
+                                            Text(
+                                                stringResource(R.string.practice_show_hints),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable(enabled = !state.loadingChoices) {
+                                                        keyboard?.hide()
+                                                        focusManager.clearFocus()
+                                                        viewModel.showHints()
+                                                    }
+                                                    .padding(vertical = 12.dp)
+                                                    .testTag(TestTags.PRACTICE_SHOW_HINTS),
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                textAlign = TextAlign.Center,
+                                                fontWeight = FontWeight.Medium,
+                                            )
                                         }
                                     }
                                 }
@@ -324,17 +357,11 @@ fun PracticeScreen(
                                         verticalArrangement = Arrangement.spacedBy(12.dp),
                                     ) {
                                         when {
-                                            state.typoWarning -> {
-                                                SpellingWarningBanner(
+                                            state.typoWarning ||
+                                                (state.lastCorrect == false && state.answerMode == AnswerMode.TYPE) -> {
+                                                AnswerWarningBanner(
                                                     typedAnswer = state.typedAnswer,
                                                     expectedAnswer = state.expectedAnswer ?: "?",
-                                                )
-                                            }
-                                            state.lastCorrect == false && state.answerMode == AnswerMode.TYPE -> {
-                                                Text(
-                                                    stringResource(R.string.practice_correct_answer, state.expectedAnswer ?: "?"),
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.SemiBold,
                                                 )
                                             }
                                         }
@@ -507,71 +534,69 @@ fun PracticeScreen(
     }
 }
 
-private val SpellingWarnBanner = Color(0xFFF2C14B)
-private val SpellingWarnOnBanner = Color(0xFF1A1408)
-private val SpellingWarnTyped = Color(0xFF7A1E3A)
-private val SpellingWarnCorrect = Color(0xFF2A7A3E)
+private val AnswerWarnGradientCenter = Color(0xFFEBDBA4)
+private val AnswerWarnGradientEdge = Color(0xFFDFC159)
+private val AnswerWarnTyped = Color(0xFF892100)
+private val AnswerWarnCorrect = Color(0xFF155200)
 
 @Composable
-private fun SpellingWarningBanner(
+private fun AnswerWarningBanner(
     typedAnswer: String,
     expectedAnswer: String,
     modifier: Modifier = Modifier,
 ) {
-    val locale = LocalContext.current.resources.configuration.locales[0] ?: Locale.getDefault()
-    val title = stringResource(R.string.practice_spelling_warn).uppercase(locale)
+    val shape = RoundedCornerShape(20.dp)
     val correctLabel = stringResource(R.string.practice_spelling_correct)
-    Surface(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .testTag(TestTags.PRACTICE_SPELLING_WARN),
-        color = SpellingWarnBanner,
-        shape = RoundedCornerShape(16.dp),
+            .clip(shape)
+            .background(
+                Brush.horizontalGradient(
+                    0f to AnswerWarnGradientEdge,
+                    0.5f to AnswerWarnGradientCenter,
+                    1f to AnswerWarnGradientEdge,
+                ),
+            )
+            .testTag(TestTags.PRACTICE_SPELLING_WARN)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Icon(
+                painter = painterResource(R.drawable.ic_spelling_warning),
+                contentDescription = null,
+                tint = Color.Unspecified,
+                modifier = Modifier.size(26.dp),
+            )
+            Column(
+                modifier = Modifier.weight(1f, fill = false),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_spelling_warning),
-                    contentDescription = null,
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(22.dp),
+                Text(
+                    text = typedAnswer,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AnswerWarnTyped,
+                    textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = SpellingWarnOnBanner,
+                    text = buildAnnotatedString {
+                        withStyle(SpanStyle(color = AnswerWarnCorrect)) {
+                            append(correctLabel)
+                            append(" ")
+                        }
+                        withStyle(SpanStyle(color = AnswerWarnCorrect, fontWeight = FontWeight.Bold)) {
+                            append(expectedAnswer)
+                        }
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                 )
             }
-            Text(
-                text = typedAnswer,
-                style = MaterialTheme.typography.bodyLarge,
-                color = SpellingWarnTyped,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = SpellingWarnCorrect)) {
-                        append(correctLabel)
-                        append(" ")
-                    }
-                    withStyle(SpanStyle(color = SpellingWarnCorrect, fontWeight = FontWeight.Bold)) {
-                        append(expectedAnswer)
-                    }
-                },
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
     }
 }

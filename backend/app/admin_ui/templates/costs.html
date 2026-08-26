@@ -39,7 +39,7 @@
 <div class="panel">
   <h2>Calle</h2>
   <table>
-    <thead><tr><th>Czas</th><th>Purpose</th><th>Model</th><th>Lemma/query</th><th>User</th><th>Tokeny</th><th>USD</th><th>Status</th></tr></thead>
+    <thead><tr><th>Czas</th><th>Purpose</th><th>Model</th><th>Lemma/query</th><th>User</th><th>Tokeny</th><th>USD</th><th>Status</th><th>JSON</th></tr></thead>
     {% for u, email in rows %}
       <tr>
         <td>{{ u.created_at|dt }}</td>
@@ -50,6 +50,7 @@
         <td>{{ u.prompt_tokens }}/{{ u.completion_tokens }} c{{ u.cached_tokens }}</td>
         <td>{{ u.estimated_cost_usd|usd }}</td>
         <td>{{ u.status }}</td>
+        <td><a href="/admin/llm-usage/{{ u.id }}">otwórz</a></td>
       </tr>
     {% endfor %}
   </table>

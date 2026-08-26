@@ -1,6 +1,7 @@
 """Jednorazowy backfill rodzin z istniejącego JSON — bez LLM.
 
-Hasła z cache’u trafiają do jednej rodziny tylko przy krawędzi dwukierunkowej.
+Hasła z cache’u trafiają do jednej rodziny przy krawędzi dwukierunkowej
+albo przy konwersji (ten sam lemma_key, inna POS — np. objetivo adj/noun).
 Krewni bez własnego LexicalEntry wiszą na rodzinie tego, kto ich wymienił.
 """
 
@@ -209,6 +210,18 @@ def build_family_plans(prepared: list[PreparedEntry]) -> list[FamilyPlan]:
                 continue
             if item.head_key in other.relative_keys:
                 uf.union(item.head_key, rel_key)
+
+    # Konwersja: ta sama forma, inna POS. LLM często nie wymienia ich nawzajem
+    # (objetivo adj ↛ el objetivo noun), a dwukierunkowa krawędź tego nie złapie.
+    by_stem: dict[str, list[MemberKey]] = defaultdict(list)
+    for key in by_key:
+        by_stem[key[0]].append(key)
+    for stem_keys in by_stem.values():
+        if len(stem_keys) < 2:
+            continue
+        first = stem_keys[0]
+        for other in stem_keys[1:]:
+            uf.union(first, other)
 
     groups: dict[MemberKey, list[PreparedEntry]] = defaultdict(list)
     for item in by_key.values():

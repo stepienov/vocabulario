@@ -29,7 +29,7 @@
 {% else %}
 <div class="panel">
   <table>
-    <thead><tr><th>Czas</th><th>User</th><th>Query</th><th>Źródło</th><th>Kandydaci</th><th>Para</th></tr></thead>
+    <thead><tr><th>Czas</th><th>User</th><th>Query</th><th>Źródło</th><th>Kandydaci</th><th>Lista</th><th>Para</th></tr></thead>
     {% for ev, email in events %}
       <tr>
         <td>{{ ev.created_at|dt }}</td>
@@ -37,9 +37,15 @@
         <td>{{ ev.query }}</td>
         <td>{{ ev.source }}</td>
         <td>{{ ev.candidate_count }}</td>
+        <td>
+          {% if ev.candidates %}
+            {% for c in ev.candidates[:6] %}{{ c.lemma }}{% if not loop.last %}, {% endif %}{% endfor %}
+            {% if ev.candidates|length > 6 %}…{% endif %}
+          {% else %}—{% endif %}
+        </td>
         <td>{{ ev.lang_pair }}</td>
       </tr>
-    {% else %}<tr><td colspan="6" class="muted">Brak historii (zapis od wdrożenia panelu)</td></tr>{% endfor %}
+    {% else %}<tr><td colspan="7" class="muted">Brak historii (zapis od wdrożenia panelu)</td></tr>{% endfor %}
   </table>
   {{ pager(page, events_total) }}
 </div>

@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     llm_mock: bool = False
     llm_rate_limit_per_minute: int = 20
     llm_max_retries: int = 2
+    # Surowy JSON request/response LLM do debugowania (osobna tabela, nie app_logs).
+    llm_store_payloads: bool = True
+    llm_payload_ttl_days: int = 30
 
     # Zapis lexical_entries + learning_cards do Postgres (wyłączone = tylko podgląd AI)
     persist_words: bool = False

@@ -198,6 +198,7 @@
     <string name="practice_title">تدريب</string>
 
     <string name="practice_show_answer">إظهار الإجابة</string>
+    <string name="practice_show_hints">إظهار التلميحات</string>
 
     <string name="practice_error_title">خطأ</string>
 

@@ -77,6 +77,8 @@ object TestTags {
     const val PRACTICE_SHOW_ANSWER = "practice_show_answer"
     const val PRACTICE_ANSWER_INPUT = "practice_answer_input"
     const val PRACTICE_CHECK = "practice_check"
+    const val PRACTICE_SHOW_HINTS = "practice_show_hints"
+    const val PRACTICE_CORRECT_ANSWER = "practice_correct_answer"
     const val PRACTICE_RETRY = "practice_retry"
     const val PRACTICE_EMPTY_BACK = "practice_empty_back"
     const val PRACTICE_WRONG_DISMISS = "practice_wrong_dismiss"

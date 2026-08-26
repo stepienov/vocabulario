@@ -27,6 +27,7 @@ from app.models import LanguageProfile, LearningCard, LexicalEntry, User
 from app.services.distractors import in_learning_lemma, lemma_keys
 from app.services.enrichment import enrich_adaptive_card_content, enrich_card_content
 from app.services.lexical import LexicalService
+from app.services.app_log import log_event
 from app.services.llm_usage import bind_llm_usage_context
 from app.services.pos_normalize import normalize_pos_bucket
 from app.services.similar_words import ensure_similar_words, skips_similar_words
@@ -45,6 +46,38 @@ STATUS_FAILED = "failed"
 STUDYABLE_STATUSES = (STATUS_READY, STATUS_LEARNABLE)
 
 ADAPTIVE_ENTRY_KINDS = frozenset({"phrase", "construction", "sentence", "other"})
+
+
+async def _log_enrich_pipeline(
+    card: LearningCard,
+    event: str,
+    *,
+    source: str,
+    content: dict | None = None,
+) -> None:
+    data = content if content is not None else dict(card.content or {})
+    family = data.get("word_family_l2") or []
+    syn = data.get("synonyms_l2") or []
+    await log_event(
+        level="info",
+        category="enrichment",
+        event=event,
+        status="ok",
+        user_id=card.user_id,
+        profile_id=card.profile_id,
+        entity_type="card",
+        entity_id=str(card.id),
+        message=f"{event} {card.lemma_l2!r}",
+        payload={
+            "lemma": card.lemma_l2,
+            "pos": card.pos,
+            "family_len": len(family) if isinstance(family, list) else 0,
+            "synonym_len": len(syn) if isinstance(syn, list) else 0,
+            "source": source,
+            "lookup_event_id": str(card.lookup_event_id) if card.lookup_event_id else None,
+            "enrichment_status": card.enrichment_status,
+        },
+    )
 
 
 def resolve_enrichment_entry_kind(content: dict | None, *, pos: str | None = None) -> str:
@@ -499,6 +532,7 @@ async def hydrate_from_lexical_cache(
                     await db.flush()
             except IntegrityError:
                 return False
+            await _log_enrich_pipeline(card, "enrich_cache_hit", source="cache")
             return True
     cached = await find_ready_entry(
         db,
@@ -522,6 +556,7 @@ async def hydrate_from_lexical_cache(
     except IntegrityError:
         # Unique (lemma, pos) — nie zatruwaj sesji importu. Karta zostaje pending.
         return False
+    await _log_enrich_pipeline(card, "enrich_cache_hit", source="cache")
     return True
 
 
@@ -759,7 +794,9 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                 card_id=card.id,
                 user_id=card.user_id,
                 profile_id=card.profile_id,
+                lookup_event_id=card.lookup_event_id,
             )
+            await _log_enrich_pipeline(card, "enrich_started", source="llm")
 
             if not _card_lookup_resolved(card):
                 user = (
@@ -805,6 +842,7 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                     operation_kind="adaptive_enrich",
                     lemma=card.lemma_l2,
                     pos=card.pos,
+                    lookup_event_id=card.lookup_event_id,
                 )
                 src = content0.get("source_import") or {}
                 content = await enrich_adaptive_card_content(
@@ -900,6 +938,7 @@ async def _persist_enrichment_result(
         card.enrichment_status = STATUS_READY
         _clear_enrich_retry(card)
         await db.commit()
+        await _log_enrich_pipeline(card, "enrich_ready", source="llm", content=content)
         if not notified:
             await notify_cards_ready(db, card.user_id, card_id=card.id)
         return
@@ -910,6 +949,7 @@ async def _persist_enrichment_result(
         if card.enrichment_retry_at is None or card.enrichment_retry_at <= datetime.now(UTC):
             card.enrichment_retry_at = datetime.now(UTC) + _AUTO_RETRY_DELAY
         await db.commit()
+        await _log_enrich_pipeline(card, "enrich_ready", source="llm", content=content)
         if not notified:
             await notify_cards_ready(db, card.user_id, card_id=card.id)
         return

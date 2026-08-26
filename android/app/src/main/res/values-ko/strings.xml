@@ -221,6 +221,7 @@
     <string name="practice_title">연습</string>
 
     <string name="practice_show_answer">정답 보기</string>
+    <string name="practice_show_hints">힌트 보기</string>
 
     <string name="practice_error_title">틀림</string>
 

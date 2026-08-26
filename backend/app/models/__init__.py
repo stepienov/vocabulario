@@ -215,6 +215,11 @@ class LearningCard(Base):
         nullable=True,
         index=True,
     )
+    lookup_event_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("lookup_events.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     user: Mapped["User"] = relationship(back_populates="cards")
     profile: Mapped["LanguageProfile"] = relationship(back_populates="cards")
@@ -542,6 +547,22 @@ class LlmUsage(Base):
     pricing_version: Mapped[str | None] = mapped_column(String(16), nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="ok")
+    lookup_event_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("lookup_events.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+
+class LlmCallPayload(Base):
+    """Surowy request/response LLM — 1:1 z llm_usage, TTL 30 dni."""
+
+    __tablename__ = "llm_call_payloads"
+
+    llm_usage_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("llm_usage.id", ondelete="CASCADE"), primary_key=True
+    )
+    request_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    response_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LookupEvent(Base):
@@ -564,3 +585,6 @@ class LookupEvent(Base):
     source: Mapped[str] = mapped_column(String(16), nullable=False, default="lookup")
     candidate_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    candidates: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    ai_complete: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

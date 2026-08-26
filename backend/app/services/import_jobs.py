@@ -1174,6 +1174,9 @@ async def start_heartbeat_watchdog() -> None:
             from app.services.card_jobs import resume_pending_enrichment
 
             await resume_pending_enrichment(stale_only=True)
+            from app.services.llm_usage import purge_expired_llm_payloads
+
+            await purge_expired_llm_payloads()
         except asyncio.CancelledError:
             raise
         except Exception as exc:
