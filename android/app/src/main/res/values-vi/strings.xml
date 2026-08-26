@@ -270,6 +270,7 @@
 
     <string name="status_awaiting_network">Đang chờ mạng</string>
 
+        <string name="status_lookup_queued">Đang chờ</string>
     <string name="list_other">Danh sách khác</string>
 
     <string name="list_new">Danh sách mới</string>
@@ -574,6 +575,7 @@
 
     <string name="err_search">Tìm kiếm không thành công</string>
 
+    <string name="err_lookup_expand">Không tìm thêm được gợi ý. Hiển thị những gì đang có.</string>
     <string name="err_import_empty">Không có từ nào để nhập</string>
 
     <string name="err_import">Nhập không thành công</string>

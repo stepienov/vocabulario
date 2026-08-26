@@ -271,6 +271,7 @@
 
     <string name="status_awaiting_network">Ağ bekleniyor</string>
 
+        <string name="status_lookup_queued">Sırada</string>
     <string name="list_other">Diğer liste</string>
 
     <string name="list_new">Yeni liste</string>
@@ -575,6 +576,7 @@
 
     <string name="err_search">Arama başarısız</string>
 
+    <string name="err_lookup_expand">Daha fazla öneri bulunamadı. Elde olanlar gösteriliyor.</string>
     <string name="err_import_empty">İçe aktarılacak kelime yok</string>
 
     <string name="err_import">İçe aktarma başarısız</string>

@@ -66,6 +66,7 @@ ALLOW_EN_COPY = {
     "settings_notifications",
     "card_history_diff_lemma",
     "pos_interj",
+    "pos_construction",
 }
 
 

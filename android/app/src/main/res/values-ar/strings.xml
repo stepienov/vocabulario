@@ -239,7 +239,8 @@
     <string name="offline_lookup_queued">أُضيفت إلى «قيد الانتظار» — البحث عند العودة للاتصال.</string>
     <string name="offline_lookup_duplicate">هذه الكلمة موجودة أصلاً في «قيد الانتظار».</string>
     <string name="status_awaiting_network">بانتظار الشبكة</string>
-<string name="list_other">قائمة أخرى</string>
+    <string name="status_lookup_queued">في قائمة الانتظار</string>
+    <string name="list_other">قائمة أخرى</string>
 
     <string name="list_new">قائمة جديدة</string>
 
@@ -543,6 +544,7 @@
 
     <string name="err_search">فشل البحث</string>
 
+    <string name="err_lookup_expand">تعذر العثور على المزيد من الاقتراحات. نعرض ما لدينا.</string>
     <string name="err_import_empty">لا كلمات للاستيراد</string>
 
     <string name="err_import">فشل الاستيراد</string>

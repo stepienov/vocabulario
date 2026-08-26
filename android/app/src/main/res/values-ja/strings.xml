@@ -271,6 +271,7 @@
 
     <string name="status_awaiting_network">ネットワークを待機中</string>
 
+        <string name="status_lookup_queued">待機中</string>
     <string name="list_other">その他のリスト</string>
 
     <string name="list_new">新しいリスト</string>
@@ -575,6 +576,7 @@
 
     <string name="err_search">検索に失敗しました</string>
 
+    <string name="err_lookup_expand">これ以上の候補は見つかりませんでした。現在の結果を表示します。</string>
     <string name="err_import_empty">インポートする単語がありません</string>
 
     <string name="err_import">インポートに失敗しました</string>

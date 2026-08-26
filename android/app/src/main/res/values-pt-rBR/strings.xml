@@ -239,7 +239,8 @@
     <string name="offline_lookup_queued">Adicionada a «Pendentes» — busca ao voltar online.</string>
     <string name="offline_lookup_duplicate">Essa palavra já está em «Pendentes».</string>
     <string name="status_awaiting_network">Aguardando rede</string>
-<string name="list_other">Outra lista</string>
+    <string name="status_lookup_queued">Na fila</string>
+    <string name="list_other">Outra lista</string>
 
     <string name="list_new">Nova lista</string>
 
@@ -543,6 +544,7 @@
 
     <string name="err_search">Falha na busca</string>
 
+    <string name="err_lookup_expand">Não foi possível encontrar mais sugestões. Mostrando o que já temos.</string>
     <string name="err_import_empty">Nenhuma palavra para importar</string>
 
     <string name="err_import">Falha na importação</string>

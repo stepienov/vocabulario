@@ -266,6 +266,7 @@
 
     <string name="status_awaiting_network">In attesa della rete</string>
 
+        <string name="status_lookup_queued">In coda</string>
     <string name="list_other">Altra lista</string>
 
     <string name="list_new">Nuova lista</string>
@@ -570,6 +571,7 @@
 
     <string name="err_search">Ricerca fallita</string>
 
+    <string name="err_lookup_expand">Impossibile trovare altri suggerimenti. Mostriamo quelli già disponibili.</string>
     <string name="err_import_empty">Nessuna parola da importare</string>
 
     <string name="err_import">Importazione fallita</string>

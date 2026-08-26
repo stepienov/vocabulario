@@ -239,7 +239,8 @@
     <string name="offline_lookup_queued">«लंबित» में जोड़ा गया — ऑनलाइन लौटने पर खोज।</string>
     <string name="offline_lookup_duplicate">यह शब्द पहले से «लंबित» में है।</string>
     <string name="status_awaiting_network">नेटवर्क की प्रतीक्षा</string>
-<string name="list_other">अन्य सूची</string>
+    <string name="status_lookup_queued">कतार में</string>
+    <string name="list_other">अन्य सूची</string>
 
     <string name="list_new">नई सूची</string>
 
@@ -543,6 +544,7 @@
 
     <string name="err_search">खोज विफल</string>
 
+    <string name="err_lookup_expand">और सुझाव नहीं मिल सके। जो है वही दिखा रहे हैं।</string>
     <string name="err_import_empty">आयात के लिए कोई शब्द नहीं</string>
 
     <string name="err_import">आयात विफल</string>

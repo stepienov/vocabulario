@@ -36,6 +36,7 @@ ALLOW = {
     "correction_field_lemma",
     "settings_notifications",
     "card_history_diff_lemma",
+    "pos_construction",
 }
 
 

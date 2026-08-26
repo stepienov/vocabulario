@@ -271,6 +271,7 @@
 
     <string name="status_awaiting_network">네트워크 대기 중</string>
 
+        <string name="status_lookup_queued">대기 중</string>
     <string name="list_other">기타 목록</string>
 
     <string name="list_new">새 목록</string>
@@ -575,6 +576,7 @@
 
     <string name="err_search">검색 실패</string>
 
+    <string name="err_lookup_expand">더 많은 제안을 찾지 못했습니다. 있는 내용을 표시합니다.</string>
     <string name="err_import_empty">가져올 단어가 없습니다</string>
 
     <string name="err_import">가져오기 실패</string>

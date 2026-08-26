@@ -35,6 +35,7 @@ ALLOW_EN_COPY = {
     "voice_stop",
     "settings_mode_choice",
     "card_history_actor_system",
+    "pos_construction",
 }
 
 LOCALE_TO_PACK = {

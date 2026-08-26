@@ -239,7 +239,8 @@
     <string name="offline_lookup_queued">已加入「待处理」— 联网后查询。</string>
     <string name="offline_lookup_duplicate">该词已在「待处理」中。</string>
     <string name="status_awaiting_network">等待网络</string>
-<string name="list_other">其他列表</string>
+    <string name="status_lookup_queued">排队中</string>
+    <string name="list_other">其他列表</string>
 
     <string name="list_new">新列表</string>
 
@@ -543,6 +544,7 @@
 
     <string name="err_search">搜索失败</string>
 
+    <string name="err_lookup_expand">找不到更多建议。显示现有内容。</string>
     <string name="err_import_empty">没有可导入的单词</string>
 
     <string name="err_import">导入失败</string>
