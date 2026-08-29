@@ -337,6 +337,7 @@
     <string name="import_reason_in_file_duplicate">यह शब्द इस आयात में दोहराया गया है।</string>
     <string name="import_reason_no_lemma">यह वाक्यांश या वाक्य लगता है — इससे शब्दकोश कार्ड नहीं बन सकता।</string>
     <string name="import_reason_llm_invalid">इसे सीखने योग्य शब्द नहीं माना गया। जाँचें कि यह आपकी सीखने वाली भाषा में है।</string>
+    <string name="import_reason_not_learning_lang">यह उस भाषा का शब्द नहीं है जिसे आप सीख रहे हैं।</string>
     <string name="import_reason_unknown">यह शब्द अभी आयात नहीं हो सकता।</string>
     <string name="import_ready_hint">ये शब्द आपकी सूची में जुड़ेंगे।</string>
     <string name="import_review_loading">शब्द लोड हो रहे हैं…</string>
@@ -388,6 +389,8 @@
 
     <string name="home_reviews">दोहराव</string>
     <string name="home_new">नए</string>
+    <string name="home_already_know">आप पहले से जानते हैं: %2$d में से %1$d</string>
+    <string name="home_left_to_learn">कुल सीखने बाकी: %1$d</string>
     <string name="home_empty_title">अभी कोई शब्द नहीं है</string>
     <string name="home_empty_body">कोई शब्द खोजें या सूची आयात करें।</string>
     <string name="home_add_first">पहले शब्द जोड़ें</string>
@@ -699,10 +702,10 @@
     <string name="settings_notif_cards">कार्ड तैयार</string>
     <string name="settings_notif_enabled">मुझे सूचनाएँ चाहिए</string>
     <string name="settings_study_hour">अध्ययन समय</string>
-    <string name="notif_offline_ready_title">कार्ड डाउनलोड हो गए</string>
-    <string name="notif_offline_ready_body">सभी %1$d ऑफ़लाइन कार्ड तैयार हैं</string>
-    <string name="notif_import_ready_title">आयात पूरा</string>
-    <string name="notif_import_ready_body">सभी %1$d आयातित कार्ड तैयार हैं</string>
+    <string name="notif_offline_ready_title">सभी कार्ड तैयार हैं!</string>
+    <string name="notif_offline_ready_body">पढ़ने का समय!</string>
+    <string name="notif_import_ready_title">सभी कार्ड तैयार हैं!</string>
+    <string name="notif_import_ready_body">पढ़ने का समय!</string>
     <string name="settings_reminder_hour">अनुस्मारक घंटा (0–23)</string>
     <string name="notif_channel_study">अध्ययन</string>
     <string name="notif_channel_cards">कार्ड</string>
@@ -710,8 +713,8 @@
     <string name="notif_study_body">%1$d कार्ड बाकी</string>
 
     <string name="notif_study_body_empty">पढ़ने का समय</string>
-    <string name="notif_cards_ready_title">कार्ड तैयार</string>
-    <string name="notif_cards_ready_body">%1$d शब्द अध्ययन के लिए तैयार</string>
+    <string name="notif_cards_ready_title">सभी कार्ड तैयार हैं!</string>
+    <string name="notif_cards_ready_body">पढ़ने का समय!</string>
     <string name="status_needs_review">जाँच ज़रूरी</string>
     <string name="review_title">शब्द की जाँच ज़रूरी है</string>
     <string name="review_no_match">«%1$s» से कोई मेल नहीं मिला।</string>

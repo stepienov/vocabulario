@@ -338,6 +338,7 @@
     <string name="import_reason_in_file_duplicate">Ce mot est répété dans cet import.</string>
     <string name="import_reason_no_lemma">Cela ressemble à une locution ou une phrase — on ne peut pas en faire une fiche dictionnaire.</string>
     <string name="import_reason_llm_invalid">Non reconnu comme un mot à apprendre. Vérifie que c’est dans la langue que tu apprends.</string>
+    <string name="import_reason_not_learning_lang">Ce n’est pas un mot dans la langue que tu apprends.</string>
     <string name="import_reason_unknown">Ce mot ne peut pas être importé pour le moment.</string>
     <string name="import_ready_hint">Ces mots seront ajoutés à ta liste.</string>
     <string name="import_review_loading">Chargement des mots…</string>
@@ -389,6 +390,8 @@
 
     <string name="home_reviews">révisions</string>
     <string name="home_new">nouvelles</string>
+    <string name="home_already_know">Vous savez déjà : %1$d sur %2$d</string>
+    <string name="home_left_to_learn">Il reste au total à apprendre : %1$d</string>
     <string name="home_empty_title">Tu n\'as pas encore de mots</string>
     <string name="home_empty_body">Cherche un mot ou importe une liste.</string>
     <string name="home_add_first">Ajouter les premiers mots</string>
@@ -698,10 +701,10 @@
     <string name="settings_notif_cards">Cartes prêtes</string>
     <string name="settings_notif_enabled">Je veux des notifications</string>
     <string name="settings_study_hour">Heure d’étude</string>
-    <string name="notif_offline_ready_title">Cartes téléchargées</string>
-    <string name="notif_offline_ready_body">Les %1$d cartes hors ligne sont prêtes</string>
-    <string name="notif_import_ready_title">Importation terminée</string>
-    <string name="notif_import_ready_body">Les %1$d cartes importées sont prêtes</string>
+    <string name="notif_offline_ready_title">Toutes les cartes sont prêtes !</string>
+    <string name="notif_offline_ready_body">C’est l’heure d’étudier !</string>
+    <string name="notif_import_ready_title">Toutes les cartes sont prêtes !</string>
+    <string name="notif_import_ready_body">C’est l’heure d’étudier !</string>
     <string name="settings_reminder_hour">Heure du rappel (0–23)</string>
     <string name="notif_channel_study">Étude</string>
     <string name="notif_channel_cards">Cartes</string>
@@ -709,8 +712,8 @@
     <string name="notif_study_body">%1$d cartes à réviser</string>
 
     <string name="notif_study_body_empty">C’est l’heure d’étudier</string>
-    <string name="notif_cards_ready_title">Cartes prêtes</string>
-    <string name="notif_cards_ready_body">%1$d mot(s) prêt(s) à étudier</string>
+    <string name="notif_cards_ready_title">Toutes les cartes sont prêtes !</string>
+    <string name="notif_cards_ready_body">C’est l’heure d’étudier !</string>
     <string name="status_needs_review">À vérifier</string>
     <string name="review_title">Le mot doit être vérifié</string>
     <string name="review_no_match">Aucune correspondance pour « %1$s ».</string>

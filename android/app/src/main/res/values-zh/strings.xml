@@ -337,6 +337,7 @@
     <string name="import_reason_in_file_duplicate">这个词在本次导入中重复出现。</string>
     <string name="import_reason_no_lemma">这更像短语或句子，无法做成词典卡片。</string>
     <string name="import_reason_llm_invalid">未能识别为要学习的词。请确认它是你正在学习的语言。</string>
+    <string name="import_reason_not_learning_lang">这不是你正在学习的语言中的词。</string>
     <string name="import_reason_unknown">暂时无法导入这个词。</string>
     <string name="import_ready_hint">这些词会加入你的列表。</string>
     <string name="import_review_loading">正在加载词表…</string>
@@ -388,6 +389,8 @@
 
     <string name="home_reviews">复习</string>
     <string name="home_new">新词</string>
+    <string name="home_already_know">已经会了：%1$d / %2$d</string>
+    <string name="home_left_to_learn">总共还需学习：%1$d</string>
     <string name="home_empty_title">还没有单词</string>
     <string name="home_empty_body">搜索一个词或导入列表。</string>
     <string name="home_add_first">添加第一批单词</string>
@@ -699,10 +702,10 @@
     <string name="settings_notif_cards">卡片已就绪</string>
     <string name="settings_notif_enabled">我想接收通知</string>
     <string name="settings_study_hour">学习时间</string>
-    <string name="notif_offline_ready_title">卡片已下载</string>
-    <string name="notif_offline_ready_body">全部 %1$d 张离线卡片已就绪</string>
-    <string name="notif_import_ready_title">导入完成</string>
-    <string name="notif_import_ready_body">全部 %1$d 张已导入卡片已就绪</string>
+    <string name="notif_offline_ready_title">所有卡片都准备好了！</string>
+    <string name="notif_offline_ready_body">该学习了！</string>
+    <string name="notif_import_ready_title">所有卡片都准备好了！</string>
+    <string name="notif_import_ready_body">该学习了！</string>
     <string name="settings_reminder_hour">提醒时刻（0–23）</string>
     <string name="notif_channel_study">学习</string>
     <string name="notif_channel_cards">卡片</string>
@@ -710,8 +713,8 @@
     <string name="notif_study_body">%1$d 张卡片待复习</string>
 
     <string name="notif_study_body_empty">该学习了</string>
-    <string name="notif_cards_ready_title">卡片已就绪</string>
-    <string name="notif_cards_ready_body">%1$d 个词可以学习</string>
+    <string name="notif_cards_ready_title">所有卡片都准备好了！</string>
+    <string name="notif_cards_ready_body">该学习了！</string>
     <string name="status_needs_review">需要核对</string>
     <string name="review_title">该词需要核对</string>
     <string name="review_no_match">未找到与“%1$s”匹配的结果。</string>

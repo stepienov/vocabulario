@@ -98,12 +98,53 @@ def test_content_complete_phrase_needs_inflection_not_similar():
     content = {
         "schema_version": "vocabulario.card.v1",
         "entry_kind": "lemma",
+        "lemma": "pagar a plazos",
+        "language": "es",
         "pos": "phrase",
         "meanings": [{"gloss_l1": "płacić na raty", "examples": [{"l2": "a", "l1": "b"}]}],
         "similar_words": [],
         "conjugation": {"presente": {"yo": "pago a plazos"}},
     }
     assert content_is_complete(content)
+
+
+def test_content_complete_noun_phrase_with_article_without_inflection():
+    """la/el + rzeczownik: LSP nie odmienia — karta jest gotowa bez koniugacji."""
+    content = {
+        "schema_version": "vocabulario.card.v1",
+        "entry_kind": "lemma",
+        "lemma": "la red social",
+        "language": "es",
+        "pos": "phrase",
+        "meanings": [
+            {
+                "gloss_l1": "sieć społecznościowa",
+                "examples": [{"l2": "Uso una red social.", "l1": "Używam sieci.", "cefr": "A2"}],
+            }
+        ],
+        "similar_words": [],
+        "conjugation": None,
+        "inflection": None,
+    }
+    assert content_is_learnable(content)
+    assert content_is_complete(content)
+    assert _entry_has_paid_content(SimpleNamespace(content=content))
+
+
+def test_content_complete_verbal_phrase_without_article_needs_inflection():
+    content = {
+        "schema_version": "vocabulario.card.v1",
+        "entry_kind": "lemma",
+        "lemma": "pagar a plazos",
+        "language": "es",
+        "pos": "phrase",
+        "meanings": [{"gloss_l1": "płacić na raty", "examples": [{"l2": "a", "l1": "b"}]}],
+        "similar_words": [],
+        "conjugation": None,
+        "inflection": None,
+    }
+    assert content_is_learnable(content)
+    assert not content_is_complete(content)
 
 
 def test_content_complete_verb_needs_inflection_and_similar():

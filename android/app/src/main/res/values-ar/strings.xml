@@ -337,6 +337,7 @@
     <string name="import_reason_in_file_duplicate">هذه الكلمة مكررة في هذا الاستيراد.</string>
     <string name="import_reason_no_lemma">يبدو هذا عبارة أو جملة، ولا يمكن تحويله إلى بطاقة قاموس.</string>
     <string name="import_reason_llm_invalid">لم تُتعرَّف ككلمة للتعلّم. تحقق أنها باللغة التي تتعلمها.</string>
+    <string name="import_reason_not_learning_lang">هذه ليست كلمة باللغة التي تتعلمها.</string>
     <string name="import_reason_unknown">لا يمكن استيراد هذه الكلمة الآن.</string>
     <string name="import_ready_hint">ستُضاف هذه الكلمات إلى قائمتك.</string>
     <string name="import_review_loading">جارٍ تحميل الكلمات…</string>
@@ -388,6 +389,8 @@
 
     <string name="home_reviews">مراجعات</string>
     <string name="home_new">جديدة</string>
+    <string name="home_already_know">تعرف بالفعل: %1$d من %2$d</string>
+    <string name="home_left_to_learn">المتبقي للتعلّم إجمالاً: %1$d</string>
     <string name="home_empty_title">ليس لديك كلمات بعد</string>
     <string name="home_empty_body">ابحث عن كلمة أو استورد قائمة.</string>
     <string name="home_add_first">أضف كلماتك الأولى</string>
@@ -699,10 +702,10 @@
     <string name="settings_notif_cards">البطاقات جاهزة</string>
     <string name="settings_notif_enabled">أريد الإشعارات</string>
     <string name="settings_study_hour">وقت الدراسة</string>
-    <string name="notif_offline_ready_title">تم تنزيل البطاقات</string>
-    <string name="notif_offline_ready_body">جميع بطاقات دون اتصال وعددها %1$d جاهزة</string>
-    <string name="notif_import_ready_title">اكتمل الاستيراد</string>
-    <string name="notif_import_ready_body">جميع البطاقات المستوردة وعددها %1$d جاهزة</string>
+    <string name="notif_offline_ready_title">جميع البطاقات جاهزة!</string>
+    <string name="notif_offline_ready_body">حان وقت الدراسة!</string>
+    <string name="notif_import_ready_title">جميع البطاقات جاهزة!</string>
+    <string name="notif_import_ready_body">حان وقت الدراسة!</string>
     <string name="settings_reminder_hour">ساعة التذكير (0–23)</string>
     <string name="notif_channel_study">دراسة</string>
     <string name="notif_channel_cards">بطاقات</string>
@@ -710,8 +713,8 @@
     <string name="notif_study_body">%1$d بطاقة مستحقة</string>
 
     <string name="notif_study_body_empty">حان وقت الدراسة</string>
-    <string name="notif_cards_ready_title">البطاقات جاهزة</string>
-    <string name="notif_cards_ready_body">%1$d كلمة جاهزة للدراسة</string>
+    <string name="notif_cards_ready_title">جميع البطاقات جاهزة!</string>
+    <string name="notif_cards_ready_body">حان وقت الدراسة!</string>
     <string name="status_needs_review">يحتاج مراجعة</string>
     <string name="review_title">الكلمة تحتاج مراجعة</string>
     <string name="review_no_match">لا تطابق لـ «%1$s».</string>

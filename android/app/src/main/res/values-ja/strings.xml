@@ -369,6 +369,7 @@
     <string name="import_reason_in_file_duplicate">この語はこのインポート内で重複しています。</string>
     <string name="import_reason_no_lemma">句や文のようで、辞書カードにできません。</string>
     <string name="import_reason_llm_invalid">学習する語として認識できませんでした。学習中の言語か確認してください。</string>
+    <string name="import_reason_not_learning_lang">学習中の言語の語ではありません。</string>
     <string name="import_reason_unknown">この語は今インポートできません。</string>
     <string name="import_ready_hint">これらの語がリストに入ります。</string>
     <string name="import_review_loading">語を読み込み中…</string>
@@ -420,6 +421,8 @@
 
     <string name="home_reviews">復習</string>
     <string name="home_new">新規</string>
+    <string name="home_already_know">すでに習得: %1$d / %2$d</string>
+    <string name="home_left_to_learn">まだ学ぶ単語: %1$d</string>
     <string name="home_empty_title">まだ単語がありません</string>
     <string name="home_empty_body">単語を検索するか、リストを取り込みましょう。</string>
     <string name="home_add_first">最初の単語を追加</string>
@@ -784,13 +787,13 @@
 
     <string name="settings_study_hour">学習時刻</string>
 
-    <string name="notif_offline_ready_title">カードをダウンロードしました</string>
+    <string name="notif_offline_ready_title">カードの準備ができました！</string>
 
-    <string name="notif_offline_ready_body">オフラインのカード %1$d 枚がすべて準備できました</string>
+    <string name="notif_offline_ready_body">学習の時間です！</string>
 
-    <string name="notif_import_ready_title">インポート完了</string>
+    <string name="notif_import_ready_title">カードの準備ができました！</string>
 
-    <string name="notif_import_ready_body">インポートしたカード %1$d 枚がすべて準備できました</string>
+    <string name="notif_import_ready_body">学習の時間です！</string>
 
     <string name="settings_reminder_hour">リマインダー時間（0～23）</string>
 
@@ -804,9 +807,9 @@
 
     <string name="notif_study_body_empty">学習の時間です</string>
 
-    <string name="notif_cards_ready_title">カードの準備完了</string>
+    <string name="notif_cards_ready_title">カードの準備ができました！</string>
 
-    <string name="notif_cards_ready_body">%1$d 語が学習の準備ができました</string>
+    <string name="notif_cards_ready_body">学習の時間です！</string>
 
     <string name="status_needs_review">確認が必要</string>
     <string name="review_title">この語は確認が必要です</string>

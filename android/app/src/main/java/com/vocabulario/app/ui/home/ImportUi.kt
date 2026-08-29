@@ -384,6 +384,7 @@ private fun reasonLabel(code: String?): String = when (code) {
     "in_file_duplicate" -> stringResource(R.string.import_reason_in_file_duplicate)
     "no_lemma" -> stringResource(R.string.import_reason_no_lemma)
     "llm_invalid" -> stringResource(R.string.import_reason_llm_invalid)
+    "not_learning_lang" -> stringResource(R.string.import_reason_not_learning_lang)
     "write_failed" -> stringResource(R.string.import_reason_write_failed)
     "deselected" -> stringResource(R.string.import_reason_unknown)
     else -> stringResource(R.string.import_reason_unknown)

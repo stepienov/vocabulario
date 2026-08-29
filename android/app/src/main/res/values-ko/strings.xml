@@ -369,6 +369,7 @@
     <string name="import_reason_in_file_duplicate">이 단어가 이번 가져오기에서 반복됩니다.</string>
     <string name="import_reason_no_lemma">구 또는 문장처럼 보여 사전 카드로 만들 수 없습니다.</string>
     <string name="import_reason_llm_invalid">학습할 단어로 인식되지 않았습니다. 배우는 언어인지 확인하세요.</string>
+    <string name="import_reason_not_learning_lang">배우고 있는 언어의 단어가 아닙니다.</string>
     <string name="import_reason_unknown">지금은 이 단어를 가져올 수 없습니다.</string>
     <string name="import_ready_hint">이 단어들이 목록에 추가됩니다.</string>
     <string name="import_review_loading">단어를 불러오는 중…</string>
@@ -420,6 +421,8 @@
 
     <string name="home_reviews">복습</string>
     <string name="home_new">새로운</string>
+    <string name="home_already_know">이미 아는 단어: %1$d / %2$d</string>
+    <string name="home_left_to_learn">아직 배울 단어: %1$d</string>
     <string name="home_empty_title">아직 단어가 없습니다</string>
     <string name="home_empty_body">단어를 검색하거나 목록을 가져오세요.</string>
     <string name="home_add_first">첫 단어 추가</string>
@@ -784,13 +787,13 @@
 
     <string name="settings_study_hour">학습 시간</string>
 
-    <string name="notif_offline_ready_title">카드 다운로드 완료</string>
+    <string name="notif_offline_ready_title">모든 카드가 준비되었습니다!</string>
 
-    <string name="notif_offline_ready_body">오프라인 카드 %1$d장이 모두 준비되었습니다</string>
+    <string name="notif_offline_ready_body">공부할 시간입니다!</string>
 
-    <string name="notif_import_ready_title">가져오기 완료</string>
+    <string name="notif_import_ready_title">모든 카드가 준비되었습니다!</string>
 
-    <string name="notif_import_ready_body">가져온 카드 %1$d장이 모두 준비되었습니다</string>
+    <string name="notif_import_ready_body">공부할 시간입니다!</string>
 
     <string name="settings_reminder_hour">알림 시간 (0–23)</string>
 
@@ -804,9 +807,9 @@
 
     <string name="notif_study_body_empty">공부할 시간입니다</string>
 
-    <string name="notif_cards_ready_title">카드 준비 완료</string>
+    <string name="notif_cards_ready_title">모든 카드가 준비되었습니다!</string>
 
-    <string name="notif_cards_ready_body">%1$d 단어가 학습 준비 완료</string>
+    <string name="notif_cards_ready_body">공부할 시간입니다!</string>
 
     <string name="status_needs_review">검토 필요</string>
     <string name="review_title">단어를 검토해야 합니다</string>

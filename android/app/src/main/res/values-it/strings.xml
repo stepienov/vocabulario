@@ -364,6 +364,7 @@
     <string name="import_reason_in_file_duplicate">Questa parola è ripetuta in questa importazione.</string>
     <string name="import_reason_no_lemma">Sembra una locuzione o una frase: non si può farne una scheda dizionario.</string>
     <string name="import_reason_llm_invalid">Non riconosciuta come parola da imparare. Controlla che sia nella lingua che stai imparando.</string>
+    <string name="import_reason_not_learning_lang">Questa non è una parola nella lingua che stai imparando.</string>
     <string name="import_reason_unknown">Questa parola non può essere importata ora.</string>
     <string name="import_ready_hint">Queste parole verranno aggiunte alla lista.</string>
     <string name="import_review_loading">Caricamento delle parole…</string>
@@ -415,6 +416,8 @@
 
     <string name="home_reviews">ripetizioni</string>
     <string name="home_new">nuove</string>
+    <string name="home_already_know">Sai già: %1$d su %2$d</string>
+    <string name="home_left_to_learn">In totale restano da imparare: %1$d</string>
     <string name="home_empty_title">Non hai ancora parole</string>
     <string name="home_empty_body">Cerca una parola o importa un elenco.</string>
     <string name="home_add_first">Aggiungi le prime parole</string>
@@ -773,10 +776,10 @@
     <string name="settings_notif_cards">Schede pronte</string>
     <string name="settings_notif_enabled">Voglio le notifiche</string>
     <string name="settings_study_hour">Ora di studio</string>
-    <string name="notif_offline_ready_title">Schede scaricate</string>
-    <string name="notif_offline_ready_body">Tutte le %1$d schede offline sono pronte</string>
-    <string name="notif_import_ready_title">Importazione completata</string>
-    <string name="notif_import_ready_body">Tutte le %1$d schede importate sono pronte</string>
+    <string name="notif_offline_ready_title">Tutte le schede sono pronte!</string>
+    <string name="notif_offline_ready_body">È ora di studiare!</string>
+    <string name="notif_import_ready_title">Tutte le schede sono pronte!</string>
+    <string name="notif_import_ready_body">È ora di studiare!</string>
 
     <string name="settings_reminder_hour">Ora del promemoria (0–23)</string>
 
@@ -790,9 +793,9 @@
 
     <string name="notif_study_body_empty">È ora di studiare</string>
 
-    <string name="notif_cards_ready_title">Schede pronte</string>
+    <string name="notif_cards_ready_title">Tutte le schede sono pronte!</string>
 
-    <string name="notif_cards_ready_body">%1$d parola(e) pronta(e) per lo studio</string>
+    <string name="notif_cards_ready_body">È ora di studiare!</string>
 
     <string name="status_needs_review">Da verificare</string>
     <string name="review_title">La parola richiede verifica</string>

@@ -63,34 +63,22 @@ object NotificationHelper {
         )
     }
 
-    fun showCardsReady(context: Context, count: Int) {
+    fun showCardsReady(context: Context, count: Int = 0) {
         post(
             context,
             CHANNEL_CARDS,
             1002,
             context.getString(R.string.notif_cards_ready_title),
-            context.getString(R.string.notif_cards_ready_body, count),
+            context.getString(R.string.notif_cards_ready_body),
         )
     }
 
     fun showOfflineReady(context: Context, count: Int) {
-        post(
-            context,
-            CHANNEL_CARDS,
-            1003,
-            context.getString(R.string.notif_offline_ready_title),
-            context.getString(R.string.notif_offline_ready_body, count),
-        )
+        showCardsReady(context, count)
     }
 
     fun showImportReady(context: Context, count: Int) {
-        post(
-            context,
-            CHANNEL_CARDS,
-            1004,
-            context.getString(R.string.notif_import_ready_title),
-            context.getString(R.string.notif_import_ready_body, count),
-        )
+        showCardsReady(context, count)
     }
 
     private fun post(

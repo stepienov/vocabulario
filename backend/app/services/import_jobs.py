@@ -485,7 +485,7 @@ def _apply_lemma_verify(
             continue
         item = ready_items[idx]
         item.verdict = "failed"
-        item.reason_code = "llm_invalid"
+        item.reason_code = _import_invalid_reason_code(raw.get("reason"))
         item.reason_detail = str(raw.get("reason") or "not a dictionary lemma")[:2000]
         item.verdict_phase = "analyze"
 
@@ -882,9 +882,41 @@ def _plain_import_headword(label: str) -> str | None:
     return text
 
 
-def _reject_garbage_lemma(item: ImportJobItem, raw: dict[str, Any], head: str) -> None:
+_WRONG_LANG_MARKERS = (
+    "języku nauki",
+    "języka nauki",
+    "języku uczonym",
+    "nie jest w języku",
+    "złym języku",
+    "learning language",
+    "wrong language",
+    "not in the language",
+    "not a headword in the language",
+    "not in l2",
+)
+
+
+def _import_invalid_reason_code(detail: object) -> str:
+    """llm_invalid vs osobny kod, gdy LLM mówi wprost: zły język."""
+    text = str(detail or "").casefold()
+    if not text:
+        return "llm_invalid"
+    if any(marker in text for marker in _WRONG_LANG_MARKERS):
+        return "not_learning_lang"
+    if "l1" in text and "l2" in text:
+        return "not_learning_lang"
+    return "llm_invalid"
+
+
+def _reject_garbage_lemma(
+    item: ImportJobItem,
+    raw: dict[str, Any],
+    head: str,
+    *,
+    reason_code: str = "llm_invalid",
+) -> None:
     item.verdict = "failed"
-    item.reason_code = "llm_invalid"
+    item.reason_code = reason_code
     item.reason_detail = (raw.get("invalid_reason") or "not recognized")[:2000]
     item.verdict_phase = "analyze"
     item.lemma = head or None
@@ -894,7 +926,12 @@ def _apply_vocab_item(item: ImportJobItem, raw: dict[str, Any], learning_lang: s
     head = (raw.get("headword_l2") or item.input_label or "").strip()
     if not raw.get("valid", True) or not head:
         # LLM invalid (zły język, śmieć, brak L2) zostaje failed — nie wskrzeszać „bo wygląda na słowo”.
-        _reject_garbage_lemma(item, raw, head)
+        _reject_garbage_lemma(
+            item,
+            raw,
+            head,
+            reason_code=_import_invalid_reason_code(raw.get("invalid_reason")),
+        )
         return
     lemma = _vocabulario_lemma(raw, learning_lang=learning_lang)
     if not lemma:

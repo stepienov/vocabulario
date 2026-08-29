@@ -349,6 +349,7 @@
     <string name="import_reason_in_file_duplicate">To samo hasło powtórzyło się w tym imporcie.</string>
     <string name="import_reason_no_lemma">To wygląda na zwrot albo zdanie — nie da się z tego zrobić karty słownikowej.</string>
     <string name="import_reason_llm_invalid">Nie rozpoznano jako hasła do nauki. Sprawdź, czy to słowo w języku, którego się uczysz.</string>
+    <string name="import_reason_not_learning_lang">To nie jest słowo w języku, którego się uczysz.</string>
     <string name="import_reason_unknown">Tego hasła nie da się teraz zaimportować.</string>
     <string name="import_ready_hint">Te hasła wejdą na listę.</string>
     <string name="import_review_loading">Wczytywanie haseł…</string>
@@ -401,6 +402,8 @@
 
     <string name="home_reviews">powtórki</string>
     <string name="home_new">nowe</string>
+    <string name="home_already_know">Umiesz już: %1$d z %2$d</string>
+    <string name="home_left_to_learn">Łącznie zostało do nauki: %1$d</string>
     <string name="home_empty_title">Nie masz jeszcze słówek</string>
     <string name="home_empty_body">Wyszukaj słowo albo zaimportuj listę.</string>
     <string name="home_add_first">Dodaj pierwsze słówka</string>
@@ -793,10 +796,10 @@
     <string name="settings_notif_cards">Karty gotowe</string>
     <string name="settings_notif_enabled">Chcę powiadomienia</string>
     <string name="settings_study_hour">Godzina nauki</string>
-    <string name="notif_offline_ready_title">Karty pobrane</string>
-    <string name="notif_offline_ready_body">Wszystkie %1$d kart offline jest gotowych</string>
-    <string name="notif_import_ready_title">Import zakończony</string>
-    <string name="notif_import_ready_body">Wszystkie %1$d zaimportowanych kart jest gotowych</string>
+    <string name="notif_offline_ready_title">Wszystkie karty gotowe!</string>
+    <string name="notif_offline_ready_body">Pora na naukę!</string>
+    <string name="notif_import_ready_title">Wszystkie karty gotowe!</string>
+    <string name="notif_import_ready_body">Pora na naukę!</string>
     <string name="settings_reminder_hour">Godzina przypomnienia (0–23)</string>
     <string name="notif_channel_study">Nauka</string>
     <string name="notif_channel_cards">Karty</string>
@@ -804,8 +807,8 @@
     <string name="notif_study_body">%1$d kart do powtórki</string>
 
     <string name="notif_study_body_empty">Czas na naukę</string>
-    <string name="notif_cards_ready_title">Karty gotowe</string>
-    <string name="notif_cards_ready_body">%1$d słów gotowych do nauki</string>
+    <string name="notif_cards_ready_title">Wszystkie karty gotowe!</string>
+    <string name="notif_cards_ready_body">Pora na naukę!</string>
 
     <string name="pos_noun">rzeczownik</string>
     <string name="pos_verb">czasownik</string>

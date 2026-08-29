@@ -369,6 +369,7 @@
     <string name="import_reason_in_file_duplicate">Bu sözcük bu içe aktarmada tekrar ediyor.</string>
     <string name="import_reason_no_lemma">Bu bir deyim veya cümle gibi — sözlük kartına çevrilemez.</string>
     <string name="import_reason_llm_invalid">Öğrenilecek bir sözcük olarak tanınmadı. Öğrendiğin dilde olduğundan emin ol.</string>
+    <string name="import_reason_not_learning_lang">Bu, öğrendiğin dilde bir sözcük değil.</string>
     <string name="import_reason_unknown">Bu sözcük şu anda içe aktarılamıyor.</string>
     <string name="import_ready_hint">Bu sözcükler listene eklenecek.</string>
     <string name="import_review_loading">Sözcükler yükleniyor…</string>
@@ -420,6 +421,8 @@
 
     <string name="home_reviews">tekrarlar</string>
     <string name="home_new">yeni</string>
+    <string name="home_already_know">Zaten biliyorsun: %1$d / %2$d</string>
+    <string name="home_left_to_learn">Toplam öğrenilecek: %1$d</string>
     <string name="home_empty_title">Henüz hiç kelimen yok</string>
     <string name="home_empty_body">Bir kelime ara veya liste içe aktar.</string>
     <string name="home_add_first">İlk kelimeleri ekle</string>
@@ -780,10 +783,10 @@
     <string name="settings_notif_cards">Kartlar hazır</string>
     <string name="settings_notif_enabled">Bildirim istiyorum</string>
     <string name="settings_study_hour">Çalışma saati</string>
-    <string name="notif_offline_ready_title">Kartlar indirildi</string>
-    <string name="notif_offline_ready_body">Çevrimdışı %1$d kartın tümü hazır</string>
-    <string name="notif_import_ready_title">İçe aktarma tamamlandı</string>
-    <string name="notif_import_ready_body">İçe aktarılan %1$d kartın tümü hazır</string>
+    <string name="notif_offline_ready_title">Tüm kartlar hazır!</string>
+    <string name="notif_offline_ready_body">Çalışma zamanı!</string>
+    <string name="notif_import_ready_title">Tüm kartlar hazır!</string>
+    <string name="notif_import_ready_body">Çalışma zamanı!</string>
 
     <string name="settings_reminder_hour">Hatırlatma saati (0–23)</string>
 
@@ -797,9 +800,9 @@
 
     <string name="notif_study_body_empty">Çalışma zamanı</string>
 
-    <string name="notif_cards_ready_title">Kartlar hazır</string>
+    <string name="notif_cards_ready_title">Tüm kartlar hazır!</string>
 
-    <string name="notif_cards_ready_body">%1$d kelime(ler) çalışmaya hazır</string>
+    <string name="notif_cards_ready_body">Çalışma zamanı!</string>
 
     <string name="status_needs_review">İnceleme gerekli</string>
     <string name="review_title">Sözcük incelenmeli</string>

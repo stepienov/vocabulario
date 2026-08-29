@@ -337,6 +337,7 @@
     <string name="import_reason_in_file_duplicate">Это слово повторяется в этом импорте.</string>
     <string name="import_reason_no_lemma">Похоже на выражение или предложение — карточку словаря из этого не сделать.</string>
     <string name="import_reason_llm_invalid">Не распознано как слово для изучения. Проверьте, что это язык, который вы учите.</string>
+    <string name="import_reason_not_learning_lang">Это не слово на языке, который вы учите.</string>
     <string name="import_reason_unknown">Это слово сейчас нельзя импортировать.</string>
     <string name="import_ready_hint">Эти слова будут добавлены в список.</string>
     <string name="import_review_loading">Загрузка слов…</string>
@@ -388,6 +389,8 @@
 
     <string name="home_reviews">повторения</string>
     <string name="home_new">новые</string>
+    <string name="home_already_know">Уже умеешь: %1$d из %2$d</string>
+    <string name="home_left_to_learn">Всего осталось выучить: %1$d</string>
     <string name="home_empty_title">У вас ещё нет слов</string>
     <string name="home_empty_body">Найдите слово или импортируйте список.</string>
     <string name="home_add_first">Добавить первые слова</string>
@@ -699,10 +702,10 @@
     <string name="settings_notif_cards">Карточки готовы</string>
     <string name="settings_notif_enabled">Хочу уведомления</string>
     <string name="settings_study_hour">Время занятий</string>
-    <string name="notif_offline_ready_title">Карточки скачаны</string>
-    <string name="notif_offline_ready_body">Все %1$d офлайн-карточек готовы</string>
-    <string name="notif_import_ready_title">Импорт завершён</string>
-    <string name="notif_import_ready_body">Все %1$d импортированных карточек готовы</string>
+    <string name="notif_offline_ready_title">Все карточки готовы!</string>
+    <string name="notif_offline_ready_body">Пора заниматься!</string>
+    <string name="notif_import_ready_title">Все карточки готовы!</string>
+    <string name="notif_import_ready_body">Пора заниматься!</string>
     <string name="settings_reminder_hour">Час напоминания (0–23)</string>
     <string name="notif_channel_study">Учёба</string>
     <string name="notif_channel_cards">Карточки</string>
@@ -710,8 +713,8 @@
     <string name="notif_study_body">%1$d карточек к повторению</string>
 
     <string name="notif_study_body_empty">Пора заниматься</string>
-    <string name="notif_cards_ready_title">Карточки готовы</string>
-    <string name="notif_cards_ready_body">%1$d слов готово к изучению</string>
+    <string name="notif_cards_ready_title">Все карточки готовы!</string>
+    <string name="notif_cards_ready_body">Пора заниматься!</string>
     <string name="status_needs_review">Нужна проверка</string>
     <string name="review_title">Слово нужно проверить</string>
     <string name="review_no_match">Совпадений для «%1$s» не найдено.</string>

@@ -368,6 +368,7 @@
     <string name="import_reason_in_file_duplicate">Từ này bị lặp trong lần nhập này.</string>
     <string name="import_reason_no_lemma">Đây giống cụm từ hoặc câu — không làm được thẻ từ điển.</string>
     <string name="import_reason_llm_invalid">Không được nhận là từ để học. Hãy kiểm tra xem có đúng ngôn ngữ bạn đang học không.</string>
+    <string name="import_reason_not_learning_lang">Đây không phải từ trong ngôn ngữ bạn đang học.</string>
     <string name="import_reason_unknown">Hiện không nhập được từ này.</string>
     <string name="import_ready_hint">Những từ này sẽ được thêm vào danh sách.</string>
     <string name="import_review_loading">Đang tải danh sách từ…</string>
@@ -419,6 +420,8 @@
 
     <string name="home_reviews">ôn tập</string>
     <string name="home_new">mới</string>
+    <string name="home_already_know">Bạn đã biết: %1$d / %2$d</string>
+    <string name="home_left_to_learn">Tổng còn phải học: %1$d</string>
     <string name="home_empty_title">Bạn chưa có từ nào</string>
     <string name="home_empty_body">Tìm một từ hoặc nhập danh sách.</string>
     <string name="home_add_first">Thêm từ đầu tiên</string>
@@ -778,10 +781,10 @@
     <string name="settings_notif_cards">Thẻ đã sẵn sàng</string>
     <string name="settings_notif_enabled">Tôi muốn nhận thông báo</string>
     <string name="settings_study_hour">Giờ học</string>
-    <string name="notif_offline_ready_title">Đã tải thẻ</string>
-    <string name="notif_offline_ready_body">Tất cả %1$d thẻ ngoại tuyến đã sẵn sàng</string>
-    <string name="notif_import_ready_title">Nhập xong</string>
-    <string name="notif_import_ready_body">Tất cả %1$d thẻ đã nhập đã sẵn sàng</string>
+    <string name="notif_offline_ready_title">Tất cả thẻ đã sẵn sàng!</string>
+    <string name="notif_offline_ready_body">Đến giờ học!</string>
+    <string name="notif_import_ready_title">Tất cả thẻ đã sẵn sàng!</string>
+    <string name="notif_import_ready_body">Đến giờ học!</string>
 
     <string name="settings_reminder_hour">Giờ nhắc nhở (0–23)</string>
 
@@ -795,9 +798,9 @@
 
     <string name="notif_study_body_empty">Đến giờ học</string>
 
-    <string name="notif_cards_ready_title">Thẻ đã sẵn sàng</string>
+    <string name="notif_cards_ready_title">Tất cả thẻ đã sẵn sàng!</string>
 
-    <string name="notif_cards_ready_body">%1$d từ(s) đã sẵn sàng để học</string>
+    <string name="notif_cards_ready_body">Đến giờ học!</string>
 
     <string name="status_needs_review">Cần kiểm tra</string>
     <string name="review_title">Từ cần được kiểm tra</string>

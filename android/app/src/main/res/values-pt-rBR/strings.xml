@@ -337,6 +337,7 @@
     <string name="import_reason_in_file_duplicate">Esta palavra se repete nesta importação.</string>
     <string name="import_reason_no_lemma">Parece uma expressão ou frase — não dá para virar um cartão de dicionário.</string>
     <string name="import_reason_llm_invalid">Não foi reconhecida como palavra para aprender. Confira se está no idioma que você está aprendendo.</string>
+    <string name="import_reason_not_learning_lang">Esta palavra não está no idioma que você está aprendendo.</string>
     <string name="import_reason_unknown">Esta palavra não pode ser importada agora.</string>
     <string name="import_ready_hint">Estas palavras serão adicionadas à sua lista.</string>
     <string name="import_review_loading">Carregando as palavras…</string>
@@ -388,6 +389,8 @@
 
     <string name="home_reviews">revisões</string>
     <string name="home_new">novas</string>
+    <string name="home_already_know">Você já sabe: %1$d de %2$d</string>
+    <string name="home_left_to_learn">No total faltam aprender: %1$d</string>
     <string name="home_empty_title">Você ainda não tem palavras</string>
     <string name="home_empty_body">Busque uma palavra ou importe uma lista.</string>
     <string name="home_add_first">Adicione as primeiras palavras</string>
@@ -699,10 +702,10 @@
     <string name="settings_notif_cards">Cartões prontos</string>
     <string name="settings_notif_enabled">Quero notificações</string>
     <string name="settings_study_hour">Hora de estudo</string>
-    <string name="notif_offline_ready_title">Cartões baixados</string>
-    <string name="notif_offline_ready_body">Todos os %1$d cartões offline estão prontos</string>
-    <string name="notif_import_ready_title">Importação concluída</string>
-    <string name="notif_import_ready_body">Todos os %1$d cartões importados estão prontos</string>
+    <string name="notif_offline_ready_title">Todos os cartões estão prontos!</string>
+    <string name="notif_offline_ready_body">Hora de estudar!</string>
+    <string name="notif_import_ready_title">Todos os cartões estão prontos!</string>
+    <string name="notif_import_ready_body">Hora de estudar!</string>
     <string name="settings_reminder_hour">Hora do lembrete (0–23)</string>
     <string name="notif_channel_study">Estudo</string>
     <string name="notif_channel_cards">Cartões</string>
@@ -710,8 +713,8 @@
     <string name="notif_study_body">%1$d cartões pendentes</string>
 
     <string name="notif_study_body_empty">Hora de estudar</string>
-    <string name="notif_cards_ready_title">Cartões prontos</string>
-    <string name="notif_cards_ready_body">%1$d palavra(s) pronta(s) para estudar</string>
+    <string name="notif_cards_ready_title">Todos os cartões estão prontos!</string>
+    <string name="notif_cards_ready_body">Hora de estudar!</string>
     <string name="status_needs_review">Precisa de revisão</string>
     <string name="review_title">A palavra precisa de revisão</string>
     <string name="review_no_match">Nenhuma correspondência para «%1$s».</string>

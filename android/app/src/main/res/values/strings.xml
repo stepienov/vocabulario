@@ -349,6 +349,7 @@
     <string name="import_reason_in_file_duplicate">This word is repeated in this import.</string>
     <string name="import_reason_no_lemma">This looks like a phrase or sentence, not a single word we can turn into a card.</string>
     <string name="import_reason_llm_invalid">This was not recognized as a word to learn. Check that it is in the language you are learning.</string>
+    <string name="import_reason_not_learning_lang">This is not a word in the language you are learning.</string>
     <string name="import_reason_unknown">This word could not be imported.</string>
     <string name="import_ready_hint">These words will be added to your list.</string>
     <string name="import_review_loading">Loading the word list…</string>
@@ -401,6 +402,8 @@
 
     <string name="home_reviews">Reviews</string>
     <string name="home_new">New</string>
+    <string name="home_already_know">You already know: %1$d of %2$d</string>
+    <string name="home_left_to_learn">Left to learn in total: %1$d</string>
     <string name="home_empty_title">You don\'t have any words yet</string>
     <string name="home_empty_body">Look up a word or import a list.</string>
     <string name="home_add_first">Add your first words</string>
@@ -793,10 +796,10 @@
     <string name="settings_notif_cards">Cards ready</string>
     <string name="settings_notif_enabled">I want notifications</string>
     <string name="settings_study_hour">Study time</string>
-    <string name="notif_offline_ready_title">Cards downloaded</string>
-    <string name="notif_offline_ready_body">All %1$d offline cards are ready</string>
-    <string name="notif_import_ready_title">Import complete</string>
-    <string name="notif_import_ready_body">All %1$d imported cards are ready</string>
+    <string name="notif_offline_ready_title">All cards are ready!</string>
+    <string name="notif_offline_ready_body">Time to study!</string>
+    <string name="notif_import_ready_title">All cards are ready!</string>
+    <string name="notif_import_ready_body">Time to study!</string>
     <string name="settings_reminder_hour">Reminder hour (0–23)</string>
     <string name="notif_channel_study">Study</string>
     <string name="notif_channel_cards">Cards</string>
@@ -804,8 +807,8 @@
     <string name="notif_study_body">%1$d cards due</string>
 
     <string name="notif_study_body_empty">Time to study</string>
-    <string name="notif_cards_ready_title">Cards ready</string>
-    <string name="notif_cards_ready_body">%1$d word(s) ready to study</string>
+    <string name="notif_cards_ready_title">All cards are ready!</string>
+    <string name="notif_cards_ready_body">Time to study!</string>
 
     <string name="pos_noun">noun</string>
     <string name="pos_verb">verb</string>

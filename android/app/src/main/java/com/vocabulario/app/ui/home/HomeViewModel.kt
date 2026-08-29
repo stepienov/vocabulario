@@ -108,6 +108,13 @@ data class HomeUiState(
         get() = listWords.any { it.id in selectedWordIds && it.isReadyToMove() }
     val sessionDue: Int get() = stats?.due_count ?: 0
     val sessionNew: Int get() = stats?.session_new ?: 0
+    /** Karty z interwałem ≥ 21 dni — „umiesz już”. */
+    val alreadyKnowCount: Int get() = stats?.srs_mastered ?: 0
+    /** Wszystkie karty w nauce (kolekcja, nie tylko dzisiejsza sesja). */
+    val currentlyLearningCount: Int get() = stats?.cards_total ?: 0
+    /** Karty, które nie są jeszcze opanowane. */
+    val remainingToLearnCount: Int
+        get() = (currentlyLearningCount - alreadyKnowCount).coerceAtLeast(0)
     val homeKind: HomeKind
         get() {
             val ready = stats?.ready_count ?: 0

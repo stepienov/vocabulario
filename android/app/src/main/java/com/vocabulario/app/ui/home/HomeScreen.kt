@@ -577,6 +577,22 @@ private fun DashboardTab(
             }
         }
 
+        if (state.homeKind != HomeKind.Empty) {
+            DashboardProgressStrip(
+                text = stringResource(
+                    R.string.home_already_know,
+                    state.alreadyKnowCount,
+                    state.currentlyLearningCount,
+                ),
+            )
+            DashboardProgressStrip(
+                text = stringResource(
+                    R.string.home_left_to_learn,
+                    state.remainingToLearnCount,
+                ),
+            )
+        }
+
         DashboardCta(
             kind = state.homeKind,
             onPractice = onPractice,
@@ -664,6 +680,35 @@ private fun DashboardCta(
                 stringResource(R.string.action_learn),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DashboardProgressStrip(text: String) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(54.dp),
+        shape = TileRadius,
+        color = scheme.surface,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = scheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

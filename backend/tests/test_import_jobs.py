@@ -9,6 +9,7 @@ from app.services.import_jobs import (
     _apply_lemma_verify,
     _apply_vocab_item,
     _finalize_analyze_verdicts,
+    _import_invalid_reason_code,
     _plain_import_headword,
     format_error_lemmas,
 )
@@ -170,7 +171,7 @@ def test_apply_vocab_item_rejects_plain_word_on_l1_mismatch():
         "fr",
     )
     assert item.verdict == "failed"
-    assert item.reason_code == "llm_invalid"
+    assert item.reason_code == "not_learning_lang"
     assert item.lemma == "evaluar"
 
 
@@ -187,7 +188,7 @@ def test_apply_vocab_item_construction_wrong_language_stays_failed():
         "en",
     )
     assert item.verdict == "failed"
-    assert item.reason_code == "llm_invalid"
+    assert item.reason_code == "not_learning_lang"
     assert item.entry_kind != "lemma"
 
 
@@ -216,6 +217,27 @@ def test_admin_user_rejects_plain_user():
     with pytest.raises(HTTPException) as exc:
         asyncio.run(get_admin_user(SimpleNamespace(role="user")))
     assert exc.value.status_code == 403
+
+
+def test_import_invalid_reason_code_splits_language_from_junk():
+    assert _import_invalid_reason_code("nie jest w języku nauki") == "not_learning_lang"
+    assert _import_invalid_reason_code("NOT in the learning language") == "not_learning_lang"
+    assert _import_invalid_reason_code("garbage / keyboard smash") == "llm_invalid"
+    assert _import_invalid_reason_code(None) == "llm_invalid"
+
+
+def test_apply_lemma_verify_rejects_wrong_language():
+    items = [
+        _item(verdict="ready", lemma="pająk"),
+        _item(verdict="ready", lemma="casa"),
+    ]
+    _apply_lemma_verify(
+        items,
+        {"invalid": [{"index": 0, "reason": "real word but not in the learning language"}]},
+    )
+    assert items[0].verdict == "failed"
+    assert items[0].reason_code == "not_learning_lang"
+    assert items[1].verdict == "ready"
 
 
 def test_apply_lemma_verify_rejects_listed_indexes():

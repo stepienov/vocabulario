@@ -21,7 +21,7 @@ from app.ai.schemas.similar_words import MIN_SIMILAR_FOR_QUIZ
 from app.core.deps import lang_pair_key, normalize_text
 from app.core.lemma_keys import cache_lookup_keys, canonical_lemma
 from app.db.session import async_session_factory
-from app.lsp.enrichment import finish_side_jobs, run_lemma_enrichment
+from app.lsp.enrichment import finish_side_jobs, inflect_pos_key, run_lemma_enrichment
 from app.lsp.lang_utils import articles_for
 from app.models import LanguageProfile, LearningCard, LexicalEntry, User
 from app.services.distractors import in_learning_lemma, lemma_keys
@@ -310,8 +310,13 @@ def _has_verb_inflection(content: dict) -> bool:
     return bool(has_inflection or content.get("conjugation"))
 
 
-def content_is_complete(content: dict | None) -> bool:
-    """Pełna treść do cache: learnable + dystraktory (+ odmiana czasownika)."""
+def content_is_complete(content: dict | None, *, learning_lang: str | None = None) -> bool:
+    """Pełna treść do cache: learnable + dystraktory (+ odmiana, gdy LSP jej chce).
+
+    Ta sama reguła co ``finish_side_jobs`` / ``inflect_pos_key``: fraza z rodzajnikiem
+    (la red social) nie dostaje koniugacji i jest kompletna bez niej. Werbalny zwrot
+    bez rodzajnika (pagar a plazos) nadal wymaga odmiany.
+    """
     if not content_is_learnable(content):
         return False
     assert content is not None
@@ -320,7 +325,9 @@ def content_is_complete(content: dict | None) -> bool:
         return True
     if content.get("schema_version") == "vocabulario.card.v1":
         pos = str(content.get("pos") or "").strip().lower()
-        needs_infl = pos in {"verb", "phrase", "construction"}
+        lemma = str(content.get("lemma") or "")
+        lang = learning_lang or str(content.get("language") or "")
+        needs_infl = inflect_pos_key(pos, lemma=lemma, learning_lang=lang) is not None
         if needs_infl and not _has_verb_inflection(content):
             return False
         if skips_similar_words(content, pos):
@@ -767,7 +774,6 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
             card.enrichment_status = STATUS_PENDING
             await db.flush()
 
-        content0 = dict(card.content or {})
         profile = (
             await db.execute(
                 select(LanguageProfile).where(LanguageProfile.id == card.profile_id)
@@ -782,6 +788,13 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                 from app.services.push import notify_cards_ready
 
                 await notify_cards_ready(db, card.user_id, card_id=card.id)
+                return
+
+            content0 = dict(card.content or {})
+            if content_is_complete(content0, learning_lang=profile.learning_lang):
+                await _persist_enrichment_result(
+                    db, card, profile, content0, entry=None, notified=False
+                )
                 return
 
             bind_llm_usage_context(
@@ -927,7 +940,7 @@ async def _persist_enrichment_result(
     from app.services.push import notify_cards_ready
 
     content = _guard_enrichment_lemma(card, content)
-    if content_is_complete(content):
+    if content_is_complete(content, learning_lang=profile.learning_lang):
         if entry is None:
             content, entry = await _store_lexical_entry(
                 db, profile, content, user_id=card.user_id, requested_pos=card.pos
@@ -968,7 +981,15 @@ async def _enrich_lemma_staged(
 
     notified = False
 
-    if content_is_learnable(content0) and not content_is_complete(content0):
+    if content_is_complete(content0, learning_lang=profile.learning_lang):
+        await _persist_enrichment_result(
+            db, card, profile, content0, entry=None, notified=False
+        )
+        return
+
+    if content_is_learnable(content0) and not content_is_complete(
+        content0, learning_lang=profile.learning_lang
+    ):
         content = await finish_side_jobs(profile, dict(content0))
         await _persist_enrichment_result(
             db, card, profile, content, entry=None, notified=False
