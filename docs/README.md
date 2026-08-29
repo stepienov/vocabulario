@@ -8,7 +8,7 @@
 | [epics.md](./epics.md) | Epiki poza bieżącym sprintem |
 | [analiza-pedagogiczna-produktowa.md](./analiza-pedagogiczna-produktowa.md) | Analiza badań SLA × stan produktu; baza pod przyszłe US |
 | [i18n-audit.md](./i18n-audit.md) | Audyt kompletności tłumaczeń UI |
-| [lsp-card-audit.md](./lsp-card-audit.md) | Audyt struktur kart, czasów i LSP |
+| [qa-nauka-karty.md](./qa-nauka-karty.md) | QA: nauka (pasek, synonim), karty, lookup, 11 haseł prod |
 | [lsp-manifest-template.yaml](./lsp-manifest-template.yaml) | Szablon Language Support Pack |
 
 Notatki robocze, plany i audyty są w lokalnym katalogu `doc/` (gitignored, nie na GitHub).
