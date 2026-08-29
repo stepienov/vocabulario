@@ -13,6 +13,7 @@ class CheckAnswerResponse(BaseModel):
     correct: bool
     expected: str | None = None
     accepted_as_typo: bool = False
+    accepted_as_synonym: bool = False
 
 
 class ChoiceOption(BaseModel):

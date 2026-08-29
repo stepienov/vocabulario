@@ -71,6 +71,7 @@ data class PracticeUiState(
     val error: String? = null,
     val loadingChoices: Boolean = false,
     val typoWarning: Boolean = false,
+    val synonymWarning: Boolean = false,
     val expectedAnswer: String? = null,
     val userTenses: List<String> = emptyList(),
     val activeProfile: com.vocabulario.app.data.api.LanguageProfileResponse? = null,
@@ -226,6 +227,7 @@ class PracticeViewModel @Inject constructor(
             lastCorrect = null,
             expectedAnswer = null,
             typoWarning = false,
+            synonymWarning = false,
         )
         if (mode == AnswerMode.CHOICE) prepareChoices()
     }
@@ -349,9 +351,25 @@ class PracticeViewModel @Inject constructor(
                         _state.value = _state.value.copy(
                             lastCorrect = true,
                             typoWarning = true,
+                            synonymWarning = false,
                             expectedAnswer = result.expected,
                             showAlmostToast = true,
                             showCorrectToast = false,
+                            showWrongToast = false,
+                            phase = PracticePhase.SHOW_CARD,
+                        )
+                    }
+                    result.correct && result.accepted_as_synonym -> {
+                        val gloss = item.gloss_primary?.trim().orEmpty().ifBlank {
+                            result.expected
+                        }
+                        _state.value = _state.value.copy(
+                            lastCorrect = true,
+                            typoWarning = false,
+                            synonymWarning = true,
+                            expectedAnswer = gloss,
+                            showCorrectToast = true,
+                            showAlmostToast = false,
                             showWrongToast = false,
                             phase = PracticePhase.SHOW_CARD,
                         )
@@ -360,6 +378,7 @@ class PracticeViewModel @Inject constructor(
                         _state.value = _state.value.copy(
                             lastCorrect = true,
                             typoWarning = false,
+                            synonymWarning = false,
                             expectedAnswer = result.expected,
                             showCorrectToast = true,
                             showAlmostToast = false,
@@ -372,6 +391,7 @@ class PracticeViewModel @Inject constructor(
                             lastCorrect = false,
                             expectedAnswer = result.expected,
                             typoWarning = false,
+                            synonymWarning = false,
                             showWrongToast = true,
                             showCorrectToast = false,
                             showAlmostToast = false,
@@ -965,8 +985,20 @@ class PracticeViewModel @Inject constructor(
                 lastUndo = _state.value.lastUndo?.copy(wasSessionComplete = true),
             )
         } else {
-            _state.value = _state.value.copy(currentIndex = next)
-            prepareCard()
+            val mode = resolveAnswerMode()
+            _state.value = _state.value.copy(
+                currentIndex = next,
+                answerMode = mode,
+                phase = PracticePhase.ANSWERING,
+                selectedChoice = null,
+                disabledChoiceTexts = emptySet(),
+                typedAnswer = "",
+                lastCorrect = null,
+                expectedAnswer = null,
+                typoWarning = false,
+                synonymWarning = false,
+            )
+            if (mode == AnswerMode.CHOICE) prepareChoices()
         }
     }
 }

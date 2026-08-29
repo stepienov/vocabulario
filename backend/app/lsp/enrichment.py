@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -34,6 +35,25 @@ from app.services.similar_words import fetch_similar_words, skips_similar_words
 logger = logging.getLogger(__name__)
 
 OnCore = Callable[[dict], Awaitable[None]]
+
+_STEM_CHANGE_NOTE = re.compile(
+    r"([a-záéíóúüñ])\s*[>:]\s*([a-záéíóúüñ]{1,3})",
+    re.IGNORECASE,
+)
+
+
+def normalize_headword_note(raw: object) -> str | None:
+    """Keep only a real stem-change mark like (e>ie). Drop regular/empty/invented notes."""
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    match = _STEM_CHANGE_NOTE.search(text)
+    if not match:
+        return None
+    src, dst = match.group(1).lower(), match.group(2).lower()
+    if src == dst:
+        return None
+    return f"({src}>{dst})"
 
 
 def _core_examples_valid(meanings: list[dict]) -> bool:
@@ -224,7 +244,7 @@ def assemble_core_card(
         "language": profile.learning_lang,
         "pos": pos_final,
         "ipa": core.get("ipa"),
-        "headword_note": core.get("headword_note"),
+        "headword_note": normalize_headword_note(core.get("headword_note")),
         "ui_hints": ui_hints,
         "meanings": meanings,
         "synonyms_l2": synonyms,

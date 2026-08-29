@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -26,6 +26,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -113,7 +114,7 @@ fun CardDetailContent(
 
     val lemma = content["lemma"].asJsonString() ?: lemmaFallback
     val pos = content["pos"].asJsonString()
-    val ipa = content["ipa"].asJsonString()
+    val headwordNote = content["headword_note"].asJsonString()
     val pattern = content["pattern"].asJsonString()
     val entryKind = content["entry_kind"].asJsonString()
     val meanings = content["meanings"].asJsonArray() ?: JsonArray(emptyList())
@@ -151,10 +152,13 @@ fun CardDetailContent(
         .ifEmpty { LanguagePacks.get(lang).nonFinite.map { it.key } }
         .filter { nonFinite?.containsKey(it) == true }
 
+    val detailScroll = remember(lemma) { ScrollState(0) }
+    LaunchedEffect(lemma) { detailScroll.scrollTo(0) }
+
     Column(
         modifier = when {
             compact || !scrollable -> Modifier.fillMaxWidth()
-            else -> Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+            else -> Modifier.fillMaxWidth().verticalScroll(detailScroll)
         },
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -229,10 +233,10 @@ fun CardDetailContent(
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             )
-            ipa?.takeIf { it.isNotBlank() }?.let {
+            headwordNote?.takeIf { it.isNotBlank() }?.let {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "[$it]",
+                    it,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -326,6 +330,7 @@ fun CardDetailContent(
                 conjugation = conjugation,
                 lang = lang,
                 profile = profile,
+                resetKey = lemma,
             )
         }
         if (fullDetail) {

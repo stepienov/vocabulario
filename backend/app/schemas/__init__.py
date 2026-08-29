@@ -460,6 +460,7 @@ class CardContent(BaseModel):
     language: str
     pos: str | None = None
     ipa: str | None = None
+    headword_note: str | None = None
     meanings: list[dict] = Field(default_factory=list)
     synonyms_l2: list[dict | str] = Field(default_factory=list)
     antonyms_l2: list[dict | str] = Field(default_factory=list)

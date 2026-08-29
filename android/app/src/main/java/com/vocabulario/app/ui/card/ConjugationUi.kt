@@ -196,9 +196,10 @@ internal fun ConjugationTenseAccordions(
     lang: String,
     profile: LanguageProfileResponse?,
     expandedDefault: Boolean = false,
+    resetKey: Any? = null,
 ) {
     if (finiteKeys.isEmpty() && nonFiniteKeys.isEmpty()) return
-    val expandedTenses = remember(expandedDefault, finiteKeys, nonFiniteKeys) {
+    val expandedTenses = remember(resetKey, expandedDefault, finiteKeys, nonFiniteKeys) {
         mutableStateMapOf<String, Boolean>().apply {
             (finiteKeys + nonFiniteKeys).forEach { put(it, expandedDefault) }
         }

@@ -303,7 +303,7 @@ async def sync_push(
         correct = item.correct
         if item.mode == "type" and item.answer is not None:
             answers = collect_acceptable_answers(card.content, item.direction)
-            correct, _, _ = check_answer(item.answer, answers, tolerance)
+            correct, _, _, _ = check_answer(item.answer, answers, tolerance)
 
         reviewed_at = _aware(item.reviewed_at)
         state = apply_review(state, item.grade, correct, reviewed_at=reviewed_at)

@@ -7,28 +7,42 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.text.Normalizer
 import kotlin.math.ceil
 
+data class AnswerCheckResult(
+    val correct: Boolean,
+    val expected: String?,
+    val acceptedAsTypo: Boolean,
+    val acceptedAsSynonym: Boolean = false,
+)
+
 object LocalAnswerCheck {
     fun check(
         userAnswer: String,
         content: JsonObject,
         direction: String,
-    ): Triple<Boolean, String?, Boolean> {
+    ): AnswerCheckResult {
         val answers = collectAnswers(content, direction)
         val normalizedUser = normalize(userAnswer)
         val normalizedCorrect = answers.map { normalize(it) }.filter { it.isNotBlank() }
 
-        for (correct in normalizedCorrect) {
-            if (normalizedUser == correct) return Triple(true, null, false)
+        for ((index, correct) in normalizedCorrect.withIndex()) {
+            if (normalizedUser == correct) {
+                return AnswerCheckResult(
+                    correct = true,
+                    expected = null,
+                    acceptedAsTypo = false,
+                    acceptedAsSynonym = index > 0,
+                )
+            }
         }
         for (correct in normalizedCorrect) {
             if (stripDiacritics(normalizedUser) == stripDiacritics(correct)) {
-                return Triple(true, correct, true)
+                return AnswerCheckResult(true, correct, acceptedAsTypo = true)
             }
             if (fuzzyOk(normalizedUser, correct)) {
-                return Triple(true, correct, true)
+                return AnswerCheckResult(true, correct, acceptedAsTypo = true)
             }
         }
-        return Triple(false, normalizedCorrect.firstOrNull(), false)
+        return AnswerCheckResult(false, normalizedCorrect.firstOrNull(), acceptedAsTypo = false)
     }
 
     fun collectAnswers(content: JsonObject, direction: String): List<String> {

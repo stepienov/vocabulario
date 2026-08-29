@@ -367,3 +367,22 @@ def test_cached_lookup_does_not_cover_single_pos_homograph():
     assert not cached_lookup_covers_query(verb_only, "play", learning_lang="en")
     both = verb_only + [{"lemma": "play", "pos": "noun", "gloss": "sztuka"}]
     assert cached_lookup_covers_query(both, "play", learning_lang="en")
+
+
+def test_sanitize_keeps_plural_citation_los_cascos():
+    out = sanitize_lookup_candidates(
+        [{"lemma": "los cascos", "pos": "noun", "gloss": "słuchawki (nauszne)"}],
+        learning_lang="es",
+    )
+    assert len(out) == 1
+    assert out[0]["lemma"] == "los cascos"
+    assert out[0]["gloss"] == "słuchawki (nauszne)"
+
+
+def test_lookup_form_rules_plural_citation_and_gloss_paren():
+    from app.ai.prompts.v1 import lookup_output_form_rules_text
+
+    text = lookup_output_form_rules_text("pl", "es")
+    assert "los cascos" in text
+    assert "słuchawki (nauszne)" in text
+    assert "książki" in text

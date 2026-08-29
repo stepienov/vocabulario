@@ -19,9 +19,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -354,6 +355,8 @@ fun PracticeScreen(
                                 }
                             }
                             PracticePhase.SHOW_CARD -> {
+                                val cardScroll = remember(item.card_id) { ScrollState(0) }
+                                LaunchedEffect(item.card_id) { cardScroll.scrollTo(0) }
                                 Column(
                                     modifier = Modifier
                                         .weight(1f)
@@ -363,10 +366,16 @@ fun PracticeScreen(
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxWidth()
-                                            .verticalScroll(rememberScrollState()),
+                                            .verticalScroll(cardScroll),
                                         verticalArrangement = Arrangement.spacedBy(12.dp),
                                     ) {
                                         when {
+                                            state.synonymWarning -> {
+                                                AnswerSynonymBanner(
+                                                    typedAnswer = state.typedAnswer,
+                                                    mainGloss = state.expectedAnswer ?: "?",
+                                                )
+                                            }
                                             state.typoWarning ||
                                                 (state.lastCorrect == false && state.answerMode == AnswerMode.TYPE) -> {
                                                 AnswerWarningBanner(
@@ -559,7 +568,7 @@ private fun AnswerWarningBanner(
     expectedAnswer: String,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(14.dp)
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -572,7 +581,9 @@ private fun AnswerWarningBanner(
                 ),
             )
             .testTag(TestTags.PRACTICE_SPELLING_WARN)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         AnswerWarningRow(
             icon = Icons.Default.Close,
@@ -592,6 +603,41 @@ private fun AnswerWarningBanner(
 }
 
 @Composable
+private fun AnswerSynonymBanner(
+    typedAnswer: String,
+    mainGloss: String,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(
+                Brush.horizontalGradient(
+                    0f to AnswerWarnGradientEdge,
+                    0.5f to AnswerWarnGradientCenter,
+                    1f to AnswerWarnGradientEdge,
+                ),
+            )
+            .testTag(TestTags.PRACTICE_SPELLING_WARN)
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "$typedAnswer – $mainGloss",
+            color = AnswerWarnCorrect,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 22.sp,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
 private fun AnswerWarningRow(
     icon: ImageVector,
     iconTint: Color,
@@ -600,33 +646,37 @@ private fun AnswerWarningRow(
     fontWeight: FontWeight,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(44.dp),
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier.size(28.dp),
-            contentAlignment = Alignment.Center,
+        Row(
+            modifier = Modifier.weight(1f, fill = false),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(24.dp),
+            Box(
+                modifier = Modifier.size(20.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = text,
+                color = textColor,
+                fontSize = 20.sp,
+                fontWeight = fontWeight,
+                lineHeight = 22.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
             )
         }
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = text,
-            color = textColor,
-            fontSize = 22.sp,
-            fontWeight = fontWeight,
-            lineHeight = 26.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
     }
 }
 

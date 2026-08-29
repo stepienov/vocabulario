@@ -15,6 +15,7 @@ from app.services.word_family_backfill import (
     build_family_plans,
     prepare_entry,
 )
+from app.services.word_families import _candidate_items, _head_item, _lift_item_article
 from app.services.word_family_quality import (
     belongs_in_family,
     filter_word_family,
@@ -46,6 +47,8 @@ def test_enrichment_prompt_has_l2_family_guidance_not_inaguantable():
     assert "L2-specific word-family guidance (es)" in static
     assert "libro" in static
     assert "irrelevante" in static
+    assert "headword_note" in static
+    assert "(e>ie)" in static
 
 
 def test_negative_prefix_relevante_irrelevante():
@@ -320,4 +323,59 @@ def test_backfill_filters_irrelevante_into_antonyms_when_missing():
         prepared.extra_antonyms,
     )
     assert [a["lemma"] for a in already["antonyms_l2"]] == ["irrelevante"]
+
+
+def test_head_item_lifts_article_from_lemma():
+    item = _head_item(
+        {
+            "lemma": "el apunte",
+            "pos": "noun",
+            "meanings": [{"gloss_l1": "notatka"}],
+        },
+        learning_lang="es",
+    )
+    assert item is not None
+    assert item["article"] == "el"
+    assert item["lemma"] == "apunte"
+
+
+def test_head_item_does_not_invent_article():
+    item = _head_item(
+        {
+            "lemma": "apunte",
+            "pos": "noun",
+            "meanings": [{"gloss_l1": "notatka"}],
+        },
+        learning_lang="es",
+    )
+    assert item is not None
+    assert item["article"] is None
+    assert item["lemma"] == "apunte"
+
+
+def test_candidate_family_lifts_article_from_lemma():
+    items = _candidate_items(
+        {
+            "lemma": "apuntarse",
+            "pos": "verb",
+            "meanings": [{"gloss_l1": "zapisać się"}],
+            "word_family_l2": [
+                {"lemma": "el apunte", "pos": "noun", "gloss_l1": "notatka"},
+            ],
+        },
+        learning_lang="es",
+    )
+    noun = next(i for i in items if i["pos"] == "noun")
+    assert noun["article"] == "el"
+    assert noun["lemma"] == "apunte"
+
+
+def test_lift_article_from_lexical_lemma_when_member_is_bare():
+    lifted = _lift_item_article(
+        {"lemma": "apunte", "pos": "noun", "article": None, "gloss_l1": "notatka"},
+        "es",
+        extra_lemma="el apunte",
+    )
+    assert lifted["article"] == "el"
+    assert lifted["lemma"] == "apunte"
 

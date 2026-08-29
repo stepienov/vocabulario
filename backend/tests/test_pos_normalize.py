@@ -150,6 +150,7 @@ def test_ensure_noun_article_spanish():
     assert ensure_noun_article("libro", learning_lang="es", gender="m") == "el libro"
     assert ensure_noun_article("tripa", learning_lang="es", gender="f") == "la tripa"
     assert ensure_noun_article("el libro", learning_lang="es", gender="m") == "el libro"
+    assert ensure_noun_article("los cascos", learning_lang="es", gender="m") == "los cascos"
 
 
 def test_canonicalize_strips_verbose_pos_and_adds_article():

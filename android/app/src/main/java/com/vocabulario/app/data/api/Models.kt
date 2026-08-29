@@ -482,6 +482,7 @@ data class CheckAnswerResponse(
     val correct: Boolean,
     val expected: String? = null,
     val accepted_as_typo: Boolean = false,
+    val accepted_as_synonym: Boolean = false,
 )
 
 @Serializable

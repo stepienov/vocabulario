@@ -633,7 +633,7 @@ async def srs_review(
     correct = body.correct
     if body.mode == "type" and body.answer is not None:
         answers = collect_acceptable_answers(card.content, body.direction)
-        correct, _, _ = check_answer(body.answer, answers, tolerance)
+        correct, _, _, _ = check_answer(body.answer, answers, tolerance)
 
     state = apply_review(state, body.grade, correct)
     log = ReviewLog(
@@ -746,11 +746,14 @@ async def check_typed_answer(
     tolerance = "tolerate"
 
     answers = collect_acceptable_answers(card.content, body.direction)
-    correct, canonical, accepted_as_typo = check_answer(body.answer, answers, tolerance)
+    correct, canonical, accepted_as_typo, accepted_as_synonym = check_answer(
+        body.answer, answers, tolerance
+    )
     return CheckAnswerResponse(
         correct=correct,
         expected=canonical,
         accepted_as_typo=accepted_as_typo,
+        accepted_as_synonym=accepted_as_synonym,
     )
 
 

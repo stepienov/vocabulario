@@ -13,6 +13,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from app.core.deps import lang_pair_key
 from app.models import LanguageProfile, LearningCard, LexicalEntry, WordFamily, WordFamilyMember
 from app.services.pos_normalize import normalize_pos_bucket
+from app.services.related_articles import attach_article, lift_article_from_lemma
 from app.services.word_family_quality import (
     MAX_FAMILY_MEMBERS,
     POS_TIEBREAK,
@@ -29,7 +30,44 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def _head_item(content: dict) -> dict | None:
+def _learning_lang_from_pair(lang_pair: str | None) -> str | None:
+    if not lang_pair or ">" not in lang_pair:
+        return None
+    return lang_pair.split(">", 1)[1].strip() or None
+
+
+def _lift_item_article(
+    item: dict,
+    learning_lang: str | None,
+    extra_lemma: str | None = None,
+) -> dict:
+    """Copy/lift a citation article from lemma text. Never invent from gender."""
+    lemma = str(item.get("lemma") or "").strip()
+    pos = item.get("pos")
+    attached = attach_article(
+        {"lemma": lemma, "pos": pos, "gloss_l1": item.get("gloss_l1") or "?"},
+        item.get("article"),
+        learning_lang,
+    )
+    if not (attached.get("article") or "").strip() and extra_lemma:
+        extra = attach_article(
+            {"lemma": str(extra_lemma).strip(), "pos": pos},
+            None,
+            learning_lang,
+        )
+        if extra.get("article"):
+            attached["article"] = extra["article"]
+            if lift_article_from_lemma(lemma, learning_lang)[0]:
+                attached["lemma"] = extra["lemma"]
+            else:
+                attached["lemma"] = lemma or extra["lemma"]
+    out = dict(item)
+    out["lemma"] = attached["lemma"]
+    out["article"] = attached.get("article")
+    return out
+
+
+def _head_item(content: dict, learning_lang: str | None = None) -> dict | None:
     lemma = content.get("lemma")
     pos = normalize_pos_bucket(content.get("pos"))
     if not lemma or pos == "unknown":
@@ -38,16 +76,19 @@ def _head_item(content: dict) -> dict | None:
     gloss = ""
     if meanings and isinstance(meanings[0], dict):
         gloss = str(meanings[0].get("gloss_l1") or "").strip()
-    return {
-        "lemma": lemma,
-        "pos": pos,
-        "article": None,
-        "gloss_l1": gloss or "?",
-    }
+    return _lift_item_article(
+        {
+            "lemma": lemma,
+            "pos": pos,
+            "article": content.get("article"),
+            "gloss_l1": gloss or "?",
+        },
+        learning_lang,
+    )
 
 
-def _candidate_items(content: dict) -> list[dict]:
-    head = _head_item(content)
+def _candidate_items(content: dict, learning_lang: str | None = None) -> list[dict]:
+    head = _head_item(content, learning_lang)
     items: list[dict] = []
     if head:
         items.append(head)
@@ -58,12 +99,15 @@ def _candidate_items(content: dict) -> list[dict]:
         if pos == "unknown":
             continue
         items.append(
-            {
-                "lemma": raw["lemma"],
-                "pos": pos,
-                "article": raw.get("article"),
-                "gloss_l1": raw.get("gloss_l1") or "?",
-            }
+            _lift_item_article(
+                {
+                    "lemma": raw["lemma"],
+                    "pos": pos,
+                    "article": raw.get("article"),
+                    "gloss_l1": raw.get("gloss_l1") or "?",
+                },
+                learning_lang,
+            )
         )
     return items
 
@@ -196,6 +240,7 @@ async def _add_member(
     key = member_key(item.get("lemma"), item.get("pos"))
     if key is None:
         return None
+    item = _lift_item_article(item, _learning_lang_from_pair(family.lang_pair))
     lemma_key, pos = key
     existing = await _member_row(db, family.lang_pair, lemma_key, pos)
     if existing is not None:
@@ -255,6 +300,26 @@ async def _project_family(db: AsyncSession, family: WordFamily) -> None:
             entry.word_family_id = family.id
             entry_by_key[key] = entry
 
+    learning = _learning_lang_from_pair(family.lang_pair)
+    for member in members:
+        key = member_key(member.lemma, member.pos)
+        entry = entry_by_key.get(key) if key else None
+        extra = None
+        if entry is not None:
+            extra = entry.lemma_l2 or (entry.content or {}).get("lemma")
+        lifted = _lift_item_article(
+            {
+                "lemma": member.lemma,
+                "pos": member.pos,
+                "article": member.article,
+                "gloss_l1": member.gloss_l1,
+            },
+            learning,
+            extra_lemma=extra,
+        )
+        member.lemma = lifted["lemma"]
+        member.article = lifted.get("article")
+
     for entry in entry_by_key.values():
         content = dict(entry.content or {})
         lemma = content.get("lemma") or entry.lemma_l2
@@ -301,8 +366,8 @@ async def sync_word_family(
 
     pair = lang_pair_key(profile.app_lang, profile.learning_lang)
     learning = profile.learning_lang
-    candidates = _candidate_items(content)
-    head = _head_item(content)
+    candidates = _candidate_items(content, learning)
+    head = _head_item(content, learning)
     if head is None:
         return content
     head_key = member_key(head.get("lemma"), head.get("pos"))

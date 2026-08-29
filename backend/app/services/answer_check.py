@@ -67,25 +67,25 @@ def check_answer(
     user_answer: str,
     correct_answers: list[str],
     tolerance: str = "tolerate",
-) -> tuple[bool, str | None, bool]:
-    """Returns (correct, canonical_or_expected, accepted_as_typo)."""
+) -> tuple[bool, str | None, bool, bool]:
+    """Returns (correct, canonical_or_expected, accepted_as_typo, accepted_as_synonym)."""
     normalized_user = normalize_answer(user_answer)
     normalized_correct = [normalize_answer(c) for c in correct_answers if c]
 
-    for correct in normalized_correct:
+    for index, correct in enumerate(normalized_correct):
         if normalized_user == correct:
-            return True, None, False
+            return True, None, False, index > 0
 
     if tolerance == "strict":
-        return False, normalized_correct[0] if normalized_correct else None, False
+        return False, normalized_correct[0] if normalized_correct else None, False, False
 
     for correct in normalized_correct:
         if strip_diacritics(normalized_user) == strip_diacritics(correct):
-            return True, correct, True
+            return True, correct, True, False
         if typo_tolerance_ok(normalized_user, correct):
-            return True, correct, True
+            return True, correct, True, False
 
-    return False, normalized_correct[0] if normalized_correct else None, False
+    return False, normalized_correct[0] if normalized_correct else None, False, False
 
 
 def collect_acceptable_answers(content: dict, direction: str) -> list[str]:

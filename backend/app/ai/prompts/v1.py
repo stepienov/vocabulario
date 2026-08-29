@@ -52,24 +52,33 @@ but every field you RETURN must be the dictionary citation form — never echo t
 
 lemma (always in L2={learning_name}):
 - verb → infinitive / citation infinitive for that language
-- noun → singular dictionary headword; include definite article when the language uses one
-  (Spanish el/la, French le/la, German der/die/das, Italian il/la, Portuguese o/a, …)
+- noun → dictionary citation headword; include definite article when the language uses one
+  (Spanish el/la/los/las, French le/la/les, German der/die/das, Italian il/la, Portuguese o/a, …)
+  Default is SINGULAR. Use a PLURAL citation ONLY when that is the real dictionary headword
+  for that sense (Spanish "los cascos" = headphones, vs "el casco" = helmet).
+  NEVER echo the user's number: query "książki" still → lemma "el libro", not a plural.
 - adjective → base citation form (no article)
 - phrase / construction → the FULL multiword headword (pagar a plazos, tener que,
   look up, be going to). NEVER reduce to the base verb.
 - other POS → standard dictionary headword for that language
 
 gloss (always in L1={native_name}):
-- noun → singular dictionary form (the form on a flashcard back)
+- noun → singular dictionary form (the form on a flashcard back), unless the L2 lemma
+  itself is a plural-only citation (then the L1 gloss may be plural: "słuchawki")
 - verb → infinitive / canonical citation form for {native_name}
 - adjective → base citation form
 - fix spelling and diacritics, but NEVER copy the user's inflection, number, case,
   or conjugation from the query string
+- If TWO OR MORE candidates share the same short L1 gloss, disambiguate EACH of them
+  with a 2–4 word parenthetical in gloss, e.g. "słuchawki (nauszne)" vs
+  "słuchawki (ochronne)", "lot (samolot)" / "lot (ptaka)". Do not leave identical bare glosses.
 
 CRITICAL: interpretation ≠ output. Examples (query → gloss / lemma):
 - "libry" (PL plural OR typo OR anything) → gloss "libra", lemma "la libra" — NOT "libry",
   NOT "litry"/"liry" invented to rhyme with the query
 - "books" → gloss "book"; "książki" → gloss "książka"; "hablando" → lemma "hablar"
+- "cascos" / "słuchawki" as headphones → lemma "los cascos", gloss "słuchawki (nauszne)"
+  — NOT "el casco" (helmet / "kask")
 - "Häuser" → lemma "das Haus"; "книги" → singular dictionary forms in both languages
 - "食べた" → lemma dictionary citation (e.g. 食べる); gloss L1 infinitive/base form
 
@@ -82,7 +91,9 @@ LOOKUP_SYSTEM_V1 = (
     "INTERPRET the query generously: typos, missing diacritics, plurals, conjugations, "
     "any alphabet — high recall, union all plausible readings. "
     "OUTPUT always dictionary citation forms: lemma = L2 headword, gloss = L1 headword "
-    "(singular noun / infinitive verb / base adjective) — never echo the query shape. "
+    "(usually singular noun / infinitive verb / base adjective) — never echo the query shape. "
+    "Plural L2 citation only when dictionaries list that sense in the plural (e.g. los cascos). "
+    "If several candidates share a gloss, add a short parenthetical. "
     "If the string fits L1 and L2, return BOTH. JSON only."
 )
 
@@ -293,6 +304,7 @@ Zwróć WYŁĄCZNIE JSON:
   "language": "{learning}",
   "pos": "noun|verb|adj|...",
   "ipa": "transkrypcja IPA",
+  "headword_note": "(e>ie) albo null",
   "ui_hints": {{
     "script": "Latn|Cyrl|Arab|Hans|Jpan|Kore|Deva|Thai|Hebr|Grek",
     "rtl": false,
@@ -337,6 +349,11 @@ Reguły ogólne:
 - Język L2 = {learning}, tłumaczeń L1 = {native}.
 - ui_hints: ustaw show_conjugation zgodnie z typologią L2 (np. chiński/tajski → false).
 - NIE generuj: similar_words, conjugation.
+- ipa: transkrypcja headworda w L2 (zostaje w danych karty; UI jej nie pokazuje).
+- headword_note: TYLKO gdy czasownik ma rzeczywistą zmianę tematu w L2.
+  Format DOKŁADNIE `(e>ie)` / `(o>ue)` / `(e>i)` / `(u>ue)` — litera źródłowa, znak `>`,
+  litera(y) w odmianie, w nawiasie, bez spacji. Regularne czasowniki, rzeczowniki,
+  przymiotniki, frazy: null. NIE używaj dwukropka (o:ue). NIE zgaduj i NIE opisuj słownie.
 
 Znaczenia (meanings) — najważniejsza część karty:
 - KOLEJNOŚĆ według częstości użycia. Pierwsze znaczenie to takie, które słownik

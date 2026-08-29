@@ -2105,7 +2105,7 @@ private fun ListWordTile(
             actionsMenuExpanded = false
             return@LaunchedEffect
         }
-        // Po animacji rozwinięcia — przewiń tak, by cały kafelek był widoczny.
+        // Po animacji rozwinięcia — zostaw nagłówek (hasło) w widoku.
         delay(320)
         bringIntoViewRequester.bringIntoView()
     }
@@ -2150,7 +2150,6 @@ private fun ListWordTile(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .bringIntoViewRequester(bringIntoViewRequester)
             .testTag(TestTags.LIST_WORD_TILE)
             .then(
                 if (selected) Modifier.border(2.dp, scheme.primary, RoundedCornerShape(20.dp))
@@ -2165,6 +2164,7 @@ private fun ListWordTile(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = tileHeaderHeight, max = tileHeaderHeight)
+                    .bringIntoViewRequester(bringIntoViewRequester)
                     .combinedClickable(
                         enabled = !card.isOptimisticCreatingTile(),
                         onClick = { if (needsReview) onReview() else onToggle() },

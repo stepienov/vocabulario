@@ -1,5 +1,6 @@
 package com.vocabulario.app.ui.learning
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -73,7 +74,9 @@ fun LearningScreen(
             state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
 
             state.selectedCard?.let { card ->
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                val cardScroll = remember(card.id) { ScrollState(0) }
+                LaunchedEffect(card.id) { cardScroll.scrollTo(0) }
+                Column(modifier = Modifier.verticalScroll(cardScroll)) {
                     CardDetailContent(
                         card.content,
                         card.lemma_l2,
@@ -87,6 +90,7 @@ fun LearningScreen(
                         onAddRelated = viewModel::openAddRelated,
                         learningLemmas = state.learningLemmas,
                         relatedMembership = state.relatedMembership,
+                        scrollable = false,
                     )
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = viewModel::clearSelection) {

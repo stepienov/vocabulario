@@ -1211,8 +1211,13 @@ class LearningRepository @Inject constructor(
     suspend fun checkAnswer(cardId: String, answer: String, direction: String): CheckAnswerResponse {
         val card = offlineStore.cardById(cardId) ?: error("offline_card")
         val content = offlineStore.parseContent(card.contentJson)
-        val (ok, expected, typo) = LocalAnswerCheck.check(answer, content, direction)
-        return CheckAnswerResponse(correct = ok, expected = expected, accepted_as_typo = typo)
+        val result = LocalAnswerCheck.check(answer, content, direction)
+        return CheckAnswerResponse(
+            correct = result.correct,
+            expected = result.expected,
+            accepted_as_typo = result.acceptedAsTypo,
+            accepted_as_synonym = result.acceptedAsSynonym,
+        )
     }
 
     suspend fun getSettings(): UserSettingsResponse =

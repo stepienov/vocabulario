@@ -432,7 +432,11 @@ def ensure_noun_article(
     learning_lang: str,
     gender: str | None,
 ) -> str:
-    """Add definite article to bare singular noun when gender is known."""
+    """Add definite article to bare singular noun when gender is known.
+
+    Never overwrites an article already on the lemma (including plural citations
+    like Spanish los/las).
+    """
     lang = _resolve_lang(learning_lang)
     articles = _SINGULAR_DEFINITE.get(lang)
     if not articles or not gender:

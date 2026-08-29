@@ -80,6 +80,20 @@ def test_content_is_learnable_without_similar_or_inflection():
     assert not _entry_has_paid_content(SimpleNamespace(content=content))
 
 
+def test_assemble_normalizes_stem_change_note():
+    core = _core_payload("pensar", "verb")
+    core["headword_note"] = "e:ie"
+    card = assemble_core_card(_profile(), "pensar", "verb", core)
+    assert card["headword_note"] == "(e>ie)"
+
+
+def test_assemble_drops_regular_headword_note():
+    core = _core_payload()
+    core["headword_note"] = "regular"
+    card = assemble_core_card(_profile(), "hablar", "verb", core)
+    assert card["headword_note"] is None
+
+
 def test_content_complete_phrase_needs_inflection_not_similar():
     content = {
         "schema_version": "vocabulario.card.v1",

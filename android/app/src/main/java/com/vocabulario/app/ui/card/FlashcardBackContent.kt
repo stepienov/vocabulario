@@ -95,7 +95,7 @@ fun FlashcardBackContent(
 ) {
     val lemma = content["lemma"].asJsonString() ?: lemmaFallback
     val pos = content["pos"].asJsonString()
-    val ipa = content["ipa"].asJsonString()
+    val headwordNote = content["headword_note"].asJsonString()
     val pattern = content["pattern"].asJsonString()
     val entryKind = content["entry_kind"].asJsonString()
     val lang = content["language"].asJsonString() ?: "en"
@@ -141,9 +141,15 @@ fun FlashcardBackContent(
     }
 
     var usagesModal by remember { mutableStateOf<List<Pair<String, String>>?>(null) }
-    var synExpanded by remember(relatedWordsExpandedDefault) { mutableStateOf(relatedWordsExpandedDefault) }
-    var antExpanded by remember(relatedWordsExpandedDefault) { mutableStateOf(relatedWordsExpandedDefault) }
-    var familyExpanded by remember(relatedWordsExpandedDefault) { mutableStateOf(relatedWordsExpandedDefault) }
+    var synExpanded by remember(lemma, relatedWordsExpandedDefault) {
+        mutableStateOf(relatedWordsExpandedDefault)
+    }
+    var antExpanded by remember(lemma, relatedWordsExpandedDefault) {
+        mutableStateOf(relatedWordsExpandedDefault)
+    }
+    var familyExpanded by remember(lemma, relatedWordsExpandedDefault) {
+        mutableStateOf(relatedWordsExpandedDefault)
+    }
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -161,10 +167,10 @@ fun FlashcardBackContent(
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             )
-            if (!ipa.isNullOrBlank()) {
+            if (!headwordNote.isNullOrBlank()) {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "[$ipa]",
+                    headwordNote,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -369,6 +375,7 @@ fun FlashcardBackContent(
                 lang = lang,
                 profile = profile,
                 expandedDefault = conjugationExpandedDefault,
+                resetKey = lemma,
             )
         }
     }
