@@ -810,6 +810,8 @@
     <string name="enrichment_retry_failed">تعذرت إعادة محاولة التحضير.</string>
 
     <string name="practice_almost">تقريباً!</string>
+    <string name="practice_typed_valid_synonym">أدخلت مرادفاً صحيحاً</string>
+    <string name="practice_synonym_paren">(مرادف)</string>
 
 </resources>
 

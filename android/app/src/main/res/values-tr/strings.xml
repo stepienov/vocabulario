@@ -899,5 +899,7 @@
     <string name="enrichment_retry_failed">Hazırlık yeniden denenemedi.</string>
 
     <string name="practice_almost">Neredeyse!</string>
+    <string name="practice_typed_valid_synonym">Doğru bir eş anlamlı girdin</string>
+    <string name="practice_synonym_paren">(eşanlamlı)</string>
 
 </resources>

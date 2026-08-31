@@ -810,6 +810,8 @@
     <string name="enrichment_retry_failed">Не удалось повторить подготовку.</string>
 
     <string name="practice_almost">Почти!</string>
+    <string name="practice_typed_valid_synonym">Ты ввёл правильный синоним</string>
+    <string name="practice_synonym_paren">(синоним)</string>
 
 </resources>
 

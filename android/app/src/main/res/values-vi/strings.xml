@@ -897,5 +897,7 @@
     <string name="enrichment_retry_failed">Không thể thử chuẩn bị lại.</string>
 
     <string name="practice_almost">Gần đúng!</string>
+    <string name="practice_typed_valid_synonym">Bạn đã nhập một từ đồng nghĩa đúng</string>
+    <string name="practice_synonym_paren">(đồng nghĩa)</string>
 
 </resources>

@@ -1,4 +1,10 @@
-from app.services.answer_check import check_answer, max_allowed_typos, typo_tolerance_ok
+from app.services.answer_check import (
+    check_answer,
+    collect_acceptable_answers,
+    format_lemma_with_article,
+    max_allowed_typos,
+    typo_tolerance_ok,
+)
 
 
 def test_exact_match():
@@ -65,3 +71,63 @@ def test_exact_synonym_is_not_typo():
     assert expected is None
     assert typo is False
     assert synonym is True
+
+
+def test_omitted_noun_article_is_typo():
+    ok, expected, typo, synonym = check_answer("casa", ["la casa"], "tolerate")
+    assert ok is True
+    assert expected == "la casa"
+    assert typo is True
+    assert synonym is False
+
+
+def test_omitted_article_plus_missing_accent_is_typo():
+    ok, expected, typo, synonym = check_answer("conclusion", ["la conclusión"], "tolerate")
+    assert ok is True
+    assert expected == "la conclusión"
+    assert typo is True
+    assert synonym is False
+
+
+def test_extra_article_on_verb_is_error():
+    ok, _, typo, synonym = check_answer("el trabajar", ["trabajar"], "tolerate")
+    assert ok is False
+    assert typo is False
+    assert synonym is False
+
+
+def test_synonym_with_article_is_exact_synonym():
+    answers = collect_acceptable_answers(
+        {
+            "lemma": "la conclusión",
+            "synonyms_l2": [
+                {"lemma": "resultado", "article": "el", "gloss_l1": "wynik"},
+            ],
+        },
+        "l1_to_l2",
+    )
+    assert "resultado" in answers
+    assert "el resultado" in answers
+    ok, expected, typo, synonym = check_answer("el resultado", answers, "tolerate")
+    assert ok is True
+    assert expected is None
+    assert typo is False
+    assert synonym is True
+
+
+def test_synonym_typo_flags_both():
+    ok, expected, typo, synonym = check_answer(
+        "resultadp",
+        ["la conclusión", "resultado", "el resultado"],
+        "tolerate",
+    )
+    assert ok is True
+    assert expected == "resultado"
+    assert typo is True
+    assert synonym is True
+
+
+def test_format_lemma_with_article_elision():
+    assert format_lemma_with_article("homme", "l'") == "l'homme"
+    assert format_lemma_with_article("resultado", "el") == "el resultado"
+    assert format_lemma_with_article("el resultado", "el") == "el resultado"

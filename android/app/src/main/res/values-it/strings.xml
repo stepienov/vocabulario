@@ -892,5 +892,7 @@
     <string name="enrichment_retry_failed">Impossibile riprovare la preparazione.</string>
 
     <string name="practice_almost">Quasi!</string>
+    <string name="practice_typed_valid_synonym">Hai inserito un sinonimo corretto</string>
+    <string name="practice_synonym_paren">(sinonimo)</string>
 
 </resources>

@@ -1,9 +1,11 @@
 package com.vocabulario.app.data.local
 
+import com.vocabulario.app.data.asJsonArray
+import com.vocabulario.app.data.asJsonObject
+import com.vocabulario.app.data.asJsonString
+import com.vocabulario.app.data.formatLemmaWithArticle
+import com.vocabulario.app.data.lemmaKey
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonPrimitive
 import java.text.Normalizer
 import kotlin.math.ceil
 
@@ -12,6 +14,11 @@ data class AnswerCheckResult(
     val expected: String?,
     val acceptedAsTypo: Boolean,
     val acceptedAsSynonym: Boolean = false,
+)
+
+data class MatchedSynonym(
+    val displayLemma: String,
+    val glossL1: String?,
 )
 
 object LocalAnswerCheck {
@@ -34,12 +41,32 @@ object LocalAnswerCheck {
                 )
             }
         }
-        for (correct in normalizedCorrect) {
+        for ((index, correct) in normalizedCorrect.withIndex()) {
+            if (articleOnlyTypo(normalizedUser, correct)) {
+                return AnswerCheckResult(
+                    true,
+                    correct,
+                    acceptedAsTypo = true,
+                    acceptedAsSynonym = index > 0,
+                )
+            }
+        }
+        for ((index, correct) in normalizedCorrect.withIndex()) {
             if (stripDiacritics(normalizedUser) == stripDiacritics(correct)) {
-                return AnswerCheckResult(true, correct, acceptedAsTypo = true)
+                return AnswerCheckResult(
+                    true,
+                    correct,
+                    acceptedAsTypo = true,
+                    acceptedAsSynonym = index > 0,
+                )
             }
             if (fuzzyOk(normalizedUser, correct)) {
-                return AnswerCheckResult(true, correct, acceptedAsTypo = true)
+                return AnswerCheckResult(
+                    true,
+                    correct,
+                    acceptedAsTypo = true,
+                    acceptedAsSynonym = index > 0,
+                )
             }
         }
         return AnswerCheckResult(false, normalizedCorrect.firstOrNull(), acceptedAsTypo = false)
@@ -48,23 +75,71 @@ object LocalAnswerCheck {
     fun collectAnswers(content: JsonObject, direction: String): List<String> {
         val out = linkedSetOf<String>()
         if (direction == "l2_to_l1") {
-            content["meanings"]?.jsonArray?.forEach { m ->
-                val obj = m as? JsonObject ?: return@forEach
-                obj["gloss_l1"]?.jsonPrimitive?.contentOrNull?.let { out += it }
-                obj["synonyms_l1"]?.jsonArray?.forEach { s ->
-                    s.jsonPrimitive.contentOrNull?.let { out += it }
+            content["meanings"].asJsonArray()?.forEach { m ->
+                val obj = m.asJsonObject() ?: return@forEach
+                obj["gloss_l1"].asJsonString()?.let { out += it }
+                obj["synonyms_l1"].asJsonArray()?.forEach { s ->
+                    s.asJsonString()?.let { out += it }
                 }
             }
         } else {
-            content["lemma"]?.jsonPrimitive?.contentOrNull?.let { out += it }
-            content["synonyms_l2"]?.jsonArray?.forEach { item ->
-                when (item) {
-                    is JsonObject -> item["lemma"]?.jsonPrimitive?.contentOrNull?.let { out += it }
-                    else -> item.jsonPrimitive.contentOrNull?.let { out += it }
+            content["lemma"].asJsonString()?.let { out += it }
+            content["synonyms_l2"].asJsonArray()?.forEach { item ->
+                val obj = item.asJsonObject()
+                if (obj != null) {
+                    val lemma = obj["lemma"].asJsonString() ?: return@forEach
+                    out += lemma
+                    val withArt = formatLemmaWithArticle(lemma, obj["article"].asJsonString())
+                    if (withArt != lemma) out += withArt
+                } else {
+                    item.asJsonString()?.let { out += it }
                 }
             }
         }
         return out.toList()
+    }
+
+    fun resolveSynonym(
+        content: JsonObject,
+        direction: String,
+        query: String,
+    ): MatchedSynonym? {
+        val q = normalize(query)
+        if (q.isBlank()) return null
+        val qStem = lemmaKey(q)
+        if (direction == "l2_to_l1") {
+            content["meanings"].asJsonArray()?.forEach { m ->
+                val obj = m.asJsonObject() ?: return@forEach
+                val gloss = obj["gloss_l1"].asJsonString()
+                obj["synonyms_l1"].asJsonArray()?.forEach { s ->
+                    val syn = s.asJsonString() ?: return@forEach
+                    if (normalize(syn) == q) {
+                        return MatchedSynonym(displayLemma = syn, glossL1 = gloss)
+                    }
+                }
+            }
+            return null
+        }
+        content["synonyms_l2"].asJsonArray()?.forEach { item ->
+            val obj = item.asJsonObject() ?: return@forEach
+            val lemma = obj["lemma"].asJsonString() ?: return@forEach
+            val article = obj["article"].asJsonString()
+            val gloss = obj["gloss_l1"].asJsonString() ?: obj["gloss"].asJsonString()
+            val display = formatLemmaWithArticle(lemma, article)
+            val candidates = listOf(lemma, display).map { normalize(it) }
+            if (q in candidates || (qStem.isNotEmpty() && lemmaKey(lemma) == qStem)) {
+                return MatchedSynonym(displayLemma = display, glossL1 = gloss)
+            }
+        }
+        return null
+    }
+
+    private fun articleOnlyTypo(user: String, correct: String): Boolean {
+        val corrStem = lemmaKey(correct)
+        if (corrStem.isEmpty() || corrStem == correct) return false
+        val userStem = lemmaKey(user).ifEmpty { user }
+        if (userStem.isEmpty()) return false
+        return stripDiacritics(userStem) == stripDiacritics(corrStem)
     }
 
     private fun normalize(text: String): String =

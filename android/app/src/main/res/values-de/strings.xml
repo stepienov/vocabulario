@@ -810,6 +810,8 @@
     <string name="enrichment_retry_failed">Vorbereitung konnte nicht wiederholt werden.</string>
 
     <string name="practice_almost">Fast!</string>
+    <string name="practice_typed_valid_synonym">Du hast ein korrektes Synonym eingegeben</string>
+    <string name="practice_synonym_paren">(Synonym)</string>
 
 </resources>
 

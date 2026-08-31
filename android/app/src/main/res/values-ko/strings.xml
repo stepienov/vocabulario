@@ -906,5 +906,7 @@
     <string name="enrichment_retry_failed">준비를 다시 시도할 수 없습니다.</string>
 
     <string name="practice_almost">거의 맞아요!</string>
+    <string name="practice_typed_valid_synonym">올바른 동의어를 입력했어요</string>
+    <string name="practice_synonym_paren">(동의어)</string>
 
 </resources>

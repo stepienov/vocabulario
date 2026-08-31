@@ -810,6 +810,8 @@
     <string name="enrichment_retry_failed">Não foi possível repetir a preparação.</string>
 
     <string name="practice_almost">Quase!</string>
+    <string name="practice_typed_valid_synonym">Introduziste um sinónimo correto</string>
+    <string name="practice_synonym_paren">(sinónimo)</string>
 
 </resources>
 

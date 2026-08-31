@@ -696,6 +696,8 @@
 
     <string name="practice_well_done">Dobrze!</string>
     <string name="practice_almost">Prawie dobrze!</string>
+    <string name="practice_typed_valid_synonym">Wpisałeś prawidłowy synonim</string>
+    <string name="practice_synonym_paren">(synonim)</string>
 
     <string name="cd_search">Szukaj</string>
 

@@ -23,6 +23,8 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -53,6 +55,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -325,10 +328,24 @@ fun PracticeScreen(
                                                 placeholder = stringResource(R.string.practice_your_answer),
                                                 modifier = Modifier.testTag(TestTags.PRACTICE_ANSWER_INPUT),
                                                 singleLine = true,
+                                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                                keyboardActions = KeyboardActions(
+                                                    onDone = {
+                                                        if (state.typedAnswer.isNotBlank()) {
+                                                            keyboard?.hide()
+                                                            focusManager.clearFocus()
+                                                            viewModel.submitTyped()
+                                                        }
+                                                    },
+                                                ),
                                             )
                                             Spacer(Modifier.height(16.dp))
                                             Button(
-                                                onClick = viewModel::submitTyped,
+                                                onClick = {
+                                                    keyboard?.hide()
+                                                    focusManager.clearFocus()
+                                                    viewModel.submitTyped()
+                                                },
                                                 modifier = Modifier.fillMaxWidth().height(52.dp).testTag(TestTags.PRACTICE_CHECK),
                                                 enabled = state.typedAnswer.isNotBlank(),
                                                 shape = AppButtonShape,
@@ -370,10 +387,11 @@ fun PracticeScreen(
                                         verticalArrangement = Arrangement.spacedBy(12.dp),
                                     ) {
                                         when {
-                                            state.synonymWarning -> {
+                                            state.synonymWarning && !state.typoWarning -> {
                                                 AnswerSynonymBanner(
                                                     typedAnswer = state.typedAnswer,
-                                                    mainGloss = state.expectedAnswer ?: "?",
+                                                    synonymGloss = state.expectedAnswer ?: "?",
+                                                    caption = stringResource(R.string.practice_typed_valid_synonym),
                                                 )
                                             }
                                             state.typoWarning ||
@@ -381,6 +399,11 @@ fun PracticeScreen(
                                                 AnswerWarningBanner(
                                                     typedAnswer = state.typedAnswer,
                                                     expectedAnswer = state.expectedAnswer ?: "?",
+                                                    synonymLabel = if (state.synonymWarning) {
+                                                        stringResource(R.string.practice_synonym_paren)
+                                                    } else {
+                                                        null
+                                                    },
                                                 )
                                             }
                                         }
@@ -566,6 +589,7 @@ private val AnswerWarnCorrect = Color(0xFF155200)
 private fun AnswerWarningBanner(
     typedAnswer: String,
     expectedAnswer: String,
+    synonymLabel: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(14.dp)
@@ -598,6 +622,8 @@ private fun AnswerWarningBanner(
             text = expectedAnswer,
             textColor = AnswerWarnCorrect,
             fontWeight = FontWeight.Bold,
+            suffix = synonymLabel,
+            suffixColor = Color.Black,
         )
     }
 }
@@ -605,11 +631,12 @@ private fun AnswerWarningBanner(
 @Composable
 private fun AnswerSynonymBanner(
     typedAnswer: String,
-    mainGloss: String,
+    synonymGloss: String,
+    caption: String,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(14.dp)
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
@@ -621,11 +648,18 @@ private fun AnswerSynonymBanner(
                 ),
             )
             .testTag(TestTags.PRACTICE_SPELLING_WARN)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center,
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "$typedAnswer – $mainGloss",
+            text = caption,
+            color = Color.Black,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = "$typedAnswer – $synonymGloss",
             color = AnswerWarnCorrect,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
@@ -644,6 +678,8 @@ private fun AnswerWarningRow(
     text: String,
     textColor: Color,
     fontWeight: FontWeight,
+    suffix: String? = null,
+    suffixColor: Color = Color.Black,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -676,6 +712,16 @@ private fun AnswerWarningRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
             )
+            if (!suffix.isNullOrBlank()) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = suffix,
+                    color = suffixColor,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                )
+            }
         }
     }
 }

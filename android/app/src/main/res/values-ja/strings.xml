@@ -906,5 +906,7 @@
     <string name="enrichment_retry_failed">準備を再試行できませんでした。</string>
 
     <string name="practice_almost">おしい！</string>
+    <string name="practice_typed_valid_synonym">正しい類義語を入力しました</string>
+    <string name="practice_synonym_paren">(類義語)</string>
 
 </resources>

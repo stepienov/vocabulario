@@ -809,6 +809,8 @@
     <string name="enrichment_retry_failed">Impossible de relancer la préparation.</string>
 
     <string name="practice_almost">Presque !</string>
+    <string name="practice_typed_valid_synonym">Tu as saisi un synonyme correct</string>
+    <string name="practice_synonym_paren">(synonyme)</string>
 
 </resources>
 

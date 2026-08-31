@@ -810,6 +810,8 @@
     <string name="enrichment_retry_failed">तैयारी दोबारा नहीं हो सकी।</string>
 
     <string name="practice_almost">लगभग सही!</string>
+    <string name="practice_typed_valid_synonym">आपने सही पर्याय लिखा</string>
+    <string name="practice_synonym_paren">(पर्याय)</string>
 
 </resources>
 

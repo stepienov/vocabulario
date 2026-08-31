@@ -824,6 +824,8 @@
     <string name="enrichment_retry_failed">No se pudo reintentar la preparación.</string>
 
     <string name="practice_almost">¡Casi!</string>
+    <string name="practice_typed_valid_synonym">Has escrito un sinónimo correcto</string>
+    <string name="practice_synonym_paren">(sinónimo)</string>
 
 </resources>
 

@@ -13,6 +13,7 @@ import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.RelatedMembershipIndex
 import com.vocabulario.app.data.containsLemma
 import com.vocabulario.app.data.lemmaKeys
+import com.vocabulario.app.data.local.LocalAnswerCheck
 import com.vocabulario.app.data.normalizeTenseKeys
 import com.vocabulario.app.i18n.UiStrings
 import com.vocabulario.app.ui.card.RelatedWord
@@ -348,11 +349,21 @@ class PracticeViewModel @Inject constructor(
             }.onSuccess { result ->
                 when {
                     result.correct && result.accepted_as_typo -> {
+                        val query = result.expected ?: _state.value.typedAnswer
+                        val syn = if (result.accepted_as_synonym) {
+                            LocalAnswerCheck.resolveSynonym(
+                                item.content,
+                                currentDirection(),
+                                query,
+                            )
+                        } else {
+                            null
+                        }
                         _state.value = _state.value.copy(
                             lastCorrect = true,
                             typoWarning = true,
-                            synonymWarning = false,
-                            expectedAnswer = result.expected,
+                            synonymWarning = result.accepted_as_synonym,
+                            expectedAnswer = syn?.displayLemma ?: result.expected,
                             showAlmostToast = true,
                             showCorrectToast = false,
                             showWrongToast = false,
@@ -360,9 +371,13 @@ class PracticeViewModel @Inject constructor(
                         )
                     }
                     result.correct && result.accepted_as_synonym -> {
-                        val gloss = item.gloss_primary?.trim().orEmpty().ifBlank {
-                            result.expected
-                        }
+                        val syn = LocalAnswerCheck.resolveSynonym(
+                            item.content,
+                            currentDirection(),
+                            _state.value.typedAnswer,
+                        )
+                        val gloss = syn?.glossL1?.trim()?.takeIf { it.isNotEmpty() }
+                            ?: item.gloss_primary?.trim().orEmpty().ifBlank { result.expected }
                         _state.value = _state.value.copy(
                             lastCorrect = true,
                             typoWarning = false,
