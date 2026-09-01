@@ -129,7 +129,7 @@ async def record_llm_usage(
 ) -> UUID | None:
     try:
         from app.db.session import async_session_factory
-        from app.models import LlmCallPayload, LlmUsage
+        from app.models import LlmUsage
 
         ctx = _usage_ctx.get()
         usage = usage or TokenUsage()
@@ -167,21 +167,39 @@ async def record_llm_usage(
         store = bool(settings.llm_store_payloads) and (
             request_json is not None or response_json is not None
         )
+        # Commit usage before payload. A combined flush can insert the child
+        # first, trip llm_call_payloads_llm_usage_id_fkey, and drop the metric.
         async with async_session_factory() as db:
             db.add(row)
-            if store:
+            await db.commit()
+    except Exception:
+        logger.exception("llm_usage write failed purpose=%s model=%s", purpose, model)
+        return None
+
+    if store:
+        try:
+            from app.db.session import async_session_factory
+            from app.models import LlmCallPayload
+
+            async with async_session_factory() as db:
                 db.add(
                     LlmCallPayload(
                         llm_usage_id=row_id,
                         request_json=request_json,
-                        response_json=response_json if isinstance(response_json, (dict, list)) else None,
+                        response_json=response_json
+                        if isinstance(response_json, (dict, list))
+                        else None,
                     )
                 )
-            await db.commit()
-        return row_id
-    except Exception:
-        logger.exception("llm_usage write failed purpose=%s model=%s", purpose, model)
-        return None
+                await db.commit()
+        except Exception:
+            logger.exception(
+                "llm payload write failed id=%s purpose=%s model=%s",
+                row_id,
+                purpose,
+                model,
+            )
+    return row_id
 
 
 async def purge_expired_llm_payloads(*, force: bool = False) -> dict[str, int]:

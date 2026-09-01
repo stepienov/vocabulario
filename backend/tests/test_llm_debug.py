@@ -138,10 +138,42 @@ def test_record_llm_usage_stores_payload_row():
                 response_json={"word_family_l2": [{"lemma": "site", "pos": "verb"}]},
             )
             assert uid is not None
-            kinds = {type(obj) for obj in added}
-            assert LlmUsage in kinds
-            assert LlmCallPayload in kinds
+            kinds = [type(obj) for obj in added]
+            assert kinds == [LlmUsage, LlmCallPayload]
             payload = next(obj for obj in added if isinstance(obj, LlmCallPayload))
             assert payload.response_json["word_family_l2"][0]["lemma"] == "site"
+
+    asyncio.run(_run())
+
+
+def test_record_llm_usage_keeps_metrics_if_payload_fails():
+    added: list[object] = []
+
+    class FakeSession:
+        def add(self, obj: object) -> None:
+            added.append(obj)
+
+        async def commit(self) -> None:
+            if any(isinstance(obj, LlmCallPayload) for obj in added):
+                raise RuntimeError("payload fk")
+
+    session = FakeSession()
+
+    @asynccontextmanager
+    async def fake_factory():
+        yield session
+
+    async def _run() -> None:
+        with patch("app.db.session.async_session_factory", fake_factory):
+            uid = await record_llm_usage(
+                provider="mock",
+                model="gpt-5.6-terra",
+                purpose="enrich_core",
+                usage=TokenUsage(prompt_tokens=10, completion_tokens=5),
+                request_json={"purpose": "enrich_core"},
+                response_json={"ok": True},
+            )
+            assert uid is not None
+            assert any(isinstance(obj, LlmUsage) for obj in added)
 
     asyncio.run(_run())
