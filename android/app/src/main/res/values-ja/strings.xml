@@ -180,7 +180,7 @@
 
     <string name="settings_periphrases">言い回し</string>
 
-    <string name="settings_syn_ant">同義語と反義語</string>
+    <string name="settings_syn_ant">この語のまわり</string>
     <string name="settings_word_family">語族</string>
 
     <string name="settings_conjugation">活用</string>
@@ -391,7 +391,7 @@
 
     <string name="section_synonyms">同義語</string>
 
-    <string name="section_syn_ant">同義語と反義語</string>
+    <string name="section_syn_ant">この語のまわり</string>
 
     <string name="section_antonyms">反意語</string>
 
@@ -706,6 +706,7 @@
     <string name="practice_well_done">素晴らしい！</string>
 
     <string name="cd_search">検索</string>
+    <string name="cd_clear_search">検索をクリア</string>
 
     <string name="correction_fix_card">修正を報告</string>
 
@@ -728,6 +729,9 @@
     <string name="correction_section_pronunciation">発音</string>
 
     <string name="correction_section_other">その他</string>
+    <string name="correction_section_family">語族</string>
+    <string name="correction_section_synonyms">同義語</string>
+    <string name="correction_section_antonyms">反意語</string>
 
     <string name="correction_note_label">ノート</string>
 
@@ -746,6 +750,8 @@
     <string name="correction_result_rejected_body">カード「%1$s」。%2$s</string>
 
     <string name="correction_edit_self">編集</string>
+    <string name="correction_escalate">管理に報告</string>
+    <string name="correction_escalated">管理に報告済み</string>
     <string name="correction_history_button">変更履歴</string>
 
     <string name="correction_self_edit_title">カードを編集</string>

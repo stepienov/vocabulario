@@ -1,6 +1,7 @@
 package com.vocabulario.app.ui.card
 
 import android.speech.tts.TextToSpeech
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -92,6 +93,8 @@ fun FlashcardBackContent(
     onAddRelated: ((RelatedWord) -> Unit)? = null,
     learningLemmas: Set<String> = emptySet(),
     relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
+    /** False gdy hasło jest przyklejone poza tym kompozytem. */
+    showHeadword: Boolean = true,
 ) {
     val lemma = content["lemma"].asJsonString() ?: lemmaFallback
     val pos = content["pos"].asJsonString()
@@ -161,12 +164,14 @@ fun FlashcardBackContent(
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                lemma,
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-            )
+            if (showHeadword) {
+                Text(
+                    lemma,
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+            }
             if (!headwordNote.isNullOrBlank()) {
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -519,5 +524,29 @@ private fun parseFlashRelatedWords(raw: JsonArray?): List<RelatedWord> {
             }
             else -> null
         }
+    }
+}
+
+@Composable
+fun StickyLemmaBar(
+    lemma: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+            .then(modifier)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            lemma,
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

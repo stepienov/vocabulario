@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,6 +29,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
@@ -62,17 +63,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vocabulario.app.R
+import com.vocabulario.app.data.asJsonString
 import com.vocabulario.app.ui.card.CardActivitySpinner
 import com.vocabulario.app.ui.card.CardCorrectionReportSheet
 import com.vocabulario.app.ui.card.CardCorrectionResultDialog
 import com.vocabulario.app.ui.card.CardHistorySheet
-import com.vocabulario.app.ui.card.CardSelfEditSheet
-import com.vocabulario.app.ui.card.CardSelfEditWarningDialog
 import com.vocabulario.app.ui.card.CorrectionActivityColor
 import com.vocabulario.app.ui.card.cardActivityStatusLabel
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.data.langDisplayName
 import com.vocabulario.app.ui.card.FlashcardBackContent
+import com.vocabulario.app.ui.card.StickyLemmaBar
 import com.vocabulario.app.ui.components.AddToListSheet
 import com.vocabulario.app.ui.components.AppAlertDialog
 import com.vocabulario.app.ui.components.AppButtonShape
@@ -374,11 +375,43 @@ fun PracticeScreen(
                             PracticePhase.SHOW_CARD -> {
                                 val cardScroll = remember(item.card_id) { ScrollState(0) }
                                 LaunchedEffect(item.card_id) { cardScroll.scrollTo(0) }
+                                val stickyLemma = item.content["lemma"].asJsonString() ?: item.lemma_l2
                                 Column(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxWidth(),
                                 ) {
+                                    Box(modifier = Modifier.fillMaxWidth()) {
+                                        StickyLemmaBar(
+                                            lemma = stickyLemma,
+                                            modifier = Modifier.padding(horizontal = 48.dp),
+                                        )
+                                        Row(
+                                            modifier = Modifier.align(Alignment.TopEnd),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            IconButton(
+                                                onClick = viewModel::openCorrection,
+                                                modifier = Modifier.testTag(TestTags.BTN_PRACTICE_REPORT),
+                                            ) {
+                                                Icon(
+                                                    Icons.Outlined.Edit,
+                                                    contentDescription = stringResource(R.string.correction_fix_card),
+                                                )
+                                            }
+                                            if (item.has_content_changes) {
+                                                IconButton(
+                                                    onClick = viewModel::openCardHistory,
+                                                    modifier = Modifier.testTag(TestTags.BTN_CARD_HISTORY),
+                                                ) {
+                                                    Icon(
+                                                        Icons.Outlined.History,
+                                                        contentDescription = stringResource(R.string.cd_card_history),
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                     Column(
                                         modifier = Modifier
                                             .weight(1f)
@@ -425,6 +458,7 @@ fun PracticeScreen(
                                             onAddRelated = viewModel::openAddRelated,
                                             learningLemmas = state.learningLemmas,
                                             relatedMembership = state.relatedMembership,
+                                            showHeadword = false,
                                         )
                                         Spacer(Modifier.height(8.dp))
                                     }
@@ -449,8 +483,7 @@ fun PracticeScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .background(MaterialTheme.colorScheme.background)
-                                            .navigationBarsPadding()
-                                            .padding(top = 14.dp, bottom = 8.dp),
+                                            .padding(top = 14.dp),
                                     ) {
                                         GradeRow(
                                             onAgain = { viewModel.grade("again") },
@@ -518,33 +551,19 @@ fun PracticeScreen(
             quotaRemaining = state.correctionQuotaRemaining,
             onDismiss = viewModel::dismissCorrectionReport,
             onSubmit = viewModel::submitCorrection,
-            onSelfEdit = viewModel::openSelfEditFromReport,
         )
         CardCorrectionResultDialog(
             correction = state.correctionResults.active?.correction,
             cardLemma = state.correctionResults.active?.cardLemma ?: "—",
             onDismiss = viewModel::dismissCorrectionResult,
-            onEditSelf = viewModel::openSelfEditFromResult,
-        )
-        CardSelfEditSheet(
-            card = if (state.selfEditWarningOpen) null else state.selfEditCard,
-            onDismiss = viewModel::dismissSelfEdit,
-            onSave = viewModel::saveSelfEdit,
-        )
-        CardSelfEditWarningDialog(
-            visible = state.selfEditWarningOpen,
-            lemma = state.selfEditCard?.lemma_l2 ?: "—",
-            issues = state.selfEditValidationIssues,
-            onConfirm = viewModel::confirmSelfEditWarning,
-            onRevert = viewModel::revertSelfEditWarning,
+            onEscalate = viewModel::escalateRejectedCorrection,
+            escalating = state.correctionEscalating,
         )
         CardHistorySheet(
             visible = state.historyOpen,
             loading = state.historyLoading,
-            restoring = state.historyRestoring,
             events = state.historyEvents,
             onDismiss = viewModel::dismissCardHistory,
-            onRestore = viewModel::restoreFromHistory,
         )
     }
 }

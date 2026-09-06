@@ -446,6 +446,25 @@ _STATEMENTS = (
     "REFERENCES lookup_events(id) ON DELETE SET NULL",
     "CREATE INDEX IF NOT EXISTS ix_learning_cards_lookup_event_id "
     "ON learning_cards (lookup_event_id)",
+    """
+    CREATE TABLE IF NOT EXISTS admin_escalations (
+        id UUID PRIMARY KEY,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        card_id UUID NOT NULL REFERENCES learning_cards(id) ON DELETE CASCADE,
+        correction_id UUID NOT NULL UNIQUE REFERENCES card_corrections(id) ON DELETE CASCADE,
+        user_note VARCHAR(2000),
+        sections JSONB NOT NULL DEFAULT '[]'::jsonb,
+        reject_reason VARCHAR(2000),
+        card_snapshot JSONB,
+        status VARCHAR(32) NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        resolved_at TIMESTAMPTZ
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_admin_escalations_status "
+    "ON admin_escalations (status, created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS ix_admin_escalations_card_id "
+    "ON admin_escalations (card_id)",
 )
 
 

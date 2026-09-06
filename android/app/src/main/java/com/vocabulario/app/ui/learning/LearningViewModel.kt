@@ -11,6 +11,7 @@ import com.vocabulario.app.data.api.isWordAlreadyOnList
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.RelatedMembershipIndex
 import com.vocabulario.app.data.containsLemma
+import com.vocabulario.app.data.formatLemmaWithArticle
 import com.vocabulario.app.data.lemmaKeys
 import com.vocabulario.app.data.normalizeTenseKeys
 import com.vocabulario.app.i18n.UiStrings
@@ -103,7 +104,7 @@ class LearningViewModel @Inject constructor(
             return
         }
         _state.value = _state.value.copy(
-            addTarget = word,
+            addTarget = word.copy(sourceCardId = _state.value.selectedCard?.id),
             pickListOpen = false,
             showCreateListPrompt = false,
             createListName = "",
@@ -159,7 +160,15 @@ class LearningViewModel @Inject constructor(
         dismissAddSheet()
         markLemmaAdded(word.lemma)
         viewModelScope.launch {
-            runCatching { repository.createCard(word.lemma, word.pos, word.glossL1, null) }
+            runCatching {
+                repository.createCard(
+                    formatLemmaWithArticle(word.lemma, word.article),
+                    word.pos,
+                    word.glossL1,
+                    null,
+                    sourceCardId = word.sourceCardId,
+                )
+            }
                 .onSuccess { created ->
                     markLemmaAdded(created.lemma_l2.ifBlank { word.lemma })
                     _state.value = _state.value.copy(
@@ -191,7 +200,14 @@ class LearningViewModel @Inject constructor(
         dismissAddSheet()
         viewModelScope.launch {
             runCatching {
-                repository.addWordToList(listId, word.lemma, word.pos, word.glossL1, null)
+                repository.addWordToList(
+                    listId,
+                    formatLemmaWithArticle(word.lemma, word.article),
+                    word.pos,
+                    word.glossL1,
+                    null,
+                    sourceCardId = word.sourceCardId,
+                )
             }.onSuccess {
                 _state.value = _state.value.copy(
                     message = strings.get(R.string.msg_added, word.lemma),
@@ -217,7 +233,14 @@ class LearningViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 val list = repository.createWordList(name)
-                repository.addWordToList(list.id, word.lemma, word.pos, word.glossL1, null)
+                repository.addWordToList(
+                    list.id,
+                    formatLemmaWithArticle(word.lemma, word.article),
+                    word.pos,
+                    word.glossL1,
+                    null,
+                    sourceCardId = word.sourceCardId,
+                )
             }.onSuccess {
                 _state.value = _state.value.copy(
                     message = strings.get(R.string.msg_added, word.lemma),

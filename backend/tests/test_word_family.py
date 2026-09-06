@@ -23,6 +23,7 @@ from app.services.word_family_quality import (
     is_negative_prefix_pair,
     is_same_member,
     is_verb_inflection_of,
+    member_key,
 )
 
 
@@ -378,4 +379,141 @@ def test_lift_article_from_lexical_lemma_when_member_is_bare():
     )
     assert lifted["article"] == "el"
     assert lifted["lemma"] == "apunte"
+
+
+def test_citation_articles_from_synonym():
+    from app.services.word_families import citation_articles_from_content
+
+    found = citation_articles_from_content(
+        {
+            "lemma": "el progreso",
+            "pos": "noun",
+            "meanings": [{"gloss_l1": "postęp"}],
+            "synonyms_l2": [
+                {"lemma": "avance", "pos": "noun", "article": "el", "gloss_l1": "postęp"},
+            ],
+        },
+        "es",
+    )
+    assert found[member_key("avance", "noun")] == "el"
+
+
+def test_project_family_hides_noun_missing_article():
+    from app.services.word_families import project_family_items
+
+    members = [
+        SimpleNamespace(
+            lemma="avanzar",
+            pos="verb",
+            article=None,
+            gloss_l1="x",
+            rank=0,
+            lang_pair="pl>es",
+        ),
+        SimpleNamespace(
+            lemma="avance",
+            pos="noun",
+            article=None,
+            gloss_l1="y",
+            rank=1,
+            lang_pair="pl>es",
+        ),
+        SimpleNamespace(
+            lemma="casa",
+            pos="noun",
+            article="la",
+            gloss_l1="z",
+            rank=2,
+            lang_pair="pl>es",
+        ),
+    ]
+    out = project_family_items(members, "avanzado", "adj")
+    lemmas = [item["lemma"] for item in out]
+    assert "avanzar" in lemmas
+    assert "casa" in lemmas
+    assert "avance" not in lemmas
+
+
+def test_project_family_excludes_self_keeps_siblings():
+    from app.services.word_families import project_family_items
+
+    members = [
+        SimpleNamespace(
+            lemma="intermitente",
+            pos="adj",
+            article=None,
+            gloss_l1="przerywany",
+            rank=0,
+            lang_pair="pl>es",
+            lemma_key="intermitente",
+        ),
+        SimpleNamespace(
+            lemma="el intermitente",
+            pos="noun",
+            article="el",
+            gloss_l1="kierunkowskaz",
+            rank=1,
+            lang_pair="pl>es",
+            lemma_key="intermitente",
+        ),
+        SimpleNamespace(
+            lemma="la intermitencia",
+            pos="noun",
+            article="la",
+            gloss_l1="intermitencja",
+            rank=2,
+            lang_pair="pl>es",
+            lemma_key="intermitencia",
+        ),
+        SimpleNamespace(
+            lemma="intermitentemente",
+            pos="adv",
+            article=None,
+            gloss_l1="przerywanie",
+            rank=3,
+            lang_pair="pl>es",
+            lemma_key="intermitentemente",
+        ),
+    ]
+    out = project_family_items(members, "la intermitencia", "noun")
+    keys = {member_key(item["lemma"], item["pos"]) for item in out}
+    assert member_key("intermitencia", "noun") not in keys
+    assert member_key("intermitente", "adj") in keys
+    assert member_key("el intermitente", "noun") in keys
+    assert member_key("intermitentemente", "adv") in keys
+
+
+def test_family_json_lists_related_head_for_seed():
+    from app.services.word_families import _candidate_items, _keys_of
+
+    keys = _keys_of(
+        _candidate_items(
+            {
+                "lemma": "el intermitente",
+                "pos": "noun",
+                "word_family_l2": [
+                    {"lemma": "intermitente", "pos": "adj", "gloss_l1": "przerywany"},
+                    {"lemma": "intermitencia", "pos": "noun", "article": "la", "gloss_l1": "x"},
+                    {"lemma": "intermitentemente", "pos": "adv", "gloss_l1": "y"},
+                ],
+            },
+            "es",
+        )
+    )
+    assert member_key("la intermitencia", "noun") in keys
+    assert member_key("intermitente", "adj") in keys
+
+
+def test_lemma_variants_include_article_forms():
+    from app.services.word_families import _lemma_variants_for_members
+
+    members = [
+        SimpleNamespace(lemma="la intermitencia", lemma_key="intermitencia"),
+        SimpleNamespace(lemma="intermitente", lemma_key="intermitente"),
+    ]
+    variants = _lemma_variants_for_members(members, "es")
+    assert "intermitencia" in variants
+    assert "la intermitencia" in variants
+    assert "el intermitente" in variants
+    assert "intermitente" in variants
 

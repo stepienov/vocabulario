@@ -496,11 +496,18 @@ def merge_candidates(
 
 
 def _payload_candidate(item: dict) -> dict:
-    return {
+    out = {
         "lemma": (item.get("lemma") or "").strip(),
         "pos": item.get("pos"),
         "gloss": (item.get("gloss") or "").strip(),
     }
+    reading = (item.get("reading") or "").strip()
+    if reading:
+        out["reading"] = reading
+    typed = (item.get("typed_as") or "").strip()
+    if typed:
+        out["typed_as"] = typed
+    return out
 
 
 def append_lookup_candidates(

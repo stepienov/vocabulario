@@ -9,7 +9,7 @@ from sqlalchemy.sql import cast
 from sqlalchemy.types import Date
 
 from app.models import (
-    AdminCardReview,
+    AdminEscalation,
     AppLog,
     ImportJob,
     ImportJobEvent,
@@ -811,14 +811,14 @@ async def import_detail(db: AsyncSession, job_id: UUID) -> dict | None:
 async def content_reviews(db: AsyncSession, page: int) -> tuple[list, int]:
     offset = max(0, (page - 1) * PAGE_SIZE)
     stmt = (
-        select(AdminCardReview, User.email, LearningCard.lemma_l2)
-        .join(User, User.id == AdminCardReview.user_id)
-        .join(LearningCard, LearningCard.id == AdminCardReview.card_id)
+        select(AdminEscalation, User.email, LearningCard.lemma_l2)
+        .join(User, User.id == AdminEscalation.user_id)
+        .join(LearningCard, LearningCard.id == AdminEscalation.card_id)
     )
     total = int((await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one() or 0)
     rows = (
         await db.execute(
-            stmt.order_by(AdminCardReview.created_at.desc()).offset(offset).limit(PAGE_SIZE)
+            stmt.order_by(AdminEscalation.created_at.desc()).offset(offset).limit(PAGE_SIZE)
         )
     ).all()
     return rows, total

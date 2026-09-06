@@ -157,7 +157,7 @@
 
     <string name="settings_periphrases">أنماط</string>
 
-    <string name="settings_syn_ant">مرادفات وأضداد</string>
+    <string name="settings_syn_ant">حول الكلمة</string>
     <string name="settings_word_family">عائلة الكلمات</string>
 
     <string name="settings_conjugation">التصريف</string>
@@ -359,7 +359,7 @@
 
     <string name="section_synonyms">المرادفات</string>
 
-    <string name="section_syn_ant">المرادفات والأضداد</string>
+    <string name="section_syn_ant">حول الكلمة</string>
 
     <string name="section_antonyms">الأضداد</string>
 
@@ -662,6 +662,7 @@
     <string name="periphrase_n">تعبير %1$d</string>
     <string name="practice_well_done">أحسنت!</string>
     <string name="cd_search">بحث</string>
+    <string name="cd_clear_search">مسح البحث</string>
     <string name="correction_fix_card">الإبلاغ عن تصحيح</string>
 <string name="correction_report_title">تحقق من البطاقة وأصلحها</string>
         <string name="correction_section_lemma">الجذر</string>
@@ -673,6 +674,9 @@
     <string name="correction_section_similar">كلمات مشابهة</string>
     <string name="correction_section_pronunciation">النطق</string>
     <string name="correction_section_other">أخرى</string>
+    <string name="correction_section_family">عائلة الكلمات</string>
+    <string name="correction_section_synonyms">مرادفات</string>
+    <string name="correction_section_antonyms">أضداد</string>
     <string name="correction_note_label">ملاحظة</string>
     <string name="correction_note_hint">صف الخطأ…</string>
     <string name="correction_validation">اختر قسماً واحداً على الأقل أو اكتب ملاحظة (3 أحرف كحد أدنى).</string>
@@ -682,6 +686,8 @@
     <string name="correction_result_rejected_title">لم يُقبل البلاغ</string>
     <string name="correction_result_rejected_body">البطاقة «%1$s». %2$s</string>
         <string name="correction_edit_self">تعديل</string>
+    <string name="correction_escalate">إبلاغ الإدارة</string>
+    <string name="correction_escalated">تم الإبلاغ للإدارة</string>
         <string name="correction_history_button">سجل التغييرات</string>
     <string name="correction_self_edit_title">تعديل البطاقة</string>
     <string name="correction_field_lemma">الجذر</string>

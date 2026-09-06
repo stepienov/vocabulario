@@ -194,6 +194,8 @@ class LookupCandidate(BaseModel):
     list_id: UUID | None = None
     list_name: str | None = None
     enrichment_status: str | None = None
+    reading: str | None = None
+    typed_as: str | None = None
 
 
 class LookupResponse(BaseModel):
@@ -407,6 +409,7 @@ class WordListAddWordRequest(BaseModel):
     entry_kind: str = "lemma"
     base_lemma: str | None = None
     pattern: str | None = None
+    source_card_id: UUID | None = None
 
 
 class WordMoveRequest(BaseModel):
@@ -452,6 +455,7 @@ class CardCreateRequest(BaseModel):
     entry_kind: str = "lemma"
     base_lemma: str | None = None
     pattern: str | None = None
+    source_card_id: UUID | None = None
 
 
 class CardContent(BaseModel):
@@ -530,29 +534,9 @@ class CardCorrectionResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class CardSelfEditRequest(BaseModel):
-    content: dict
-
-    @field_validator("content")
-    @classmethod
-    def _validate_content(cls, value: dict) -> dict:
-        if not isinstance(value, dict):
-            raise ValueError("content must be an object")
-        lemma = str(value.get("lemma") or "").strip()
-        if not lemma:
-            raise ValueError("content.lemma is required")
-        return value
-
-
-class SelfEditValidateIssue(BaseModel):
-    field: str
-    label: str
-    message: str
-
-
-class SelfEditValidateResponse(BaseModel):
-    ok: bool
-    issues: list[SelfEditValidateIssue] = []
+class CorrectionEscalateResponse(BaseModel):
+    id: UUID
+    status: str = "pending"
 
 
 class CardHistoryEventResponse(BaseModel):
@@ -569,10 +553,6 @@ class CardHistoryEventResponse(BaseModel):
 
 class CardHistoryResponse(BaseModel):
     events: list[CardHistoryEventResponse]
-
-
-class CardRestoreRequest(BaseModel):
-    history_event_id: UUID
 
 
 class DeviceRegisterRequest(BaseModel):

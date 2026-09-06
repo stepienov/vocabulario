@@ -11,6 +11,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.deps import lang_pair_key, normalize_text
 from app.models import LanguageProfile, LearningCard, LexicalEntry, LookupQueryCache, User
+from app.services.dictionary_lookup import lookup_dictionary_candidates
 from app.services.llm import LLMService
 from app.services.llm_usage import bind_llm_usage_context
 from app.services.enrichment import enrich_card_content
@@ -188,6 +189,7 @@ class LexicalService:
                         learning_card = None
             annotated.append(
                 {
+                    **c,
                     "lemma": c["lemma"],
                     "pos": c.get("pos"),
                     "gloss": c.get("gloss", ""),
@@ -239,16 +241,24 @@ class LexicalService:
         return out
 
     def _raw_to_candidates(self, raw: list[dict]) -> list[dict]:
-        return [
-            {
+        out: list[dict] = []
+        for c in raw:
+            if not c.get("lemma"):
+                continue
+            item = {
                 "lemma": c.get("lemma", ""),
                 "pos": c.get("pos"),
                 "gloss": c.get("gloss", ""),
                 "lexical_entry_id": None,
             }
-            for c in raw
-            if c.get("lemma")
-        ]
+            reading = (c.get("reading") or "").strip()
+            if reading:
+                item["reading"] = reading
+            typed = (c.get("typed_as") or "").strip()
+            if typed:
+                item["typed_as"] = typed
+            out.append(item)
+        return out
 
     def _rank_lookup_candidates(
         self, candidates: list[dict], text: str, *, learning_lang: str
@@ -405,30 +415,71 @@ class LexicalService:
         annotated = await self._annotate_candidates(user.id, profile.id, attached)
         return LookupOutcome(annotated, source, ai_complete)
 
+    async def _merge_into_query_cache(
+        self,
+        pair: str,
+        key: str,
+        incoming: list[dict],
+        *,
+        learning_lang: str,
+    ) -> list[dict]:
+        row = await self._ensure_query_cache_row(pair, key)
+        merged, _added = append_lookup_candidates(
+            list(row.candidates or []),
+            incoming,
+            learning_lang=learning_lang,
+        )
+        row.candidates = merged
+        flag_modified(row, "candidates")
+        row.hit_count = (row.hit_count or 0) + 1
+        row.updated_at = datetime.now(UTC)
+        await self.db.flush()
+        return merged
+
+    async def _dictionary_candidates(
+        self, profile: LanguageProfile, text: str
+    ) -> list[dict]:
+        raw = await lookup_dictionary_candidates(
+            text,
+            app_lang=profile.app_lang,
+            learning_lang=profile.learning_lang,
+        )
+        return self._raw_to_candidates(raw)
+
     async def lookup_cached(
         self, user: User, profile_id: UUID, text: str
     ) -> LookupOutcome:
-        """Read-only query cache. Does not call OpenAI or create a row on miss."""
+        """Szybka ścieżka: cache + Wikisłownik. Bez modelu."""
         profile = await self.get_profile(user.id, profile_id)
         pair = lang_pair_key(profile.app_lang, profile.learning_lang)
         key = self._query_cache_key(text)
         row = await self._fetch_query_cache(pair, key)
-        if row is None:
-            return LookupOutcome([], "db", False)
-        row.hit_count = (row.hit_count or 0) + 1
-        return await self._present_lookup(
-            user,
-            profile,
-            text,
-            list(row.candidates or []),
-            "db",
-            bool(row.ai_complete),
-        )
+        if row is not None and (row.candidates or row.ai_complete):
+            row.hit_count = (row.hit_count or 0) + 1
+            return await self._present_lookup(
+                user,
+                profile,
+                text,
+                list(row.candidates or []),
+                "db",
+                bool(row.ai_complete),
+            )
+        incoming = await self._dictionary_candidates(profile, text)
+        if incoming:
+            merged = await self._merge_into_query_cache(
+                pair, key, incoming, learning_lang=profile.learning_lang
+            )
+            return await self._present_lookup(
+                user, profile, text, merged, "dict", False
+            )
+        if row is not None:
+            row.hit_count = (row.hit_count or 0) + 1
+        return LookupOutcome([], "db", False)
 
     async def lookup_expand(
         self, user: User, profile_id: UUID, text: str
     ) -> LookupOutcome:
-        """Ask OpenAI for new suggestions, append to cache, return the full ranked list."""
+        """Wikisłownik, a gdy pusto — model. Zwraca pełną listę."""
         profile = await self.get_profile(user.id, profile_id)
         pair = lang_pair_key(profile.app_lang, profile.learning_lang)
         key = self._query_cache_key(text)
@@ -446,6 +497,26 @@ class LexicalService:
             )
 
         already = list(existing.candidates or []) if existing is not None else []
+        if not already:
+            incoming = await self._dictionary_candidates(profile, text)
+            if incoming:
+                merged = await self._merge_into_query_cache(
+                    pair, key, incoming, learning_lang=profile.learning_lang
+                )
+                return await self._present_lookup(
+                    user, profile, text, merged, "dict", False
+                )
+        elif already:
+            existing.hit_count = (existing.hit_count or 0) + 1
+            return await self._present_lookup(
+                user,
+                profile,
+                text,
+                already,
+                "db",
+                False,
+            )
+
         bind_llm_usage_context(
             overwrite_operation=True,
             operation_id=uuid4(),
@@ -493,9 +564,9 @@ class LexicalService:
         )
 
     async def lookup(self, user: User, profile_id: UUID, text: str) -> LookupOutcome:
-        """Full path for offline flush / one-shot clients: cache if complete, else expand."""
+        """Pełna ścieżka: cache/Wikisłownik, model tylko gdy nadal pusto."""
         cached = await self.lookup_cached(user, profile_id, text)
-        if cached.ai_complete:
+        if cached.ai_complete or cached.candidates:
             return cached
         return await self.lookup_expand(user, profile_id, text)
 

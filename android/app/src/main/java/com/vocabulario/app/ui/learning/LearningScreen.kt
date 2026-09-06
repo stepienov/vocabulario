@@ -25,7 +25,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vocabulario.app.R
+import com.vocabulario.app.data.asJsonString
 import com.vocabulario.app.ui.card.CardDetailContent
+import com.vocabulario.app.ui.card.StickyLemmaBar
 import com.vocabulario.app.ui.components.AddToListSheet
 import com.vocabulario.app.ui.components.AppScreenScaffold
 import com.vocabulario.app.ui.components.EmptyState
@@ -76,25 +78,31 @@ fun LearningScreen(
             state.selectedCard?.let { card ->
                 val cardScroll = remember(card.id) { ScrollState(0) }
                 LaunchedEffect(card.id) { cardScroll.scrollTo(0) }
-                Column(modifier = Modifier.verticalScroll(cardScroll)) {
-                    CardDetailContent(
-                        card.content,
-                        card.lemma_l2,
-                        languageCode = card.content["language"]?.jsonPrimitive?.content
-                            ?: state.learningLang,
-                        userTenses = state.userTenses,
-                        userCefr = state.userCefr,
-                        enrichmentStatus = card.enrichment_status,
-                        enrichmentError = card.enrichment_error,
-                        profile = state.activeProfile,
-                        onAddRelated = viewModel::openAddRelated,
-                        learningLemmas = state.learningLemmas,
-                        relatedMembership = state.relatedMembership,
-                        scrollable = false,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    TextButton(onClick = viewModel::clearSelection) {
-                        Text(stringResource(R.string.learning_back_list))
+                val stickyLemma = card.content["lemma"].asJsonString()?.takeIf { it.isNotBlank() }
+                    ?: card.lemma_l2
+                Column(modifier = Modifier.weight(1f)) {
+                    StickyLemmaBar(lemma = stickyLemma)
+                    Column(modifier = Modifier.weight(1f).verticalScroll(cardScroll)) {
+                        CardDetailContent(
+                            card.content,
+                            card.lemma_l2,
+                            languageCode = card.content["language"]?.jsonPrimitive?.content
+                                ?: state.learningLang,
+                            userTenses = state.userTenses,
+                            userCefr = state.userCefr,
+                            enrichmentStatus = card.enrichment_status,
+                            enrichmentError = card.enrichment_error,
+                            profile = state.activeProfile,
+                            onAddRelated = viewModel::openAddRelated,
+                            learningLemmas = state.learningLemmas,
+                            relatedMembership = state.relatedMembership,
+                            scrollable = false,
+                            showHeadword = false,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = viewModel::clearSelection) {
+                            Text(stringResource(R.string.learning_back_list))
+                        }
                     }
                 }
                 return@Column

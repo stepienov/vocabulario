@@ -3,13 +3,11 @@ package com.vocabulario.app.data
 import com.vocabulario.app.data.api.CardCorrectionCreate
 import com.vocabulario.app.data.api.CardCorrectionCreateResponse
 import com.vocabulario.app.data.api.CardCorrectionResponse
+import com.vocabulario.app.data.api.CorrectionEscalateResponse
 import com.vocabulario.app.data.api.CorrectionQuotaResponse
 import com.vocabulario.app.data.api.CardCreateRequest
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.CardHistoryResponse
-import com.vocabulario.app.data.api.CardRestoreRequest
-import com.vocabulario.app.data.api.CardSelfEditRequest
-import com.vocabulario.app.data.api.SelfEditValidateResponse
 import com.vocabulario.app.data.api.CheckAnswerResponse
 import com.vocabulario.app.data.api.ChoiceOption
 import com.vocabulario.app.data.api.DashboardStatsResponse
@@ -334,6 +332,7 @@ class LearningRepository @Inject constructor(
         pos: String?,
         gloss: String?,
         lexicalEntryId: String?,
+        sourceCardId: String? = null,
     ): CardResponse {
         val profileId = activeProfileId()
         val created = api.createCard(
@@ -343,6 +342,7 @@ class LearningRepository @Inject constructor(
                 gloss = gloss,
                 profile_id = profileId,
                 lexical_entry_id = lexicalEntryId,
+                source_card_id = sourceCardId,
             )
         )
         offlineStore.upsertCards(profileId, listOf(created), deckId = null, overwriteDeckId = true)
@@ -419,6 +419,7 @@ class LearningRepository @Inject constructor(
         entryKind: String = "lemma",
         baseLemma: String? = null,
         pattern: String? = null,
+        sourceCardId: String? = null,
     ): CardResponse {
         val profileId = activeProfileId()
         val created = api.addWordToList(
@@ -432,6 +433,7 @@ class LearningRepository @Inject constructor(
                 entry_kind = entryKind,
                 base_lemma = baseLemma,
                 pattern = pattern,
+                source_card_id = sourceCardId,
             ),
         )
         val lists = offlineStore.localLists(profileId)
@@ -1471,41 +1473,12 @@ class LearningRepository @Inject constructor(
         return api.latestCardCorrection(cardId, activeProfileId())
     }
 
-    suspend fun validateSelfEdit(
-        cardId: String,
-        content: kotlinx.serialization.json.JsonObject,
-    ): SelfEditValidateResponse {
-        return api.validateSelfEdit(
-            cardId,
-            activeProfileId(),
-            CardSelfEditRequest(content = content),
-        )
-    }
-
-    suspend fun selfEditCard(cardId: String, content: kotlinx.serialization.json.JsonObject): CardResponse {
-        val updated = api.selfEditCard(
-            cardId,
-            activeProfileId(),
-            CardSelfEditRequest(content = content),
-        )
-        offlineStore.upsertCards(activeProfileId(), listOf(updated))
-        syncScheduler.requestNow()
-        return updated
+    suspend fun escalateCardCorrection(cardId: String, correctionId: String): CorrectionEscalateResponse {
+        return api.escalateCardCorrection(cardId, correctionId, activeProfileId())
     }
 
     suspend fun getCardHistory(cardId: String): CardHistoryResponse {
         return api.getCardHistory(cardId, activeProfileId())
-    }
-
-    suspend fun restoreCard(cardId: String, historyEventId: String): CardResponse {
-        val updated = api.restoreCard(
-            cardId,
-            activeProfileId(),
-            CardRestoreRequest(history_event_id = historyEventId),
-        )
-        offlineStore.upsertCards(activeProfileId(), listOf(updated))
-        syncScheduler.requestNow()
-        return updated
     }
 
     suspend fun retryCardEnrichment(cardId: String): CardResponse {

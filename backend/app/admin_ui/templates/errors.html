@@ -4,7 +4,7 @@
 <div class="tabs">
   <a class="{{ 'active' if tab=='logs' else '' }}" href="{{ qs(tab='logs', page=1) }}">Logi</a>
   <a class="{{ 'active' if tab=='enrichment' else '' }}" href="{{ qs(tab='enrichment', page=1) }}">Enrichment</a>
-  <a class="{{ 'active' if tab=='qa' else '' }}" href="{{ qs(tab='qa', page=1) }}">QA treści</a>
+  <a class="{{ 'active' if tab=='qa' else '' }}" href="{{ qs(tab='qa', page=1) }}">Zgłoszenia</a>
 </div>
 <form class="filters" method="get">
   <input type="hidden" name="tab" value="{{ tab }}">
@@ -34,16 +34,38 @@
 {% elif tab == 'qa' %}
 <div class="panel">
   <table>
-    <thead><tr><th>Czas</th><th>User</th><th>Lemma</th><th>AI</th><th>Admin</th></tr></thead>
-    {% for rev, email, lemma in qa %}
-      <tr>
-        <td>{{ rev.created_at|dt }}</td>
-        <td>{{ email }}</td>
-        <td><a href="/admin/cards/{{ rev.card_id }}">{{ lemma }}</a></td>
-        <td>{{ rev.ai_verdict }}</td>
-        <td>{{ rev.admin_status }}</td>
-      </tr>
-    {% else %}<tr><td colspan="5" class="muted">Kolejka pusta</td></tr>{% endfor %}
+            <thead>
+              <tr>
+                <th>Czas</th>
+                <th>User</th>
+                <th>Hasło</th>
+                <th>Notatka</th>
+                <th>Odrzut serwera</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for esc, email, lemma in qa %}
+              <tr>
+                <td>{{ esc.created_at|dt }}</td>
+                <td>{{ email }}</td>
+                <td><a href="/admin/cards/{{ esc.card_id }}">{{ lemma }}</a></td>
+                <td>{{ esc.user_note or '—' }}</td>
+                <td>{{ esc.reject_reason or '—' }}</td>
+                <td><span class="pill {{ 'ok' if esc.status=='done' else 'warn' }}">{{ esc.status }}</span></td>
+                <td>
+                  {% if esc.status != 'done' %}
+                  <form method="post" action="/admin/escalations/{{ esc.id }}/done">
+                    <button type="submit">Załatwione</button>
+                  </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="7" class="muted">Brak zgłoszeń do administracji</td></tr>
+            {% endfor %}
+            </tbody>
   </table>
   {{ pager(page, qa_total) }}
 </div>

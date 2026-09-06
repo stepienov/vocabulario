@@ -216,32 +216,18 @@ interface VocabularioApi {
         @Query("profile_id") profileId: String,
     ): CardCorrectionResponse?
 
-    @POST("cards/{card_id}/self-edit/validate")
-    suspend fun validateSelfEdit(
+    @POST("cards/{card_id}/corrections/{correction_id}/escalate")
+    suspend fun escalateCardCorrection(
         @Path("card_id") cardId: String,
+        @Path("correction_id") correctionId: String,
         @Query("profile_id") profileId: String,
-        @Body body: CardSelfEditRequest,
-    ): SelfEditValidateResponse
-
-    @POST("cards/{card_id}/self-edit")
-    suspend fun selfEditCard(
-        @Path("card_id") cardId: String,
-        @Query("profile_id") profileId: String,
-        @Body body: CardSelfEditRequest,
-    ): CardResponse
+    ): CorrectionEscalateResponse
 
     @GET("cards/{card_id}/history")
     suspend fun getCardHistory(
         @Path("card_id") cardId: String,
         @Query("profile_id") profileId: String,
     ): CardHistoryResponse
-
-    @POST("cards/{card_id}/restore")
-    suspend fun restoreCard(
-        @Path("card_id") cardId: String,
-        @Query("profile_id") profileId: String,
-        @Body body: CardRestoreRequest,
-    ): CardResponse
 
     @POST("devices/register")
     suspend fun registerDevice(@Body body: DeviceRegisterRequest): retrofit2.Response<Unit>

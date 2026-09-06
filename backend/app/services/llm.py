@@ -1081,8 +1081,25 @@ class LLMService:
         note: str,
         app_lang: str,
         learning_lang: str,
+        evidence: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         from app.ai.conjugation import conjugation_paradigm_rules
+        from app.lsp.lang_utils import articles_for
+
+        patch_field_names = (
+            "lemma",
+            "pos",
+            "gloss_primary",
+            "meanings",
+            "examples",
+            "conjugation",
+            "similar_words",
+            "ipa",
+            "notes",
+            "synonyms_l2",
+            "antonyms_l2",
+            "word_family_l2",
+        )
 
         lemma = str(content.get("lemma") or "")
         pos = str(content.get("pos") or "")
@@ -1102,31 +1119,64 @@ class LLMService:
         if not user_hints:
             user_hints = "User provided no section hints or note.\n"
 
+        article_rule = ""
+        if articles_for(learning_lang):
+            article_rule = (
+                "- For nouns in this learning language, the citation lemma MUST include the "
+                "definite article (e.g. 'el intermitente', not 'intermitente'). "
+                "A bare noun on the card is a factual error. "
+                "Do not require articles for languages that do not use them.\n"
+            )
+        else:
+            article_rule = (
+                "- This learning language does not use articles on citation forms; "
+                "do not add articles.\n"
+            )
+
+        evidence_block = ""
+        if evidence:
+            evidence_block = (
+                "INDEPENDENT DICTIONARY EVIDENCE (Wiktionary). Empty lookup is NOT proof "
+                "that a word does not exist.\n"
+                f"{json.dumps(evidence, ensure_ascii=False)}\n"
+                "If app_lang_page_exists is false for a gloss on the card, that gloss is "
+                "likely an invented / non-existent word in the app language — accept and fix it.\n"
+            )
+
+        patch_fields = ",".join(f'"{name}"' for name in patch_field_names)
         prompt = (
             "Flashcard correction — FULL CARD AUDIT.\n"
             f"App language: {app_lang}\n"
             f"Learning language: {learning_lang}\n"
             f"{user_hints}"
             "IMPORTANT: Review the ENTIRE card below — lemma, pos, glosses, meanings, "
-            "examples, conjugation, similar words, pronunciation. "
+            "examples, conjugation, similar words, pronunciation, synonyms, antonyms, "
+            "word family, notes. "
             "User selections/note are optional hints only; never reject solely because "
             "the note is vague, empty, or off-topic.\n"
             "STRICT ACCEPTANCE RULES:\n"
-            "- Accept ONLY when there is a factual error, clear omission, wrong translation, "
-            "wrong part of speech, placeholder/missing data, or objectively incorrect grammar.\n"
+            "- Accept ONLY a real, clear, significant, noticeable, obvious error: "
+            "wrong translation (not a synonym), wrong part of speech, invented/non-existent "
+            "word in the app language, missing article where this language uses articles, "
+            "placeholder/missing data, or objectively incorrect grammar.\n"
+            "- An invented or non-existent word in a family/synonym/antonym gloss is a "
+            "factual error — patch word_family_l2 / synonyms_l2 / antonyms_l2.\n"
             "- NEVER accept to replace one valid translation/gloss with another equally valid "
-            "alternative (e.g. 'mebel' vs 'obiekt meblowy', 'to speak' vs 'to talk').\n"
+            "alternative (e.g. 'mebel' vs 'obiekt meblowy', 'to speak' vs 'to talk', "
+            "'budzić się' vs 'wstawać' when both are correct).\n"
             "- NEVER accept if the card is already correct — return rejected.\n"
+            "- content.lemma and the card headword must be the same string.\n"
+            f"{article_rule}"
             "- patch must contain ONLY fields that need fixing; omit unchanged fields.\n"
             "- If no factual fix is needed, status must be rejected with code correction_unfounded.\n"
+            f"{evidence_block}"
             f"Current card content JSON:\n{json.dumps(content, ensure_ascii=False)}\n"
             f"{conj_guidance}\n"
             "Return JSON only:\n"
             '{"status":"accepted"|"rejected","code":"correction_accepted"|'
             '"correction_unfounded"|"correction_not_applicable",'
             '"reason":"short user-facing summary","reason_detail":"optional admin detail",'
-            '"patch":{include every field you correct: '
-            '"lemma","pos","gloss_primary","meanings","examples","conjugation","similar_words","ipa"}}\n'
+            f'"patch":{{include every field you correct: {patch_fields}}}}}\n'
             "Do not use correction_insufficient_info."
         )
         data = await self._chat_json(
@@ -1136,6 +1186,7 @@ class LLMService:
                 "You audit flashcards for factual and linguistic errors only. "
                 "Never apply stylistic or synonymous rewordings. "
                 "Reject when the card is correct or changes would be equivalent in meaning. "
+                "Invented or non-existent words in the app language are factual errors. "
                 "Return strict JSON."
             ),
             temperature=0.2,
@@ -1160,105 +1211,6 @@ class LLMService:
             "reason_detail": data.get("reason_detail") or data.get("reason"),
             "patch": data.get("patch") if isinstance(data.get("patch"), dict) else None,
         }
-
-    async def validate_self_edit_changes(
-        self,
-        *,
-        lemma: str,
-        learning_lang: str,
-        app_lang: str,
-        changes: dict[str, Any],
-    ) -> dict[str, Any]:
-        prompt = (
-            "Validate a user's manual flashcard edits before saving.\n"
-            f"Lemma (L2): {lemma}\n"
-            f"Learning language: {learning_lang}\n"
-            f"App/UI language: {app_lang}\n"
-            f"User changes JSON:\n{json.dumps(changes, ensure_ascii=False)}\n"
-            "Review ONLY the user's changes (the 'to' values). "
-            "Flag factual or linguistic errors, wrong POS, mistranslations, or nonsense. "
-            "Do NOT flag stylistic preferences or minor wording differences.\n"
-            "Return JSON only:\n"
-            '{"ok":true|false,"issues":[{"field":"pos|notes|meanings[0].gloss_l1|...","label":"short label in app language","message":"why it is wrong in app language"}]}\n'
-            "If all changes are reasonable, return ok:true with empty issues. "
-            "List ONLY changes that are actually incorrect."
-        )
-        if self.mock:
-            issues: list[dict[str, str]] = []
-            changes_json = json.dumps(changes, ensure_ascii=False).lower()
-            if "invalid" in changes_json or "dupa" in changes_json:
-                issues.append(
-                    {
-                        "field": "meanings[0].gloss_l1",
-                        "label": "Główne tłumaczenie" if app_lang.startswith("pl") else "Primary gloss",
-                        "message": (
-                            "To tłumaczenie wygląda na nieprawidłowe."
-                            if app_lang.startswith("pl")
-                            else "This gloss looks incorrect."
-                        ),
-                    }
-                )
-            return {"ok": not issues, "issues": issues}
-
-        data = await self._chat_json(
-            self.enrichment_model,
-            prompt,
-            system=(
-                "You validate user flashcard edits. Be strict on factual errors, lenient on style. "
-                "Return strict JSON."
-            ),
-            temperature=0.2,
-            purpose="self_edit_validate",
-        )
-        ok = bool(data.get("ok", True))
-        raw_issues = data.get("issues") if isinstance(data.get("issues"), list) else []
-        issues = []
-        for item in raw_issues:
-            if not isinstance(item, dict):
-                continue
-            field = str(item.get("field") or "").strip()
-            label = str(item.get("label") or field).strip()
-            message = str(item.get("message") or "").strip()
-            if field and message:
-                issues.append({"field": field, "label": label, "message": message})
-        if issues:
-            ok = False
-        return {"ok": ok, "issues": issues}
-
-    async def review_self_edit(
-        self,
-        *,
-        before_content: dict[str, Any],
-        after_content: dict[str, Any],
-        before_lemma: str,
-        after_lemma: str,
-        app_lang: str,
-        learning_lang: str,
-    ) -> dict[str, Any]:
-        prompt = (
-            "Review a user's manual flashcard edit.\n"
-            f"App language: {app_lang}\n"
-            f"Learning language: {learning_lang}\n"
-            f"Before lemma: {before_lemma}\n"
-            f"After lemma: {after_lemma}\n"
-            f"Before content JSON:\n{json.dumps(before_content, ensure_ascii=False)}\n"
-            f"After content JSON:\n{json.dumps(after_content, ensure_ascii=False)}\n"
-            "Return JSON only:\n"
-            '{"verdict":"self_edit_ok"|"self_edit_questionable"|"self_edit_invalid",'
-            '"reason":"short explanation for admin"}\n'
-            "Do not block the user — this is for admin review only."
-        )
-        data = await self._chat_json(
-            self.enrichment_model,
-            prompt,
-            system="You review whether a user's flashcard edit is linguistically reasonable. Return strict JSON.",
-            temperature=0.2,
-            purpose="self_edit_review",
-        )
-        verdict = str(data.get("verdict", "self_edit_questionable"))
-        if verdict not in {"self_edit_ok", "self_edit_questionable", "self_edit_invalid"}:
-            verdict = "self_edit_questionable"
-        return {"verdict": verdict, "reason": data.get("reason")}
 
 
 async def verify_google_id_token(id_token: str) -> dict[str, Any]:

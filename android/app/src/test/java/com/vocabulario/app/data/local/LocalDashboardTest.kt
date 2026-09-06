@@ -102,6 +102,25 @@ class LocalDashboardTest {
         assertTrue(stats.next_review_at != null)
     }
 
+    @Test
+    fun delayUntilNextReviewAddsGrace() {
+        val dueAt = now + 60_000L
+        val iso = java.time.Instant.ofEpochMilli(dueAt).toString()
+        assertEquals(
+            65_000L,
+            LocalDashboard.delayUntilNextReviewRefresh(iso, now),
+        )
+        assertEquals(
+            3_000L,
+            LocalDashboard.delayUntilNextReviewRefresh(iso, dueAt + 2_000L),
+        )
+        assertEquals(
+            0L,
+            LocalDashboard.delayUntilNextReviewRefresh(iso, dueAt + 10_000L),
+        )
+        assertEquals(null, LocalDashboard.delayUntilNextReviewRefresh(null, now))
+    }
+
     private fun card(
         id: String,
         status: String,

@@ -1,4 +1,4 @@
-"""Card correction reports, self-edit, history, and admin review queue."""
+"""Card correction reports, history, and admin escalation queue."""
 
 from __future__ import annotations
 
@@ -12,14 +12,23 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import async_session_factory
+from app.lsp.lang_utils import articles_for
 from app.models import (
-    AdminCardReview,
+    AdminEscalation,
     CardCorrection,
     CardHistoryEvent,
     LanguageProfile,
     LearningCard,
 )
+from app.services.correction_evidence import both_glosses_attested, gather_correction_evidence
 from app.services.llm import LLMService
+from app.services.pos_normalize import (
+    ensure_noun_article,
+    infer_gender_from_lemma,
+    infer_gender_from_pos,
+    lemma_has_article,
+    normalize_pos_bucket,
+)
 from app.services.push import notify_correction_resolved
 
 logger = logging.getLogger(__name__)
@@ -33,8 +42,34 @@ ALLOWED_SECTIONS = {
     "conjugation",
     "similar",
     "pronunciation",
+    "family",
+    "synonyms",
+    "antonyms",
     "other",
 }
+
+PATCH_CONTENT_KEYS = (
+    "meanings",
+    "examples",
+    "conjugation",
+    "similar_words",
+    "ipa",
+    "notes",
+    "synonyms_l2",
+    "antonyms_l2",
+    "word_family_l2",
+)
+
+PATCH_PROMPT_FIELDS = (
+    "lemma",
+    "pos",
+    "gloss_primary",
+    *PATCH_CONTENT_KEYS,
+)
+
+STYLE_REJECT_REASON = (
+    "Karta jest poprawna — zmiana byłaby tylko stylistyczna lub równoważna semantycznie."
+)
 
 CORRECTION_RESULT_CODES = {
     "correction_accepted",
@@ -50,12 +85,6 @@ _PLACEHOLDER_RE = re.compile(
     r"^[\s\-—–.?…]+$|^(n/?a|none|brak|unknown|todo|tbd|xxx)$",
     re.IGNORECASE,
 )
-
-SELF_EDIT_VERDICT_CODES = {
-    "self_edit_ok",
-    "self_edit_questionable",
-    "self_edit_invalid",
-}
 
 
 def _validate_sections(sections: list[str]) -> list[str]:
@@ -76,23 +105,11 @@ def _card_snapshot(card: LearningCard) -> dict:
     }
 
 
-def _apply_snapshot(card: LearningCard, snapshot: dict) -> None:
-    card.lemma_l2 = str(snapshot.get("lemma_l2") or card.lemma_l2)
-    card.pos = snapshot.get("pos")
-    card.gloss_primary = snapshot.get("gloss_primary")
-    card.content = dict(snapshot.get("content") or {})
-    lex_id = snapshot.get("lexical_entry_id")
-    if lex_id:
-        card.lexical_entry_id = UUID(str(lex_id))
-    else:
-        card.lexical_entry_id = None
-
-
-def _apply_patch_to_content(content: dict, patch: dict, sections: list[str]) -> dict:
-    """Apply all keys present in patch (full-card correction). sections kept for logging only."""
+def _apply_patch_to_content(content: dict, patch: dict, sections: list[str] | None = None) -> dict:
+    """Apply every known card field present in patch."""
     merged = dict(content or {})
     if patch.get("lemma"):
-        merged["lemma"] = patch["lemma"]
+        merged["lemma"] = str(patch["lemma"]).strip()
     if patch.get("pos"):
         merged["pos"] = patch["pos"]
     if patch.get("gloss_primary"):
@@ -106,7 +123,7 @@ def _apply_patch_to_content(content: dict, patch: dict, sections: list[str]) -> 
             merged["meanings"] = [
                 {"gloss_l1": patch["gloss_primary"], "synonyms_l1": [], "examples": [], "usages": []}
             ]
-    for key in ("meanings", "examples", "conjugation", "similar_words", "ipa"):
+    for key in PATCH_CONTENT_KEYS:
         if key in patch:
             merged[key] = patch[key]
     return merged
@@ -171,18 +188,19 @@ def _primary_gloss(snapshot: dict) -> str | None:
 
 
 def patch_is_material(before: dict, patch: dict) -> tuple[bool, str | None]:
-    """Reject LLM accepts that would not fix a real error (stylistic-only or no-op)."""
+    """Reject accepts that would not fix a real error (stylistic-only or no-op)."""
     if not isinstance(patch, dict) or not patch:
         return False, "Brak zmian w poprawce."
 
     content = dict(before.get("content") or {})
-    merged = _apply_patch_to_content(content, patch, [])
+    merged = _apply_patch_to_content(content, patch)
     material: list[str] = []
 
     if patch.get("lemma"):
         old_lemma = _norm_text(before.get("lemma_l2") or content.get("lemma"))
         new_lemma = _norm_text(patch.get("lemma"))
-        if new_lemma and new_lemma != old_lemma:
+        inner_lemma = _norm_text(content.get("lemma"))
+        if new_lemma and (new_lemma != old_lemma or new_lemma != inner_lemma):
             material.append("lemma")
 
     if patch.get("pos"):
@@ -205,7 +223,11 @@ def patch_is_material(before: dict, patch: dict) -> tuple[bool, str | None]:
         if new_ipa and (new_ipa != old_ipa or _is_placeholder(content.get("ipa"))):
             material.append("pronunciation")
 
-    for key in ("meanings", "examples", "similar_words"):
+    if "notes" in patch:
+        if _norm_text(content.get("notes")) != _norm_text(patch.get("notes")):
+            material.append("notes")
+
+    for key in ("meanings", "examples", "similar_words", "synonyms_l2", "antonyms_l2", "word_family_l2"):
         if key not in patch:
             continue
         if _json_stable(content.get(key)) != _json_stable(patch.get(key)):
@@ -226,15 +248,85 @@ def patch_is_material(before: dict, patch: dict) -> tuple[bool, str | None]:
         "gloss_primary": patch.get("gloss_primary") or before.get("gloss_primary"),
         "content": merged,
     }
-    if not material and _json_stable(before) == _json_stable(after_top):
+    if not material and _json_stable(
+        {k: before.get(k) for k in ("lemma_l2", "pos", "gloss_primary", "content")}
+    ) == _json_stable(after_top):
         return False, "Poprawka nie wprowadza żadnych rzeczywistych zmian."
 
     if not material:
-        return (
-            False,
-            "Karta jest poprawna — zmiana byłaby tylko stylistyczna lub równoważna semantycznie.",
-        )
+        return False, STYLE_REJECT_REASON
     return True, None
+
+
+def gate_accepted_patch(
+    before: dict,
+    patch: dict,
+    evidence: dict | None = None,
+) -> tuple[bool, str | None]:
+    """Hard checks after the model accepts: materiality + synonym ping-pong."""
+    material, reason = patch_is_material(before, patch)
+    if not material:
+        return False, reason
+    if patch.get("gloss_primary") and evidence:
+        old_gloss = _primary_gloss(before)
+        new_gloss = str(patch["gloss_primary"])
+        if both_glosses_attested(old_gloss, new_gloss, evidence):
+            return False, STYLE_REJECT_REASON
+    return True, None
+
+
+def obvious_headword_fix(before: dict, learning_lang: str) -> dict | None:
+    """Sync the two headword fields; prefer the citation form with an article when the language has them."""
+    content = dict(before.get("content") or {})
+    top = str(before.get("lemma_l2") or "").strip()
+    inner = str(content.get("lemma") or "").strip()
+    if not top and not inner:
+        return None
+    if _norm_text(top) == _norm_text(inner) and top and inner:
+        return None
+    chosen = top or inner
+    if articles_for(learning_lang):
+        if lemma_has_article(top, learning_lang) and not lemma_has_article(inner, learning_lang):
+            chosen = top
+        elif lemma_has_article(inner, learning_lang) and not lemma_has_article(top, learning_lang):
+            chosen = inner
+    if not chosen:
+        return None
+    if _norm_text(chosen) == _norm_text(inner) and _norm_text(chosen) == _norm_text(top):
+        return None
+    return {"lemma": chosen}
+
+
+def _citation_lemma(lemma: str, pos: str | None, learning_lang: str) -> str:
+    text = str(lemma or "").strip()
+    if not text:
+        return text
+    if normalize_pos_bucket(pos) != "noun":
+        return text
+    if not articles_for(learning_lang):
+        return text
+    gender = infer_gender_from_lemma(text, learning_lang) or infer_gender_from_pos(pos)
+    return ensure_noun_article(text, learning_lang=learning_lang, gender=gender)
+
+
+def apply_correction_patch(card: LearningCard, patch: dict, learning_lang: str) -> None:
+    content = _apply_patch_to_content(dict(card.content or {}), patch)
+    lemma = str(content.get("lemma") or patch.get("lemma") or card.lemma_l2 or "").strip()
+    pos = str(patch.get("pos") or content.get("pos") or card.pos or "") or None
+    lemma = _citation_lemma(lemma, pos, learning_lang)
+    content["lemma"] = lemma
+    if pos:
+        content["pos"] = pos
+        card.pos = pos
+    card.lemma_l2 = lemma
+    card.content = content
+    if patch.get("gloss_primary"):
+        card.gloss_primary = str(patch["gloss_primary"])
+    else:
+        meanings = content.get("meanings") or []
+        if meanings and isinstance(meanings[0], dict) and meanings[0].get("gloss_l1"):
+            card.gloss_primary = str(meanings[0]["gloss_l1"])
+    card.lexical_entry_id = None
 
 
 def _diff_summary(before: dict, after: dict) -> str:
@@ -249,12 +341,18 @@ def _diff_summary(before: dict, after: dict) -> str:
     after_content = after.get("content") or {}
     if before_content.get("ipa") != after_content.get("ipa"):
         parts.append(f"ipa: {before_content.get('ipa')} → {after_content.get('ipa')}")
-    if _json_stable(before_content.get("conjugation")) != _json_stable(after_content.get("conjugation")):
-        parts.append("conjugation updated")
-    if _json_stable(before_content.get("meanings")) != _json_stable(after_content.get("meanings")):
-        parts.append("meanings updated")
-    if _json_stable(before_content.get("similar_words")) != _json_stable(after_content.get("similar_words")):
-        parts.append("similar words updated")
+    for key, label in (
+        ("conjugation", "conjugation updated"),
+        ("meanings", "meanings updated"),
+        ("examples", "examples updated"),
+        ("similar_words", "similar words updated"),
+        ("synonyms_l2", "synonyms updated"),
+        ("antonyms_l2", "antonyms updated"),
+        ("word_family_l2", "word family updated"),
+        ("notes", "notes updated"),
+    ):
+        if _json_stable(before_content.get(key)) != _json_stable(after_content.get(key)):
+            parts.append(label)
     return "; ".join(parts) if parts else "content updated"
 
 
@@ -283,150 +381,6 @@ async def _add_history_event(
     return event
 
 
-def _can_restore_event(event: CardHistoryEvent, all_events: list[CardHistoryEvent]) -> bool:
-    if event.event_type != "self_edit_applied":
-        return False
-    prior = [e for e in all_events if e.created_at < event.created_at]
-    submissions = [e for e in prior if e.event_type == "correction_submitted"]
-    if not submissions:
-        return True
-    last_sub = max(submissions, key=lambda e: e.created_at)
-    resolutions = [
-        e
-        for e in prior
-        if e.created_at >= last_sub.created_at
-        and e.event_type in {"correction_accepted", "correction_rejected"}
-    ]
-    if any(e.event_type == "correction_accepted" for e in resolutions):
-        return False
-    return any(e.event_type == "correction_rejected" for e in resolutions)
-
-
-def _pair_rows_equal(a: list, b: list) -> bool:
-  def norm_row(row: dict) -> tuple[str, str]:
-      return (_norm_text(row.get("l2")), _norm_text(row.get("l1")))
-
-  return [norm_row(dict(r)) for r in a if isinstance(r, dict)] == [
-      norm_row(dict(r)) for r in b if isinstance(r, dict)
-  ]
-
-
-def compute_self_edit_user_changes(before: dict, after: dict) -> dict:
-    """Diff only user-editable fields: pos, notes, meanings (gloss/examples/usages)."""
-    changes: dict = {}
-    if _norm_text(before.get("pos")) != _norm_text(after.get("pos")):
-        changes["pos"] = {"from": before.get("pos"), "to": after.get("pos")}
-    if _norm_text(before.get("notes")) != _norm_text(after.get("notes")):
-        changes["notes"] = {"from": before.get("notes") or "", "to": after.get("notes") or ""}
-
-    before_meanings = [dict(m) for m in (before.get("meanings") or []) if isinstance(m, dict)]
-    after_meanings = [dict(m) for m in (after.get("meanings") or []) if isinstance(m, dict)]
-    meaning_changes: list[dict] = []
-    max_len = max(len(before_meanings), len(after_meanings))
-    for index in range(max_len):
-        before_m = before_meanings[index] if index < len(before_meanings) else {}
-        after_m = after_meanings[index] if index < len(after_meanings) else {}
-        entry: dict = {"index": index}
-        changed = False
-        if _norm_text(before_m.get("gloss_l1")) != _norm_text(after_m.get("gloss_l1")):
-            entry["gloss_l1"] = {
-                "from": before_m.get("gloss_l1") or "",
-                "to": after_m.get("gloss_l1") or "",
-            }
-            changed = True
-        if not _pair_rows_equal(before_m.get("examples") or [], after_m.get("examples") or []):
-            entry["examples"] = {
-                "from": before_m.get("examples") or [],
-                "to": after_m.get("examples") or [],
-            }
-            changed = True
-        if not _pair_rows_equal(before_m.get("usages") or [], after_m.get("usages") or []):
-            entry["usages"] = {
-                "from": before_m.get("usages") or [],
-                "to": after_m.get("usages") or [],
-            }
-            changed = True
-        if changed:
-            meaning_changes.append(entry)
-    if meaning_changes:
-        changes["meanings"] = meaning_changes
-    return changes
-
-
-async def validate_self_edit_before_save(
-    *,
-    card: LearningCard,
-    profile: LanguageProfile,
-    after_content: dict,
-) -> dict:
-    before = dict(card.content or {})
-    changes = compute_self_edit_user_changes(before, after_content)
-    if not changes:
-        return {"ok": True, "issues": []}
-    llm = LLMService()
-    return await llm.validate_self_edit_changes(
-        lemma=str(after_content.get("lemma") or card.lemma_l2),
-        learning_lang=profile.learning_lang,
-        app_lang=profile.app_lang,
-        changes=changes,
-    )
-
-
-def apply_self_edit_content(card: LearningCard, content: dict) -> dict:
-    """Apply full user self-edit in-place; returns before snapshot for history."""
-    before = _card_snapshot(card)
-    merged = dict(content or {})
-    lemma = str(merged.get("lemma") or card.lemma_l2).strip()
-    if not lemma:
-        raise ValueError("lemma is required")
-    merged["lemma"] = lemma
-    meanings = merged.get("meanings") or []
-    gloss_primary = card.gloss_primary
-    if meanings and isinstance(meanings[0], dict):
-        g = meanings[0].get("gloss_l1")
-        if g:
-            gloss_primary = str(g)
-    card.content = merged
-    card.lemma_l2 = lemma
-    card.pos = merged.get("pos")
-    card.gloss_primary = gloss_primary
-    card.lexical_entry_id = None
-    card.content_review_status = "user_edited"
-    card.has_content_changes = True
-    card.card_activity_status = "self_edit_processing"
-    return before
-
-
-def apply_self_edit(
-    card: LearningCard,
-    *,
-    lemma_l2: str,
-    pos: str | None,
-    gloss_primary: str | None,
-    extra_glosses: list[str],
-) -> dict:
-    """Legacy narrow self-edit — prefer apply_self_edit_content."""
-    content = dict(card.content or {})
-    content["lemma"] = lemma_l2
-    if pos:
-        content["pos"] = pos
-    glosses = [g for g in ([gloss_primary] if gloss_primary else []) + list(extra_glosses) if g and g.strip()]
-    if glosses:
-        meanings = list(content.get("meanings") or [])
-        new_meanings: list[dict] = []
-        for i, gloss in enumerate(glosses):
-            if i < len(meanings):
-                m = dict(meanings[i])
-                m["gloss_l1"] = gloss
-                new_meanings.append(m)
-            else:
-                new_meanings.append(
-                    {"gloss_l1": gloss, "synonyms_l1": [], "examples": [], "usages": []}
-                )
-        content["meanings"] = new_meanings
-    return apply_self_edit_content(card, content)
-
-
 async def count_corrections_today(db: AsyncSession, user_id: UUID) -> int:
     start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     result = await db.execute(
@@ -435,6 +389,22 @@ async def count_corrections_today(db: AsyncSession, user_id: UUID) -> int:
         .where(CardCorrection.user_id == user_id, CardCorrection.created_at >= start)
     )
     return int(result.scalar_one())
+
+
+def _accept_patch(
+    card: LearningCard,
+    correction: CardCorrection,
+    *,
+    patch: dict,
+    before: dict,
+    reason: str | None,
+    learning_lang: str,
+) -> None:
+    apply_correction_patch(card, patch, learning_lang)
+    card.content_review_status = "correction_accepted"
+    card.has_content_changes = True
+    correction.status = "accepted"
+    correction.result_code = "correction_accepted"
 
 
 async def process_correction(correction_id: UUID) -> None:
@@ -453,6 +423,17 @@ async def process_correction(correction_id: UUID) -> None:
             return
 
         before = _card_snapshot(card)
+        evidence: dict = {}
+        try:
+            evidence = await gather_correction_evidence(
+                dict(card.content or {}),
+                app_lang=profile.app_lang,
+                learning_lang=profile.learning_lang,
+            )
+        except Exception:
+            logger.exception("Correction dictionary lookup failed for %s", correction_id)
+            evidence = {"lookup_empty": True, "lookup_error": True, "lemma_candidates": []}
+
         llm = LLMService()
         try:
             verdict = await llm.verify_card_correction(
@@ -461,6 +442,7 @@ async def process_correction(correction_id: UUID) -> None:
                 note=correction.note or "",
                 app_lang=profile.app_lang,
                 learning_lang=profile.learning_lang,
+                evidence=evidence,
             )
         except Exception:
             logger.exception("Correction LLM failed for %s", correction_id)
@@ -495,22 +477,16 @@ async def process_correction(correction_id: UUID) -> None:
 
         applied = False
         if status == "accepted" and isinstance(patch, dict):
-            material, reject_reason = patch_is_material(before, patch)
-            if material:
-                card.content = _apply_patch_to_content(
-                    dict(card.content or {}), patch, list(correction.sections or [])
+            ok, reject_reason = gate_accepted_patch(before, patch, evidence)
+            if ok:
+                _accept_patch(
+                    card,
+                    correction,
+                    patch=patch,
+                    before=before,
+                    reason=reason,
+                    learning_lang=profile.learning_lang,
                 )
-                if patch.get("lemma"):
-                    card.lemma_l2 = str(patch["lemma"])
-                if patch.get("pos"):
-                    card.pos = str(patch["pos"])
-                if patch.get("gloss_primary"):
-                    card.gloss_primary = str(patch["gloss_primary"])
-                card.lexical_entry_id = None
-                card.content_review_status = "correction_accepted"
-                card.has_content_changes = True
-                correction.status = "accepted"
-                correction.result_code = "correction_accepted"
                 after = _card_snapshot(card)
                 await _add_history_event(
                     db,
@@ -526,11 +502,44 @@ async def process_correction(correction_id: UUID) -> None:
             else:
                 status = "rejected"
                 result_code = "correction_unfounded"
-                reason = reject_reason or "Karta jest poprawna — brak błędów do poprawy."
+                reason = reject_reason or STYLE_REJECT_REASON
         elif status == "accepted":
             status = "rejected"
             result_code = "correction_unfounded"
             reason = reason or "Brak poprawki do zastosowania."
+
+        if not applied:
+            obvious = obvious_headword_fix(before, profile.learning_lang)
+            if obvious:
+                ok, _ = gate_accepted_patch(before, obvious, evidence)
+                if ok:
+                    _accept_patch(
+                        card,
+                        correction,
+                        patch=obvious,
+                        before=before,
+                        reason=reason,
+                        learning_lang=profile.learning_lang,
+                    )
+                    after = _card_snapshot(card)
+                    await _add_history_event(
+                        db,
+                        card_id=card.id,
+                        user_id=correction.user_id,
+                        event_type="correction_accepted",
+                        actor="system",
+                        result_code="correction_accepted",
+                        summary=_diff_summary(before, after),
+                        payload={
+                            "reason": "Zsynchronizowano hasło karty.",
+                            "patch": obvious,
+                            "before": before,
+                            "after": after,
+                        },
+                    )
+                    applied = True
+                    patch = obvious
+                    reason = "Zsynchronizowano hasło karty."
 
         if not applied:
             correction.status = "rejected"
@@ -560,107 +569,56 @@ async def process_correction(correction_id: UUID) -> None:
         await notify_correction_resolved(db, card.user_id, card.id, correction.status)
 
 
-async def review_self_edit(history_event_id: UUID) -> None:
-    async with async_session_factory() as db:
-        result = await db.execute(
-            select(CardHistoryEvent, LearningCard, LanguageProfile)
-            .join(LearningCard, LearningCard.id == CardHistoryEvent.card_id)
-            .join(LanguageProfile, LanguageProfile.id == LearningCard.profile_id)
-            .where(CardHistoryEvent.id == history_event_id)
-        )
-        row = result.one_or_none()
-        if row is None:
-            return
-        event, card, profile = row
-        if event.event_type != "self_edit_applied":
-            return
-
-        payload = dict(event.payload or {})
-        before = payload.get("before") or {}
-        after = payload.get("after") or _card_snapshot(card)
-
-        llm = LLMService()
-        try:
-            verdict = await llm.review_self_edit(
-                before_content=dict(before.get("content") or {}),
-                after_content=dict(after.get("content") or {}),
-                before_lemma=str(before.get("lemma_l2") or ""),
-                after_lemma=str(after.get("lemma_l2") or ""),
-                app_lang=profile.app_lang,
-                learning_lang=profile.learning_lang,
-            )
-            ai_verdict = str(verdict.get("verdict") or "self_edit_ok")
-            if ai_verdict not in SELF_EDIT_VERDICT_CODES:
-                ai_verdict = "self_edit_questionable"
-            ai_reason = verdict.get("reason")
-        except Exception:
-            logger.exception("Self-edit review failed for event %s", history_event_id)
-            ai_verdict = "self_edit_questionable"
-            ai_reason = "Review processing failed"
-
-        review = AdminCardReview(
-            user_id=event.user_id,
-            card_id=card.id,
-            source="self_edit",
-            source_id=event.id,
-            learning_lang=profile.learning_lang,
-            before_snapshot=before,
-            after_snapshot=after,
-            ai_verdict=ai_verdict.replace("self_edit_", ""),
-            ai_reason=ai_reason,
-            admin_status="pending",
-        )
-        db.add(review)
-        await _add_history_event(
-            db,
-            card_id=card.id,
-            user_id=event.user_id,
-            event_type="self_edit_reviewed",
-            actor="system",
-            result_code=ai_verdict,
-            summary=ai_reason or ai_verdict,
-            payload={"review_id": str(review.id)},
-        )
-        card.card_activity_status = None
-        await db.commit()
-
-
-async def restore_card_from_history(
+async def escalate_rejected_correction(
     db: AsyncSession,
     *,
-    card: LearningCard,
     user_id: UUID,
-    history_event_id: UUID,
-) -> CardHistoryEvent:
-    events_q = await db.execute(
-        select(CardHistoryEvent)
-        .where(CardHistoryEvent.card_id == card.id, CardHistoryEvent.user_id == user_id)
-        .order_by(CardHistoryEvent.created_at.asc())
+    card: LearningCard,
+    correction: CardCorrection,
+) -> AdminEscalation:
+    if correction.user_id != user_id or correction.card_id != card.id:
+        raise ValueError("Correction not found")
+    if correction.status != "rejected":
+        raise ValueError("Only a rejected report can be sent to administration")
+    existing = (
+        await db.execute(
+            select(AdminEscalation).where(AdminEscalation.correction_id == correction.id)
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+    row = AdminEscalation(
+        user_id=user_id,
+        card_id=card.id,
+        correction_id=correction.id,
+        user_note=correction.note,
+        sections=list(correction.sections or []),
+        reject_reason=correction.reason,
+        card_snapshot=_card_snapshot(card),
+        status="pending",
     )
-    all_events = list(events_q.scalars().all())
-    target = next((e for e in all_events if e.id == history_event_id), None)
-    if target is None:
-        raise ValueError("History event not found")
-    if not _can_restore_event(target, all_events):
-        raise ValueError("Restore not allowed for this event")
-
-    snapshot = (target.payload or {}).get("pre_edit_snapshot")
-    if not isinstance(snapshot, dict):
-        raise ValueError("No snapshot available")
-
-    _apply_snapshot(card, snapshot)
-    card.content_review_status = None
-    card.card_activity_status = None
-    restored = await _add_history_event(
+    db.add(row)
+    await db.flush()
+    await _add_history_event(
         db,
         card_id=card.id,
         user_id=user_id,
-        event_type="restored_to_original",
+        event_type="correction_escalated",
         actor="user",
-        summary="Przywrócono oryginalną wersję karty",
-        payload={"restored_from_event_id": str(history_event_id)},
+        summary="Zgłoszono do administracji",
+        payload={"escalation_id": str(row.id), "correction_id": str(correction.id)},
     )
-    return restored
+    return row
+
+
+async def mark_escalation_done(db: AsyncSession, escalation_id: UUID) -> AdminEscalation | None:
+    row = await db.get(AdminEscalation, escalation_id)
+    if row is None:
+        return None
+    row.status = "done"
+    row.resolved_at = datetime.now(UTC)
+    await db.flush()
+    return row
 
 
 async def create_correction_submitted_event(
@@ -683,29 +641,6 @@ async def create_correction_submitted_event(
     )
 
 
-async def create_self_edit_history_event(
-    db: AsyncSession,
-    *,
-    card: LearningCard,
-    user_id: UUID,
-    before: dict,
-) -> CardHistoryEvent:
-    after = _card_snapshot(card)
-    return await _add_history_event(
-        db,
-        card_id=card.id,
-        user_id=user_id,
-        event_type="self_edit_applied",
-        actor="user",
-        summary=_diff_summary(before, after),
-        payload={
-            "before": before,
-            "after": after,
-            "pre_edit_snapshot": before,
-        },
-    )
-
-
 def history_event_response(event: CardHistoryEvent, all_events: list[CardHistoryEvent]) -> dict:
     return {
         "id": event.id,
@@ -716,5 +651,5 @@ def history_event_response(event: CardHistoryEvent, all_events: list[CardHistory
         "summary": event.summary,
         "payload": event.payload,
         "created_at": event.created_at,
-        "can_restore": _can_restore_event(event, all_events),
+        "can_restore": False,
     }

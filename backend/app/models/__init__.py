@@ -345,6 +345,24 @@ class AdminCardReview(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class AdminEscalation(Base):
+    __tablename__ = "admin_escalations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    card_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("learning_cards.id", ondelete="CASCADE"))
+    correction_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("card_corrections.id", ondelete="CASCADE"), unique=True
+    )
+    user_note: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    sections: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    reject_reason: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    card_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class DeviceToken(Base):
     __tablename__ = "device_tokens"
 

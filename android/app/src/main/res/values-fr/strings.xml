@@ -158,7 +158,7 @@
 
     <string name="settings_periphrases">Tournures</string>
 
-    <string name="settings_syn_ant">Synonymes et antonymes</string>
+    <string name="settings_syn_ant">Autour du mot</string>
     <string name="settings_word_family">Famille de mots</string>
 
     <string name="settings_conjugation">Conjugaison</string>
@@ -360,7 +360,7 @@
 
     <string name="section_synonyms">SYNONYMES</string>
 
-    <string name="section_syn_ant">SYNONYMES &amp; ANTONYMES</string>
+    <string name="section_syn_ant">AUTOUR DU MOT</string>
 
     <string name="section_antonyms">ANTONYMES</string>
 
@@ -661,6 +661,7 @@
     <string name="periphrase_n">Périphrase %1$d</string>
     <string name="practice_well_done">Bravo !</string>
     <string name="cd_search">Rechercher</string>
+    <string name="cd_clear_search">Effacer la recherche</string>
     <string name="correction_fix_card">Signaler une correction</string>
 <string name="correction_report_title">Vérifier et corriger la carte</string>
         <string name="correction_section_lemma">Lemme</string>
@@ -672,6 +673,9 @@
     <string name="correction_section_similar">Mots similaires</string>
     <string name="correction_section_pronunciation">Prononciation</string>
     <string name="correction_section_other">Autre</string>
+    <string name="correction_section_family">Famille de mots</string>
+    <string name="correction_section_synonyms">Synonymes</string>
+    <string name="correction_section_antonyms">Antonymes</string>
         <string name="correction_note_label">Note</string>
 <string name="correction_note_hint">Décrivez l’erreur…</string>
     <string name="correction_validation">Sélectionnez au moins une section ou écrivez une note (min. 3 caractères).</string>
@@ -681,6 +685,8 @@
     <string name="correction_result_rejected_title">Signalement non accepté</string>
     <string name="correction_result_rejected_body">Carte « %1$s ». %2$s</string>
         <string name="correction_edit_self">Modifier</string>
+    <string name="correction_escalate">Signaler à l’administration</string>
+    <string name="correction_escalated">Signalé à l’administration</string>
         <string name="correction_history_button">Historique des modifications</string>
     <string name="correction_self_edit_title">Modifier la carte</string>
     <string name="correction_field_lemma">Lemme</string>

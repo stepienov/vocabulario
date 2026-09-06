@@ -249,6 +249,21 @@ async def retry_enrichment(
     return RedirectResponse(f"/admin/cards/{card_id}", status_code=303)
 
 
+@router.post("/escalations/{escalation_id}/done")
+async def mark_escalation_done_page(
+    escalation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _admin: str = Depends(require_panel),
+):
+    from app.services.card_corrections import mark_escalation_done
+
+    row = await mark_escalation_done(db, escalation_id)
+    if row is None:
+        raise StarletteHTTPException(404, "Nie znaleziono zgłoszenia")
+    await db.commit()
+    return RedirectResponse("/admin/errors?tab=qa", status_code=303)
+
+
 @router.get("/lookups", response_class=HTMLResponse)
 async def lookups_page(
     request: Request,

@@ -13,6 +13,7 @@ import java.util.Calendar
 object LocalDashboard {
     const val MASTERED_INTERVAL_DAYS = 21.0
     const val FORECAST_CELLS = 35
+    const val NEXT_REVIEW_REFRESH_GRACE_MS = 5_000L
 
     fun build(
         learningCards: List<CachedCardEntity>,
@@ -116,6 +117,20 @@ object LocalDashboard {
             .mapNotNull { it.nextReviewAt }
             .filter { it > nowMs }
             .minOrNull()
+
+    /**
+     * Ile ms poczekać, zanim dashboard ma się przeliczyć po due.
+     * null = nie ma zaplanowanej powtórki.
+     */
+    fun delayUntilNextReviewRefresh(
+        nextReviewAtIso: String?,
+        nowMs: Long,
+        graceMs: Long = NEXT_REVIEW_REFRESH_GRACE_MS,
+    ): Long? {
+        if (nextReviewAtIso.isNullOrBlank()) return null
+        val nextMs = runCatching { Instant.parse(nextReviewAtIso).toEpochMilli() }.getOrNull() ?: return null
+        return (nextMs + graceMs - nowMs).coerceAtLeast(0L)
+    }
 
     private fun forecast(ready: List<CachedCardEntity>, nowMs: Long): List<DashboardForecastDay> {
         val weekStart = startOfWeekMondayMs(nowMs)

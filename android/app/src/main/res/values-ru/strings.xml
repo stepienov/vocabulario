@@ -157,7 +157,7 @@
 
     <string name="settings_periphrases">Конструкции</string>
 
-    <string name="settings_syn_ant">Синонимы и антонимы</string>
+    <string name="settings_syn_ant">Вокруг слова</string>
     <string name="settings_word_family">Родственные слова</string>
 
     <string name="settings_conjugation">Спряжение</string>
@@ -359,7 +359,7 @@
 
     <string name="section_synonyms">СИНОНИМЫ</string>
 
-    <string name="section_syn_ant">СИНОНИМЫ И АНТОНИМЫ</string>
+    <string name="section_syn_ant">ВОКРУГ СЛОВА</string>
 
     <string name="section_antonyms">АНТОНИМЫ</string>
 
@@ -662,6 +662,7 @@
     <string name="periphrase_n">Перифраза %1$d</string>
     <string name="practice_well_done">Отлично!</string>
     <string name="cd_search">Поиск</string>
+    <string name="cd_clear_search">Очистить поиск</string>
     <string name="correction_fix_card">Сообщить об исправлении</string>
 <string name="correction_report_title">Проверить и исправить карточку</string>
         <string name="correction_section_lemma">Лемма</string>
@@ -673,6 +674,9 @@
     <string name="correction_section_similar">Похожие слова</string>
     <string name="correction_section_pronunciation">Произношение</string>
     <string name="correction_section_other">Другое</string>
+    <string name="correction_section_family">Родственные слова</string>
+    <string name="correction_section_synonyms">Синонимы</string>
+    <string name="correction_section_antonyms">Антонимы</string>
     <string name="correction_note_label">Заметка</string>
     <string name="correction_note_hint">Опишите ошибку…</string>
     <string name="correction_validation">Выберите хотя бы один раздел или напишите заметку (мин. 3 символа).</string>
@@ -682,6 +686,8 @@
     <string name="correction_result_rejected_title">Жалоба не принята</string>
     <string name="correction_result_rejected_body">Карточка «%1$s». %2$s</string>
         <string name="correction_edit_self">Изменить</string>
+    <string name="correction_escalate">Сообщить администрации</string>
+    <string name="correction_escalated">Сообщено администрации</string>
         <string name="correction_history_button">История изменений</string>
     <string name="correction_self_edit_title">Изменить карточку</string>
     <string name="correction_field_lemma">Лемма</string>

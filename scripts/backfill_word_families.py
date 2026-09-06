@@ -6,7 +6,8 @@ Produkcja: --prod (czyta PROD_DATABASE_URL z .env)
 Przykłady:
   python scripts/backfill_word_families.py --lang-pair pl>es
   python scripts/backfill_word_families.py --lang-pair pl>es --apply
-  python scripts/backfill_word_families.py --prod --apply
+  python scripts/backfill_word_families.py --prod --fill-articles
+  python scripts/backfill_word_families.py --prod --fill-articles --apply
 """
 
 from __future__ import annotations
@@ -41,6 +42,15 @@ def _configure_database(*, prod: bool) -> None:
     os.environ.setdefault("LLM_MOCK", "true")
 
 
+def _print_fill_report(report) -> None:
+    print(
+        f"pair={report.lang_pair} needing={report.members_needing} "
+        f"filled={report.members_filled} families={report.families_projected}"
+    )
+    for example in report.examples:
+        print(f"  {example}")
+
+
 def _print_report(report) -> None:
     print(
         f"pair={report.lang_pair} entries={report.entries_seen} "
@@ -56,6 +66,7 @@ async def _run(args: argparse.Namespace) -> None:
     from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
     from app.core.config import get_settings
+    from app.services.word_families import fill_missing_family_articles
     from app.services.word_family_backfill import backfill_lang_pair, list_lang_pairs
 
     settings = get_settings()
@@ -65,7 +76,7 @@ async def _run(args: argparse.Namespace) -> None:
     if dry_run:
         print("dry-run (pass --apply to write)")
     else:
-        print("APPLY — writing families and patching cards")
+        print("APPLY — writing to DB")
 
     async with factory() as db:
         pairs = [args.lang_pair] if args.lang_pair else await list_lang_pairs(db)
@@ -73,12 +84,20 @@ async def _run(args: argparse.Namespace) -> None:
             print("no lang pairs found")
             return
         for pair in pairs:
-            report = await backfill_lang_pair(
-                db, pair, dry_run=dry_run, limit=args.limit
-            )
-            _print_report(report)
+            if args.fill_articles:
+                report = await fill_missing_family_articles(
+                    db, pair, dry_run=dry_run
+                )
+                _print_fill_report(report)
+            else:
+                report = await backfill_lang_pair(
+                    db, pair, dry_run=dry_run, limit=args.limit
+                )
+                _print_report(report)
             if dry_run:
                 await db.rollback()
+            else:
+                await db.commit()
     await engine.dispose()
 
 
@@ -88,6 +107,11 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None, help="Max lexical entries (smoke test)")
     parser.add_argument("--apply", action="store_true", help="Write to DB (default is dry-run)")
     parser.add_argument("--prod", action="store_true", help="Use PROD_DATABASE_URL from .env")
+    parser.add_argument(
+        "--fill-articles",
+        action="store_true",
+        help="Only fill missing citation articles on family members (no rebuild)",
+    )
     args = parser.parse_args()
     _configure_database(prod=args.prod)
     asyncio.run(_run(args))

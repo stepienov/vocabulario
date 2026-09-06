@@ -179,7 +179,7 @@
 
     <string name="settings_periphrases">Cách diễn đạt</string>
 
-    <string name="settings_syn_ant">Từ đồng nghĩa và trái nghĩa</string>
+    <string name="settings_syn_ant">Xung quanh từ</string>
     <string name="settings_word_family">Họ từ</string>
 
     <string name="settings_conjugation">Chia động từ</string>
@@ -390,7 +390,7 @@
 
     <string name="section_synonyms">ĐỒNG NGHĨA</string>
 
-    <string name="section_syn_ant">ĐỒNG NGHĨA VÀ TRÁI NGHĨA</string>
+    <string name="section_syn_ant">XUNG QUANH TỪ</string>
 
     <string name="section_antonyms">TRÁI NGHĨA</string>
 
@@ -705,6 +705,7 @@
     <string name="practice_well_done">Tuyệt vời!</string>
 
     <string name="cd_search">Tìm kiếm</string>
+    <string name="cd_clear_search">Xóa tìm kiếm</string>
 
     <string name="correction_fix_card">Báo cáo chỉnh sửa</string>
 
@@ -727,6 +728,9 @@
     <string name="correction_section_pronunciation">Phát âm</string>
 
     <string name="correction_section_other">Khác</string>
+    <string name="correction_section_family">Họ từ</string>
+    <string name="correction_section_synonyms">Từ đồng nghĩa</string>
+    <string name="correction_section_antonyms">Từ trái nghĩa</string>
 
     <string name="correction_note_label">Ghi chú</string>
 
@@ -745,6 +749,8 @@
     <string name="correction_result_rejected_body">Thẻ “%1$s”. %2$s</string>
 
     <string name="correction_edit_self">Chỉnh sửa</string>
+    <string name="correction_escalate">Báo cho quản trị</string>
+    <string name="correction_escalated">Đã báo cho quản trị</string>
     <string name="correction_history_button">Lịch sử thay đổi</string>
 
     <string name="correction_self_edit_title">Chỉnh sửa thẻ</string>

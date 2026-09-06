@@ -140,13 +140,13 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import androidx.compose.ui.platform.testTag
 import com.vocabulario.app.ui.TestTags
+import com.vocabulario.app.i18n.localizedLookupReadingLabel
 import com.vocabulario.app.i18n.localizedPosLabel
+import com.vocabulario.app.i18n.lookupShowsReadingChips
 import com.vocabulario.app.ui.card.ListCardDetailOverlay
 import com.vocabulario.app.ui.card.CardCorrectionReportSheet
 import com.vocabulario.app.ui.card.CardCorrectionResultDialog
 import com.vocabulario.app.ui.card.CardHistorySheet
-import com.vocabulario.app.ui.card.CardSelfEditSheet
-import com.vocabulario.app.ui.card.CardSelfEditWarningDialog
 import com.vocabulario.app.ui.card.CorrectionActivityColor
 import com.vocabulario.app.ui.card.cardActivityStatusLabel
 import com.vocabulario.app.ui.card.CardActivitySpinner
@@ -215,6 +215,7 @@ fun HomeScreen(
                     importState = importState,
                     isOnline = isOnline,
                     onQueryChange = viewModel::onQueryChange,
+                    onClearSearch = viewModel::clearSearch,
                     onSearch = viewModel::search,
                     onPrepareVoiceSearch = viewModel::prepareVoiceSearch,
                     onAdd = viewModel::openAddSheet,
@@ -294,35 +295,19 @@ fun HomeScreen(
         quotaRemaining = state.correctionQuotaRemaining,
         onDismiss = viewModel::dismissCorrectionReport,
         onSubmit = viewModel::submitCorrection,
-        onSelfEdit = viewModel::openSelfEditFromReport,
     )
     CardCorrectionResultDialog(
         correction = state.correctionResults.active?.correction,
         cardLemma = state.correctionResults.active?.cardLemma ?: "—",
         onDismiss = viewModel::dismissCorrectionResult,
-        onEditSelf = viewModel::openSelfEditFromResult,
-    )
-    CardSelfEditSheet(
-        card = if (state.selfEditWarningOpen) null else state.selfEditCard,
-        onDismiss = viewModel::dismissSelfEdit,
-        onSave = viewModel::saveSelfEdit,
-    )
-    CardSelfEditWarningDialog(
-        visible = state.selfEditWarningOpen,
-        lemma = state.selfEditPendingCardId?.let { id ->
-            state.listWords.firstOrNull { it.id == id }?.lemma_l2
-        } ?: state.selfEditCard?.lemma_l2 ?: "—",
-        issues = state.selfEditValidationIssues,
-        onConfirm = viewModel::confirmSelfEditWarning,
-        onRevert = viewModel::revertSelfEditWarning,
+        onEscalate = viewModel::escalateRejectedCorrection,
+        escalating = state.correctionEscalating,
     )
     CardHistorySheet(
         visible = state.historyCardId != null,
         loading = state.historyLoading,
-        restoring = state.historyRestoring,
         events = state.historyEvents,
         onDismiss = viewModel::dismissCardHistory,
-        onRestore = viewModel::restoreFromHistory,
     )
     com.vocabulario.app.ui.card.PendingReviewSheet(
         visible = state.reviewCardId != null,
@@ -880,6 +865,7 @@ private fun AddTab(
     importState: com.vocabulario.app.data.imports.ImportJobState,
     isOnline: Boolean,
     onQueryChange: (String) -> Unit,
+    onClearSearch: () -> Unit,
     onSearch: () -> Unit,
     onPrepareVoiceSearch: () -> Unit,
     onAdd: (LookupCandidate) -> Unit,
@@ -1051,7 +1037,19 @@ private fun AddTab(
                     Icon(Icons.Default.Search, contentDescription = null, tint = scheme.onSurfaceVariant)
                 },
                 trailingIcon = {
-                    Row {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (state.query.isNotEmpty() || state.candidates.isNotEmpty()) {
+                            IconButton(
+                                onClick = onClearSearch,
+                                modifier = Modifier.testTag(TestTags.SEARCH_CLEAR),
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.cd_clear_search),
+                                    tint = scheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                         if (isOnline && speechAvailable) {
                             IconButton(
                                 onClick = {
@@ -1095,6 +1093,9 @@ private fun AddTab(
         state.notice?.let { Text(it, color = scheme.onSurfaceVariant) }
 
         if (!importBusy) {
+            val showReadingChip = lookupShowsReadingChips(
+                state.candidates.map { it.reading },
+            )
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1103,6 +1104,9 @@ private fun AddTab(
                 items(state.candidates) { candidate ->
                     CandidateRow(
                         candidate = candidate,
+                        showReadingChip = showReadingChip,
+                        appLang = nativeLang,
+                        learningLang = learningLang,
                         onAdd = { onAdd(candidate) },
                         onOpenWord = onOpenWord,
                     )
@@ -1200,10 +1204,23 @@ private fun listDisplayName(list: WordListResponse): String = when {
 @Composable
 private fun CandidateRow(
     candidate: LookupCandidate,
+    showReadingChip: Boolean,
+    appLang: String,
+    learningLang: String,
     onAdd: () -> Unit,
     onOpenWord: (LookupCandidate) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val readingLabel = if (showReadingChip) {
+        localizedLookupReadingLabel(
+            reading = candidate.reading,
+            typedAs = candidate.typed_as,
+            appLang = appLang,
+            learningLang = learningLang,
+        )
+    } else {
+        null
+    }
     LemmaActionRow(
         lemma = candidate.lemma,
         gloss = candidate.gloss,
@@ -1215,6 +1232,7 @@ private fun CandidateRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                readingLabel?.let { TagChip(it) }
                 candidate.pos?.let { TagChip(localizedPosLabel(it).ifBlank { it }) }
                 if (candidate.onList) {
                     TagChip(
@@ -1541,7 +1559,6 @@ private fun ListsTab(
                             expanded = expandedId == card.id && !selectionMode,
                             selected = selected,
                             selectionMode = selectionMode,
-                            editProcessing = card.id == state.selfEditProgressCardId,
                             onToggle = {
                                 if (selectionMode) {
                                     onToggleWordSelection(card.id)
@@ -2129,7 +2146,6 @@ private fun ListWordTile(
     expanded: Boolean,
     selected: Boolean = false,
     selectionMode: Boolean = false,
-    editProcessing: Boolean = false,
     isOnline: Boolean = true,
     flushInProgress: Boolean = false,
     onToggle: () -> Unit,
@@ -2159,7 +2175,7 @@ private fun ListWordTile(
     val lookupQueued = card.enrichment_status == "awaiting_network" && isOnline && !flushInProgress
     val awaitingNetwork = card.enrichment_status == "awaiting_network" && !isOnline
     val pending = card.enrichment_status == "pending" || card.enrichment_status == "preparing" || flushInProgress
-    val activityProcessing = !card.card_activity_status.isNullOrBlank() || editProcessing
+    val activityProcessing = !card.card_activity_status.isNullOrBlank()
     val failed = card.enrichment_status == "failed"
     val posKey = normalizePosKey(card.pos)
     val posLabelText = if (posKey == "unknown") {
@@ -2311,11 +2327,7 @@ private fun ListWordTile(
                 }
             }
 
-            val activityLabel = when {
-                editProcessing && card.card_activity_status.isNullOrBlank() ->
-                    stringResource(R.string.self_edit_validating)
-                else -> cardActivityStatusLabel(card.card_activity_status)
-            }
+            val activityLabel = cardActivityStatusLabel(card.card_activity_status)
             activityLabel?.let { label ->
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(

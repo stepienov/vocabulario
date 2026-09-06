@@ -158,7 +158,7 @@
 
     <string name="settings_periphrases">Patrones</string>
 
-    <string name="settings_syn_ant">Sinónimos y antónimos</string>
+    <string name="settings_syn_ant">En torno a la palabra</string>
     <string name="settings_word_family">Familia de palabras</string>
 
     <string name="settings_conjugation">Conjugación</string>
@@ -360,7 +360,7 @@
 
     <string name="section_synonyms">SINÓNIMOS</string>
 
-    <string name="section_syn_ant">SINÓNIMOS Y ANTÓNIMOS</string>
+    <string name="section_syn_ant">EN TORNO A LA PALABRA</string>
 
     <string name="section_antonyms">ANTÓNIMOS</string>
 
@@ -674,6 +674,7 @@
     <string name="practice_well_done">¡Bien!</string>
 
     <string name="cd_search">Buscar</string>
+    <string name="cd_clear_search">Borrar búsqueda</string>
 
 
         <string name="correction_fix_card">Reportar una corrección</string>
@@ -687,6 +688,9 @@
     <string name="correction_section_similar">Palabras similares</string>
     <string name="correction_section_pronunciation">Pronunciación</string>
     <string name="correction_section_other">Otro</string>
+    <string name="correction_section_family">Familia de palabras</string>
+    <string name="correction_section_synonyms">Sinónimos</string>
+    <string name="correction_section_antonyms">Antónimos</string>
     <string name="correction_note_label">Nota</string>
     <string name="correction_note_hint">Describe el error…</string>
     <string name="correction_validation">Selecciona al menos una sección o escribe una nota (mín. 3 caracteres).</string>
@@ -696,6 +700,8 @@
     <string name="correction_result_rejected_title">Informe no aceptado</string>
     <string name="correction_result_rejected_body">Tarjeta «%1$s». %2$s</string>
         <string name="correction_edit_self">Editar</string>
+    <string name="correction_escalate">Avisar a administración</string>
+    <string name="correction_escalated">Avisado a administración</string>
         <string name="correction_history_button">Historial de cambios</string>
     <string name="correction_self_edit_title">Editar tarjeta</string>
     <string name="correction_field_lemma">Lema</string>

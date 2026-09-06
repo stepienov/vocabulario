@@ -158,7 +158,7 @@
 
     <string name="settings_periphrases">Muster</string>
 
-    <string name="settings_syn_ant">Synonyme und Antonyme</string>
+    <string name="settings_syn_ant">Rund ums Wort</string>
     <string name="settings_word_family">Wortfamilie</string>
 
     <string name="settings_conjugation">Konjugation</string>
@@ -359,7 +359,7 @@
 
     <string name="section_synonyms">SYNONYME</string>
 
-    <string name="section_syn_ant">SYNONYME &amp; ANTONYME</string>
+    <string name="section_syn_ant">RUND UMS WORT</string>
 
     <string name="section_antonyms">ANTONYME</string>
 
@@ -662,6 +662,7 @@
     <string name="periphrase_n">Umschreibung %1$d</string>
     <string name="practice_well_done">Gut!</string>
     <string name="cd_search">Suchen</string>
+    <string name="cd_clear_search">Suche löschen</string>
     <string name="correction_fix_card">Korrektur melden</string>
 <string name="correction_report_title">Karte prüfen und korrigieren</string>
             <string name="correction_section_lemma">Lemma</string>
@@ -673,6 +674,9 @@
     <string name="correction_section_similar">Ähnliche Wörter</string>
     <string name="correction_section_pronunciation">Aussprache</string>
     <string name="correction_section_other">Sonstiges</string>
+    <string name="correction_section_family">Wortfamilie</string>
+    <string name="correction_section_synonyms">Synonyme</string>
+    <string name="correction_section_antonyms">Antonyme</string>
     <string name="correction_note_label">Notiz</string>
     <string name="correction_note_hint">Beschreibe den Fehler…</string>
     <string name="correction_validation">Wähle mindestens einen Abschnitt oder schreibe eine Notiz (mind. 3 Zeichen).</string>
@@ -682,6 +686,8 @@
     <string name="correction_result_rejected_title">Meldung nicht angenommen</string>
     <string name="correction_result_rejected_body">Karte „%1$s“. %2$s</string>
         <string name="correction_edit_self">Bearbeiten</string>
+    <string name="correction_escalate">An die Verwaltung melden</string>
+    <string name="correction_escalated">An die Verwaltung gemeldet</string>
         <string name="correction_history_button">Änderungsverlauf</string>
     <string name="correction_self_edit_title">Karte bearbeiten</string>
         <string name="correction_field_lemma">Lemma</string>

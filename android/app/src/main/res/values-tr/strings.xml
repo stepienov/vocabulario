@@ -180,7 +180,7 @@
 
     <string name="settings_periphrases">Kalıplar</string>
 
-    <string name="settings_syn_ant">Eş anlamlılar ve zıt anlamlılar</string>
+    <string name="settings_syn_ant">Kelimenin çevresi</string>
     <string name="settings_word_family">Kelime ailesi</string>
 
     <string name="settings_conjugation">Çekim</string>
@@ -391,7 +391,7 @@
 
     <string name="section_synonyms">EŞ ANLAMLI KELİMELER</string>
 
-    <string name="section_syn_ant">EŞ ANLAMLI VE ZIT ANLAMLI KELİMELER</string>
+    <string name="section_syn_ant">KELİMENİN ÇEVRESİ</string>
 
     <string name="section_antonyms">ZIT ANLAMLI KELİMELER</string>
 
@@ -706,6 +706,7 @@
     <string name="practice_well_done">Güzel!</string>
 
     <string name="cd_search">Ara</string>
+    <string name="cd_clear_search">Aramayı temizle</string>
 
     <string name="correction_fix_card">Düzeltme bildir</string>
 
@@ -728,6 +729,9 @@
     <string name="correction_section_pronunciation">Telaffuz</string>
 
     <string name="correction_section_other">Diğer</string>
+    <string name="correction_section_family">Kelime ailesi</string>
+    <string name="correction_section_synonyms">Eşanlamlılar</string>
+    <string name="correction_section_antonyms">Zıt anlamlılar</string>
 
     <string name="correction_note_label">Not</string>
 
@@ -746,6 +750,8 @@
     <string name="correction_result_rejected_body">Kart «%1$s». %2$s</string>
 
     <string name="correction_edit_self">Düzenle</string>
+    <string name="correction_escalate">Yönetime bildir</string>
+    <string name="correction_escalated">Yönetime bildirildi</string>
     <string name="correction_history_button">Değişiklik geçmişi</string>
 
     <string name="correction_self_edit_title">Kartı düzenle</string>

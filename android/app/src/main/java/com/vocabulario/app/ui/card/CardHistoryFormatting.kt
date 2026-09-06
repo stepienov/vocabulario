@@ -14,12 +14,10 @@ import kotlinx.serialization.json.jsonPrimitive
 @Composable
 fun historyEventSummary(event: CardHistoryEventResponse): String? = when (event.event_type) {
     "correction_submitted" -> historyReportSummary(event.payload)
-    "restored_to_original" -> stringResource(R.string.card_history_summary_restored)
     "correction_rejected" -> event.payload?.get("reason")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
         ?: correctionResultMessage(event.result_code)
     "correction_accepted" -> historyAcceptedSummary(event)
-    "self_edit_applied" -> historySelfEditDiff(event.payload)
-    "self_edit_reviewed" -> event.summary?.takeIf { it.isNotBlank() }
+    "correction_escalated" -> stringResource(R.string.correction_escalated)
     else -> event.summary?.takeIf { it.isNotBlank() }
 }
 

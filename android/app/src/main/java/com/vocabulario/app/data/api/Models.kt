@@ -124,6 +124,9 @@ data class LookupCandidate(
     val list_id: String? = null,
     val list_name: String? = null,
     val enrichment_status: String? = null,
+    val source_card_id: String? = null,
+    val reading: String? = null,
+    val typed_as: String? = null,
 ) {
     val onList: Boolean get() = !list_name.isNullOrBlank()
     val isCreating: Boolean get() = EnrichmentStatus.isCreating(enrichment_status)
@@ -257,6 +260,7 @@ data class WordListAddWordRequest(
     val entry_kind: String = "lemma",
     val base_lemma: String? = null,
     val pattern: String? = null,
+    val source_card_id: String? = null,
 )
 
 @Serializable
@@ -306,6 +310,7 @@ data class CardCreateRequest(
     val gloss: String? = null,
     val profile_id: String,
     val lexical_entry_id: String? = null,
+    val source_card_id: String? = null,
 )
 
 @Serializable
@@ -535,6 +540,12 @@ data class CardCorrectionResponse(
 )
 
 @Serializable
+data class CorrectionEscalateResponse(
+    val id: String,
+    val status: String = "pending",
+)
+
+@Serializable
 data class CardHistoryEventResponse(
     val id: String,
     val card_id: String,
@@ -553,33 +564,10 @@ data class CardHistoryResponse(
 )
 
 @Serializable
-data class CardRestoreRequest(
-    val history_event_id: String,
-)
-
-@Serializable
 data class CorrectionQuotaResponse(
     val used: Int,
     val limit: Int,
     val remaining: Int,
-)
-
-@Serializable
-data class CardSelfEditRequest(
-    val content: kotlinx.serialization.json.JsonObject,
-)
-
-@Serializable
-data class SelfEditValidateIssue(
-    val field: String,
-    val label: String,
-    val message: String,
-)
-
-@Serializable
-data class SelfEditValidateResponse(
-    val ok: Boolean,
-    val issues: List<SelfEditValidateIssue> = emptyList(),
 )
 
 @Serializable

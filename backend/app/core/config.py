@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     llm_store_payloads: bool = True
     llm_payload_ttl_days: int = 30
 
+    # User-Agent wymagany przez Wikimedia (Wikisłownik).
+    wikimedia_user_agent: str = (
+        "Vocabulario/1.0 (https://github.com/stepienov/vocabulario; wiktionary-lookup)"
+    )
+
     # Zapis lexical_entries + learning_cards do Postgres (wyłączone = tylko podgląd AI)
     persist_words: bool = False
 

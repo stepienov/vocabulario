@@ -16,13 +16,11 @@ from app.schemas import (
     CardCorrectionCreate,
     CardCorrectionCreateResponse,
     CardCorrectionResponse,
+    CorrectionEscalateResponse,
     CorrectionQuotaResponse,
     CardHistoryEventResponse,
     CardHistoryResponse,
     CardResponse,
-    CardRestoreRequest,
-    CardSelfEditRequest,
-    SelfEditValidateResponse,
     DashboardForecastDay,
     DashboardStatsResponse,
     ImportIngestRequest,
@@ -49,15 +47,11 @@ from app.schemas.practice import CheckAnswerRequest, CheckAnswerResponse, Choice
 from app.services.answer_check import check_answer, collect_acceptable_answers
 from app.services.card_corrections import (
     CORRECTION_DAILY_LIMIT,
-    apply_self_edit_content,
     count_corrections_today,
     create_correction_submitted_event,
-    create_self_edit_history_event,
+    escalate_rejected_correction,
     history_event_response,
     process_correction,
-    restore_card_from_history,
-    review_self_edit,
-    validate_self_edit_before_save,
     _validate_sections,
 )
 from app.services.card_jobs import (
@@ -79,7 +73,7 @@ from app.services.lookup_events import find_lookup_event_for_card, record_lookup
 from app.services.lookup_candidates import has_confident_match
 from app.services.similar_words import ensure_similar_words
 from app.services.srs import apply_review
-from app.services.word_families import backfill_card_word_family
+from app.services.word_families import attach_card_to_word_family, backfill_card_word_family
 from app.services.word_lists import (
     RESERVED_LIST_NAMES,
     ensure_pending_inbox_list,
@@ -113,6 +107,25 @@ async def _active_profile(db: AsyncSession, user_id: UUID, profile_id: UUID | No
     if profile is None:
         raise api_error(400, "no_active_profile", "No active language profile")
     return profile
+
+
+async def _owned_source_card(
+    db: AsyncSession,
+    user_id: UUID,
+    profile_id: UUID,
+    card_id: UUID | None,
+) -> LearningCard | None:
+    if card_id is None:
+        return None
+    result = await db.execute(
+        select(LearningCard).where(
+            LearningCard.id == card_id,
+            LearningCard.user_id == user_id,
+            LearningCard.profile_id == profile_id,
+            LearningCard.deleted_at.is_(None),
+        )
+    )
+    return result.scalar_one_or_none()
 
 
 @router.post("/lookup", response_model=LookupResponse)
@@ -379,6 +392,8 @@ async def create_card(
         card.lookup_event_id = matched.id
     db.add(SrsState(card_id=card.id, scope="main", status="new"))
     await hydrate_from_lexical_cache(db, card, profile)
+    source = await _owned_source_card(db, user.id, profile.id, body.source_card_id)
+    await attach_card_to_word_family(db, profile, card, source_card=source)
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -1227,6 +1242,8 @@ async def add_word_to_list(
         await db.flush()
 
     await hydrate_from_lexical_cache(db, card, profile)
+    source = await _owned_source_card(db, user.id, profile.id, body.source_card_id)
+    await attach_card_to_word_family(db, profile, card, source_card=source)
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -1534,51 +1551,34 @@ async def latest_card_correction(
     return CardCorrectionResponse.model_validate(correction)
 
 
-@router.post("/cards/{card_id}/self-edit/validate", response_model=SelfEditValidateResponse)
-async def validate_self_edit_card(
+@router.post(
+    "/cards/{card_id}/corrections/{correction_id}/escalate",
+    response_model=CorrectionEscalateResponse,
+)
+async def escalate_card_correction(
     card_id: UUID,
-    body: CardSelfEditRequest,
+    correction_id: UUID,
     profile_id: UUID = Query(...),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     card = await _user_card(db, user.id, card_id, profile_id)
-    profile = await db.get(LanguageProfile, profile_id)
-    if profile is None:
-        raise api_error(404, "profile_not_found", "Profile not found")
+    correction = await db.get(CardCorrection, correction_id)
+    if (
+        correction is None
+        or correction.user_id != user.id
+        or correction.card_id != card.id
+    ):
+        raise api_error(404, "correction_not_found", "Correction not found")
     try:
-        result = await validate_self_edit_before_save(
-            card=card,
-            profile=profile,
-            after_content=body.content,
+        row = await escalate_rejected_correction(
+            db, user_id=user.id, card=card, correction=correction
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return SelfEditValidateResponse(**result)
-
-
-@router.post("/cards/{card_id}/self-edit", response_model=CardResponse)
-async def self_edit_card(
-    card_id: UUID,
-    body: CardSelfEditRequest,
-    background_tasks: BackgroundTasks,
-    profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    card = await _user_card(db, user.id, card_id, profile_id)
-    try:
-        before = apply_self_edit_content(card, body.content)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    event = await create_self_edit_history_event(db, card=card, user_id=user.id, before=before)
     await db.commit()
-    await db.refresh(card)
-    background_tasks.add_task(review_self_edit, event.id)
-    srs_q = await db.execute(
-        select(SrsState).where(SrsState.card_id == card.id, SrsState.scope == "main")
-    )
-    return _card_response(card, srs_q.scalar_one_or_none())
+    await db.refresh(row)
+    return CorrectionEscalateResponse(id=row.id, status=row.status)
 
 
 @router.get("/cards/{card_id}/history", response_model=CardHistoryResponse)
@@ -1604,27 +1604,20 @@ async def card_history(
     )
 
 
-@router.post("/cards/{card_id}/restore", response_model=CardResponse)
-async def restore_card(
-    card_id: UUID,
-    body: CardRestoreRequest,
-    profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    card = await _user_card(db, user.id, card_id, profile_id)
-    try:
-        await restore_card_from_history(
-            db,
-            card=card,
-            user_id=user.id,
-            history_event_id=body.history_event_id,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    await db.commit()
-    await db.refresh(card)
-    srs_q = await db.execute(
-        select(SrsState).where(SrsState.card_id == card.id, SrsState.scope == "main")
-    )
-    return _card_response(card, srs_q.scalar_one_or_none())
+def _self_edit_gone():
+    raise api_error(410, "self_edit_removed", "Manual card editing was removed.")
+
+
+@router.post("/cards/{card_id}/self-edit/validate")
+async def validate_self_edit_removed(card_id: UUID):
+    _self_edit_gone()
+
+
+@router.post("/cards/{card_id}/self-edit")
+async def self_edit_removed(card_id: UUID):
+    _self_edit_gone()
+
+
+@router.post("/cards/{card_id}/restore")
+async def restore_removed(card_id: UUID):
+    _self_edit_gone()

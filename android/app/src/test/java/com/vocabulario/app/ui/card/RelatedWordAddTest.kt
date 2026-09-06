@@ -15,6 +15,17 @@ class RelatedWordAddTest {
         assertEquals("pasek, taśma", candidate.gloss)
         assertEquals("noun", candidate.pos)
         assertEquals(false, candidate.onList)
+        assertEquals(null, candidate.source_card_id)
+    }
+
+    @Test
+    fun relatedWordKeepsSourceCardId() {
+        val candidate = relatedWordToCandidate(
+            RelatedWord(lemma = "intermitencia", glossL1 = "x", pos = "noun", article = "la"),
+            sourceCardId = "card-1",
+        )
+        assertEquals("la intermitencia", candidate.lemma)
+        assertEquals("card-1", candidate.source_card_id)
     }
 
     @Test

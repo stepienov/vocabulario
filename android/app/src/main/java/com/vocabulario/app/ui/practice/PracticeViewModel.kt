@@ -12,6 +12,7 @@ import com.vocabulario.app.data.api.isWordAlreadyOnList
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.RelatedMembershipIndex
 import com.vocabulario.app.data.containsLemma
+import com.vocabulario.app.data.formatLemmaWithArticle
 import com.vocabulario.app.data.lemmaKeys
 import com.vocabulario.app.data.local.LocalAnswerCheck
 import com.vocabulario.app.data.normalizeTenseKeys
@@ -19,7 +20,6 @@ import com.vocabulario.app.i18n.UiStrings
 import com.vocabulario.app.ui.card.RelatedWord
 import com.vocabulario.app.ui.card.CorrectionResultItem
 import com.vocabulario.app.ui.card.CorrectionResultsState
-import com.vocabulario.app.ui.card.HomeUiStateSelfEditActive
 import com.vocabulario.app.ui.home.listNameConflictMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.buildJsonObject
 import javax.inject.Inject
 
 enum class PracticePhase {
@@ -103,17 +102,10 @@ data class PracticeUiState(
     val correctionSubmitting: Boolean = false,
     val correctionResults: CorrectionResultsState = CorrectionResultsState(),
     val correctionQuotaRemaining: Int? = null,
-    val selfEditCard: com.vocabulario.app.data.api.CardResponse? = null,
-    val selfEditSaving: Boolean = false,
-    val selfEditValidating: Boolean = false,
-    val selfEditProgressCardId: String? = null,
-    val selfEditWarningOpen: Boolean = false,
-    val selfEditValidationIssues: List<com.vocabulario.app.data.api.SelfEditValidateIssue> = emptyList(),
-    val selfEditPendingContent: kotlinx.serialization.json.JsonObject? = null,
+    val correctionEscalating: Boolean = false,
     val historyOpen: Boolean = false,
     val historyEvents: List<com.vocabulario.app.data.api.CardHistoryEventResponse> = emptyList(),
     val historyLoading: Boolean = false,
-    val historyRestoring: Boolean = false,
 ) {
     val canUndo: Boolean get() = lastUndo != null && !grading
 }
@@ -475,7 +467,9 @@ class PracticeViewModel @Inject constructor(
             return
         }
         _state.value = _state.value.copy(
-            addTarget = word,
+            addTarget = word.copy(
+                sourceCardId = _state.value.queue.getOrNull(_state.value.currentIndex)?.card_id,
+            ),
             pickListOpen = false,
             showCreateListPrompt = false,
             createListName = "",
@@ -531,7 +525,15 @@ class PracticeViewModel @Inject constructor(
         dismissAddSheet()
         markLemmaAdded(word.lemma)
         viewModelScope.launch {
-            runCatching { repository.createCard(word.lemma, word.pos, word.glossL1, null) }
+            runCatching {
+                repository.createCard(
+                    formatLemmaWithArticle(word.lemma, word.article),
+                    word.pos,
+                    word.glossL1,
+                    null,
+                    sourceCardId = word.sourceCardId,
+                )
+            }
                 .onSuccess { created ->
                     markLemmaAdded(created.lemma_l2.ifBlank { word.lemma })
                 }
@@ -589,7 +591,14 @@ class PracticeViewModel @Inject constructor(
         dismissAddSheet()
         viewModelScope.launch {
             runCatching {
-                repository.addWordToList(listId, word.lemma, word.pos, word.glossL1, null)
+                repository.addWordToList(
+                    listId,
+                    formatLemmaWithArticle(word.lemma, word.article),
+                    word.pos,
+                    word.glossL1,
+                    null,
+                    sourceCardId = word.sourceCardId,
+                )
             }.onFailure {
                 _state.value = _state.value.copy(
                     error = it.userMessage(strings, R.string.err_add),
@@ -610,7 +619,14 @@ class PracticeViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 val list = repository.createWordList(name)
-                repository.addWordToList(list.id, word.lemma, word.pos, word.glossL1, null)
+                repository.addWordToList(
+                    list.id,
+                    formatLemmaWithArticle(word.lemma, word.article),
+                    word.pos,
+                    word.glossL1,
+                    null,
+                    sourceCardId = word.sourceCardId,
+                )
             }.onFailure {
                 _state.value = _state.value.copy(
                     error = it.userMessage(strings, R.string.err_create_list),
@@ -723,21 +739,6 @@ class PracticeViewModel @Inject constructor(
         )
     }
 
-    fun openSelfEditFromReport() {
-        val item = _state.value.queue.getOrNull(_state.value.currentIndex) ?: return
-        _state.value = _state.value.copy(
-            correctionOpen = false,
-            correctionSubmitting = false,
-            selfEditCard = com.vocabulario.app.data.api.CardResponse(
-                id = item.card_id,
-                lemma_l2 = item.lemma_l2,
-                gloss_primary = item.gloss_primary,
-                content = item.content,
-                created_at = "",
-            ),
-        )
-    }
-
     fun submitCorrection(sections: List<String>, note: String) {
         if (!networkMonitor.isCurrentlyOnline()) {
             _state.value = _state.value.copy(error = strings.get(R.string.correction_requires_online))
@@ -786,30 +787,10 @@ class PracticeViewModel @Inject constructor(
         }
     }
 
-    private fun selfEditFlowActive(state: PracticeUiState = _state.value): Boolean =
-        HomeUiStateSelfEditActive(
-            state.selfEditCard,
-            state.selfEditWarningOpen,
-            state.selfEditProgressCardId,
-            state.selfEditSaving,
-            state.selfEditValidating,
-        )
-
     private fun deliverCorrectionResult(correction: com.vocabulario.app.data.api.CardCorrectionResponse, lemma: String) {
         val item = CorrectionResultItem(correction, lemma)
         _state.value = _state.value.copy(
-            correctionResults = _state.value.correctionResults.enqueue(
-                item,
-                selfEditFlowActive(),
-            ),
-        )
-    }
-
-    private fun maybeShowNextCorrectionResult() {
-        _state.value = _state.value.copy(
-            correctionResults = _state.value.correctionResults.tryShowNext(
-                selfEditFlowActive(),
-            ),
+            correctionResults = _state.value.correctionResults.enqueue(item),
         )
     }
 
@@ -831,116 +812,29 @@ class PracticeViewModel @Inject constructor(
 
     fun dismissCorrectionResult() {
         _state.value = _state.value.copy(
-            correctionResults = _state.value.correctionResults.dismiss(
-                selfEditFlowActive(),
-            ),
+            correctionResults = _state.value.correctionResults.dismiss(),
+            correctionEscalating = false,
         )
     }
 
-    fun openSelfEditFromResult() {
+    fun escalateRejectedCorrection() {
         val active = _state.value.correctionResults.active ?: return
-        val cardId = active.correction.card_id
-        val item = _state.value.queue.firstOrNull { it.card_id == cardId }
-        _state.value = _state.value.copy(
-            correctionResults = _state.value.correctionResults.clearActiveForSelfEdit(),
-            selfEditCard = com.vocabulario.app.data.api.CardResponse(
-                id = cardId,
-                lemma_l2 = item?.lemma_l2 ?: active.cardLemma,
-                gloss_primary = item?.gloss_primary,
-                content = item?.content ?: buildJsonObject { },
-                created_at = "",
-            ),
-        )
-    }
-
-    fun dismissSelfEdit() {
-        _state.value = _state.value.copy(
-            selfEditCard = null,
-            selfEditSaving = false,
-            selfEditValidating = false,
-            selfEditWarningOpen = false,
-            selfEditValidationIssues = emptyList(),
-            selfEditPendingContent = null,
-        )
-        maybeShowNextCorrectionResult()
-    }
-
-    fun saveSelfEdit(content: kotlinx.serialization.json.JsonObject) {
-        val cardId = _state.value.selfEditCard?.id ?: return
+        val correction = active.correction
+        if (correction.status == "accepted") return
         viewModelScope.launch {
-            _state.value = _state.value.copy(selfEditValidating = true)
-            runCatching { repository.validateSelfEdit(cardId, content) }
-                .onSuccess { validation ->
-                    if (validation.ok) {
-                        commitSelfEdit(cardId, content)
-                    } else {
-                        _state.value = _state.value.copy(
-                            selfEditValidating = false,
-                            selfEditWarningOpen = true,
-                            selfEditValidationIssues = validation.issues,
-                            selfEditPendingContent = content,
-                        )
-                    }
-                }
-                .onFailure {
-                    _state.value = _state.value.copy(
-                        selfEditValidating = false,
-                        error = it.userMessage(strings, R.string.err_save),
-                    )
-                }
-        }
-    }
-
-    fun confirmSelfEditWarning() {
-        val cardId = _state.value.selfEditCard?.id ?: return
-        val content = _state.value.selfEditPendingContent ?: return
-        viewModelScope.launch { commitSelfEdit(cardId, content) }
-    }
-
-    fun revertSelfEditWarning() {
-        dismissSelfEdit()
-    }
-
-    private suspend fun commitSelfEdit(cardId: String, content: kotlinx.serialization.json.JsonObject) {
-        _state.value = _state.value.copy(
-            selfEditSaving = true,
-            selfEditValidating = false,
-            selfEditWarningOpen = false,
-            selfEditValidationIssues = emptyList(),
-            selfEditPendingContent = null,
-        )
-        runCatching { repository.selfEditCard(cardId, content) }
-            .onSuccess { updated ->
+            _state.value = _state.value.copy(correctionEscalating = true, error = null)
+            runCatching {
+                repository.escalateCardCorrection(correction.card_id, correction.id)
+            }.onSuccess {
+                _state.value = _state.value.copy(correctionEscalating = false)
+                dismissCorrectionResult()
+            }.onFailure {
                 _state.value = _state.value.copy(
-                    selfEditCard = null,
-                    selfEditSaving = false,
-                    selfEditValidating = false,
-                )
-                _state.value = _state.value.copy(
-                    queue = _state.value.queue.map { item ->
-                        if (item.card_id == updated.id) {
-                            item.copy(
-                                lemma_l2 = updated.lemma_l2,
-                                gloss_primary = updated.gloss_primary,
-                                content = updated.content,
-                                card_activity_status = updated.card_activity_status,
-                                has_content_changes = updated.has_content_changes,
-                            )
-                        } else item
-                    },
-                )
-                maybeStartActivityPoll()
-                loadQueue(append = false)
-                maybeShowNextCorrectionResult()
-            }
-            .onFailure {
-                _state.value = _state.value.copy(
-                    selfEditSaving = false,
-                    selfEditValidating = false,
+                    correctionEscalating = false,
                     error = it.userMessage(strings, R.string.err_save),
                 )
-                maybeShowNextCorrectionResult()
             }
+        }
     }
 
     fun openCardHistory() {
@@ -970,26 +864,7 @@ class PracticeViewModel @Inject constructor(
             historyOpen = false,
             historyEvents = emptyList(),
             historyLoading = false,
-            historyRestoring = false,
         )
-    }
-
-    fun restoreFromHistory(eventId: String) {
-        val cardId = _state.value.queue.getOrNull(_state.value.currentIndex)?.card_id ?: return
-        viewModelScope.launch {
-            _state.value = _state.value.copy(historyRestoring = true)
-            runCatching { repository.restoreCard(cardId, eventId) }
-                .onSuccess {
-                    dismissCardHistory()
-                    loadQueue(append = false)
-                }
-                .onFailure {
-                    _state.value = _state.value.copy(
-                        historyRestoring = false,
-                        error = it.userMessage(strings, R.string.err_save),
-                    )
-                }
-        }
     }
 
     private fun advanceToNext() {

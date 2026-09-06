@@ -175,7 +175,7 @@
 
     <string name="settings_periphrases">Modelli</string>
 
-    <string name="settings_syn_ant">Sinonimi e antonimi</string>
+    <string name="settings_syn_ant">Intorno alla parola</string>
     <string name="settings_word_family">Famiglia di parole</string>
 
     <string name="settings_conjugation">Coniugazione</string>
@@ -386,7 +386,7 @@
 
     <string name="section_synonyms">SINONIMI</string>
 
-    <string name="section_syn_ant">SINONIMI E CONTRARI</string>
+    <string name="section_syn_ant">INTORNO ALLA PAROLA</string>
 
     <string name="section_antonyms">ANTONIMI</string>
 
@@ -701,6 +701,7 @@
     <string name="practice_well_done">Ottimo!</string>
 
     <string name="cd_search">Cerca</string>
+    <string name="cd_clear_search">Cancella ricerca</string>
 
     <string name="correction_fix_card">Segnala una correzione</string>
 
@@ -722,6 +723,9 @@
     <string name="correction_section_pronunciation">Pronuncia</string>
 
     <string name="correction_section_other">Altro</string>
+    <string name="correction_section_family">Famiglia di parole</string>
+    <string name="correction_section_synonyms">Sinonimi</string>
+    <string name="correction_section_antonyms">Antonimi</string>
 
     <string name="correction_note_label">Nota</string>
 
@@ -740,6 +744,8 @@
     <string name="correction_result_rejected_body">Scheda «%1$s». %2$s</string>
 
     <string name="correction_edit_self">Modifica</string>
+    <string name="correction_escalate">Segnala all’amministrazione</string>
+    <string name="correction_escalated">Segnalato all’amministrazione</string>
     <string name="correction_history_button">Cronologia modifiche</string>
 
     <string name="correction_self_edit_title">Modifica scheda</string>

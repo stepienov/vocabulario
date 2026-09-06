@@ -65,6 +65,7 @@ data class RelatedWord(
     val glossL1: String?,
     val pos: String?,
     val article: String? = null,
+    val sourceCardId: String? = null,
 )
 
 private fun parseRelatedWords(raw: JsonArray?): List<RelatedWord> {
@@ -108,6 +109,8 @@ fun CardDetailContent(
     relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
     /** Gdy false — przewijanie obsługuje rodzic (np. pełny widok z listy). */
     scrollable: Boolean = true,
+    /** False gdy hasło jest przyklejone poza tym kompozytem. */
+    showHeadword: Boolean = true,
 ) {
     val lang = languageCode ?: content["language"].asJsonString() ?: "en"
     val tts = rememberL2Tts(lang)
@@ -227,12 +230,14 @@ fun CardDetailContent(
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                lemma,
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-            )
+            if (showHeadword) {
+                Text(
+                    lemma,
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+            }
             headwordNote?.takeIf { it.isNotBlank() }?.let {
                 Spacer(Modifier.height(6.dp))
                 Text(

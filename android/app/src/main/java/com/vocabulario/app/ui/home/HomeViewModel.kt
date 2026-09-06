@@ -20,16 +20,15 @@ import com.vocabulario.app.data.api.LookupCandidate
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.imports.ImportController
+import com.vocabulario.app.data.local.LocalDashboard
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.i18n.UiStrings
 import com.vocabulario.app.ui.card.CorrectionResultItem
 import com.vocabulario.app.ui.card.CorrectionResultsState
-import com.vocabulario.app.ui.card.HomeUiStateSelfEditActive
 import com.vocabulario.app.ui.card.RelatedWord
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -77,18 +76,10 @@ data class HomeUiState(
     val correctionSubmitting: Boolean = false,
     val correctionResults: CorrectionResultsState = CorrectionResultsState(),
     val correctionQuotaRemaining: Int? = null,
-    val selfEditCard: CardResponse? = null,
-    val selfEditSaving: Boolean = false,
-    val selfEditValidating: Boolean = false,
-    val selfEditProgressCardId: String? = null,
-    val selfEditPendingCardId: String? = null,
-    val selfEditWarningOpen: Boolean = false,
-    val selfEditValidationIssues: List<com.vocabulario.app.data.api.SelfEditValidateIssue> = emptyList(),
-    val selfEditPendingContent: kotlinx.serialization.json.JsonObject? = null,
+    val correctionEscalating: Boolean = false,
     val historyCardId: String? = null,
     val historyEvents: List<com.vocabulario.app.data.api.CardHistoryEventResponse> = emptyList(),
     val historyLoading: Boolean = false,
-    val historyRestoring: Boolean = false,
     /** Po przejściu z lookup — rozwiń ten kafelek na liście. */
     val focusWordId: String? = null,
     val focusLemma: String? = null,
@@ -146,6 +137,8 @@ class HomeViewModel @Inject constructor(
     private var listsObserverJob: Job? = null
     private var cardsObserverJob: Job? = null
     private var roomRefreshJob: Job? = null
+    /** Odśwież dashboard chwilę po next_review_at, bez tickera. */
+    private var nextReviewRefreshJob: Job? = null
     /** Podczas move/delete nie publikuj pośrednich liczników z Room. */
     private var pauseRoomRefresh = false
 
@@ -280,6 +273,7 @@ class HomeViewModel @Inject constructor(
             relatedMembership = relatedMembership ?: _state.value.relatedMembership,
             detailCard = syncDetailCard(publishedWords, _state.value.detailCard),
         )
+        if (stats != null) scheduleNextReviewRefresh(stats)
         syncCandidatesFromRoom(visible, selected)
     }
 
@@ -287,6 +281,7 @@ class HomeViewModel @Inject constructor(
     private fun onLanguagePairChanged(wipeUi: Boolean = true) {
         pollJob?.cancel()
         searchJob?.cancel()
+        nextReviewRefreshJob?.cancel()
         if (wipeUi) {
             val keepTab = _state.value.tab
             val online = networkMonitor.isCurrentlyOnline()
@@ -345,12 +340,28 @@ class HomeViewModel @Inject constructor(
     fun loadStats() {
         viewModelScope.launch {
             runCatching { repository.dashboardStats(7) }
-                .onSuccess { _state.value = _state.value.copy(stats = it, error = null) }
+                .onSuccess {
+                    _state.value = _state.value.copy(stats = it, error = null)
+                    scheduleNextReviewRefresh(it)
+                }
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         error = e.userMessage(strings, R.string.err_load_stats),
                     )
                 }
+        }
+    }
+
+    /** Po next_review_at + 5 s przelicz dashboard, żeby due weszło do sesji. */
+    private fun scheduleNextReviewRefresh(stats: DashboardStatsResponse) {
+        nextReviewRefreshJob?.cancel()
+        val wait = LocalDashboard.delayUntilNextReviewRefresh(
+            stats.next_review_at,
+            System.currentTimeMillis(),
+        ) ?: return
+        nextReviewRefreshJob = viewModelScope.launch {
+            delay(wait)
+            loadStats()
         }
     }
 
@@ -514,11 +525,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onQueryChange(value: String) {
-        _state.value = _state.value.copy(query = value, error = null, notice = null)
-    }
-
-    fun prepareVoiceSearch() {
+    fun clearSearch() {
         searchJob?.cancel()
         _state.value = _state.value.copy(
             query = "",
@@ -528,6 +535,14 @@ class HomeViewModel @Inject constructor(
             error = null,
             notice = null,
         )
+    }
+
+    fun onQueryChange(value: String) {
+        _state.value = _state.value.copy(query = value, error = null, notice = null)
+    }
+
+    fun prepareVoiceSearch() {
+        clearSearch()
     }
 
     fun search() {
@@ -580,10 +595,7 @@ class HomeViewModel @Inject constructor(
                 tab = HomeTab.ADD,
             )
             try {
-                val cachedDeferred = async { runCatching { repository.lookupCached(text) } }
-                val expandDeferred = async { runCatching { repository.lookupExpand(text) } }
-
-                val cached = cachedDeferred.await()
+                val cached = runCatching { repository.lookupCached(text) }
                 if (!isActive) return@launch
                 cached.onSuccess { response ->
                     if (response.candidates.isNotEmpty()) {
@@ -592,17 +604,18 @@ class HomeViewModel @Inject constructor(
                                 _state.value.candidates,
                                 response.candidates,
                             ),
+                            expanding = false,
                         )
                         startPollingIfNeeded()
+                        return@launch
                     }
                     if (response.ai_complete) {
-                        expandDeferred.cancel()
                         _state.value = _state.value.copy(expanding = false)
                         return@launch
                     }
                 }
 
-                val expand = expandDeferred.await()
+                val expand = runCatching { repository.lookupExpand(text) }
                 if (!isActive) return@launch
                 expand.onSuccess { response ->
                     _state.value = _state.value.copy(
@@ -740,7 +753,7 @@ class HomeViewModel @Inject constructor(
             _state.value = _state.value.copy(error = strings.get(R.string.import_online_only))
             return
         }
-        openAddSheet(relatedWordToCandidate(word))
+        openAddSheet(relatedWordToCandidate(word, sourceCardId = _state.value.detailCard?.id))
     }
 
     fun dismissAddSheet() {
@@ -767,6 +780,7 @@ class HomeViewModel @Inject constructor(
                         candidate.pos,
                         candidate.gloss,
                         candidate.lexical_entry_id,
+                        sourceCardId = candidate.source_card_id,
                     )
                 }.onSuccess { card ->
                     markCandidateOnList(
@@ -837,6 +851,7 @@ class HomeViewModel @Inject constructor(
                     candidate.pos,
                     candidate.gloss,
                     candidate.lexical_entry_id,
+                    sourceCardId = candidate.source_card_id,
                 )
                 card to list
             }.onSuccess { (card, list) ->
@@ -877,6 +892,7 @@ class HomeViewModel @Inject constructor(
                     candidate.pos,
                     candidate.gloss,
                     candidate.lexical_entry_id,
+                    sourceCardId = candidate.source_card_id,
                 )
             }.onSuccess { card ->
                 markCandidateOnList(
@@ -1451,16 +1467,6 @@ class HomeViewModel @Inject constructor(
         )
     }
 
-    fun openSelfEditFromReport() {
-        val cardId = _state.value.correctionCardId ?: return
-        val card = _state.value.listWords.firstOrNull { it.id == cardId }
-        _state.value = _state.value.copy(
-            correctionCardId = null,
-            correctionSubmitting = false,
-            selfEditCard = card,
-        )
-    }
-
     fun submitCorrection(sections: List<String>, note: String) {
         val cardId = _state.value.correctionCardId ?: return
         if (!networkMonitor.isCurrentlyOnline()) {
@@ -1490,30 +1496,10 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun selfEditFlowActive(state: HomeUiState = _state.value): Boolean =
-        HomeUiStateSelfEditActive(
-            state.selfEditCard,
-            state.selfEditWarningOpen,
-            state.selfEditProgressCardId,
-            state.selfEditSaving,
-            state.selfEditValidating,
-        )
-
     private fun deliverCorrectionResult(correction: com.vocabulario.app.data.api.CardCorrectionResponse, lemma: String) {
         val item = CorrectionResultItem(correction, lemma)
         _state.value = _state.value.copy(
-            correctionResults = _state.value.correctionResults.enqueue(
-                item,
-                selfEditFlowActive(),
-            ),
-        )
-    }
-
-    private fun maybeShowNextCorrectionResult() {
-        _state.value = _state.value.copy(
-            correctionResults = _state.value.correctionResults.tryShowNext(
-                selfEditFlowActive(),
-            ),
+            correctionResults = _state.value.correctionResults.enqueue(item),
         )
     }
 
@@ -1535,119 +1521,28 @@ class HomeViewModel @Inject constructor(
 
     fun dismissCorrectionResult() {
         _state.value = _state.value.copy(
-            correctionResults = _state.value.correctionResults.dismiss(
-                selfEditFlowActive(),
-            ),
+            correctionResults = _state.value.correctionResults.dismiss(),
+            correctionEscalating = false,
         )
     }
 
-    fun openSelfEditFromResult() {
-        val cardId = _state.value.correctionResults.active?.correction?.card_id ?: return
-        val card = _state.value.listWords.firstOrNull { it.id == cardId }
-        _state.value = _state.value.copy(
-            correctionResults = _state.value.correctionResults.clearActiveForSelfEdit(),
-            selfEditCard = card,
-        )
-    }
-
-    fun openSelfEdit(card: CardResponse) {
-        _state.value = _state.value.copy(selfEditCard = card)
-    }
-
-    fun dismissSelfEdit() {
-        _state.value = _state.value.copy(
-            selfEditCard = null,
-            selfEditSaving = false,
-            selfEditProgressCardId = null,
-            selfEditPendingCardId = null,
-            selfEditWarningOpen = false,
-            selfEditValidationIssues = emptyList(),
-            selfEditPendingContent = null,
-        )
-        maybeShowNextCorrectionResult()
-    }
-
-    fun saveSelfEdit(content: kotlinx.serialization.json.JsonObject) {
-        val card = _state.value.selfEditCard ?: return
-        val cardId = card.id
+    fun escalateRejectedCorrection() {
+        val active = _state.value.correctionResults.active ?: return
+        val correction = active.correction
+        if (correction.status == "accepted") return
         viewModelScope.launch {
-            _state.value = _state.value.copy(
-                selfEditCard = null,
-                selfEditProgressCardId = cardId,
-                focusWordId = cardId,
-                focusLemma = null,
-                error = null,
-            )
+            _state.value = _state.value.copy(correctionEscalating = true, error = null)
             runCatching {
-                repository.validateSelfEdit(cardId, content)
-            }.onSuccess { validation ->
-                if (validation.ok) {
-                    commitSelfEdit(cardId, content)
-                } else {
-                    _state.value = _state.value.copy(
-                        selfEditProgressCardId = null,
-                        selfEditWarningOpen = true,
-                        selfEditValidationIssues = validation.issues,
-                        selfEditPendingContent = content,
-                        selfEditPendingCardId = cardId,
-                    )
-                }
+                repository.escalateCardCorrection(correction.card_id, correction.id)
+            }.onSuccess {
+                _state.value = _state.value.copy(correctionEscalating = false)
+                dismissCorrectionResult()
             }.onFailure { e ->
                 _state.value = _state.value.copy(
-                    selfEditProgressCardId = null,
+                    correctionEscalating = false,
                     error = e.userMessage(strings, R.string.err_save),
                 )
             }
-        }
-    }
-
-    fun confirmSelfEditWarning() {
-        val cardId = _state.value.selfEditPendingCardId ?: return
-        val content = _state.value.selfEditPendingContent ?: return
-        viewModelScope.launch {
-            _state.value = _state.value.copy(
-                selfEditWarningOpen = false,
-                selfEditProgressCardId = cardId,
-                focusWordId = cardId,
-            )
-            commitSelfEdit(cardId, content)
-        }
-    }
-
-    fun revertSelfEditWarning() {
-        dismissSelfEdit()
-    }
-
-    private suspend fun commitSelfEdit(cardId: String, content: kotlinx.serialization.json.JsonObject) {
-        _state.value = _state.value.copy(
-            selfEditSaving = true,
-            selfEditWarningOpen = false,
-            selfEditValidationIssues = emptyList(),
-            selfEditPendingContent = null,
-            selfEditPendingCardId = null,
-        )
-        runCatching {
-            repository.selfEditCard(cardId, content)
-        }.onSuccess { updated ->
-            _state.value = _state.value.copy(
-                selfEditSaving = false,
-                selfEditProgressCardId = null,
-            )
-            _state.value = _state.value.copy(
-                listWords = _state.value.listWords.map { c ->
-                    if (c.id == updated.id) updated else c
-                },
-            )
-            maybeStartActivityPoll()
-            _state.value.selectedListId?.let { loadListWords(it, background = true) }
-            maybeShowNextCorrectionResult()
-        }.onFailure { e ->
-            _state.value = _state.value.copy(
-                selfEditSaving = false,
-                selfEditProgressCardId = null,
-                error = e.userMessage(strings, R.string.err_save),
-            )
-            maybeShowNextCorrectionResult()
         }
     }
 
@@ -1680,27 +1575,7 @@ class HomeViewModel @Inject constructor(
             historyCardId = null,
             historyEvents = emptyList(),
             historyLoading = false,
-            historyRestoring = false,
         )
-    }
-
-    fun restoreFromHistory(eventId: String) {
-        val cardId = _state.value.historyCardId ?: return
-        viewModelScope.launch {
-            _state.value = _state.value.copy(historyRestoring = true, error = null)
-            runCatching { repository.restoreCard(cardId, eventId) }
-                .onSuccess {
-                    _state.value = _state.value.copy(historyRestoring = false)
-                    dismissCardHistory()
-                    _state.value.selectedListId?.let { loadListWords(it, background = true) }
-                }
-                .onFailure { e ->
-                    _state.value = _state.value.copy(
-                        historyRestoring = false,
-                        error = e.userMessage(strings, R.string.err_save),
-                    )
-                }
-        }
     }
 
     private fun syncCandidatesFromWords(words: List<CardResponse>) {
@@ -1785,6 +1660,8 @@ private fun preferCurrentMembership(
         list_name = current.list_name ?: incoming.list_name,
         enrichment_status = current.enrichment_status ?: incoming.enrichment_status,
         lexical_entry_id = incoming.lexical_entry_id ?: current.lexical_entry_id,
+        reading = incoming.reading ?: current.reading,
+        typed_as = incoming.typed_as ?: current.typed_as,
     )
 }
 
@@ -1796,10 +1673,14 @@ internal fun candidateMatchesCard(candidate: LookupCandidate, card: CardResponse
     return sameLemmaAndPos(card.lemma_l2, card.pos, candidate.lemma, candidate.pos)
 }
 
-internal fun relatedWordToCandidate(word: RelatedWord) = LookupCandidate(
+internal fun relatedWordToCandidate(
+    word: RelatedWord,
+    sourceCardId: String? = word.sourceCardId,
+) = LookupCandidate(
     lemma = formatLemmaWithArticle(word.lemma, word.article),
     pos = word.pos,
     gloss = word.glossL1.orEmpty(),
+    source_card_id = sourceCardId,
 )
 
 private fun syncDetailCard(words: List<CardResponse>, opened: CardResponse?): CardResponse? {

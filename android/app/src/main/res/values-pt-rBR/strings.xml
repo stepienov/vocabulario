@@ -157,7 +157,7 @@
 
     <string name="settings_periphrases">Padrões</string>
 
-    <string name="settings_syn_ant">Sinônimos e antônimos</string>
+    <string name="settings_syn_ant">Em torno da palavra</string>
     <string name="settings_word_family">Família de palavras</string>
 
     <string name="settings_conjugation">Conjugação</string>
@@ -359,7 +359,7 @@
 
     <string name="section_synonyms">SINÔNIMOS</string>
 
-    <string name="section_syn_ant">SINÔNIMOS &amp; ANTÔNIMOS</string>
+    <string name="section_syn_ant">EM TORNO DA PALAVRA</string>
 
     <string name="section_antonyms">ANTÔNIMOS</string>
 
@@ -662,6 +662,7 @@
     <string name="periphrase_n">Perífrase %1$d</string>
     <string name="practice_well_done">Ótimo!</string>
     <string name="cd_search">Buscar</string>
+    <string name="cd_clear_search">Limpar busca</string>
     <string name="correction_fix_card">Relatar uma correção</string>
 <string name="correction_report_title">Verificar e corrigir o cartão</string>
         <string name="correction_section_lemma">Lema</string>
@@ -673,6 +674,9 @@
     <string name="correction_section_similar">Palavras semelhantes</string>
     <string name="correction_section_pronunciation">Pronúncia</string>
     <string name="correction_section_other">Outro</string>
+    <string name="correction_section_family">Família de palavras</string>
+    <string name="correction_section_synonyms">Sinônimos</string>
+    <string name="correction_section_antonyms">Antônimos</string>
     <string name="correction_note_label">Nota</string>
     <string name="correction_note_hint">Descreva o erro…</string>
     <string name="correction_validation">Selecione pelo menos uma seção ou escreva uma nota (mín. 3 caracteres).</string>
@@ -682,6 +686,8 @@
     <string name="correction_result_rejected_title">Relato não aceito</string>
     <string name="correction_result_rejected_body">Cartão «%1$s». %2$s</string>
         <string name="correction_edit_self">Editar</string>
+    <string name="correction_escalate">Reportar à administração</string>
+    <string name="correction_escalated">Reportado à administração</string>
         <string name="correction_history_button">Histórico de alterações</string>
     <string name="correction_self_edit_title">Editar cartão</string>
     <string name="correction_field_lemma">Lema</string>

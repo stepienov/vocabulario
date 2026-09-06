@@ -157,7 +157,7 @@
 
     <string name="settings_periphrases">पैटर्न</string>
 
-    <string name="settings_syn_ant">पर्याय और विलोम</string>
+    <string name="settings_syn_ant">शब्द के आसपास</string>
     <string name="settings_word_family">शब्द परिवार</string>
 
     <string name="settings_conjugation">क्रिया रूप</string>
@@ -359,7 +359,7 @@
 
     <string name="section_synonyms">पर्याय</string>
 
-    <string name="section_syn_ant">पर्याय और विलोम</string>
+    <string name="section_syn_ant">शब्द के आसपास</string>
 
     <string name="section_antonyms">विलोम</string>
 
@@ -662,6 +662,7 @@
     <string name="periphrase_n">पेरिफ़्रेज़ %1$d</string>
     <string name="practice_well_done">बहुत बढ़िया!</string>
     <string name="cd_search">खोजें</string>
+    <string name="cd_clear_search">खोज साफ़ करें</string>
     <string name="correction_fix_card">सुधार रिपोर्ट करें</string>
 <string name="correction_report_title">कार्ड जाँचें और ठीक करें</string>
         <string name="correction_section_lemma">मूल रूप</string>
@@ -673,6 +674,9 @@
     <string name="correction_section_similar">समान शब्द</string>
     <string name="correction_section_pronunciation">उच्चारण</string>
     <string name="correction_section_other">अन्य</string>
+    <string name="correction_section_family">शब्द परिवार</string>
+    <string name="correction_section_synonyms">पर्याय</string>
+    <string name="correction_section_antonyms">विलोम</string>
     <string name="correction_note_label">नोट</string>
     <string name="correction_note_hint">गलती बताएँ…</string>
     <string name="correction_validation">कम से कम एक अनुभाग चुनें या नोट लिखें (न्यूनतम 3 अक्षर)।</string>
@@ -682,6 +686,8 @@
     <string name="correction_result_rejected_title">रिपोर्ट स्वीकृत नहीं हुई</string>
     <string name="correction_result_rejected_body">कार्ड «%1$s». %2$s</string>
         <string name="correction_edit_self">संपादित करें</string>
+    <string name="correction_escalate">प्रशासन को रिपोर्ट करें</string>
+    <string name="correction_escalated">प्रशासन को रिपोर्ट किया गया</string>
         <string name="correction_history_button">परिवर्तन इतिहास</string>
     <string name="correction_self_edit_title">कार्ड संपादित करें</string>
     <string name="correction_field_lemma">मूल रूप</string>

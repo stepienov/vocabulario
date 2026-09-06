@@ -66,11 +66,14 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import com.vocabulario.app.R
 import com.vocabulario.app.data.api.LookupCandidate
+import com.vocabulario.app.i18n.localizedLookupReadingLabel
+import com.vocabulario.app.i18n.lookupShowsReadingChips
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppDialogShape
 import com.vocabulario.app.ui.components.AppDialogWindowChrome
 import com.vocabulario.app.ui.components.LemmaActionRow
 import com.vocabulario.app.ui.components.LemmaAddButton
+import com.vocabulario.app.ui.components.TagChip
 import java.util.Locale
 
 @Composable
@@ -393,6 +396,9 @@ fun VoiceSearchSheet(
                     }
 
                     if (candidates.isNotEmpty()) {
+                        val showReadingChip = lookupShowsReadingChips(
+                            candidates.map { it.reading },
+                        )
                         Spacer(Modifier.height(12.dp))
                         LazyColumn(
                             modifier = Modifier
@@ -400,9 +406,15 @@ fun VoiceSearchSheet(
                                 .heightIn(max = 280.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            items(candidates, key = { it.lemma + it.gloss }) { candidate ->
+                            items(
+                                candidates,
+                                key = { it.lemma + it.gloss + (it.reading ?: "") },
+                            ) { candidate ->
                                 VoiceCandidateRow(
                                     candidate = candidate,
+                                    showReadingChip = showReadingChip,
+                                    appLang = nativeLang,
+                                    learningLang = learningLang,
                                     onAdd = {
                                         onAdd(candidate)
                                         dismiss()
@@ -420,12 +432,38 @@ fun VoiceSearchSheet(
 @Composable
 private fun VoiceCandidateRow(
     candidate: LookupCandidate,
+    showReadingChip: Boolean,
+    appLang: String,
+    learningLang: String,
     onAdd: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val readingLabel = if (showReadingChip) {
+        localizedLookupReadingLabel(
+            reading = candidate.reading,
+            typedAs = candidate.typed_as,
+            appLang = appLang,
+            learningLang = learningLang,
+        )
+    } else {
+        null
+    }
     LemmaActionRow(
         lemma = candidate.lemma,
         gloss = candidate.gloss,
+        belowGloss = if (readingLabel == null) {
+            null
+        } else {
+            {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TagChip(readingLabel)
+                }
+            }
+        },
         trailing = {
             when {
                 candidate.isCreating -> {

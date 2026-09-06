@@ -957,6 +957,7 @@ async def _persist_enrichment_result(
         return
 
     if content_is_learnable(content):
+        content = await sync_word_family(db, profile, content, None)
         _apply_content_fields(card, content)
         card.enrichment_status = STATUS_LEARNABLE
         if card.enrichment_retry_at is None or card.enrichment_retry_at <= datetime.now(UTC):
@@ -1000,6 +1001,7 @@ async def _enrich_lemma_staged(
         nonlocal notified
         if not content_is_learnable(core_card):
             return
+        core_card = await sync_word_family(db, profile, core_card, None)
         _apply_content_fields(card, core_card)
         card.enrichment_status = STATUS_LEARNABLE
         await db.commit()

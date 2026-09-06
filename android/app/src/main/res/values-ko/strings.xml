@@ -180,7 +180,7 @@
 
     <string name="settings_periphrases">패턴</string>
 
-    <string name="settings_syn_ant">동의어 및 반의어</string>
+    <string name="settings_syn_ant">단어 주변</string>
     <string name="settings_word_family">어족</string>
 
     <string name="settings_conjugation">활용</string>
@@ -391,7 +391,7 @@
 
     <string name="section_synonyms">동의어</string>
 
-    <string name="section_syn_ant">동의어 &amp; 반의어</string>
+    <string name="section_syn_ant">단어 주변</string>
 
     <string name="section_antonyms">반의어</string>
 
@@ -706,6 +706,7 @@
     <string name="practice_well_done">잘했어요!</string>
 
     <string name="cd_search">검색</string>
+    <string name="cd_clear_search">검색 지우기</string>
 
     <string name="correction_fix_card">수정 신고</string>
 
@@ -728,6 +729,9 @@
     <string name="correction_section_pronunciation">발음</string>
 
     <string name="correction_section_other">기타</string>
+    <string name="correction_section_family">어족</string>
+    <string name="correction_section_synonyms">동의어</string>
+    <string name="correction_section_antonyms">반의어</string>
 
     <string name="correction_note_label">노트</string>
 
@@ -746,6 +750,8 @@
     <string name="correction_result_rejected_body">카드 “%1$s”. %2$s</string>
 
     <string name="correction_edit_self">편집</string>
+    <string name="correction_escalate">관리에 신고</string>
+    <string name="correction_escalated">관리에 신고됨</string>
     <string name="correction_history_button">변경 기록</string>
 
     <string name="correction_self_edit_title">카드 수정</string>
