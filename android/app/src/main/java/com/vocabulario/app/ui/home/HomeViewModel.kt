@@ -20,6 +20,8 @@ import com.vocabulario.app.data.api.LookupCandidate
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.imports.ImportController
+import com.vocabulario.app.data.lookup.LookupCoordinator
+import com.vocabulario.app.data.lookup.LookupSessionState
 import com.vocabulario.app.data.local.LocalDashboard
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.i18n.UiStrings
@@ -121,6 +123,7 @@ class HomeViewModel @Inject constructor(
     private val strings: UiStrings,
     private val networkMonitor: com.vocabulario.app.data.NetworkMonitor,
     private val importController: ImportController,
+    private val lookupCoordinator: LookupCoordinator,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState(isOnline = networkMonitor.isCurrentlyOnline()))
@@ -132,8 +135,8 @@ class HomeViewModel @Inject constructor(
     val connectivity: StateFlow<Boolean> = networkMonitor.isOnline
 
     private var pollJob: Job? = null
-    private var searchJob: Job? = null
     private var boundProfileId: String? = null
+    private var appliedLookupGeneration: Long = -1L
     private var listsObserverJob: Job? = null
     private var cardsObserverJob: Job? = null
     private var roomRefreshJob: Job? = null
@@ -147,6 +150,14 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             importController.navigateToList.collect { listId ->
                 openListTab(listId)
+            }
+        }
+        viewModelScope.launch {
+            var first = true
+            lookupCoordinator.state.collect { session ->
+                val openAdd = session.hasResultsOrProgress && (first || session.expanding)
+                first = false
+                applyLookupSession(session, openAddTab = openAdd)
             }
         }
         viewModelScope.launch {
@@ -280,7 +291,7 @@ class HomeViewModel @Inject constructor(
     /** Drop pair-scoped UI state immediately, then reload lists/cards/stats. */
     private fun onLanguagePairChanged(wipeUi: Boolean = true) {
         pollJob?.cancel()
-        searchJob?.cancel()
+        if (wipeUi) lookupCoordinator.clear()
         nextReviewRefreshJob?.cancel()
         if (wipeUi) {
             val keepTab = _state.value.tab
@@ -328,6 +339,10 @@ class HomeViewModel @Inject constructor(
     /** Odśwież dashboard przy powrocie na Home (np. z Ćwicz) — liczby mają być aktualne. */
     fun onHomeResumed() {
         importController.onAppForeground()
+        val session = lookupCoordinator.state.value
+        if (session.hasResultsOrProgress) {
+            applyLookupSession(session, openAddTab = true)
+        }
         if (_state.value.tab == HomeTab.DASHBOARD) {
             loadStats()
         }
@@ -526,7 +541,8 @@ class HomeViewModel @Inject constructor(
     }
 
     fun clearSearch() {
-        searchJob?.cancel()
+        lookupCoordinator.clear()
+        appliedLookupGeneration = lookupCoordinator.state.value.generation
         _state.value = _state.value.copy(
             query = "",
             candidates = emptyList(),
@@ -584,62 +600,60 @@ class HomeViewModel @Inject constructor(
             }
             return
         }
-        searchJob?.cancel()
-        searchJob = viewModelScope.launch {
-            _state.value = _state.value.copy(
-                expanding = true,
-                searchLoading = false,
-                error = null,
-                notice = null,
-                candidates = emptyList(),
-                tab = HomeTab.ADD,
-            )
-            try {
-                val cached = runCatching { repository.lookupCached(text) }
-                if (!isActive) return@launch
-                cached.onSuccess { response ->
-                    if (response.candidates.isNotEmpty()) {
-                        _state.value = _state.value.copy(
-                            candidates = mergeLookupCandidates(
-                                _state.value.candidates,
-                                response.candidates,
-                            ),
-                            expanding = false,
-                        )
-                        startPollingIfNeeded()
-                        return@launch
-                    }
-                    if (response.ai_complete) {
-                        _state.value = _state.value.copy(expanding = false)
-                        return@launch
-                    }
-                }
+        _state.value = _state.value.copy(
+            expanding = true,
+            searchLoading = false,
+            error = null,
+            notice = null,
+            candidates = emptyList(),
+            tab = HomeTab.ADD,
+        )
+        lookupCoordinator.start(text)
+    }
 
-                val expand = runCatching { repository.lookupExpand(text) }
-                if (!isActive) return@launch
-                expand.onSuccess { response ->
-                    _state.value = _state.value.copy(
-                        candidates = mergeLookupCandidates(
-                            _state.value.candidates,
-                            response.candidates,
-                        ),
-                        expanding = false,
-                    )
-                    startPollingIfNeeded()
-                }.onFailure {
-                    val has = _state.value.candidates.isNotEmpty()
-                    _state.value = _state.value.copy(
-                        expanding = false,
-                        error = if (!has) it.userMessage(strings, R.string.err_search) else null,
-                        notice = if (has) strings.get(R.string.err_lookup_expand) else null,
-                    )
-                }
-            } finally {
-                if (isActive) {
-                    _state.value = _state.value.copy(expanding = false)
-                }
+    private fun applyLookupSession(session: LookupSessionState, openAddTab: Boolean) {
+        val current = _state.value
+        val newGeneration = session.generation != appliedLookupGeneration
+        if (!session.hasResultsOrProgress && session.query.isEmpty()) {
+            appliedLookupGeneration = session.generation
+            if (newGeneration && (current.expanding || current.candidates.isNotEmpty())) {
+                _state.value = current.copy(
+                    candidates = emptyList(),
+                    expanding = false,
+                    error = null,
+                )
             }
+            return
         }
+        appliedLookupGeneration = session.generation
+        val candidates = if (newGeneration) {
+            session.candidates
+        } else {
+            mergeLookupCandidates(current.candidates, session.candidates)
+        }
+        val query = when {
+            session.expanding -> session.query
+            current.query.isBlank() && session.query.isNotBlank() -> session.query
+            else -> current.query
+        }
+        _state.value = current.copy(
+            tab = if (openAddTab) HomeTab.ADD else current.tab,
+            query = query,
+            candidates = candidates,
+            expanding = session.expanding,
+            error = if (session.error != null || newGeneration || session.expanding) {
+                session.error
+            } else {
+                current.error
+            },
+            notice = if (session.notice != null || newGeneration || session.expanding) {
+                session.notice
+            } else {
+                current.notice
+            },
+            searchLoading = if (session.expanding) false else current.searchLoading,
+        )
+        if (candidates.isNotEmpty()) startPollingIfNeeded()
     }
 
     fun startImportFromFile(
@@ -1089,7 +1103,7 @@ class HomeViewModel @Inject constructor(
     /** „Szukaj ponownie" — przenosi do zakładki Dodaj z wpisanym słowem, bez uruchamiania szukania. */
     fun retryReviewSearch() {
         val word = _state.value.reviewWord.orEmpty()
-        searchJob?.cancel()
+        lookupCoordinator.clear()
         closePendingReview()
         _state.value = _state.value.copy(
             tab = HomeTab.ADD,
