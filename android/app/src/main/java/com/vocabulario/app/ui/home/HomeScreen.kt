@@ -21,6 +21,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,6 +68,8 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -90,6 +93,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
@@ -151,6 +155,7 @@ import com.vocabulario.app.ui.card.CorrectionActivityColor
 import com.vocabulario.app.ui.card.cardActivityStatusLabel
 import com.vocabulario.app.ui.card.CardActivitySpinner
 import com.vocabulario.app.ui.home.voice.VoiceSearchSheet
+import com.vocabulario.app.ui.practice.ListFlashcardSummary
 
 private val ScreenPad = 20.dp
 private val TileRadius = RoundedCornerShape(28.dp)
@@ -161,6 +166,9 @@ fun HomeScreen(
     onPractice: () -> Unit,
     onSettings: () -> Unit,
     onOpenCard: (String) -> Unit = {},
+    onListFlashcards: (String) -> Unit = {},
+    listFlashcardSummary: ListFlashcardSummary? = null,
+    onDismissListFlashcardSummary: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -217,6 +225,7 @@ fun HomeScreen(
                     onQueryChange = viewModel::onQueryChange,
                     onClearSearch = viewModel::clearSearch,
                     onSearch = viewModel::search,
+                    onToggleSearchByCategory = viewModel::setSearchByCategory,
                     onPrepareVoiceSearch = viewModel::prepareVoiceSearch,
                     onAdd = viewModel::openAddSheet,
                     onOpenWord = viewModel::openWordOnList,
@@ -259,6 +268,9 @@ fun HomeScreen(
                     onReviewWord = viewModel::openPendingReview,
                     onClearWordFocus = viewModel::clearWordFocus,
                     onViewCard = viewModel::openCardDetail,
+                    onStartListFlashcards = {
+                        state.selectedListId?.let(onListFlashcards)
+                    },
                 )
             }
         }
@@ -309,6 +321,25 @@ fun HomeScreen(
         events = state.historyEvents,
         onDismiss = viewModel::dismissCardHistory,
     )
+    listFlashcardSummary?.let { summary ->
+        AppAlertDialog(
+            onDismissRequest = onDismissListFlashcardSummary,
+            title = stringResource(R.string.list_flashcards),
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.list_flashcards_reviewed, summary.reviewed))
+                    Text(stringResource(R.string.list_flashcards_added, summary.added))
+                }
+            },
+            buttons = {
+                AppDialogButtonRow(
+                    primaryText = stringResource(R.string.action_ok),
+                    onPrimary = onDismissListFlashcardSummary,
+                    primaryModifier = Modifier.testTag(TestTags.LIST_FLASHCARDS_SUMMARY),
+                )
+            },
+        )
+    }
     com.vocabulario.app.ui.card.PendingReviewSheet(
         visible = state.reviewCardId != null,
         word = state.reviewWord.orEmpty(),
@@ -867,6 +898,7 @@ private fun AddTab(
     onQueryChange: (String) -> Unit,
     onClearSearch: () -> Unit,
     onSearch: () -> Unit,
+    onToggleSearchByCategory: (Boolean) -> Unit,
     onPrepareVoiceSearch: () -> Unit,
     onAdd: (LookupCandidate) -> Unit,
     onOpenWord: (LookupCandidate) -> Unit,
@@ -1077,7 +1109,32 @@ private fun AddTab(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+                    .testTag(TestTags.SEARCH_BY_CATEGORY)
+                    .toggleable(
+                        value = state.searchByCategory,
+                        enabled = isOnline,
+                        role = Role.Checkbox,
+                        onValueChange = onToggleSearchByCategory,
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = state.searchByCategory,
+                    onCheckedChange = null,
+                    enabled = isOnline,
+                    colors = CheckboxDefaults.colors(checkedColor = scheme.primary),
+                )
+                Text(
+                    stringResource(R.string.search_by_category),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isOnline) scheme.onSurface else scheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         if ((state.searchLoading || (state.expanding && state.candidates.isEmpty())) && !importBusy) {
@@ -1360,6 +1417,7 @@ private fun ListsTab(
     onReviewWord: (String) -> Unit,
     onClearWordFocus: () -> Unit,
     onViewCard: (CardResponse) -> Unit,
+    onStartListFlashcards: () -> Unit,
 ) {
     var showCreate by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
@@ -1790,6 +1848,17 @@ private fun ListsTab(
                                 )
                             }
                         } else {
+                            Button(
+                                onClick = {
+                                    closeListDialogs()
+                                    onStartListFlashcards()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag(TestTags.LIST_FLASHCARDS_MENU),
+                                shape = AppButtonShape,
+                                enabled = state.hasFlashcardListWords,
+                            ) { ButtonLabel(stringResource(R.string.list_flashcards)) }
                             Button(
                                 onClick = {
                                     renameDraft = selectedList?.name.orEmpty()

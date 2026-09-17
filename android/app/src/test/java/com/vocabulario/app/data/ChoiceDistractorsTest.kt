@@ -212,6 +212,25 @@ class ChoiceDistractorsTest {
     }
 
     @Test
+    fun phrase_aloneOnAccount_fillsEightFromSimilar() {
+        val similarPhrases = (1..12).map { i ->
+            similar("at the other time $i", "en otro momento $i", "phrase")
+        }
+        val result = pick(
+            correctId = "only",
+            correctLemma = "at the same time",
+            correctGloss = "a la vez",
+            correctPos = "phrase",
+            list = listOf(card("only", "at the same time", "a la vez", "phrase")),
+            similarWords = similarPhrases,
+            seed = 11,
+        )
+        assertEquals(8, result.options.size)
+        assertTrue(result.options.all { normalizePosKey(it.pos) == "phrase" })
+        assertEquals(1, result.options.count { it.is_correct })
+    }
+
+    @Test
     fun unknownPos_doesNotDumpTheWholeDeck() {
         val result = pick(
             correctId = "x",

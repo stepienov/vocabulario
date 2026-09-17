@@ -85,6 +85,10 @@
 
     <string name="auth_password">Passwort</string>
 
+    <string name="cd_show_password">Passwort anzeigen</string>
+
+    <string name="cd_hide_password">Passwort ausblenden</string>
+
 
 
     <string name="auth_have_account">Ich habe schon ein Konto</string>
@@ -247,6 +251,13 @@
 
     <string name="list_rename">Umbenennen</string>
 
+    <string name="list_flashcards">Karteikarten</string>
+    <string name="list_flashcards_next">Weiter</string>
+    <string name="list_flashcards_add">Zum Lernen</string>
+    <string name="list_flashcards_reviewed">Angesehen: %1$d</string>
+    <string name="list_flashcards_added">Zum Lernen hinzugefügt: %1$d</string>
+    <string name="list_flashcards_empty">Keine Karten bereit</string>
+
     <string name="list_move_all">Alle verschieben</string>
 
     <string name="list_empty">Leere Liste</string>
@@ -372,6 +383,7 @@
     <string name="section_usages">Wendungen</string>
 
     <string name="home_search_hint">Wort suchen…</string>
+    <string name="search_by_category">Nach Kategorie suchen</string>
 
     <string name="home_due_now">Jetzt fällig</string>
 

@@ -107,6 +107,10 @@
 
     <string name="auth_password">Şifre</string>
 
+    <string name="cd_show_password">Şifreyi göster</string>
+
+    <string name="cd_hide_password">Şifreyi gizle</string>
+
 
 
     <string name="auth_have_account">Zaten bir hesabım var</string>
@@ -278,6 +282,13 @@
 
     <string name="list_rename">Yeniden adlandır</string>
 
+    <string name="list_flashcards">Kartlar</string>
+    <string name="list_flashcards_next">Sonraki</string>
+    <string name="list_flashcards_add">Öğrenmeye ekle</string>
+    <string name="list_flashcards_reviewed">Gözden geçirilen: %1$d</string>
+    <string name="list_flashcards_added">Öğrenmeye eklenen: %1$d</string>
+    <string name="list_flashcards_empty">Hazır kart yok</string>
+
     <string name="list_move_all">Hepsini taşı</string>
 
     <string name="list_empty">Boş liste</string>
@@ -404,6 +415,7 @@
     <string name="section_usages">ifadeler</string>
 
     <string name="home_search_hint">Bir kelime ara…</string>
+    <string name="search_by_category">Kategoriye göre ara</string>
 
     <string name="home_due_now">Şimdi gözden geçirmeye hazır</string>
 

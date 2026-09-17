@@ -69,6 +69,19 @@ def test_rank_union_puts_closest_first():
     assert {c["lemma"] for c in ranked} == {"el libro", "la tripa"}
 
 
+def test_draft_prompt_stays_short_and_includes_query():
+    from app.ai.prompts.v1 import LOOKUP_DRAFT_PROMPT_V1, LOOKUP_EXPAND_PROMPT_V1
+
+    draft = LOOKUP_DRAFT_PROMPT_V1.format(
+        native_name="Polish",
+        learning_name="Spanish",
+        text="ksiazka",
+        pair_guidance="pair",
+    )
+    assert "ksiazka" in draft
+    assert len(draft) < len(LOOKUP_EXPAND_PROMPT_V1)
+
+
 def test_expand_prompt_lists_existing_candidates():
     from app.ai.prompts.v1 import LOOKUP_EXPAND_PROMPT_V1, lookup_output_form_rules_text
     from app.services.llm import LLMService

@@ -85,6 +85,10 @@
 
     <string name="auth_password">पासवर्ड</string>
 
+    <string name="cd_show_password">पासवर्ड दिखाएँ</string>
+
+    <string name="cd_hide_password">पासवर्ड छिपाएँ</string>
+
 
 
     <string name="auth_have_account">मेरा पहले से खाता है</string>
@@ -246,6 +250,13 @@
 
     <string name="list_rename">नाम बदलें</string>
 
+    <string name="list_flashcards">फ्लैशकार्ड</string>
+    <string name="list_flashcards_next">अगला</string>
+    <string name="list_flashcards_add">सीख रहा हूँ में जोड़ें</string>
+    <string name="list_flashcards_reviewed">देखा: %1$d</string>
+    <string name="list_flashcards_added">सीख रहा हूँ में जोड़े: %1$d</string>
+    <string name="list_flashcards_empty">फ्लैशकार्ड तैयार नहीं</string>
+
     <string name="list_move_all">सभी स्थानांतरित करें</string>
 
     <string name="list_empty">खाली सूची</string>
@@ -372,6 +383,7 @@
     <string name="section_usages">मुहावरे</string>
 
     <string name="home_search_hint">शब्द खोजें…</string>
+    <string name="search_by_category">श्रेणी से खोजें</string>
 
     <string name="home_due_now">अभी दोहराने के लिए तैयार</string>
 

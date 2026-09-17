@@ -30,7 +30,7 @@ from app.services.enrichment import (
 from app.services.word_family_quality import filter_word_family
 from app.services.llm import LLMService
 from app.services.pos_normalize import normalize_pos_bucket
-from app.services.similar_words import fetch_similar_words, skips_similar_words
+from app.services.similar_words import fetch_similar_words
 
 logger = logging.getLogger(__name__)
 
@@ -307,10 +307,7 @@ async def finish_side_jobs(
     llm = llm or LLMService()
     lemma = content.get("lemma") or ""
     pos = content.get("pos")
-    need_similar = (
-        not skips_similar_words(content, pos)
-        and len(content.get("similar_words") or []) < MIN_SIMILAR_WORDS
-    )
+    need_similar = len(content.get("similar_words") or []) < MIN_SIMILAR_WORDS
     has_infl = bool(content.get("inflection") or content.get("conjugation"))
     need_inflection = inflect_pos_key(
         pos, lemma=lemma, learning_lang=profile.learning_lang
@@ -355,16 +352,13 @@ async def run_lemma_enrichment(
     """
     llm = llm or LLMService()
     pos_lookup = _resolve_pos(pos) or pos or "unknown"
-    skip_similar = skips_similar_words(pos=pos) or skips_similar_words(pos=pos_lookup)
 
     core_task = asyncio.create_task(
         _fetch_core_with_examples(llm, profile, lemma, pos_lookup, gloss_hint=gloss_hint)
     )
-    similar_task: asyncio.Task | None = None
-    if not skip_similar:
-        similar_task = asyncio.create_task(
-            fetch_similar_words(llm, profile, lemma, pos_lookup)
-        )
+    similar_task: asyncio.Task | None = asyncio.create_task(
+        fetch_similar_words(llm, profile, lemma, pos_lookup)
+    )
     inflection_task: asyncio.Task = asyncio.create_task(
         fetch_lsp_inflection(llm, profile, lemma, pos_lookup)
     )
@@ -392,7 +386,7 @@ async def run_lemma_enrichment(
     retry_similar, retry_inflection = side_jobs_need_retry(
         lemma, pos_lookup, lemma_final, pos_final
     )
-    if retry_similar and not skip_similar and not skips_similar_words(card, pos_final):
+    if retry_similar:
         _cancel_if_pending(similar_task)
         if similar_task is not None:
             await _await_task(similar_task, [])
@@ -414,12 +408,7 @@ async def run_lemma_enrichment(
     inflection = await _await_task(inflection_task, {})
     card = merge_side_jobs(card, similar, inflection, profile)
 
-    if (
-        require_similar
-        and not skip_similar
-        and not skips_similar_words(card, pos_final)
-        and len(card.get("similar_words") or []) < MIN_SIMILAR_FOR_QUIZ
-    ):
+    if require_similar and len(card.get("similar_words") or []) < MIN_SIMILAR_FOR_QUIZ:
         raise ValueError(
             f"AI zwróciło za mało dystraktorów dla „{lemma_final}” "
             f"({len(card.get('similar_words') or [])}/{MIN_SIMILAR_FOR_QUIZ})."

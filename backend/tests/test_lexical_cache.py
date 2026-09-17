@@ -61,6 +61,7 @@ def _entry(pos: str, lemma: str = "play"):
             "pos": pos,
             "schema_version": "vocabulario.adaptive.v1",
             "meanings": [{"gloss_l1": "x", "examples": [{"l2": "ej", "l1": "pr"}]}],
+            "similar_words": [{"lemma": f"s{i}", "pos": pos, "gloss_l1": f"g{i}"} for i in range(7)],
         },
     )
 

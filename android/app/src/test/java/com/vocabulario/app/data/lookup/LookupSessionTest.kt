@@ -115,6 +115,52 @@ class LookupSessionTest {
     }
 
     @Test
+    fun expandIoFailurePollsCachedUntilReady() = runTest {
+        var cachedCalls = 0
+        val session = session(
+            parent = this,
+            ioRetryDelayMs = 0,
+            cachedPollDelayMs = 0,
+            cachedPollAttempts = 5,
+            lookupCached = {
+                cachedCalls++
+                if (cachedCalls < 4) {
+                    LookupResponse(emptyList(), source = "none")
+                } else {
+                    LookupResponse(listOf(candidate("hola")), source = "db", ai_complete = true)
+                }
+            },
+            lookupExpand = { throw IOException("connection reset") },
+        )
+        session.start("hola")
+        advanceUntilIdle()
+        assertTrue(cachedCalls >= 4)
+        assertEquals(listOf("hola"), session.state.value.candidates.map { it.lemma })
+        assertNull(session.state.value.error)
+        assertFalse(session.state.value.expanding)
+    }
+
+    @Test
+    fun cachedHitsKeepExpandingUntilFullPrompt() = runTest {
+        val expandStarted = CompletableDeferred<Unit>()
+        val session = session(
+            parent = this,
+            lookupCached = {
+                LookupResponse(listOf(candidate("casa")), source = "dict", ai_complete = false)
+            },
+            lookupExpand = {
+                expandStarted.complete(Unit)
+                awaitCancellation()
+            },
+        )
+        session.start("casa")
+        expandStarted.await()
+        assertEquals(listOf("casa"), session.state.value.candidates.map { it.lemma })
+        assertTrue(session.state.value.expanding)
+        assertNull(session.state.value.error)
+    }
+
+    @Test
     fun expandingSessionOpensAddTab() {
         val expanding = LookupSessionState(query = "deska", expanding = true)
         val done = LookupSessionState(
@@ -135,6 +181,8 @@ class LookupSessionTest {
             LookupResponse(emptyList(), source = "none")
         },
         ioRetryDelayMs: Long = 1_500L,
+        cachedPollDelayMs: Long = 0L,
+        cachedPollAttempts: Int = 0,
     ) = LookupSession(
         lookupCached = lookupCached,
         lookupExpand = lookupExpand,
@@ -142,6 +190,8 @@ class LookupSessionTest {
         expandFailedNotice = "expand-failed",
         parent = parent,
         ioRetryDelayMs = ioRetryDelayMs,
+        cachedPollDelayMs = cachedPollDelayMs,
+        cachedPollAttempts = cachedPollAttempts,
     )
 
     private fun candidate(lemma: String) = LookupCandidate(

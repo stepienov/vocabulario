@@ -59,6 +59,12 @@ interface VocabularioApi {
     @POST("lookup/expand")
     suspend fun lookupExpand(@Body body: LookupRequest): LookupResponse
 
+    @POST("lookup/category/cached")
+    suspend fun lookupCategoryCached(@Body body: LookupRequest): LookupResponse
+
+    @POST("lookup/category/expand")
+    suspend fun lookupCategoryExpand(@Body body: LookupRequest): LookupResponse
+
     @POST("imports/validate")
     suspend fun validateImport(@Body body: ImportValidateRequest): ImportValidateResponse
 

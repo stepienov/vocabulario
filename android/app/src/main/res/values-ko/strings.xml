@@ -107,6 +107,10 @@
 
     <string name="auth_password">비밀번호</string>
 
+    <string name="cd_show_password">비밀번호 표시</string>
+
+    <string name="cd_hide_password">비밀번호 숨기기</string>
+
 
 
     <string name="auth_have_account">이미 계정이 있습니다</string>
@@ -278,6 +282,13 @@
 
     <string name="list_rename">이름 변경</string>
 
+    <string name="list_flashcards">플래시카드</string>
+    <string name="list_flashcards_next">다음</string>
+    <string name="list_flashcards_add">학습 중으로</string>
+    <string name="list_flashcards_reviewed">확인함: %1$d</string>
+    <string name="list_flashcards_added">학습 중으로 추가: %1$d</string>
+    <string name="list_flashcards_empty">준비된 카드가 없습니다</string>
+
     <string name="list_move_all">모두 이동</string>
 
     <string name="list_empty">빈 목록</string>
@@ -404,6 +415,7 @@
     <string name="section_usages">표현</string>
 
     <string name="home_search_hint">단어 검색…</string>
+    <string name="search_by_category">카테고리로 검색</string>
 
     <string name="home_due_now">지금 복습할 준비 완료</string>
 

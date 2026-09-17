@@ -60,3 +60,16 @@ def test_card_lookup_not_resolved_without_gloss():
         pos="verb",
     )
     assert not _card_lookup_resolved(card)
+
+
+def test_similar_words_prompt_keeps_phrase_lemma_in_dynamic():
+    static, dynamic = build_similar_words_prompt_parts(
+        native="en",
+        learning="es",
+        lemma="at the same time",
+        pos="phrase",
+        count=12,
+    )
+    assert "at the same time" not in static
+    assert "at the same time" in dynamic
+    assert "WIELOWYRAZOWE" in static

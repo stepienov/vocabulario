@@ -104,6 +104,10 @@
 
         <string name="auth_email">E-mail</string>
         <string name="auth_password">Password</string>
+
+    <string name="cd_show_password">Mostra password</string>
+
+    <string name="cd_hide_password">Nascondi password</string>
 <string name="auth_have_account">Ho già un account</string>
 
     <string name="onboarding_app_setup">Configurazione dell\'app</string>
@@ -273,6 +277,13 @@
 
     <string name="list_rename">Rinomina</string>
 
+    <string name="list_flashcards">Flashcard</string>
+    <string name="list_flashcards_next">Avanti</string>
+    <string name="list_flashcards_add">Aggiungi ad Apprendimento</string>
+    <string name="list_flashcards_reviewed">Rivedute: %1$d</string>
+    <string name="list_flashcards_added">Aggiunte ad Apprendimento: %1$d</string>
+    <string name="list_flashcards_empty">Nessuna flashcard pronta</string>
+
     <string name="list_move_all">Sposta tutto</string>
 
     <string name="list_empty">Lista vuota</string>
@@ -399,6 +410,7 @@
     <string name="section_usages">espressioni</string>
 
     <string name="home_search_hint">Cerca una parola…</string>
+    <string name="search_by_category">Cerca per categoria</string>
 
     <string name="home_due_now">Pronto per la revisione ora</string>
 

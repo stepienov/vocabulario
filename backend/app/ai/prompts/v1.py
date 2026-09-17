@@ -235,6 +235,147 @@ Return ONLY JSON:
 }}
 """
 
+LOOKUP_DRAFT_PROMPT_V1 = """Fast bilingual dictionary draft for ONE language pair.
+
+{pair_guidance}
+
+L1 (native): {native_name}
+L2 (learning — every lemma MUST be in this language): {learning_name}
+User query: "{text}"
+
+Return up to 8 DISTINCT L2 headword proposals the user might mean.
+Interpret generously: typos, missing diacritics, inflections, stray punctuation.
+lemma = L2 citation form; gloss = L1 citation form.
+pos = one of: noun, verb, adj, adv, prep, conj, pron, det, interj, phrase, construction, particle.
+If the string is a word in BOTH languages, return both readings.
+If several candidates share a gloss, add a short parenthetical.
+JSON only:
+{{
+  "candidates": [
+    {{"lemma": "...", "pos": "...", "gloss": "..."}}
+  ]
+}}
+"""
+
+LOOKUP_CATEGORY_SYSTEM_V1 = (
+    "You build one learner vocabulary theme from a single query. "
+    "Return JSON only. lemma is always the L2 dictionary citation form; "
+    "gloss is always the L1 citation form. Never echo the raw query shape."
+)
+
+LOOKUP_CATEGORY_DRAFT_PROMPT_V1 = """Fast study-set draft for ONE vocabulary theme.
+
+{pair_guidance}
+
+L1: {native_name}
+L2 (every lemma): {learning_name}
+Query: "{text}"
+
+Interpret as L1 and/or L2 (typos, missing diacritics, inflection OK).
+Pick ONE seed meaning. Build ONE textbook theme around it.
+candidates[0] = the seed in L2 citation form.
+Then 7 more on-theme L2 headwords (8 total).
+Colors stay colors. A vehicle seed → other vehicles (incl. plane/train) + fuel/driver.
+No generic pad verbs (eat/do/be). A2–B1. JSON only.
+
+lemma = L2 citation; gloss = L1 citation; pos = noun|verb|adj|adv|prep|conj|pron|det|interj|phrase|construction|particle.
+
+{{
+  "query_lang": "l1" | "l2" | "both",
+  "theme": "short English theme name",
+  "candidates": [
+    {{"lemma": "...", "pos": "...", "gloss": "..."}}
+  ]
+}}
+"""
+
+LOOKUP_CATEGORY_PROMPT_V1 = """You are building a STUDY SET for ONE vocabulary theme, for one language pair.
+
+{pair_guidance}
+
+L1 (app / native): {native_name}
+L2 (learning — every candidate.lemma MUST be in this language): {learning_name}
+CEFR: {cefr}
+User query: "{text}"
+
+Treat the query ONLY as {native_name} and/or {learning_name}.
+
+STEP 1 — INTERPRET
+- Ignore stray punctuation. Missing/wrong diacritics = the same word.
+- Inflected / typo forms map to the dictionary headword.
+- Decide whether the query is L1, L2, or both.
+- Pick ONE ordinary learner meaning as the seed.
+  If the string is a word in both languages, pick the reading with the clearer
+  concrete study theme.
+
+STEP 2 — THEME (one textbook page)
+Name the theme in English in `theme`.
+This is a study set, NOT a synonym list.
+
+Width rules:
+- Colors, fruit, animals, family, clothes, body, weather: stay inside that closed set
+  (czerwony → other colors, NOT emotions).
+- A vehicle / place / activity seed: include the whole learner TOPIC, not only
+  subtypes of that one object. Example: samochód / coche → other vehicles
+  (truck, bus, bike, taxi, PLANE, train) PLUS scene words (fuel, driver, to drive,
+  road). Still transport — not "all technology".
+- A phrase like "at the same time": seed = that phrase; neighbours = other
+  time/sequence expressions, not random adverbs.
+- Do NOT pad with generic verbs that fit every theme (eat, do, be, have, combine).
+- CEFR A2–B1 everyday words. No brands, no rare jargon.
+
+STEP 3 — LIST
+Return exactly 21 DISTINCT L2 headwords:
+- candidates[0] MUST be the seed (what the user typed), L2 citation + L1 gloss.
+  If they typed L2, candidates[0].lemma is that L2 headword (citation form).
+  If they typed L1, candidates[0] is its L2 translation.
+- Then 20 on-theme neighbours.
+- Mix POS only when natural for the theme.
+- Same lemma+pos once. Disambiguate identical glosses with a short parenthetical.
+
+{lookup_output_form_rules}
+
+POS: exactly one of
+noun, verb, adj, adv, prep, conj, pron, det, interj, phrase, construction, particle.
+
+Return ONLY JSON:
+{{
+  "query_lang": "l1" | "l2" | "both",
+  "theme": "short English theme name",
+  "seed_l1": "citation form in L1",
+  "candidates": [
+    {{"lemma": "...", "pos": "...", "gloss": "..."}}
+  ]
+}}
+"""
+
+LOOKUP_CATEGORY_EXPAND_PROMPT_V1 = """Add NEW study-set items for the SAME vocabulary theme.
+
+{pair_guidance}
+
+L1: {native_name}
+L2 (every NEW lemma MUST be in this language): {learning_name}
+Query: "{text}"
+Theme: {theme}
+Already stored (do NOT repeat these lemma+pos pairs):
+{already_block}
+
+Return ONLY new L2 headwords from this same theme, enough to reach about 21 total
+with the stored list (so typically 13 new rows). Stay on-theme. No generic pad
+verbs. A2–B1. Same citation-form rules: lemma=L2, gloss=L1, pos=one English bucket.
+
+{lookup_output_form_rules}
+
+If nothing new belongs, return {{"candidates": []}}.
+
+JSON only:
+{{
+  "candidates": [
+    {{"lemma": "...", "pos": "...", "gloss": "..."}}
+  ]
+}}
+"""
+
 LOOKUP_L1_TYPO_PROMPT_V1 = """The user typed an L1 (native) word, most likely WITHOUT
 diacritics and/or with a small typo. Recover what they meant. Be high-recall.
 
@@ -606,10 +747,10 @@ def build_similar_words_prompt_parts(
         learning=learning,
         pos=pos,
         pos_form=pos_form_label(pos),
-        filler_cefr=FILLER_CEFR,
+        shape_rules=similar_shape_rules(pos),
         count=count,
     )
-    dynamic = SIMILAR_WORDS_DYNAMIC_V1.format(lemma=lemma)
+    dynamic = SIMILAR_WORDS_DYNAMIC_V1.format(lemma=lemma, pos=pos)
     return static, dynamic
 
 
@@ -653,70 +794,94 @@ _POS_FORMS = {
     "noun": "mianownik, z rodzajnikiem jeśli język go używa",
     "adj": "forma podstawowa, rodzaj męski, liczba pojedyncza",
     "adv": "forma podstawowa",
+    "phrase": "pełny zwrot (minimum dwa wyrazy), nie pojedyncze słowo",
+    "construction": "pełna konstrukcja / peryfraza, nie pojedynczy lemat",
+    "sentence": "całe zdanie, nie wyjęte z niego słowo",
 }
+
+_PHRASE_LIKE_POS = frozenset({"phrase", "construction", "sentence", "other"})
 
 
 def pos_form_label(pos: str) -> str:
     return _POS_FORMS.get((pos or "").lower(), "podstawowa forma słownikowa")
 
 
-SIMILAR_WORDS_SYSTEM_V1 = (
-    "Przygotowujesz materiały do fiszek językowych. "
-    "Zwracasz zawsze pełną, żądaną liczbę pozycji — każdą inną od pozostałych. "
-    "Podajesz wyłącznie prawdziwe słowa ze słownika, nigdy form wymyślonych. "
-    "Tylko JSON zgodny ze schematem."
-)
-
 # Dystraktor ma być pułapką, nie słowem do nauki, więc wypełniacze bierzemy
 # ze stałego poziomu średnio zaawansowanego. Przy poziomie uczącego się listę
 # domykały słowa w rodzaju „comer”, „vivir”, „abrir” — zbyt oczywiste na dystraktor.
 FILLER_CEFR = "B2"
 
+
+def similar_shape_rules(pos: str) -> str:
+    bucket = (pos or "").strip().lower()
+    if bucket in _PHRASE_LIKE_POS:
+        return (
+            "Hasło jest WIELOWYRAZOWE. Każda pozycja też musi być zwrotem albo konstrukcją "
+            "(minimum dwa wyrazy) o tej samej części mowy — NIGDY pojedynczym słowem.\n"
+            "Najpierw zwroty podobne formalnie lub znaczeniowo:\n"
+            "a) ten sam szkielet, inne słowo w slocie\n"
+            "b) near-synonimiczny zwrot\n"
+            "c) podobny początek albo koniec, inny środek\n"
+            f"Gdy podobne się skończą, dopełnij listę innymi zwrotami z poziomu {FILLER_CEFR}."
+        )
+    return (
+        "Najpierw wpisz słowa możliwie podobne do hasła na piśmie lub w wymowie.\n"
+        "Podobnych szukaj systematycznie i WYCZERP te sposoby, zanim sięgniesz po wypełniacze:\n"
+        "a) ta sama końcówka, inny początek — dopisz do końcówki różne przedrostki i rdzenie\n"
+        "b) zmiana jednej litery\n"
+        "c) dodanie lub usunięcie jednej litery\n"
+        "d) ten sam początek, inna końcówka\n"
+        "e) słowo o innym zapisie, ale bardzo bliskim brzmieniu\n"
+        f"Gdy podobne się skończą, dopełnij listę słowami z poziomu {FILLER_CEFR}.\n"
+        "Te nie muszą być podobne, ale trzymaj poziom: nie wpisuj podstawowych słów "
+        "z A1–A2 ani rzadkich, literackich i książkowych."
+    )
+
+
+SIMILAR_WORDS_SYSTEM_V1 = (
+    "Przygotowujesz materiały do fiszek językowych. "
+    "Zwracasz zawsze pełną, żądaną liczbę pozycji — każdą inną od pozostałych. "
+    "Podajesz wyłącznie prawdziwe hasła ze słownika, nigdy form wymyślonych. "
+    "Tylko JSON zgodny ze schematem."
+)
+
 SIMILAR_WORDS_STATIC_V1 = """Przygotowujesz fiszkę do nauki języka {learning} dla osoby mówiącej po {native}.
 
-Fiszka ma tryb wyboru odpowiedzi — podaj {count} słów-dystraktorów.
+Fiszka ma tryb wyboru odpowiedzi — podaj {count} dystraktorów.
 
 Warunki — każdy obowiązkowy:
-1. Ta sama część mowy co słowo na fiszce: {pos}
-2. Prawdziwe słowo języka {learning} — nigdy forma wymyślona ani zniekształcona
-3. Inne słowo niż słowo docelowe — nie jego odmiana i nie wyraz pochodny od tego rdzenia
-4. Forma słownikowa: {pos_form}
+1. Ta sama część mowy co hasło na fiszce: {pos}
+2. Prawdziwe hasło języka {learning} — nigdy forma wymyślona ani zniekształcona
+3. Inne niż hasło docelowe — nie jego odmiana i nie wyraz pochodny od tego rdzenia
+4. Forma: {pos_form}
 5. Każda pozycja inna od pozostałych na liście
 6. Krótkie tłumaczenie na {native} — 1–3 słowa
 
-Kolejność wypełniania listy:
-Najpierw wpisz słowa możliwie podobne do słowa docelowego na piśmie lub w wymowie.
-Podobnych szukaj systematycznie i WYCZERP te sposoby, zanim sięgniesz po wypełniacze:
-a) ta sama końcówka, inny początek — dopisz do końcówki różne przedrostki i rdzenie
-b) zmiana jednej litery
-c) dodanie lub usunięcie jednej litery
-d) ten sam początek, inna końcówka
-e) słowo o innym zapisie, ale bardzo bliskim brzmieniu
-Gdy podobne się skończą, dopełnij listę do {count} słowami z poziomu {filler_cefr}.
-Te nie muszą być podobne, ale trzymaj poziom: nie wpisuj podstawowych słów
-z A1–A2 ani rzadkich, literackich i książkowych.
+{shape_rules}
 
 Zwróć pełne {count} pozycji w JSON zgodnym ze schematem similar_words.
 """
 
-SIMILAR_WORDS_DYNAMIC_V1 = """Słowo na fiszce: {lemma}
+SIMILAR_WORDS_DYNAMIC_V1 = """Hasło na fiszce: {lemma}
+POS: {pos}
 """
 
 SIMILAR_WORDS_PROMPT_V1 = SIMILAR_WORDS_STATIC_V1 + "\n" + SIMILAR_WORDS_DYNAMIC_V1
 
 SIMILAR_WORDS_FILL_PROMPT_V1 = """Przygotowujesz fiszkę do nauki języka {learning} dla osoby mówiącej po {native}.
 
-Do puli odpowiedzi w quizie brakuje słów. Podaj {count} słów.
+Do puli odpowiedzi w quizie brakuje pozycji. Podaj {count} pozycji.
 
 Warunki — każdy obowiązkowy:
 1. Część mowy: {pos}
-2. Prawdziwe słowa języka {learning}
-3. Forma słownikowa: {pos_form}
+2. Prawdziwe hasła języka {learning}
+3. Forma: {pos_form}
 4. Słownictwo z poziomu {filler_cefr} — ani podstawowe z A1–A2, ani rzadkie
    i literackie; takie, które spotyka się w prasie i rozmowie
 5. Każda pozycja inna od pozostałych
 6. Żadne nie może być na tej liście: {exclude}
 7. Krótkie tłumaczenie na {native} — 1–3 słowa
+8. Jeśli pos to phrase/construction/sentence — każda pozycja wielowyrazowa, nie pojedyncze słowo
 
 Nie muszą być do niczego podobne. Zwróć pełne {count} pozycji.
 """

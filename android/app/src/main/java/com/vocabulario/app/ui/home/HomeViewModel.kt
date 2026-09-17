@@ -20,6 +20,7 @@ import com.vocabulario.app.data.api.LookupCandidate
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.imports.ImportController
+import com.vocabulario.app.data.lookup.CategoryLookupCoordinator
 import com.vocabulario.app.data.lookup.LookupCoordinator
 import com.vocabulario.app.data.lookup.LookupSessionState
 import com.vocabulario.app.data.local.LocalDashboard
@@ -38,6 +39,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import java.time.Instant
 import javax.inject.Inject
 
 enum class HomeTab { DASHBOARD, ADD, LISTS }
@@ -52,6 +55,7 @@ data class HomeUiState(
     /** OpenAI jeszcze uzupełnia listę — mały spinner pod propozycjami. */
     val expanding: Boolean = false,
     val candidates: List<LookupCandidate> = emptyList(),
+    val searchByCategory: Boolean = false,
     val activeProfile: LanguageProfileResponse? = null,
     val error: String? = null,
     val notice: String? = null,
@@ -97,6 +101,8 @@ data class HomeUiState(
     val visibleListWords: List<CardResponse>
         get() = applyListFilterSort(listWords, listFilter, listSortOrder, listQuery)
     val hasMovableListWords: Boolean get() = listWords.any { it.isReadyToMove() }
+    val hasFlashcardListWords: Boolean
+        get() = listWords.any { EnrichmentStatus.isStudyable(it.enrichment_status) }
     val hasMovableSelectedWords: Boolean
         get() = listWords.any { it.id in selectedWordIds && it.isReadyToMove() }
     val sessionDue: Int get() = stats?.due_count ?: 0
@@ -124,6 +130,7 @@ class HomeViewModel @Inject constructor(
     private val networkMonitor: com.vocabulario.app.data.NetworkMonitor,
     private val importController: ImportController,
     private val lookupCoordinator: LookupCoordinator,
+    private val categoryLookupCoordinator: CategoryLookupCoordinator,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState(isOnline = networkMonitor.isCurrentlyOnline()))
@@ -155,6 +162,20 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             var first = true
             lookupCoordinator.state.collect { session ->
+                if (_state.value.searchByCategory) return@collect
+                val openAdd = session.hasResultsOrProgress && (first || session.expanding)
+                first = false
+                applyLookupSession(session, openAddTab = openAdd)
+            }
+        }
+        viewModelScope.launch {
+            var first = true
+            categoryLookupCoordinator.state.collect { session ->
+                val categoryActive = session.query.isNotEmpty() || session.hasResultsOrProgress
+                if (categoryActive && !_state.value.searchByCategory) {
+                    _state.value = _state.value.copy(searchByCategory = true)
+                }
+                if (!_state.value.searchByCategory) return@collect
                 val openAdd = session.hasResultsOrProgress && (first || session.expanding)
                 first = false
                 applyLookupSession(session, openAddTab = openAdd)
@@ -274,15 +295,21 @@ class HomeViewModel @Inject constructor(
         val learningLemmas = runCatching { repository.learningLemmaSet() }.getOrNull()
         val relatedMembership = runCatching { repository.relatedMembershipIndex() }.getOrNull()
         val publishedWords = words ?: _state.value.listWords
+        val selectedId = selected ?: _state.value.selectedListId
+        val mergedWords = if (selectedId != null) {
+            mergeIncomingListWords(selectedId, publishedWords)
+        } else {
+            publishedWords
+        }
         _state.value = _state.value.copy(
             lists = visible,
-            selectedListId = selected ?: _state.value.selectedListId,
-            listWords = publishedWords,
+            selectedListId = selectedId,
+            listWords = mergedWords,
             selectedWordIds = if (clearSelection) emptySet() else _state.value.selectedWordIds,
             stats = stats ?: _state.value.stats,
             learningLemmas = learningLemmas ?: _state.value.learningLemmas,
             relatedMembership = relatedMembership ?: _state.value.relatedMembership,
-            detailCard = syncDetailCard(publishedWords, _state.value.detailCard),
+            detailCard = syncDetailCard(mergedWords, _state.value.detailCard),
         )
         if (stats != null) scheduleNextReviewRefresh(stats)
         syncCandidatesFromRoom(visible, selected)
@@ -291,7 +318,10 @@ class HomeViewModel @Inject constructor(
     /** Drop pair-scoped UI state immediately, then reload lists/cards/stats. */
     private fun onLanguagePairChanged(wipeUi: Boolean = true) {
         pollJob?.cancel()
-        if (wipeUi) lookupCoordinator.clear()
+        if (wipeUi) {
+            lookupCoordinator.clear()
+            categoryLookupCoordinator.clear()
+        }
         nextReviewRefreshJob?.cancel()
         if (wipeUi) {
             val keepTab = _state.value.tab
@@ -339,10 +369,18 @@ class HomeViewModel @Inject constructor(
     /** Odśwież dashboard przy powrocie na Home (np. z Ćwicz) — liczby mają być aktualne. */
     fun onHomeResumed() {
         importController.onAppForeground()
-        val session = lookupCoordinator.state.value
+        lookupCoordinator.retryPending()
+        categoryLookupCoordinator.retryPending()
+        val session = if (_state.value.searchByCategory) {
+            categoryLookupCoordinator.state.value
+        } else {
+            lookupCoordinator.state.value
+        }
         if (session.hasResultsOrProgress) {
             applyLookupSession(session, openAddTab = true)
         }
+        startPollingIfNeeded()
+        _state.value.selectedListId?.let { loadListWords(it, background = true) }
         if (_state.value.tab == HomeTab.DASHBOARD) {
             loadStats()
         }
@@ -473,16 +511,32 @@ class HomeViewModel @Inject constructor(
                 list.name == name || (isLearningListName(name) && list.is_system)
             }?.id
             ?: return
+        val placeholder = placeholderCardFromCandidate(candidate)
+        val sameList = _state.value.selectedListId == listId
+        val seeded = upsertListWord(
+            if (sameList) _state.value.listWords else emptyList(),
+            placeholder,
+        )
         _state.value = _state.value.copy(
             tab = HomeTab.LISTS,
             selectedListId = listId,
-            focusWordId = candidate.learning_card_id,
+            listWords = seeded,
+            focusWordId = candidate.learning_card_id ?: placeholder.id,
             focusLemma = candidate.lemma.takeIf { candidate.learning_card_id.isNullOrBlank() },
             listFilter = ListFilterState(),
             listQuery = "",
             selectedWordIds = emptySet(),
             error = null,
         )
+        viewModelScope.launch {
+            val cached = runCatching { repository.cachedListWords(listId) }.getOrNull() ?: return@launch
+            if (_state.value.selectedListId != listId) return@launch
+            val merged = mergeIncomingListWords(listId, cached)
+            _state.value = _state.value.copy(
+                listWords = merged,
+                detailCard = syncDetailCard(merged, _state.value.detailCard),
+            )
+        }
         loadLists(listId)
     }
 
@@ -504,12 +558,13 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { words ->
                     val lemmas = runCatching { repository.learningLemmaSet() }.getOrNull()
                     val membership = runCatching { repository.relatedMembershipIndex() }.getOrNull()
+                    val merged = mergeIncomingListWords(listId, words)
                     _state.value = _state.value.copy(
-                        listWords = words,
+                        listWords = merged,
                         error = null,
                         learningLemmas = lemmas ?: _state.value.learningLemmas,
                         relatedMembership = membership ?: _state.value.relatedMembership,
-                        detailCard = syncDetailCard(words, _state.value.detailCard),
+                        detailCard = syncDetailCard(merged, _state.value.detailCard),
                     )
                     syncCandidatesFromRoom(_state.value.lists, listId)
                     startPollingIfNeeded()
@@ -530,7 +585,8 @@ class HomeViewModel @Inject constructor(
                     runCatching { repository.flushPendingLookupsIfNeeded() }
                     runCatching { repository.cachedListWords(listId) }
                         .onSuccess { words ->
-                            _state.value = _state.value.copy(listWords = words, error = null)
+                            val merged = mergeIncomingListWords(listId, words)
+                            _state.value = _state.value.copy(listWords = merged, error = null)
                         }
                     loadLists(_state.value.selectedListId)
                 } finally {
@@ -542,6 +598,7 @@ class HomeViewModel @Inject constructor(
 
     fun clearSearch() {
         lookupCoordinator.clear()
+        categoryLookupCoordinator.clear()
         appliedLookupGeneration = lookupCoordinator.state.value.generation
         _state.value = _state.value.copy(
             query = "",
@@ -561,11 +618,30 @@ class HomeViewModel @Inject constructor(
         clearSearch()
     }
 
+    fun setSearchByCategory(enabled: Boolean) {
+        if (_state.value.searchByCategory == enabled) return
+        lookupCoordinator.clear()
+        categoryLookupCoordinator.clear()
+        appliedLookupGeneration = -1L
+        _state.value = _state.value.copy(
+            searchByCategory = enabled,
+            candidates = emptyList(),
+            expanding = false,
+            searchLoading = false,
+            error = null,
+            notice = null,
+        )
+    }
+
     fun search() {
         if (importController.state.value.blocksUi) return
         val text = _state.value.query.trim()
         if (text.isBlank()) return
         if (!networkMonitor.isCurrentlyOnline()) {
+            if (_state.value.searchByCategory) {
+                _state.value = _state.value.copy(error = strings.get(R.string.err_offline))
+                return
+            }
             viewModelScope.launch {
                 _state.value = _state.value.copy(
                     searchLoading = true,
@@ -608,7 +684,13 @@ class HomeViewModel @Inject constructor(
             candidates = emptyList(),
             tab = HomeTab.ADD,
         )
-        lookupCoordinator.start(text)
+        if (_state.value.searchByCategory) {
+            lookupCoordinator.clear()
+            categoryLookupCoordinator.start(text)
+        } else {
+            categoryLookupCoordinator.clear()
+            lookupCoordinator.start(text)
+        }
     }
 
     private fun applyLookupSession(session: LookupSessionState, openAddTab: Boolean) {
@@ -1104,6 +1186,7 @@ class HomeViewModel @Inject constructor(
     fun retryReviewSearch() {
         val word = _state.value.reviewWord.orEmpty()
         lookupCoordinator.clear()
+        categoryLookupCoordinator.clear()
         closePendingReview()
         _state.value = _state.value.copy(
             tab = HomeTab.ADD,
@@ -1284,18 +1367,23 @@ class HomeViewModel @Inject constructor(
     private fun beginCreating(candidate: LookupCandidate, listName: String, listId: String?) {
         dismissAddSheet()
         val addedKeys = if (isLearningListName(listName)) lemmaKeys(candidate.lemma) else emptySet()
+        val creating = candidate.copy(
+            in_learning = isLearningListName(listName),
+            list_id = listId,
+            list_name = listName,
+            enrichment_status = "pending",
+        )
+        val listWords = if (listId != null && listId == _state.value.selectedListId) {
+            upsertListWord(_state.value.listWords, placeholderCardFromCandidate(creating))
+        } else {
+            _state.value.listWords
+        }
         _state.value = _state.value.copy(
             learningLemmas = _state.value.learningLemmas + addedKeys,
             candidates = _state.value.candidates.map {
-                if (sameLemmaAndPos(it.lemma, it.pos, candidate.lemma, candidate.pos)) {
-                    it.copy(
-                        in_learning = isLearningListName(listName),
-                        list_id = listId,
-                        list_name = listName,
-                        enrichment_status = "pending",
-                    )
-                } else it
+                if (sameLemmaAndPos(it.lemma, it.pos, candidate.lemma, candidate.pos)) creating else it
             },
+            listWords = listWords,
         )
     }
 
@@ -1327,20 +1415,55 @@ class HomeViewModel @Inject constructor(
         enrichmentStatus: String,
     ) {
         val addedKeys = if (isLearningListName(listName)) lemmaKeys(candidate.lemma) else emptySet()
+        val updated = candidate.copy(
+            in_learning = isLearningListName(listName),
+            learning_card_id = cardId,
+            list_id = listId,
+            list_name = listName,
+            enrichment_status = enrichmentStatus,
+        )
+        val pendingId = pendingCardId(candidate.lemma, candidate.pos)
+        val listWords = if (listId != null && listId == _state.value.selectedListId) {
+            upsertListWord(_state.value.listWords, placeholderCardFromCandidate(updated))
+        } else {
+            _state.value.listWords
+        }
+        val focusId = _state.value.focusWordId
         _state.value = _state.value.copy(
             learningLemmas = _state.value.learningLemmas + addedKeys,
             candidates = _state.value.candidates.map {
-                if (sameLemmaAndPos(it.lemma, it.pos, candidate.lemma, candidate.pos)) {
-                    it.copy(
-                        in_learning = isLearningListName(listName),
-                        learning_card_id = cardId,
-                        list_id = listId,
-                        list_name = listName,
-                        enrichment_status = enrichmentStatus,
-                    )
-                } else it
+                if (sameLemmaAndPos(it.lemma, it.pos, candidate.lemma, candidate.pos)) updated else it
+            },
+            listWords = listWords,
+            focusWordId = when (focusId) {
+                pendingId, candidate.learning_card_id -> cardId
+                else -> focusId
             },
         )
+    }
+
+    private fun candidateBelongsToList(candidate: LookupCandidate, listId: String): Boolean {
+        if (!candidate.onList && !candidate.isCreating) return false
+        if (candidate.list_id == listId) return true
+        val list = _state.value.lists.firstOrNull { it.id == listId } ?: return false
+        val name = candidate.list_name ?: return false
+        if (list.is_system && isLearningListName(name)) return true
+        return list.name == name
+    }
+
+    private fun cardsFromCandidatesForList(listId: String): List<CardResponse> =
+        _state.value.candidates.mapNotNull { candidate ->
+            if (!candidateBelongsToList(candidate, listId)) null
+            else placeholderCardFromCandidate(candidate)
+        }
+
+    private fun mergeIncomingListWords(listId: String, incoming: List<CardResponse>): List<CardResponse> {
+        val fromCandidates = cardsFromCandidatesForList(listId)
+        val current = if (_state.value.selectedListId == listId) _state.value.listWords else emptyList()
+        if (incoming.isEmpty()) {
+            return mergeInFlightListWords(current, fromCandidates)
+        }
+        return mergeInFlightListWords(incoming, current + fromCandidates)
     }
 
     /**
@@ -1368,7 +1491,9 @@ class HomeViewModel @Inject constructor(
                 if (listId != null) {
                     val words = runCatching { repository.listWords(listId) }.getOrNull()
                     if (words != null) {
-                        _state.value = _state.value.copy(listWords = words)
+                        _state.value = _state.value.copy(
+                            listWords = mergeIncomingListWords(listId, words),
+                        )
                     }
                 }
                 if (fetched.isNotEmpty()) {
@@ -1393,7 +1518,7 @@ class HomeViewModel @Inject constructor(
         _state.value.listWords.forEach { card ->
             val watch = EnrichmentStatus.needsPoll(card.enrichment_status) ||
                 !card.card_activity_status.isNullOrBlank()
-            if (watch) ids.add(card.id)
+            if (watch && !card.id.startsWith("pending-")) ids.add(card.id)
         }
         _state.value.candidates.forEach { c ->
             if (EnrichmentStatus.needsPoll(c.enrichment_status)) {
@@ -1622,6 +1747,55 @@ class HomeViewModel @Inject constructor(
 
 internal fun pendingCardId(lemma: String, pos: String?): String =
     "pending-${lemma.trim().lowercase()}-${normalizePosKey(pos)}"
+
+internal fun placeholderCardFromCandidate(candidate: LookupCandidate): CardResponse {
+    val status = candidate.enrichment_status?.takeIf { it.isNotBlank() } ?: EnrichmentStatus.PENDING
+    return CardResponse(
+        id = candidate.learning_card_id ?: pendingCardId(candidate.lemma, candidate.pos),
+        lemma_l2 = candidate.lemma,
+        pos = candidate.pos,
+        gloss_primary = candidate.gloss,
+        content = buildJsonObject { },
+        lexical_entry_id = candidate.lexical_entry_id,
+        created_at = Instant.now().toString(),
+        enrichment_status = status,
+        srs_status = "new",
+    )
+}
+
+internal fun upsertListWord(words: List<CardResponse>, card: CardResponse): List<CardResponse> {
+    val idx = words.indexOfFirst {
+        it.id == card.id || sameLemmaAndPos(it.lemma_l2, it.pos, card.lemma_l2, card.pos)
+    }
+    if (idx >= 0) {
+        val copy = words.toMutableList()
+        copy[idx] = card
+        return copy
+    }
+    return listOf(card) + words
+}
+
+/** Keep optimistic / still-creating tiles that a stale Room/API snapshot has not caught up with. */
+internal fun mergeInFlightListWords(
+    incoming: List<CardResponse>,
+    inFlight: List<CardResponse>,
+): List<CardResponse> {
+    val extras = inFlight.filter { extra ->
+        val keep = extra.id.startsWith("pending-") ||
+            EnrichmentStatus.isCreating(extra.enrichment_status)
+        if (!keep) return@filter false
+        incoming.none { it.id == extra.id || sameLemmaAndPos(it.lemma_l2, it.pos, extra.lemma_l2, extra.pos) }
+    }
+    val unique = LinkedHashMap<String, CardResponse>()
+    for (extra in extras) {
+        val key = "${extra.lemma_l2.trim().lowercase()}|${normalizePosKey(extra.pos)}"
+        val existing = unique[key]
+        if (existing == null || (existing.id.startsWith("pending-") && !extra.id.startsWith("pending-"))) {
+            unique[key] = extra
+        }
+    }
+    return unique.values.toList() + incoming
+}
 
 internal fun sameLemmaAndPos(
     lemmaA: String?,

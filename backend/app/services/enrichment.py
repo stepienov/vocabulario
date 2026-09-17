@@ -264,7 +264,7 @@ async def enrich_adaptive_card_content(
     base_lemma: str | None = None,
     pattern: str | None = None,
 ) -> dict:
-    """Bogata karta dla zwrotu/konstrukcji/zdania — bez full conjugation / similar_words."""
+    """Bogata karta dla zwrotu/konstrukcji/zdania — bez pełnej koniugacji, z dystraktorami quizu."""
     llm = LLMService()
     kind = (entry_kind or "other").strip().lower()
     if kind == "lemma":
@@ -332,7 +332,7 @@ async def enrich_adaptive_card_content(
     if a and b and a != b:
         raise ValueError("adaptive_lemma_mismatch")
 
-    return {
+    result = {
         "schema_version": "vocabulario.adaptive.v1",
         "entry_kind": kind,
         "lemma": headword,
@@ -354,3 +354,6 @@ async def enrich_adaptive_card_content(
             "pattern": pattern,
         },
     }
+    from app.services.similar_words import ensure_similar_words
+
+    return await ensure_similar_words(result, profile, headword, result.get("pos") or pos)

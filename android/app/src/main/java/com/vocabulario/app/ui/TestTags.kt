@@ -4,6 +4,7 @@ package com.vocabulario.app.ui
 object TestTags {
     const val AUTH_EMAIL = "auth_email"
     const val AUTH_PASSWORD = "auth_password"
+    const val AUTH_PASSWORD_TOGGLE = "auth_password_toggle"
     const val AUTH_SUBMIT = "auth_submit"
     const val AUTH_GOOGLE = "auth_google"
     const val AUTH_TOGGLE_MODE = "auth_toggle_mode"
@@ -25,6 +26,7 @@ object TestTags {
     const val SEARCH_INPUT = "search_input"
     const val SEARCH_CLEAR = "search_clear"
     const val SEARCH_SUBMIT = "search_submit"
+    const val SEARCH_BY_CATEGORY = "search_by_category"
     const val SEARCH_RESULT = "search_result"
     const val CANDIDATE_ADD = "candidate_add"
     const val BTN_IMPORT = "btn_import"
@@ -74,6 +76,12 @@ object TestTags {
     const val SHEET_NEW_LIST = "sheet_new_list"
     const val SHEET_CONFIRM_ADD = "sheet_confirm_add"
 
+    const val LIST_FLASHCARDS_CLOSE = "list_flashcards_close"
+    const val LIST_FLASHCARDS_NEXT = "list_flashcards_next"
+    const val LIST_FLASHCARDS_ADD = "list_flashcards_add"
+    const val LIST_FLASHCARDS_EMPTY_BACK = "list_flashcards_empty_back"
+    const val LIST_FLASHCARDS_MENU = "list_flashcards_menu"
+    const val LIST_FLASHCARDS_SUMMARY = "list_flashcards_summary"
     const val BTN_BACK = "btn_back"
     const val PRACTICE_SHOW_ANSWER = "practice_show_answer"
     const val PRACTICE_ANSWER_INPUT = "practice_answer_input"

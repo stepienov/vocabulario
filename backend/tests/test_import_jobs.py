@@ -372,24 +372,24 @@ def test_enrichment_routes_construction_pos_without_entry_kind():
     )
 
 
-def test_skips_similar_words_for_construction():
+def test_skips_similar_words_never_by_pos():
     from app.services.similar_words import skips_similar_words
 
-    assert skips_similar_words({"entry_kind": "construction"}, "construction")
-    assert skips_similar_words({"schema_version": "vocabulario.adaptive.v1"}, "verb")
-    assert skips_similar_words({"pos": "phrase"}, None)
+    assert not skips_similar_words({"entry_kind": "construction"}, "construction")
+    assert not skips_similar_words({"schema_version": "vocabulario.adaptive.v1"}, "verb")
+    assert not skips_similar_words({"pos": "phrase"}, None)
     assert not skips_similar_words({"pos": "noun"}, "noun")
 
 
-def test_ensure_similar_words_does_not_fetch_for_construction(monkeypatch):
+def test_ensure_similar_words_fetches_for_construction(monkeypatch):
     import asyncio
 
     from app.services import similar_words as sw
 
-    async def boom(*args, **kwargs):
-        raise AssertionError("must not fetch similar_words for construction")
+    async def fake_fetch(*args, **kwargs):
+        return [{"lemma": f"ir a x{i}", "pos": "construction", "gloss_l1": f"g{i}"} for i in range(12)]
 
-    monkeypatch.setattr(sw, "fetch_similar_words", boom)
+    monkeypatch.setattr(sw, "fetch_similar_words", fake_fetch)
     profile = SimpleNamespace(app_lang="pl", learning_lang="en")
     content = asyncio.run(
         sw.ensure_similar_words(
@@ -399,4 +399,4 @@ def test_ensure_similar_words_does_not_fetch_for_construction(monkeypatch):
             "construction",
         )
     )
-    assert content["similar_words"] == []
+    assert len(content["similar_words"]) == 12

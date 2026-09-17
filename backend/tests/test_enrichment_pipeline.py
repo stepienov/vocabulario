@@ -94,7 +94,7 @@ def test_assemble_drops_regular_headword_note():
     assert card["headword_note"] is None
 
 
-def test_content_complete_phrase_needs_inflection_not_similar():
+def test_content_complete_phrase_needs_inflection_and_similar():
     content = {
         "schema_version": "vocabulario.card.v1",
         "entry_kind": "lemma",
@@ -105,6 +105,10 @@ def test_content_complete_phrase_needs_inflection_not_similar():
         "similar_words": [],
         "conjugation": {"presente": {"yo": "pago a plazos"}},
     }
+    assert not content_is_complete(content)
+    content["similar_words"] = _similar(MIN_SIMILAR_FOR_QUIZ)
+    for item in content["similar_words"]:
+        item["pos"] = "phrase"
     assert content_is_complete(content)
 
 
@@ -122,7 +126,10 @@ def test_content_complete_noun_phrase_with_article_without_inflection():
                 "examples": [{"l2": "Uso una red social.", "l1": "Używam sieci.", "cefr": "A2"}],
             }
         ],
-        "similar_words": [],
+        "similar_words": [
+            {"lemma": f"la red {i}", "pos": "phrase", "gloss_l1": f"g{i}"}
+            for i in range(MIN_SIMILAR_FOR_QUIZ)
+        ],
         "conjugation": None,
         "inflection": None,
     }
@@ -192,7 +199,7 @@ def test_guard_pins_lemma_on_lemma_path_and_raises_on_adaptive():
         raise AssertionError("expected adaptive_lemma_mismatch")
 
 
-def test_run_lemma_enrichment_skips_similar_for_construction(monkeypatch):
+def test_run_lemma_enrichment_fetches_similar_for_construction(monkeypatch):
     from app.lsp import enrichment as enrich_mod
 
     similar_calls: list[str] = []
@@ -216,7 +223,7 @@ def test_run_lemma_enrichment_skips_similar_for_construction(monkeypatch):
             _profile(), "ir a hacer algo", "construction", require_similar=True
         )
     )
-    assert similar_calls == []
+    assert similar_calls == ["construction"]
 
 
 def test_assemble_core_omits_similar_and_inflection():

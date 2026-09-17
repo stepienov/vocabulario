@@ -85,6 +85,10 @@
 
     <string name="auth_password">كلمة المرور</string>
 
+    <string name="cd_show_password">إظهار كلمة المرور</string>
+
+    <string name="cd_hide_password">إخفاء كلمة المرور</string>
+
 
 
     <string name="auth_have_account">لديّ حساب بالفعل</string>
@@ -246,6 +250,13 @@
 
     <string name="list_rename">إعادة تسمية</string>
 
+    <string name="list_flashcards">بطاقات</string>
+    <string name="list_flashcards_next">التالي</string>
+    <string name="list_flashcards_add">إضافة إلى أتعلّم</string>
+    <string name="list_flashcards_reviewed">تمت المراجعة: %1$d</string>
+    <string name="list_flashcards_added">أُضيفت إلى أتعلّم: %1$d</string>
+    <string name="list_flashcards_empty">لا بطاقات جاهزة</string>
+
     <string name="list_move_all">نقل الكل</string>
 
     <string name="list_empty">قائمة فارغة</string>
@@ -372,6 +383,7 @@
     <string name="section_usages">عبارات</string>
 
     <string name="home_search_hint">ابحث عن كلمة…</string>
+    <string name="search_by_category">البحث حسب الفئة</string>
 
     <string name="home_due_now">جاهز للمراجعة الآن</string>
 

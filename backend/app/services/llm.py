@@ -17,6 +17,10 @@ from app.ai.prompts.v1 import (
     IMPORT_FORMAT_PROMPT_V1,
     IMPORT_FORMAT_SYSTEM_V1,
     IMPORT_STRUCTURE_SYSTEM_V1,
+    LOOKUP_CATEGORY_DRAFT_PROMPT_V1,
+    LOOKUP_CATEGORY_EXPAND_PROMPT_V1,
+    LOOKUP_CATEGORY_SYSTEM_V1,
+    LOOKUP_DRAFT_PROMPT_V1,
     LOOKUP_EXPAND_PROMPT_V1,
     LOOKUP_L1_TYPO_PROMPT_V1,
     LOOKUP_PROMPT_V1,
@@ -354,8 +358,9 @@ class LLMService:
             text = re.sub(r"\s*```$", "", text)
         return json.loads(text or "{}"), parse_anthropic_usage(msg)
 
-    def _mock_similar_words(self, lemma: str) -> list[dict[str, str]]:
-        """Dystraktory — inne słowa, nie odmiany lematu."""
+    def _mock_similar_words(self, lemma: str, pos: str = "verb") -> list[dict[str, str]]:
+        """Dystraktory — inne hasła, nie odmiany lematu."""
+        pos_val = (pos or "verb").strip().lower() or "verb"
         pools: dict[str, list[tuple[str, str, str]]] = {
             "apoyar": [
                 ("apagar", "verb", "gasić"),
@@ -391,20 +396,30 @@ class LLMService:
                 {"lemma": l, "pos": p, "gloss_l1": g}
                 for l, p, g in pools[lemma.lower()]
             ]
+        if pos_val in {"phrase", "construction", "sentence", "other"}:
+            token = lemma.split()[0] if lemma.strip() else "x"
+            return [
+                {
+                    "lemma": f"{token} mock {i}",
+                    "pos": pos_val,
+                    "gloss_l1": f"gloss {i}",
+                }
+                for i in range(12)
+            ]
         base = lemma[:4] if len(lemma) >= 4 else lemma
         variants = [
-            (f"ab{base[-2:]}", "verb", "gasić"),
-            (f"ac{base[-2:]}", "verb", "przyklejać"),
-            (f"ad{base[-2:]}", "verb", "układać"),
-            (f"al{base[-2:]}", "verb", "stosować"),
-            (f"am{base[-2:]}", "verb", "stawiać"),
-            (f"an{base[-2:]}", "verb", "wskazywać"),
-            (f"as{base[-2:]}", "verb", "wnosić"),
-            (f"at{base[-2:]}", "verb", "zatwierdzać"),
-            (f"av{base[-2:]}", "verb", "parować"),
-            (f"az{base[-2:]}", "verb", "ściskać"),
-            (f"ag{base[-2:]}", "verb", "oddawać"),
-            (f"aj{base[-2:]}", "verb", "odwoływać"),
+            (f"ab{base[-2:]}", pos_val, "gasić"),
+            (f"ac{base[-2:]}", pos_val, "przyklejać"),
+            (f"ad{base[-2:]}", pos_val, "układać"),
+            (f"al{base[-2:]}", pos_val, "stosować"),
+            (f"am{base[-2:]}", pos_val, "stawiać"),
+            (f"an{base[-2:]}", pos_val, "wskazywać"),
+            (f"as{base[-2:]}", pos_val, "wnosić"),
+            (f"at{base[-2:]}", pos_val, "zatwierdzać"),
+            (f"av{base[-2:]}", pos_val, "parować"),
+            (f"az{base[-2:]}", pos_val, "ściskać"),
+            (f"ag{base[-2:]}", pos_val, "oddawać"),
+            (f"aj{base[-2:]}", pos_val, "odwoływać"),
         ]
         return [{"lemma": l, "pos": p, "gloss_l1": g} for l, p, g in variants]
 
@@ -468,7 +483,7 @@ class LLMService:
                 "reason": "Mock: no factual errors found on full card audit.",
             }
         if "Żadne nie może być na tej liście:" in prompt:
-            count_match = re.search(r"Podaj (\d+) słów", prompt)
+            count_match = re.search(r"Podaj (\d+) (?:słów|pozycji)", prompt)
             count = int(count_match.group(1)) if count_match else 12
             exclude_match = re.search(r"Żadne nie może być na tej liście: (.+)", prompt)
             excluded = set()
@@ -478,13 +493,17 @@ class LLMService:
                     for word in exclude_match.group(1).split(",")
                     if word.strip() and word.strip() != "(brak)"
                 }
-            pool = self._mock_similar_words("palabra")
+            pos_match = re.search(r"Część mowy:\s*(\S+)", prompt)
+            pos = (pos_match.group(1) if pos_match else "verb").strip()
+            pool = self._mock_similar_words("palabra", pos)
             filtered = [i for i in pool if i["lemma"].lower() not in excluded]
             return {"similar_words": filtered[:count]}
-        if "Słowo na fiszce:" in prompt:
-            match = re.search(r"Słowo na fiszce:\s*(\S+)", prompt)
-            lemma = match.group(1).rstrip(".”„") if match else "palabra"
-            return {"similar_words": self._mock_similar_words(lemma)}
+        if "Hasło na fiszce:" in prompt or "Słowo na fiszce:" in prompt:
+            match = re.search(r"(?:Hasło|Słowo) na fiszce:\s*(.+)", prompt)
+            lemma = match.group(1).strip().rstrip(".”„") if match else "palabra"
+            pos_match = re.search(r"^POS:\s*(\S+)", prompt, re.M)
+            pos = (pos_match.group(1) if pos_match else "verb").strip()
+            return {"similar_words": self._mock_similar_words(lemma, pos)}
         if "candidates" in prompt or "kandydat" in prompt.lower() or "Candidate list" in prompt:
             q = re.search(r'User query string:\s*"([^"]+)"', prompt)
             if not q:
@@ -593,6 +612,80 @@ class LLMService:
             prompt,
             system=LOOKUP_SYSTEM_V1,
             purpose="lookup_expand",
+        )
+        return data.get("candidates", [])
+
+    async def lookup_draft(
+        self,
+        text: str,
+        native: str,
+        learning: str,
+        cefr: str,
+    ) -> list[dict[str, Any]]:
+        """Cheap first-paint lookup on the light model (~2–3s)."""
+        prompt = LOOKUP_DRAFT_PROMPT_V1.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            text=text,
+            pair_guidance=language_pair_guidance(native=native, learning=learning),
+        )
+        bind_llm_usage_context(query=text, lang_pair=lang_pair_key(native, learning))
+        data = await self._chat_json(
+            self.light_model,
+            prompt,
+            system=LOOKUP_SYSTEM_V1,
+            max_tokens=1200,
+            purpose="lookup_draft",
+        )
+        return data.get("candidates", [])
+
+    async def lookup_category_draft(
+        self,
+        text: str,
+        native: str,
+        learning: str,
+        cefr: str,
+    ) -> list[dict[str, Any]]:
+        prompt = LOOKUP_CATEGORY_DRAFT_PROMPT_V1.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            text=text,
+            pair_guidance=language_pair_guidance(native=native, learning=learning),
+        )
+        bind_llm_usage_context(query=text, lang_pair=lang_pair_key(native, learning))
+        data = await self._chat_json(
+            self.light_model,
+            prompt,
+            system=LOOKUP_CATEGORY_SYSTEM_V1,
+            max_tokens=1200,
+            purpose="lookup_category_draft",
+        )
+        return data.get("candidates", [])
+
+    async def lookup_category_expand(
+        self,
+        text: str,
+        native: str,
+        learning: str,
+        cefr: str,
+        already: list[dict[str, Any]] | None = None,
+        theme: str = "",
+    ) -> list[dict[str, Any]]:
+        prompt = LOOKUP_CATEGORY_EXPAND_PROMPT_V1.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            text=text,
+            theme=(theme or "").strip() or "same theme as the seed",
+            pair_guidance=language_pair_guidance(native=native, learning=learning),
+            lookup_output_form_rules=lookup_output_form_rules_text(native, learning),
+            already_block=self._already_block(already or []),
+        )
+        bind_llm_usage_context(query=text, lang_pair=lang_pair_key(native, learning))
+        data = await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=LOOKUP_CATEGORY_SYSTEM_V1,
+            purpose="lookup_category_expand",
         )
         return data.get("candidates", [])
 

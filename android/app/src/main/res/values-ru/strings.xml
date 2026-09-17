@@ -85,6 +85,10 @@
 
     <string name="auth_password">Пароль</string>
 
+    <string name="cd_show_password">Показать пароль</string>
+
+    <string name="cd_hide_password">Скрыть пароль</string>
+
 
 
     <string name="auth_have_account">У меня уже есть аккаунт</string>
@@ -246,6 +250,13 @@
 
     <string name="list_rename">Переименовать</string>
 
+    <string name="list_flashcards">Карточки</string>
+    <string name="list_flashcards_next">Далее</string>
+    <string name="list_flashcards_add">В «Изучаю»</string>
+    <string name="list_flashcards_reviewed">Просмотрено: %1$d</string>
+    <string name="list_flashcards_added">Добавлено в «Изучаю»: %1$d</string>
+    <string name="list_flashcards_empty">Нет готовых карточек</string>
+
     <string name="list_move_all">Переместить все</string>
 
     <string name="list_empty">Пустой список</string>
@@ -372,6 +383,7 @@
     <string name="section_usages">выражения</string>
 
     <string name="home_search_hint">Искать слово…</string>
+    <string name="search_by_category">Искать по категории</string>
 
     <string name="home_due_now">Готово к повторению</string>
 

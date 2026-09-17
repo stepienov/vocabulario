@@ -85,6 +85,10 @@
 
     <string name="auth_password">Contraseña</string>
 
+    <string name="cd_show_password">Mostrar contraseña</string>
+
+    <string name="cd_hide_password">Ocultar contraseña</string>
+
 
 
     <string name="auth_have_account">Ya tengo una cuenta</string>
@@ -247,6 +251,13 @@
 
     <string name="list_rename">Renombrar</string>
 
+    <string name="list_flashcards">Fichas</string>
+    <string name="list_flashcards_next">Siguiente</string>
+    <string name="list_flashcards_add">Añadir a Aprendiendo</string>
+    <string name="list_flashcards_reviewed">Repasadas: %1$d</string>
+    <string name="list_flashcards_added">Añadidas a Aprendiendo: %1$d</string>
+    <string name="list_flashcards_empty">No hay fichas listas</string>
+
     <string name="list_move_all">Mover todas</string>
 
     <string name="list_empty">Lista vacía</string>
@@ -373,6 +384,7 @@
     <string name="section_usages">expresiones</string>
 
     <string name="home_search_hint">Buscar una palabra…</string>
+    <string name="search_by_category">Buscar por categoría</string>
 
     <string name="home_due_now">Listo para repasar</string>
 

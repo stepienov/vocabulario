@@ -11,6 +11,7 @@ import com.vocabulario.app.data.api.CardHistoryResponse
 import com.vocabulario.app.data.api.CheckAnswerResponse
 import com.vocabulario.app.data.api.ChoiceOption
 import com.vocabulario.app.data.api.DashboardStatsResponse
+import com.vocabulario.app.data.api.DistractorsRequest
 import com.vocabulario.app.data.api.DistractorsResponse
 import com.vocabulario.app.data.api.DeviceRegisterRequest
 import com.vocabulario.app.data.api.ImportIngestRequest
@@ -217,6 +218,16 @@ class LearningRepository @Inject constructor(
     suspend fun lookupExpand(text: String): LookupResponse {
         val profileId = activeProfileId()
         return api.lookupExpand(LookupRequest(text = text, profile_id = profileId))
+    }
+
+    suspend fun lookupCategoryCached(text: String): LookupResponse {
+        val profileId = activeProfileId()
+        return api.lookupCategoryCached(LookupRequest(text = text, profile_id = profileId))
+    }
+
+    suspend fun lookupCategoryExpand(text: String): LookupResponse {
+        val profileId = activeProfileId()
+        return api.lookupCategoryExpand(LookupRequest(text = text, profile_id = profileId))
     }
 
     suspend fun validateImport(words: List<String>): ImportValidateResponse {
@@ -714,7 +725,27 @@ class LearningRepository @Inject constructor(
         usedKeys: Set<String> = emptySet(),
     ): DistractorsPick {
         val profileId = activeProfileId()
-        return localDistractors(profileId, cardId, direction, usedKeys)
+        val local = localDistractors(profileId, cardId, direction, usedKeys)
+        if (local.response.options.size >= 8 || !networkMonitor.isCurrentlyOnline()) {
+            return local
+        }
+        val remote = apiTry(timeoutMs = 25_000L) {
+            api.srsDistractors(
+                DistractorsRequest(
+                    card_id = cardId,
+                    profile_id = profileId,
+                    direction = direction,
+                ),
+            )
+        }.getOrNull()
+        if (remote != null && remote.options.size >= 8) {
+            return DistractorsPick(
+                response = remote,
+                usedListKeys = emptyList(),
+                unusedPoolWasEmpty = false,
+            )
+        }
+        return local
     }
 
     private suspend fun localDistractors(

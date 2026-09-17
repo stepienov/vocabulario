@@ -107,6 +107,10 @@
 
     <string name="auth_password">パスワード</string>
 
+    <string name="cd_show_password">パスワードを表示</string>
+
+    <string name="cd_hide_password">パスワードを非表示</string>
+
 
 
     <string name="auth_have_account">すでにアカウントを持っています</string>
@@ -278,6 +282,13 @@
 
     <string name="list_rename">名前を変更</string>
 
+    <string name="list_flashcards">フラッシュカード</string>
+    <string name="list_flashcards_next">次へ</string>
+    <string name="list_flashcards_add">学習中に追加</string>
+    <string name="list_flashcards_reviewed">確認したカード: %1$d</string>
+    <string name="list_flashcards_added">学習中に追加: %1$d</string>
+    <string name="list_flashcards_empty">使えるカードがありません</string>
+
     <string name="list_move_all">すべて移動</string>
 
     <string name="list_empty">空のリスト</string>
@@ -404,6 +415,7 @@
     <string name="section_usages">フレーズ</string>
 
     <string name="home_search_hint">単語を検索…</string>
+    <string name="search_by_category">カテゴリで検索</string>
 
     <string name="home_due_now">今すぐレビューの準備ができました</string>
 

@@ -14,6 +14,8 @@ from app.services.pos_normalize import (
 
 # Soft cap for a stored lookup list. Ranking never drops extras below this.
 LOOKUP_CACHE_LIMIT = 16
+LOOKUP_CATEGORY_DRAFT_LIMIT = 8
+LOOKUP_CATEGORY_LIMIT = 24
 
 
 def _normalize_lemma(lemma: str) -> str:
@@ -457,6 +459,26 @@ def has_confident_match(
         candidate_is_confident(c, query, learning_lang=learning_lang)
         for c in candidates
     )
+
+
+def rank_category_candidates(
+    candidates: list[dict],
+    query: str,
+    *,
+    learning_lang: str = "en",
+) -> list[dict]:
+    """Seed (the typed word) first, then keep the model's theme order."""
+    cleaned = sanitize_lookup_candidates(
+        candidates, learning_lang=learning_lang, limit=None
+    )
+    seed: list[dict] = []
+    rest: list[dict] = []
+    for item in cleaned:
+        if candidate_is_confident(item, query, learning_lang=learning_lang):
+            seed.append(item)
+        else:
+            rest.append(item)
+    return (seed + rest)[:LOOKUP_CATEGORY_LIMIT]
 
 
 def looks_like_spurious_l2_top(candidates: list[dict], query: str) -> bool:

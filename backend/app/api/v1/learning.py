@@ -182,11 +182,26 @@ async def lookup_cached(
 async def lookup_expand(
     body: LookupRequest,
     user: User = Depends(get_current_user),
+):
+    """Expand jest odpięty od HTTP — zabicie apki nie kasuje LLM ani cache."""
+    from app.services.lookup_jobs import await_lookup_expand
+
+    try:
+        outcome = await await_lookup_expand(user.id, body.profile_id, body.text)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _lookup_http(outcome, body.text)
+
+
+@router.post("/lookup/category/cached", response_model=LookupResponse)
+async def lookup_category_cached(
+    body: LookupRequest,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = LexicalService(db)
     try:
-        outcome = await service.lookup_expand(user, body.profile_id, body.text)
+        outcome = await service.lookup_category_cached(user, body.profile_id, body.text)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     await record_lookup_event(
@@ -194,12 +209,28 @@ async def lookup_expand(
         user_id=user.id,
         profile_id=body.profile_id,
         query=body.text,
-        source=outcome.source or "expand",
+        source=outcome.source or "category",
         candidate_count=len(outcome.candidates),
         candidates=outcome.candidates,
         ai_complete=outcome.ai_complete,
     )
     await db.commit()
+    return _lookup_http(outcome, body.text)
+
+
+@router.post("/lookup/category/expand", response_model=LookupResponse)
+async def lookup_category_expand(
+    body: LookupRequest,
+    user: User = Depends(get_current_user),
+):
+    from app.services.lookup_category_jobs import await_lookup_category_expand
+
+    try:
+        outcome = await await_lookup_category_expand(
+            user.id, body.profile_id, body.text
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return _lookup_http(outcome, body.text)
 
 

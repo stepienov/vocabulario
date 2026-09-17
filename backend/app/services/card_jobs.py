@@ -30,7 +30,7 @@ from app.services.lexical import LexicalService
 from app.services.app_log import log_event
 from app.services.llm_usage import bind_llm_usage_context
 from app.services.pos_normalize import normalize_pos_bucket
-from app.services.similar_words import ensure_similar_words, skips_similar_words
+from app.services.similar_words import ensure_similar_words
 from app.services.word_families import sync_word_family
 
 logger = logging.getLogger(__name__)
@@ -320,19 +320,13 @@ def content_is_complete(content: dict | None, *, learning_lang: str | None = Non
     if not content_is_learnable(content):
         return False
     assert content is not None
-    # Adaptive: bez similar_words / conjugation
-    if content.get("schema_version") == "vocabulario.adaptive.v1":
-        return True
-    if content.get("schema_version") == "vocabulario.card.v1":
-        pos = str(content.get("pos") or "").strip().lower()
-        lemma = str(content.get("lemma") or "")
-        lang = learning_lang or str(content.get("language") or "")
+    pos = str(content.get("pos") or "").strip().lower()
+    lemma = str(content.get("lemma") or "")
+    lang = learning_lang or str(content.get("language") or "")
+    if content.get("schema_version") != "vocabulario.adaptive.v1":
         needs_infl = inflect_pos_key(pos, lemma=lemma, learning_lang=lang) is not None
         if needs_infl and not _has_verb_inflection(content):
             return False
-        if skips_similar_words(content, pos):
-            return True
-        return len(content.get("similar_words") or []) >= MIN_SIMILAR_FOR_QUIZ
     return len(content.get("similar_words") or []) >= MIN_SIMILAR_FOR_QUIZ
 
 

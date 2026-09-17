@@ -7,18 +7,11 @@ from app.ai.schemas.similar_words import (
 )
 from app.models import LanguageProfile
 from app.services.llm import LLMService
+from app.services.pos_normalize import normalize_pos_bucket
 
-SKIP_SIMILAR_KINDS = frozenset({"phrase", "construction", "sentence", "other"})
-
-
+# Quiz needs 7 distractors on the card itself. Never skip by POS / schema.
 def skips_similar_words(content: dict | None = None, pos: str | None = None) -> bool:
-    """Dystraktory są do lematów; construction/phrase nie wołają similar_words."""
-    data = content or {}
-    if data.get("schema_version") == "vocabulario.adaptive.v1":
-        return True
-    for raw in (data.get("entry_kind"), data.get("pos"), pos):
-        if str(raw or "").strip().lower() in SKIP_SIMILAR_KINDS:
-            return True
+    """Zostawione dla starych testów — dystraktory są na każdej karcie."""
     return False
 
 
@@ -57,6 +50,8 @@ def _collect(
             entry = _as_entry(item, pos)
             if entry is None:
                 continue
+            if not _same_quiz_pos(pos, entry.get("pos")):
+                continue
             key = entry["lemma"].lower()
             if key in seen:
                 continue
@@ -83,6 +78,13 @@ def similar_words_from_content(content: dict) -> list[dict]:
     return result
 
 
+def _same_quiz_pos(want: str | None, got: str | None) -> bool:
+    want_b = normalize_pos_bucket(want)
+    if want_b == "unknown":
+        return True
+    return normalize_pos_bucket(got) == want_b
+
+
 def sanitize_similar_words(
     items: list[dict],
     target_lemma: str,
@@ -98,9 +100,7 @@ async def fetch_similar_words(
     pos: str | None,
 ) -> list[dict]:
     """Jedno zapytanie o 12 dystraktorów; gdy któryś wypadnie po deduplikacji,
-    brakujące pozycje bierzemy z awaryjnej puli słów."""
-    if skips_similar_words(pos=pos):
-        return []
+    brakujące pozycje bierzemy z awaryjnej puli."""
     pos_val = pos or "unknown"
 
     similar = await llm.generate_similar_words(
@@ -132,10 +132,7 @@ async def ensure_similar_words(
 ) -> dict:
     """Gwarantuje 12 dystraktorów w content — przy dodawaniu / odświeżaniu karty."""
     updated = dict(content or {})
-    if skips_similar_words(updated, pos):
-        updated.setdefault("similar_words", [])
-        return updated
-    pos_val = pos or "unknown"
+    pos_val = pos or updated.get("pos") or "unknown"
 
     existing = _collect(
         [similar_words_from_content(updated)], lemma, pos_val, limit=MIN_SIMILAR_WORDS

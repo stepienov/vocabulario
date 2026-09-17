@@ -85,6 +85,10 @@
 
     <string name="auth_password">Password</string>
 
+    <string name="cd_show_password">Show password</string>
+
+    <string name="cd_hide_password">Hide password</string>
+
 
 
     <string name="auth_have_account">I already have an account</string>
@@ -258,6 +262,13 @@
 
     <string name="list_rename">Rename</string>
 
+    <string name="list_flashcards">Flashcards</string>
+    <string name="list_flashcards_next">Next</string>
+    <string name="list_flashcards_add">Add to learning</string>
+    <string name="list_flashcards_reviewed">Reviewed: %1$d</string>
+    <string name="list_flashcards_added">Added to learning: %1$d</string>
+    <string name="list_flashcards_empty">No cards ready for flashcards</string>
+
     <string name="list_move_all">Move all</string>
 
     <string name="list_empty">Empty list</string>
@@ -385,6 +396,7 @@
     <string name="section_usages">phrases</string>
 
     <string name="home_search_hint">Search a word…</string>
+    <string name="search_by_category">Search by category</string>
 
     <string name="home_due_now">Ready to review now</string>
 

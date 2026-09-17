@@ -15,9 +15,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import android.net.Uri
 import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.imports.ImportController
 import com.vocabulario.app.ui.auth.AuthScreen
@@ -27,6 +30,8 @@ import com.vocabulario.app.ui.home.HomeScreen
 import com.vocabulario.app.ui.learning.LearningScreen
 import com.vocabulario.app.ui.onboarding.OnboardingScreen
 import com.vocabulario.app.ui.packs.PacksScreen
+import com.vocabulario.app.ui.practice.ListFlashcardSummary
+import com.vocabulario.app.ui.practice.ListFlashcardsScreen
 import com.vocabulario.app.ui.practice.PracticeScreen
 import com.vocabulario.app.ui.profile.ProfileScreen
 import com.vocabulario.app.ui.settings.SettingsScreen
@@ -40,6 +45,7 @@ object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
     const val PRACTICE = "practice"
+    const val LIST_FLASHCARDS = "list_flashcards/{listId}"
     const val SETTINGS = "settings"
     const val PROFILE = "profile"
     const val LEARNING = "learning"
@@ -121,15 +127,51 @@ fun VocabularioAppRoot(
                             onComplete = { appViewModel.onOnboardingComplete() },
                         )
                     }
-                    composable(Routes.HOME) {
+                    composable(Routes.HOME) { homeEntry ->
+                        val flashReviewed by homeEntry.savedStateHandle
+                            .getStateFlow("list_flash_reviewed", 0)
+                            .collectAsState()
+                        val flashAdded by homeEntry.savedStateHandle
+                            .getStateFlow("list_flash_added", 0)
+                            .collectAsState()
                         HomeScreen(
                             onPractice = { navController.navigate(Routes.PRACTICE) },
                             onSettings = { navController.navigate(Routes.SETTINGS) },
                             onOpenCard = { navController.navigate(Routes.LEARNING) },
+                            onListFlashcards = { listId ->
+                                navController.navigate(
+                                    "list_flashcards/${Uri.encode(listId)}",
+                                )
+                            },
+                            listFlashcardSummary = if (flashReviewed > 0) {
+                                ListFlashcardSummary(flashReviewed, flashAdded)
+                            } else {
+                                null
+                            },
+                            onDismissListFlashcardSummary = {
+                                homeEntry.savedStateHandle["list_flash_reviewed"] = 0
+                                homeEntry.savedStateHandle["list_flash_added"] = 0
+                            },
                         )
                     }
                     composable(Routes.PRACTICE) {
                         PracticeScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(
+                        route = Routes.LIST_FLASHCARDS,
+                        arguments = listOf(navArgument("listId") { type = NavType.StringType }),
+                    ) {
+                        ListFlashcardsScreen(
+                            onFinished = { summary ->
+                                if (summary.reviewed > 0) {
+                                    navController.previousBackStackEntry?.savedStateHandle?.apply {
+                                        set("list_flash_reviewed", summary.reviewed)
+                                        set("list_flash_added", summary.added)
+                                    }
+                                }
+                                navController.popBackStack()
+                            },
+                        )
                     }
                     composable(Routes.SETTINGS) {
                         SettingsScreen(
