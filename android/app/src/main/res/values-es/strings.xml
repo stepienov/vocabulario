@@ -384,7 +384,7 @@
     <string name="section_usages">expresiones</string>
 
     <string name="home_search_hint">Buscar una palabra…</string>
-    <string name="search_by_category">Buscar por categoría</string>
+    <string name="search_by_category">Buscar palabras de esta categoría</string>
 
     <string name="home_due_now">Listo para repasar</string>
 

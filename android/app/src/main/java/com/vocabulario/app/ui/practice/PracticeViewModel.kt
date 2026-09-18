@@ -722,12 +722,11 @@ class PracticeViewModel @Inject constructor(
             _state.value = _state.value.copy(error = strings.get(R.string.correction_requires_online))
             return
         }
+        _state.value = _state.value.copy(correctionOpen = true)
         viewModelScope.launch {
             val remaining = runCatching { repository.correctionQuota() }.getOrNull()?.remaining
-            _state.value = _state.value.copy(
-                correctionOpen = true,
-                correctionQuotaRemaining = remaining,
-            )
+            if (!_state.value.correctionOpen) return@launch
+            _state.value = _state.value.copy(correctionQuotaRemaining = remaining)
         }
     }
 

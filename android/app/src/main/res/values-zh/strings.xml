@@ -383,7 +383,7 @@
     <string name="section_usages">短语</string>
 
     <string name="home_search_hint">搜索单词…</string>
-    <string name="search_by_category">按类别搜索</string>
+    <string name="search_by_category">搜索该类别的单词</string>
 
     <string name="home_due_now">现在可复习</string>
 

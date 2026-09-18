@@ -410,7 +410,7 @@
     <string name="section_usages">espressioni</string>
 
     <string name="home_search_hint">Cerca una parola…</string>
-    <string name="search_by_category">Cerca per categoria</string>
+    <string name="search_by_category">Cerca parole per questa categoria</string>
 
     <string name="home_due_now">Pronto per la revisione ora</string>
 

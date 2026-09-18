@@ -384,7 +384,7 @@
     <string name="section_usages">expressions</string>
 
     <string name="home_search_hint">Chercher un mot…</string>
-    <string name="search_by_category">Rechercher par catégorie</string>
+    <string name="search_by_category">Chercher des mots pour cette catégorie</string>
 
     <string name="home_due_now">À revoir maintenant</string>
 

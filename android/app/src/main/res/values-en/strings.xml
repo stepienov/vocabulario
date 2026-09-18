@@ -396,7 +396,7 @@
     <string name="section_usages">phrases</string>
 
     <string name="home_search_hint">Search a word…</string>
-    <string name="search_by_category">Search by category</string>
+    <string name="search_by_category">Search words for this category</string>
 
     <string name="home_due_now">Ready to review now</string>
 

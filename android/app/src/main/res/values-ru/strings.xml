@@ -383,7 +383,7 @@
     <string name="section_usages">выражения</string>
 
     <string name="home_search_hint">Искать слово…</string>
-    <string name="search_by_category">Искать по категории</string>
+    <string name="search_by_category">Искать слова по этой категории</string>
 
     <string name="home_due_now">Готово к повторению</string>
 

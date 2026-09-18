@@ -75,6 +75,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -83,6 +84,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -102,6 +104,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -1112,24 +1115,31 @@ private fun AddTab(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp)
+                    .padding(top = 10.dp, bottom = 2.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .testTag(TestTags.SEARCH_BY_CATEGORY)
                     .toggleable(
                         value = state.searchByCategory,
                         enabled = isOnline,
                         role = Role.Checkbox,
                         onValueChange = onToggleSearchByCategory,
-                    ),
+                    )
+                    .padding(start = 2.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Checkbox(
-                    checked = state.searchByCategory,
-                    onCheckedChange = null,
-                    enabled = isOnline,
-                    colors = CheckboxDefaults.colors(checkedColor = scheme.primary),
-                )
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                    Checkbox(
+                        checked = state.searchByCategory,
+                        onCheckedChange = null,
+                        enabled = isOnline,
+                        modifier = Modifier.size(24.dp),
+                        colors = CheckboxDefaults.colors(checkedColor = scheme.primary),
+                    )
+                }
                 Text(
                     stringResource(R.string.search_by_category),
+                    modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (isOnline) scheme.onSurface else scheme.onSurfaceVariant,
                 )

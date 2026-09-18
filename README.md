@@ -45,12 +45,13 @@ API wybierane automatycznie (Android Studio / Run ▶ = lokalny BE):
 - **emulator** → `http://10.0.2.2:8000`
 - **fizyczny telefon** → IP z `android/local.properties` (`api.device.host=…`)
 
-APK dla testerów (Railway) — nie zmieniaj `local.properties`:
+APK dla testerów (Railway) — z roota repo, ten sam podpis na obu komputerach:
 
 ```powershell
-cd android
-.\gradlew :app:assembleDebug "-Papi.base.url=https://vocabulario.up.railway.app/api/v1/"
+.\build-apk.ps1
 ```
+
+Wynik: `dist\Vocabulario.apk`. Debug keystore jest w `android/keystore/debug.keystore` (wspólny w gicie).
 
 Szablon: `android/local.properties.example`. Po zmianie hosta zrób Gradle Sync + reinstall appki.
 

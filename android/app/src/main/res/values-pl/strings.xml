@@ -396,7 +396,7 @@
     <string name="section_usages">zwroty</string>
 
     <string name="home_search_hint">Szukaj słowa…</string>
-    <string name="search_by_category">Szukaj w kategorii</string>
+    <string name="search_by_category">Szukaj słów dla podanej kategorii</string>
 
     <string name="home_due_now">Gotowe do powtórki teraz</string>
 

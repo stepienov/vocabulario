@@ -415,7 +415,7 @@
     <string name="section_usages">ifadeler</string>
 
     <string name="home_search_hint">Bir kelime ara…</string>
-    <string name="search_by_category">Kategoriye göre ara</string>
+    <string name="search_by_category">Bu kategori için sözcük ara</string>
 
     <string name="home_due_now">Şimdi gözden geçirmeye hazır</string>
 

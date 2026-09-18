@@ -17,12 +17,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,6 +46,7 @@ import com.vocabulario.app.ui.components.ButtonLabel
 import com.vocabulario.app.ui.components.EmptyState
 import com.vocabulario.app.ui.components.PracticeProgressBar
 import com.vocabulario.app.ui.components.PromptCard
+import com.vocabulario.app.ui.theme.ActionConfirm
 
 @Composable
 fun ListFlashcardsScreen(
@@ -190,15 +192,6 @@ fun ListFlashcardsScreen(
                                 .padding(top = 14.dp, bottom = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            OutlinedButton(
-                                onClick = viewModel::next,
-                                enabled = !state.busy,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(56.dp)
-                                    .testTag(TestTags.LIST_FLASHCARDS_NEXT),
-                                shape = AppButtonShape,
-                            ) { ButtonLabel(stringResource(R.string.list_flashcards_next)) }
                             Button(
                                 onClick = viewModel::addToLearning,
                                 enabled = !state.busy,
@@ -207,7 +200,24 @@ fun ListFlashcardsScreen(
                                     .height(56.dp)
                                     .testTag(TestTags.LIST_FLASHCARDS_ADD),
                                 shape = AppButtonShape,
-                            ) { ButtonLabel(stringResource(R.string.list_flashcards_add)) }
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = Color.White,
+                                ),
+                            ) { ButtonLabel(stringResource(R.string.list_flashcards_add), color = Color.White) }
+                            Button(
+                                onClick = viewModel::next,
+                                enabled = !state.busy,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp)
+                                    .testTag(TestTags.LIST_FLASHCARDS_NEXT),
+                                shape = AppButtonShape,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = ActionConfirm,
+                                    contentColor = Color.White,
+                                ),
+                            ) { ButtonLabel(stringResource(R.string.list_flashcards_next), color = Color.White) }
                         }
                     }
                 }
