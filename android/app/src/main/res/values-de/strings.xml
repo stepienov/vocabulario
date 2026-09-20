@@ -164,6 +164,7 @@
 
     <string name="settings_syn_ant">Rund ums Wort</string>
     <string name="settings_word_family">Wortfamilie</string>
+    <string name="settings_associations">Assoziationen</string>
 
     <string name="settings_conjugation">Konjugation</string>
 
@@ -642,6 +643,7 @@
 
     <string name="section_antonyms_short">Antonyme</string>
     <string name="section_word_family">Wortfamilie</string>
+    <string name="section_associations">Assoziationen</string>
 
     <string name="action_show_more">Mehr</string>
 
@@ -687,6 +689,7 @@
     <string name="correction_section_pronunciation">Aussprache</string>
     <string name="correction_section_other">Sonstiges</string>
     <string name="correction_section_family">Wortfamilie</string>
+    <string name="correction_section_associations">Assoziationen</string>
     <string name="correction_section_synonyms">Synonyme</string>
     <string name="correction_section_antonyms">Antonyme</string>
     <string name="correction_note_label">Notiz</string>

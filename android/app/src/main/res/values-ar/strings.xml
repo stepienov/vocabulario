@@ -163,6 +163,7 @@
 
     <string name="settings_syn_ant">حول الكلمة</string>
     <string name="settings_word_family">عائلة الكلمات</string>
+    <string name="settings_associations">تداعيات</string>
 
     <string name="settings_conjugation">التصريف</string>
 
@@ -642,6 +643,7 @@
 
     <string name="section_antonyms_short">أضداد</string>
     <string name="section_word_family">عائلة الكلمات</string>
+    <string name="section_associations">تداعيات</string>
 
     <string name="action_show_more">المزيد</string>
 
@@ -687,6 +689,7 @@
     <string name="correction_section_pronunciation">النطق</string>
     <string name="correction_section_other">أخرى</string>
     <string name="correction_section_family">عائلة الكلمات</string>
+    <string name="correction_section_associations">تداعيات</string>
     <string name="correction_section_synonyms">مرادفات</string>
     <string name="correction_section_antonyms">أضداد</string>
     <string name="correction_note_label">ملاحظة</string>

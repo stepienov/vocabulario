@@ -5,6 +5,32 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
+function Resolve-JavaHome {
+    $candidates = @()
+    if ($env:JAVA_HOME) { $candidates += $env:JAVA_HOME }
+    $candidates += Get-ChildItem "C:\Program Files\Microsoft" -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like "jdk-*" } |
+        ForEach-Object { $_.FullName }
+    $candidates += @(
+        "C:\Program Files\Android\Android Studio\jbr",
+        "C:\Program Files\Eclipse Adoptium\jdk-17",
+        "C:\Program Files\Java\jdk-17"
+    )
+    foreach ($jdkDir in $candidates) {
+        if ($jdkDir -and (Test-Path (Join-Path $jdkDir "bin\java.exe"))) { return $jdkDir }
+    }
+    $cmd = Get-Command java -ErrorAction SilentlyContinue
+    if ($cmd) { return (Split-Path (Split-Path $cmd.Source)) }
+    return $null
+}
+
+$javaHome = Resolve-JavaHome
+if (-not $javaHome) {
+    throw "JDK not found. Install Microsoft OpenJDK 17 or Android Studio, then re-run."
+}
+$env:JAVA_HOME = $javaHome
+$env:Path = "$javaHome\bin;" + $env:Path
+
 $keystore = Join-Path $PSScriptRoot "android\keystore\debug.keystore"
 if (-not (Test-Path $keystore)) {
     New-Item -ItemType Directory -Force -Path (Split-Path $keystore) | Out-Null

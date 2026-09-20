@@ -40,7 +40,7 @@ def l1_terms_from_content(content: dict) -> list[str]:
             for syn in meaning.get("synonyms_l1") or []:
                 if isinstance(syn, str):
                     add(syn)
-    for key in ("synonyms_l2", "antonyms_l2", "word_family_l2", "similar_words"):
+    for key in ("synonyms_l2", "antonyms_l2", "word_family_l2", "associations_l2", "similar_words"):
         for item in content.get(key) or []:
             if isinstance(item, dict):
                 add(item.get("gloss_l1") or item.get("gloss"))

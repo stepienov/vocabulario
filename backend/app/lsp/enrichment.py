@@ -25,6 +25,7 @@ from app.services.enrichment import (
     _normalize_usages,
     _resolve_pos,
     examples_unique_across_meanings,
+    filter_associations,
     strip_prepositional_construction_meanings,
 )
 from app.services.word_family_quality import filter_word_family
@@ -227,6 +228,16 @@ def assemble_core_card(
     family, antonyms = filter_word_family(
         lemma_final, pos_final, family, antonyms, lang
     )
+    associations = _normalize_related_words(
+        core.get("associations_l2"), fallback_pos=None, learning_lang=lang
+    )
+    associations = filter_associations(
+        lemma_final,
+        associations,
+        synonyms=synonyms,
+        antonyms=antonyms,
+        family=family,
+    )
 
     ui_hints = core.get("ui_hints") if isinstance(core.get("ui_hints"), dict) else {}
     ui_hints = dict(ui_hints)
@@ -250,6 +261,7 @@ def assemble_core_card(
         "synonyms_l2": synonyms,
         "antonyms_l2": antonyms,
         "word_family_l2": family,
+        "associations_l2": associations,
         "similar_words": [],
         "inflection": None,
         "conjugation": None,

@@ -85,6 +85,7 @@ fun FlashcardBackContent(
     showSynonyms: Boolean = true,
     showAntonyms: Boolean = true,
     showWordFamily: Boolean = true,
+    showAssociations: Boolean = true,
     showPeriphrases: Boolean = true,
     showConjugation: Boolean = true,
     conjugationExpandedDefault: Boolean = false,
@@ -106,6 +107,7 @@ fun FlashcardBackContent(
     val synonymsL2 = parseFlashRelatedWords(content["synonyms_l2"].asJsonArray())
     val antonymsL2 = parseFlashRelatedWords(content["antonyms_l2"].asJsonArray())
     val wordFamilyL2 = parseFlashRelatedWords(content["word_family_l2"].asJsonArray())
+    val associationsL2 = parseFlashRelatedWords(content["associations_l2"].asJsonArray())
     val conjugation = conjugationFromContent(content)
     val tenseMap = conjugation?.get("tenses").asJsonObject()
     val nonFinite = conjugation?.get("non_finite").asJsonObject()
@@ -151,6 +153,9 @@ fun FlashcardBackContent(
         mutableStateOf(relatedWordsExpandedDefault)
     }
     var familyExpanded by remember(lemma, relatedWordsExpandedDefault) {
+        mutableStateOf(relatedWordsExpandedDefault)
+    }
+    var associationsExpanded by remember(lemma, relatedWordsExpandedDefault) {
         mutableStateOf(relatedWordsExpandedDefault)
     }
     Column(
@@ -362,6 +367,23 @@ fun FlashcardBackContent(
                     learningLemmas,
                     relatedMembership,
                     pageSize = WORD_FAMILY_PAGE_SIZE,
+                    joinWordFamily = true,
+                )
+            }
+        }
+
+        if (showAssociations && associationsL2.isNotEmpty()) {
+            CollapsibleSection(
+                title = stringResource(R.string.section_associations),
+                expanded = associationsExpanded,
+                onToggle = { associationsExpanded = !associationsExpanded },
+            ) {
+                RelatedWordsList(
+                    associationsL2,
+                    onAddRelated,
+                    learningLemmas,
+                    relatedMembership,
+                    pageSize = WORD_FAMILY_PAGE_SIZE,
                 )
             }
         }
@@ -452,6 +474,7 @@ private fun RelatedWordsList(
     learningLemmas: Set<String> = emptySet(),
     relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
     pageSize: Int = 0,
+    joinWordFamily: Boolean = false,
 ) {
     var visibleCount by remember(words, pageSize) {
         mutableIntStateOf(if (pageSize > 0) minOf(pageSize, words.size) else words.size)
@@ -488,7 +511,9 @@ private fun RelatedWordsList(
                         }
                         onAdd != null -> {
                             LemmaAddButton(
-                                onClick = { onAdd(word) },
+                                onClick = {
+                                    onAdd(if (joinWordFamily) word.copy(joinWordFamily = true) else word)
+                                },
                                 contentDescription = stringResource(R.string.action_add),
                             )
                         }

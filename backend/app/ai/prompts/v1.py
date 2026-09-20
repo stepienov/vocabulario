@@ -478,6 +478,9 @@ Zwróć WYŁĄCZNIE JSON:
   "word_family_l2": [
     {{"lemma": "wyraz pokrewny w L2 (stem, bez rodzajnika)", "pos": "noun|verb|adj|...", "article": "el|la|l'|ال|null", "gloss_l1": "tłumaczenie na {native}"}}
   ],
+  "associations_l2": [
+    {{"lemma": "skojarzenie w L2 bez rodzajnika w lemma", "pos": "noun|verb|adj|adv|...", "article": "el|la|l'|ال|null", "gloss_l1": "tłumaczenie na {native}"}}
+  ],
   "notes": null,
   "confidence": 0.95
 }}
@@ -561,6 +564,24 @@ Wyrazy pokrewne (word_family_l2) — rodzina wyrazów / wspólny rdzeń:
 - Format: obiekty {{lemma, pos, article, gloss_l1}} — pole pos OBOWIĄZKOWE
   (noun|verb|adj|adv|…), nigdy puste. article jak wyżej (rzeczownik z rodzajnikiem
   w językach cytacji; w przeciwnym razie null). lemma bez powtórzonego rodzajnika.
+
+Skojarzenia (associations_l2) — siatka słów z tej samej codziennej sytuacji:
+- Słowa, które w życiu idą razem z hasłem: przedmioty, czynności, cechy, osoby.
+  Inny rdzeń niż hasło. Inna część mowy jest oczekiwana.
+- Przykłady: gasić → pożar, ogień, świeca, płonąć, gorący
+  (gaszenie to word_family_l2; rozpalać przy tej samej POS to antonyms_l2).
+  rower → jeździć, koło, kierownica, rowerzysta, kask.
+  brudny → brud, czyścić, plama, prać (czysty zostaje w antonyms_l2).
+- 15–20 konkretnych, częstych lematów L2 na poziomie A2–B1.
+- Scena = najczęstsze codzienne użycie hasła, nie jedna nisza
+  (intensywnie ≠ tylko siłownia; przestać ≠ tylko palenie).
+- Mieszanka POS obowiązkowa: rzeczowniki ok. 40–55%, czasowniki 20–30%,
+  przymiotniki 15–25%, 1–2 przysłówki jeśli pasują.
+  Minimum: 4 czasowniki i 3 przymiotniki. Zakaz listy samych rzeczowników.
+- Format jak synonimy: obiekty {{lemma, pos, article, gloss_l1}}.
+- ZAKAZ: hasło karty, wpisy z synonyms_l2 / antonyms_l2 / word_family_l2,
+  fleksja, ogólniki (cosa, hacer, rzecz, robić), hapaxy, angielskie wstawki.
+- Jeśli brak dobrej sceny → pusta tablica [].
 """
 
 ENRICHMENT_CORE_DYNAMIC_V1 = """SŁOWO DO PRZYGOTOWANIA:

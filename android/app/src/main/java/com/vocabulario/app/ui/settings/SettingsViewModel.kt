@@ -47,6 +47,7 @@ data class SettingsUiState(
     val showSynonyms: Boolean = true,
     val showAntonyms: Boolean = true,
     val showWordFamily: Boolean = true,
+    val showAssociations: Boolean = true,
     val showPeriphrases: Boolean = true,
     val showConjugation: Boolean = true,
     /** Aktywne czasy w profilu; puste = tryb „wszystkie czasy”. */
@@ -115,6 +116,7 @@ class SettingsViewModel @Inject constructor(
                     showSynonyms = showSyn,
                     showAntonyms = showAnt,
                     showWordFamily = s.show_word_family,
+                    showAssociations = s.show_associations,
                     showPeriphrases = s.show_periphrases,
                     showConjugation = s.show_conjugation,
                     studyReminderEnabled = s.study_reminder_enabled,
@@ -174,6 +176,7 @@ class SettingsViewModel @Inject constructor(
                     showSynonyms = showSyn,
                     showAntonyms = showAnt,
                     showWordFamily = s.show_word_family,
+                    showAssociations = s.show_associations,
                     showPeriphrases = s.show_periphrases,
                     showConjugation = s.show_conjugation,
                     selectedTenses = selected,
@@ -334,6 +337,9 @@ class SettingsViewModel @Inject constructor(
 
     fun setShowWordFamily(value: Boolean) =
         save(UserSettingsUpdate(show_word_family = value)) { it.copy(showWordFamily = value) }
+
+    fun setShowAssociations(value: Boolean) =
+        save(UserSettingsUpdate(show_associations = value)) { it.copy(showAssociations = value) }
 
     fun setShowPeriphrases(value: Boolean) =
         save(UserSettingsUpdate(show_periphrases = value)) { it.copy(showPeriphrases = value) }

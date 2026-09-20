@@ -64,6 +64,9 @@ ENRICH_CORE_SYSTEM = (
     "go to word_family_l2 (other POS allowed), not synonyms. Negative prefixes "
     "(irrelevante, unhappy) are antonyms, not word family. Look-alikes with "
     "another root are not word family. "
+    "associations_l2 is a 15-20 word everyday scene (mixed POS: objects, "
+    "actions, qualities, people) — not synonyms, not antonyms, not same-root "
+    "family. "
     "Each meaning needs exactly 3 example sentences (A2, B2, C2). "
     "No conjugation, no similar_words. JSON only."
 )
@@ -542,6 +545,15 @@ class LLMService:
             ],
             "synonyms_l2": [],
             "antonyms_l2": [],
+            "word_family_l2": [],
+            "associations_l2": [
+                {
+                    "lemma": "escena",
+                    "pos": "noun",
+                    "article": "la",
+                    "gloss_l1": "scena",
+                }
+            ],
             "similar_words": self._mock_similar_words(lemma),
             "inflection": None,
             "conjugation": None,
@@ -1192,6 +1204,7 @@ class LLMService:
             "synonyms_l2",
             "antonyms_l2",
             "word_family_l2",
+            "associations_l2",
         )
 
         lemma = str(content.get("lemma") or "")
@@ -1244,7 +1257,7 @@ class LLMService:
             f"{user_hints}"
             "IMPORTANT: Review the ENTIRE card below — lemma, pos, glosses, meanings, "
             "examples, conjugation, similar words, pronunciation, synonyms, antonyms, "
-            "word family, notes. "
+            "word family, associations, notes. "
             "User selections/note are optional hints only; never reject solely because "
             "the note is vague, empty, or off-topic.\n"
             "STRICT ACCEPTANCE RULES:\n"
@@ -1253,7 +1266,8 @@ class LLMService:
             "word in the app language, missing article where this language uses articles, "
             "placeholder/missing data, or objectively incorrect grammar.\n"
             "- An invented or non-existent word in a family/synonym/antonym gloss is a "
-            "factual error — patch word_family_l2 / synonyms_l2 / antonyms_l2.\n"
+            "factual error — patch word_family_l2 / synonyms_l2 / antonyms_l2 "
+            "/ associations_l2.\n"
             "- NEVER accept to replace one valid translation/gloss with another equally valid "
             "alternative (e.g. 'mebel' vs 'obiekt meblowy', 'to speak' vs 'to talk', "
             "'budzić się' vs 'wstawać' when both are correct).\n"

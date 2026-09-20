@@ -9,7 +9,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -158,6 +160,7 @@ class LookupSessionTest {
         assertEquals(listOf("casa"), session.state.value.candidates.map { it.lemma })
         assertTrue(session.state.value.expanding)
         assertNull(session.state.value.error)
+        session.clear()
     }
 
     @Test
@@ -170,6 +173,88 @@ class LookupSessionTest {
         assertTrue(expanding.hasResultsOrProgress)
         assertTrue(done.hasResultsOrProgress)
         assertFalse(LookupSessionState().hasResultsOrProgress)
+    }
+
+    @Test
+    fun hangingExpandCompletesFromParallelCachedPoll() = runTest {
+        var cachedCalls = 0
+        val session = session(
+            parent = this,
+            ioRetryDelayMs = 0,
+            cachedPollDelayMs = 5,
+            lookupCached = {
+                cachedCalls++
+                if (cachedCalls == 1) {
+                    LookupResponse(emptyList(), source = "none")
+                } else {
+                    LookupResponse(listOf(candidate("hola")), source = "db", ai_complete = true)
+                }
+            },
+            lookupExpand = { awaitCancellation() },
+        )
+        session.start("hola")
+        advanceUntilIdle()
+        assertEquals(listOf("hola"), session.state.value.candidates.map { it.lemma })
+        assertFalse(session.state.value.expanding)
+        assertNull(session.state.value.error)
+        assertTrue(cachedCalls >= 2)
+    }
+
+    @Test
+    fun refreshFromCacheUnblocksFrozenExpand() = runTest {
+        var cachedCalls = 0
+        val expandStarted = CompletableDeferred<Unit>()
+        val session = session(
+            parent = this,
+            ioRetryDelayMs = 0,
+            cachedPollDelayMs = 60_000,
+            lookupCached = {
+                cachedCalls++
+                if (cachedCalls == 1) {
+                    LookupResponse(emptyList(), source = "none")
+                } else {
+                    LookupResponse(listOf(candidate("deska")), source = "db", ai_complete = true)
+                }
+            },
+            lookupExpand = {
+                expandStarted.complete(Unit)
+                awaitCancellation()
+            },
+        )
+        session.start("deska")
+        expandStarted.await()
+        assertTrue(session.state.value.expanding)
+        session.refreshFromCache()
+        advanceTimeBy(1)
+        runCurrent()
+        assertEquals(listOf("deska"), session.state.value.candidates.map { it.lemma })
+        assertFalse(session.state.value.expanding)
+        assertNull(session.state.value.error)
+        session.clear()
+    }
+
+    @Test
+    fun acceptServerResultCancelsHangingExpand() = runTest {
+        val expandStarted = CompletableDeferred<Unit>()
+        val session = session(
+            parent = this,
+            ioRetryDelayMs = 0,
+            cachedPollDelayMs = 60_000,
+            lookupExpand = {
+                expandStarted.complete(Unit)
+                awaitCancellation()
+            },
+        )
+        session.start("casa")
+        expandStarted.await()
+        session.acceptServerResult(
+            "casa",
+            LookupResponse(listOf(candidate("casa")), source = "db", ai_complete = true),
+        )
+        runCurrent()
+        assertEquals(listOf("casa"), session.state.value.candidates.map { it.lemma })
+        assertFalse(session.state.value.expanding)
+        session.clear()
     }
 
     private fun session(

@@ -111,7 +111,7 @@ def _normalize_related_words(
     fallback_pos: str | None,
     learning_lang: str | None = None,
 ) -> list[dict]:
-    """synonyms_l2 / antonyms_l2 / word_family_l2 as {lemma, pos, gloss_l1, article}."""
+    """synonyms_l2 / antonyms_l2 / word_family_l2 / associations_l2 as {lemma, pos, gloss_l1, article}."""
     from app.services.related_articles import attach_article, drop_related_missing_articles
 
     if not isinstance(raw, list):
@@ -140,6 +140,49 @@ def _normalize_related_words(
             entry["pos"] = pos
         result.append(attach_article(entry, raw_article, learning_lang))
     return drop_related_missing_articles(result, learning_lang)
+
+
+MAX_ASSOCIATIONS = 20
+
+
+def _lemma_keys_of(items: object) -> set[str]:
+    out: set[str] = set()
+    if not isinstance(items, list):
+        return out
+    for item in items:
+        raw = item.get("lemma") if isinstance(item, dict) else item
+        key = canonical_lemma(str(raw or ""))
+        if key:
+            out.add(key)
+    return out
+
+
+def filter_associations(
+    lemma: str,
+    associations: list[dict],
+    *,
+    synonyms: list[dict] | None = None,
+    antonyms: list[dict] | None = None,
+    family: list[dict] | None = None,
+) -> list[dict]:
+    """Drop the headword and anything already in syn/ant/family. Cap at MAX_ASSOCIATIONS."""
+    blocked = _lemma_keys_of(synonyms) | _lemma_keys_of(antonyms) | _lemma_keys_of(family)
+    head = canonical_lemma(lemma)
+    if head:
+        blocked.add(head)
+    out: list[dict] = []
+    seen: set[str] = set()
+    for item in associations:
+        if not isinstance(item, dict):
+            continue
+        key = canonical_lemma(str(item.get("lemma") or ""))
+        if not key or key in blocked or key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+        if len(out) >= MAX_ASSOCIATIONS:
+            break
+    return out
 
 
 def _normalize_usages(meanings: list[dict]) -> None:
@@ -345,6 +388,7 @@ async def enrich_adaptive_card_content(
         "synonyms_l2": [],
         "antonyms_l2": [],
         "word_family_l2": [],
+        "associations_l2": [],
         "similar_words": [],
         "conjugation": None,
         "notes": data.get("notes"),

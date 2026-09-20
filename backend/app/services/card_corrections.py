@@ -43,6 +43,7 @@ ALLOWED_SECTIONS = {
     "similar",
     "pronunciation",
     "family",
+    "associations",
     "synonyms",
     "antonyms",
     "other",
@@ -58,6 +59,7 @@ PATCH_CONTENT_KEYS = (
     "synonyms_l2",
     "antonyms_l2",
     "word_family_l2",
+    "associations_l2",
 )
 
 PATCH_PROMPT_FIELDS = (
@@ -227,7 +229,7 @@ def patch_is_material(before: dict, patch: dict) -> tuple[bool, str | None]:
         if _norm_text(content.get("notes")) != _norm_text(patch.get("notes")):
             material.append("notes")
 
-    for key in ("meanings", "examples", "similar_words", "synonyms_l2", "antonyms_l2", "word_family_l2"):
+    for key in ("meanings", "examples", "similar_words", "synonyms_l2", "antonyms_l2", "word_family_l2", "associations_l2"):
         if key not in patch:
             continue
         if _json_stable(content.get(key)) != _json_stable(patch.get(key)):
@@ -349,6 +351,7 @@ def _diff_summary(before: dict, after: dict) -> str:
         ("synonyms_l2", "synonyms updated"),
         ("antonyms_l2", "antonyms updated"),
         ("word_family_l2", "word family updated"),
+        ("associations_l2", "associations updated"),
         ("notes", "notes updated"),
     ):
         if _json_stable(before_content.get(key)) != _json_stable(after_content.get(key)):

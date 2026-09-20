@@ -379,7 +379,7 @@ class HomeViewModel @Inject constructor(
         if (session.hasResultsOrProgress) {
             applyLookupSession(session, openAddTab = true)
         }
-        startPollingIfNeeded()
+        startPollingIfNeeded(restart = true)
         _state.value.selectedListId?.let { loadListWords(it, background = true) }
         if (_state.value.tab == HomeTab.DASHBOARD) {
             loadStats()
@@ -849,7 +849,12 @@ class HomeViewModel @Inject constructor(
             _state.value = _state.value.copy(error = strings.get(R.string.import_online_only))
             return
         }
-        openAddSheet(relatedWordToCandidate(word, sourceCardId = _state.value.detailCard?.id))
+        openAddSheet(
+            relatedWordToCandidate(
+                word,
+                sourceCardId = if (word.joinWordFamily) _state.value.detailCard?.id else null,
+            ),
+        )
     }
 
     fun dismissAddSheet() {
@@ -1470,7 +1475,7 @@ class HomeViewModel @Inject constructor(
      * Polling TYLKO obserwuje serwerowy enrichment (pending → learnable → ready).
      * GET pojedynczych kart, nie całej listy. Flush lookupów nie jest tu wołany.
      */
-    private fun startPollingIfNeeded() {
+    private fun startPollingIfNeeded(restart: Boolean = false) {
         val needsPoll = _state.value.candidates.any { EnrichmentStatus.needsPoll(it.enrichment_status) } ||
             _state.value.listWords.any { EnrichmentStatus.needsPoll(it.enrichment_status) } ||
             _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
@@ -1478,7 +1483,8 @@ class HomeViewModel @Inject constructor(
             pollJob?.cancel()
             return
         }
-        if (pollJob?.isActive == true) return
+        if (!restart && pollJob?.isActive == true) return
+        pollJob?.cancel()
         pollJob = viewModelScope.launch {
             while (isActive) {
                 val cardIds = enrichmentPollCardIds()

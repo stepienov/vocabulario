@@ -2,7 +2,9 @@ package com.vocabulario.app.data.lookup
 
 import com.vocabulario.app.R
 import com.vocabulario.app.data.LearningRepository
+import com.vocabulario.app.data.api.LookupResponse
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.sync.BackgroundJobScheduler
 import com.vocabulario.app.i18n.UiStrings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +22,7 @@ class CategoryLookupCoordinator @Inject constructor(
     repository: LearningRepository,
     strings: UiStrings,
     private val persistence: LookupQueryPersistence,
+    private val backgroundJobs: BackgroundJobScheduler,
 ) {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val session = LookupSession(
@@ -45,27 +48,45 @@ class CategoryLookupCoordinator @Inject constructor(
         }
     }
 
-    fun start(query: String) = session.start(query)
+    fun start(query: String) {
+        session.start(query)
+        appScope.launch {
+            persistence.saveQuery(query.trim(), byCategory = true)
+            backgroundJobs.enqueueLookup(replace = true)
+        }
+    }
 
-    fun clear() = session.clear()
+    fun clear() {
+        session.clear()
+        backgroundJobs.cancelLookup()
+    }
+
+    fun acceptServerResult(query: String, response: LookupResponse) =
+        session.acceptServerResult(query, response)
 
     fun retryPending() {
         val current = session.state.value
+        if (current.expanding || current.query.isNotBlank()) {
+            session.refreshFromCache()
+        }
         if (current.expanding) return
         if (current.error != null && current.query.isNotBlank()) {
-            session.start(current.query)
+            start(current.query)
             return
         }
         appScope.launch {
             if (!persistence.loadByCategory()) return@launch
             val stored = persistence.loadQuery() ?: return@launch
             val now = session.state.value
-            if (now.expanding) return@launch
+            if (now.expanding) {
+                now.query.takeIf { it.isNotBlank() }?.let { session.refreshFromCache() }
+                return@launch
+            }
             if (now.candidates.isNotEmpty() && now.error == null) {
                 persistence.saveQuery(null)
                 return@launch
             }
-            session.start(stored)
+            start(stored)
         }
     }
 }

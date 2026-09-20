@@ -104,7 +104,9 @@ class LearningViewModel @Inject constructor(
             return
         }
         _state.value = _state.value.copy(
-            addTarget = word.copy(sourceCardId = _state.value.selectedCard?.id),
+            addTarget = word.copy(
+                sourceCardId = if (word.joinWordFamily) _state.value.selectedCard?.id else null,
+            ),
             pickListOpen = false,
             showCreateListPrompt = false,
             createListName = "",

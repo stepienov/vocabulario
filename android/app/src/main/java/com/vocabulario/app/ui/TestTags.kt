@@ -120,6 +120,7 @@ object TestTags {
     const val SETTINGS_CHECK_PERIPHRASES = "settings_check_periphrases"
     const val SETTINGS_CHECK_SYN_ANT = "settings_check_syn_ant"
     const val SETTINGS_CHECK_WORD_FAMILY = "settings_check_word_family"
+    const val SETTINGS_CHECK_ASSOCIATIONS = "settings_check_associations"
     const val SETTINGS_CHECK_CONJUGATION = "settings_check_conjugation"
     const val SETTINGS_NATIVE_LANG = "settings_native_lang"
     const val SETTINGS_LEARNING_LANG = "settings_learning_lang"

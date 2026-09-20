@@ -163,6 +163,7 @@
 
     <string name="settings_syn_ant">शब्द के आसपास</string>
     <string name="settings_word_family">शब्द परिवार</string>
+    <string name="settings_associations">साहचर्य</string>
 
     <string name="settings_conjugation">क्रिया रूप</string>
 
@@ -642,6 +643,7 @@
 
     <string name="section_antonyms_short">विलोम</string>
     <string name="section_word_family">शब्द परिवार</string>
+    <string name="section_associations">साहचर्य</string>
 
     <string name="action_show_more">और</string>
 
@@ -687,6 +689,7 @@
     <string name="correction_section_pronunciation">उच्चारण</string>
     <string name="correction_section_other">अन्य</string>
     <string name="correction_section_family">शब्द परिवार</string>
+    <string name="correction_section_associations">साहचर्य</string>
     <string name="correction_section_synonyms">पर्याय</string>
     <string name="correction_section_antonyms">विलोम</string>
     <string name="correction_note_label">नोट</string>

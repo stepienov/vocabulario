@@ -50,6 +50,8 @@ def test_enrichment_prompt_has_l2_family_guidance_not_inaguantable():
     assert "irrelevante" in static
     assert "headword_note" in static
     assert "(e>ie)" in static
+    assert "associations_l2" in static
+    assert "Skojarzenia" in static
 
 
 def test_negative_prefix_relevante_irrelevante():

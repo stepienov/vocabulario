@@ -2,6 +2,7 @@ package com.vocabulario.app
 
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.local.TokenStore
@@ -24,6 +25,7 @@ class VocabularioApp : Application(), Configuration.Provider {
     @Inject lateinit var notificationScheduler: NotificationScheduler
     @Inject lateinit var tokenStore: TokenStore
     @Inject lateinit var learningRepository: LearningRepository
+    @Inject lateinit var appVisibilityHandler: AppVisibilityHandler
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -44,6 +46,7 @@ class VocabularioApp : Application(), Configuration.Provider {
         syncScheduler.schedulePeriodic()
         syncScheduler.requestNow()
         notificationScheduler.scheduleEnrichmentCheck()
+        ProcessLifecycleOwner.get().lifecycle.addObserver(appVisibilityHandler)
         appScope.launch {
             runCatching {
                 val settings = learningRepository.getSettings()

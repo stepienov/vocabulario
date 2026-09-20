@@ -164,6 +164,7 @@
 
     <string name="settings_syn_ant">Wokół słowa</string>
     <string name="settings_word_family">Wyrazy pokrewne</string>
+    <string name="settings_associations">Skojarzenia</string>
 
     <string name="settings_conjugation">Koniugacja</string>
 
@@ -668,6 +669,7 @@
 
     <string name="section_antonyms_short">Przeciwieństwa</string>
     <string name="section_word_family">Wyrazy pokrewne</string>
+    <string name="section_associations">Skojarzenia</string>
 
     <string name="action_show_more">Więcej</string>
 
@@ -730,6 +732,7 @@
     <string name="correction_section_similar">Podobne słowa</string>
     <string name="correction_section_pronunciation">Wymowa</string>
     <string name="correction_section_family">Wyrazy pokrewne</string>
+    <string name="correction_section_associations">Skojarzenia</string>
     <string name="correction_section_synonyms">Synonimy</string>
     <string name="correction_section_antonyms">Przeciwieństwa</string>
     <string name="correction_section_other">Inne</string>

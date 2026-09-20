@@ -35,4 +35,36 @@ class RelatedWordAddTest {
         )
         assertEquals("el alcance", candidate.lemma)
     }
+
+    @Test
+    fun associationAddOmitsSourceCardId() {
+        val word = RelatedWord(
+            lemma = "volante",
+            glossL1 = "kierownica",
+            pos = "noun",
+            article = "el",
+            joinWordFamily = false,
+        )
+        val candidate = relatedWordToCandidate(
+            word,
+            sourceCardId = if (word.joinWordFamily) "card-1" else null,
+        )
+        assertEquals(null, candidate.source_card_id)
+    }
+
+    @Test
+    fun familyAddKeepsSourceCardId() {
+        val word = RelatedWord(
+            lemma = "avance",
+            glossL1 = "x",
+            pos = "noun",
+            article = "el",
+            joinWordFamily = true,
+        )
+        val candidate = relatedWordToCandidate(
+            word,
+            sourceCardId = if (word.joinWordFamily) "card-1" else null,
+        )
+        assertEquals("card-1", candidate.source_card_id)
+    }
 }

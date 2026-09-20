@@ -272,6 +272,7 @@ def build_pending_content(
         "synonyms_l2": [],
         "antonyms_l2": [],
         "word_family_l2": [],
+        "associations_l2": [],
         "similar_words": [],
         "inflection": None,
         "conjugation": None,

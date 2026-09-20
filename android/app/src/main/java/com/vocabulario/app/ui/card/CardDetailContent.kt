@@ -66,6 +66,7 @@ data class RelatedWord(
     val pos: String?,
     val article: String? = null,
     val sourceCardId: String? = null,
+    val joinWordFamily: Boolean = false,
 )
 
 private fun parseRelatedWords(raw: JsonArray?): List<RelatedWord> {
@@ -129,6 +130,7 @@ fun CardDetailContent(
     val synonymsL2 = parseRelatedWords(content["synonyms_l2"].asJsonArray())
     val antonymsL2 = parseRelatedWords(content["antonyms_l2"].asJsonArray())
     val wordFamilyL2 = parseRelatedWords(content["word_family_l2"].asJsonArray())
+    val associationsL2 = parseRelatedWords(content["associations_l2"].asJsonArray())
     val conjugation = conjugationFromContent(content)
     val tenseMap = conjugation?.get("tenses").asJsonObject()
     val nonFinite = conjugation?.get("non_finite").asJsonObject()
@@ -315,6 +317,18 @@ fun CardDetailContent(
             RelatedWordsSection(
                 title = stringResource(R.string.section_word_family),
                 words = wordFamilyL2,
+                onAdd = onAddRelated,
+                learningLemmas = learningLemmas,
+                relatedMembership = relatedMembership,
+                pageSize = WORD_FAMILY_PAGE_SIZE,
+                joinWordFamily = true,
+            )
+        }
+
+        if ((!compact || fullDetail) && associationsL2.isNotEmpty()) {
+            RelatedWordsSection(
+                title = stringResource(R.string.section_associations),
+                words = associationsL2,
                 onAdd = onAddRelated,
                 learningLemmas = learningLemmas,
                 relatedMembership = relatedMembership,
@@ -641,6 +655,7 @@ private fun RelatedWordsSection(
     learningLemmas: Set<String> = emptySet(),
     relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
     pageSize: Int = 0,
+    joinWordFamily: Boolean = false,
 ) {
     var visibleCount by remember(words, pageSize) {
         mutableIntStateOf(if (pageSize > 0) minOf(pageSize, words.size) else words.size)
@@ -709,7 +724,9 @@ private fun RelatedWordsSection(
                         onAdd != null -> {
                             val scheme = MaterialTheme.colorScheme
                             Surface(
-                                onClick = { onAdd(word) },
+                                onClick = {
+                                    onAdd(if (joinWordFamily) word.copy(joinWordFamily = true) else word)
+                                },
                                 shape = CircleShape,
                                 color = scheme.primary,
                                 contentColor = scheme.onPrimary,

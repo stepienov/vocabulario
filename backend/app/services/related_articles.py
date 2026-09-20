@@ -105,7 +105,7 @@ def apply_article_repairs(entries: list[dict], repairs: dict[str, str]) -> list[
     return out
 
 
-_RELATED_KEYS = ("synonyms_l2", "antonyms_l2", "word_family_l2")
+_RELATED_KEYS = ("synonyms_l2", "antonyms_l2", "word_family_l2", "associations_l2")
 
 
 def related_items_missing_article(core: dict, learning_lang: str | None) -> list[dict]:

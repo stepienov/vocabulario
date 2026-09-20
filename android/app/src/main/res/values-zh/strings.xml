@@ -163,6 +163,7 @@
 
     <string name="settings_syn_ant">围绕这个词</string>
     <string name="settings_word_family">词族</string>
+    <string name="settings_associations">联想</string>
 
     <string name="settings_conjugation">动词变位</string>
 
@@ -642,6 +643,7 @@
 
     <string name="section_antonyms_short">反义词</string>
     <string name="section_word_family">词族</string>
+    <string name="section_associations">联想</string>
 
     <string name="action_show_more">更多</string>
 
@@ -687,6 +689,7 @@
     <string name="correction_section_pronunciation">发音</string>
     <string name="correction_section_other">其他</string>
     <string name="correction_section_family">词族</string>
+    <string name="correction_section_associations">联想</string>
     <string name="correction_section_synonyms">同义词</string>
     <string name="correction_section_antonyms">反义词</string>
     <string name="correction_note_label">备注</string>

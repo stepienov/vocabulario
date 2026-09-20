@@ -185,6 +185,7 @@
 
     <string name="settings_syn_ant">Xung quanh từ</string>
     <string name="settings_word_family">Họ từ</string>
+    <string name="settings_associations">Liên tưởng</string>
 
     <string name="settings_conjugation">Chia động từ</string>
 
@@ -673,6 +674,7 @@
 
     <string name="section_antonyms_short">Từ trái nghĩa</string>
     <string name="section_word_family">Họ từ</string>
+    <string name="section_associations">Liên tưởng</string>
 
     <string name="action_show_more">Thêm</string>
 
@@ -741,6 +743,7 @@
 
     <string name="correction_section_other">Khác</string>
     <string name="correction_section_family">Họ từ</string>
+    <string name="correction_section_associations">Liên tưởng</string>
     <string name="correction_section_synonyms">Từ đồng nghĩa</string>
     <string name="correction_section_antonyms">Từ trái nghĩa</string>
 

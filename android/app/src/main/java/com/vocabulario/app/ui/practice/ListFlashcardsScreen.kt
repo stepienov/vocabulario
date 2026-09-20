@@ -169,6 +169,7 @@ fun ListFlashcardsScreen(
                                 showSynonyms = state.showSynonyms,
                                 showAntonyms = state.showAntonyms,
                                 showWordFamily = state.showWordFamily,
+                                showAssociations = state.showAssociations,
                                 showPeriphrases = state.showPeriphrases,
                                 showConjugation = state.showConjugation,
                                 conjugationExpandedDefault = state.conjugationExpandedDefault,

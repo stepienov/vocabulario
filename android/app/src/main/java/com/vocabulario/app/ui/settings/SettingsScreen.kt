@@ -250,6 +250,12 @@ fun SettingsScreen(
                     testTag = TestTags.SETTINGS_CHECK_WORD_FAMILY,
                 )
                 SettingsCheckRow(
+                    label = stringResource(R.string.settings_associations),
+                    checked = state.showAssociations,
+                    onCheckedChange = viewModel::setShowAssociations,
+                    testTag = TestTags.SETTINGS_CHECK_ASSOCIATIONS,
+                )
+                SettingsCheckRow(
                     label = stringResource(R.string.settings_conjugation),
                     checked = state.showConjugation,
                     onCheckedChange = viewModel::setShowConjugation,

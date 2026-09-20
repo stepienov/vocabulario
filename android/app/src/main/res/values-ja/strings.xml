@@ -186,6 +186,7 @@
 
     <string name="settings_syn_ant">この語のまわり</string>
     <string name="settings_word_family">語族</string>
+    <string name="settings_associations">連想</string>
 
     <string name="settings_conjugation">活用</string>
 
@@ -674,6 +675,7 @@
 
     <string name="section_antonyms_short">反義語</string>
     <string name="section_word_family">語族</string>
+    <string name="section_associations">連想</string>
 
     <string name="action_show_more">もっと見る</string>
 
@@ -742,6 +744,7 @@
 
     <string name="correction_section_other">その他</string>
     <string name="correction_section_family">語族</string>
+    <string name="correction_section_associations">連想</string>
     <string name="correction_section_synonyms">同義語</string>
     <string name="correction_section_antonyms">反意語</string>
 

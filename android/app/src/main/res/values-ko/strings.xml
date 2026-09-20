@@ -186,6 +186,7 @@
 
     <string name="settings_syn_ant">단어 주변</string>
     <string name="settings_word_family">어족</string>
+    <string name="settings_associations">연상</string>
 
     <string name="settings_conjugation">활용</string>
 
@@ -674,6 +675,7 @@
 
     <string name="section_antonyms_short">반의어</string>
     <string name="section_word_family">어족</string>
+    <string name="section_associations">연상</string>
 
     <string name="action_show_more">더보기</string>
 
@@ -742,6 +744,7 @@
 
     <string name="correction_section_other">기타</string>
     <string name="correction_section_family">어족</string>
+    <string name="correction_section_associations">연상</string>
     <string name="correction_section_synonyms">동의어</string>
     <string name="correction_section_antonyms">반의어</string>
 

@@ -186,6 +186,7 @@
 
     <string name="settings_syn_ant">Kelimenin çevresi</string>
     <string name="settings_word_family">Kelime ailesi</string>
+    <string name="settings_associations">Çağrışımlar</string>
 
     <string name="settings_conjugation">Çekim</string>
 
@@ -674,6 +675,7 @@
 
     <string name="section_antonyms_short">Zıt anlamlılar</string>
     <string name="section_word_family">Kelime ailesi</string>
+    <string name="section_associations">Çağrışımlar</string>
 
     <string name="action_show_more">Daha fazla</string>
 
@@ -742,6 +744,7 @@
 
     <string name="correction_section_other">Diğer</string>
     <string name="correction_section_family">Kelime ailesi</string>
+    <string name="correction_section_associations">Çağrışımlar</string>
     <string name="correction_section_synonyms">Eşanlamlılar</string>
     <string name="correction_section_antonyms">Zıt anlamlılar</string>
 

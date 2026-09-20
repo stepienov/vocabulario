@@ -81,6 +81,7 @@ data class PracticeUiState(
     val showSynonyms: Boolean = true,
     val showAntonyms: Boolean = true,
     val showWordFamily: Boolean = true,
+    val showAssociations: Boolean = true,
     val showPeriphrases: Boolean = true,
     val showConjugation: Boolean = true,
     val conjugationExpandedDefault: Boolean = false,
@@ -178,6 +179,7 @@ class PracticeViewModel @Inject constructor(
                     showSynonyms = settings.show_synonyms_antonyms && settings.show_synonyms,
                     showAntonyms = settings.show_synonyms_antonyms && settings.show_antonyms,
                     showWordFamily = settings.show_word_family,
+                    showAssociations = settings.show_associations,
                     showPeriphrases = settings.show_periphrases,
                     showConjugation = settings.show_conjugation,
                     conjugationExpandedDefault = settings.conjugation_expanded_default,
@@ -468,7 +470,11 @@ class PracticeViewModel @Inject constructor(
         }
         _state.value = _state.value.copy(
             addTarget = word.copy(
-                sourceCardId = _state.value.queue.getOrNull(_state.value.currentIndex)?.card_id,
+                sourceCardId = if (word.joinWordFamily) {
+                    _state.value.queue.getOrNull(_state.value.currentIndex)?.card_id
+                } else {
+                    null
+                },
             ),
             pickListOpen = false,
             showCreateListPrompt = false,

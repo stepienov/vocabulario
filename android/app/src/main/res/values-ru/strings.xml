@@ -163,6 +163,7 @@
 
     <string name="settings_syn_ant">Вокруг слова</string>
     <string name="settings_word_family">Родственные слова</string>
+    <string name="settings_associations">Ассоциации</string>
 
     <string name="settings_conjugation">Спряжение</string>
 
@@ -642,6 +643,7 @@
 
     <string name="section_antonyms_short">Антонимы</string>
     <string name="section_word_family">Родственные слова</string>
+    <string name="section_associations">Ассоциации</string>
 
     <string name="action_show_more">Ещё</string>
 
@@ -687,6 +689,7 @@
     <string name="correction_section_pronunciation">Произношение</string>
     <string name="correction_section_other">Другое</string>
     <string name="correction_section_family">Родственные слова</string>
+    <string name="correction_section_associations">Ассоциации</string>
     <string name="correction_section_synonyms">Синонимы</string>
     <string name="correction_section_antonyms">Антонимы</string>
     <string name="correction_note_label">Заметка</string>

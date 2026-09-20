@@ -63,6 +63,7 @@ val correctionSections = listOf(
     CorrectionSection("conjugation", R.string.correction_section_conjugation),
     CorrectionSection("similar", R.string.correction_section_similar),
     CorrectionSection("family", R.string.correction_section_family),
+    CorrectionSection("associations", R.string.correction_section_associations),
     CorrectionSection("synonyms", R.string.correction_section_synonyms),
     CorrectionSection("antonyms", R.string.correction_section_antonyms),
     CorrectionSection("pronunciation", R.string.correction_section_pronunciation),

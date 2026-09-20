@@ -48,6 +48,7 @@ class UserSettingsResponse(BaseModel):
     show_synonyms: bool = True
     show_antonyms: bool = True
     show_word_family: bool = True
+    show_associations: bool = True
     show_periphrases: bool = True
     show_conjugation: bool = True
     conjugation_expanded_default: bool = False
@@ -72,6 +73,7 @@ class UserSettingsUpdate(BaseModel):
     show_synonyms: bool | None = None
     show_antonyms: bool | None = None
     show_word_family: bool | None = None
+    show_associations: bool | None = None
     show_periphrases: bool | None = None
     show_conjugation: bool | None = None
     conjugation_expanded_default: bool | None = None
@@ -469,6 +471,7 @@ class CardContent(BaseModel):
     synonyms_l2: list[dict | str] = Field(default_factory=list)
     antonyms_l2: list[dict | str] = Field(default_factory=list)
     word_family_l2: list[dict | str] = Field(default_factory=list)
+    associations_l2: list[dict | str] = Field(default_factory=list)
     similar_words: list[dict] = Field(default_factory=list)
     conjugation: dict | None = None
     notes: str | None = None

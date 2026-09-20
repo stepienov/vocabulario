@@ -3,7 +3,9 @@ package com.vocabulario.app.data.imports
 import com.vocabulario.app.R
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.NetworkMonitor
+import com.vocabulario.app.data.api.ImportJobProgressResponse
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.sync.BackgroundJobScheduler
 import com.vocabulario.app.i18n.UiStrings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +30,7 @@ class ImportController @Inject constructor(
     private val persistence: ImportStatePersistence,
     private val strings: UiStrings,
     private val networkMonitor: NetworkMonitor,
+    private val backgroundJobs: BackgroundJobScheduler,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -66,6 +69,7 @@ class ImportController @Inject constructor(
                     _state.value = progress.toState(
                         ImportJobState(targetListName = listName, sourceName = filename, mode = mode),
                     )
+                    backgroundJobs.enqueueImport(replace = true)
                     startPoll()
                 }
                 .onFailure { e ->
@@ -107,6 +111,7 @@ class ImportController @Inject constructor(
                             mode = mode,
                         ),
                     )
+                    backgroundJobs.enqueueImport(replace = true)
                     startPoll()
                 }
                 .onFailure { e ->
@@ -154,6 +159,7 @@ class ImportController @Inject constructor(
                         watchImportedCards(next)
                     }
                     _state.value = next
+                    if (next.busy) backgroundJobs.enqueueImport(replace = true)
                     startPoll()
                 }
                 .onFailure { e ->
@@ -167,6 +173,7 @@ class ImportController @Inject constructor(
         scope.launch { persistence.saveJobId(null) }
         _state.value = ImportJobState()
         stopPoll()
+        backgroundJobs.cancelImport()
         if (openList && !listId.isNullOrBlank()) {
             _navigateToList.tryEmit(listId)
         }
@@ -205,8 +212,20 @@ class ImportController @Inject constructor(
 
     fun onAppForeground() {
         scope.launch {
-            if (repository.hasSyncableSession()) startPoll()
+            if (!repository.hasSyncableSession()) return@launch
+            if (_state.value.jobId.isNullOrBlank()) {
+                val stored = persistence.loadJobId()
+                if (stored.isNullOrBlank()) return@launch
+                restore()
+                return@launch
+            }
+            startPoll()
         }
+    }
+
+    /** WorkManager w tle — ten sam ingest co pętla poll, bez czekania na UI. */
+    suspend fun ingestRemoteProgress(progress: ImportJobProgressResponse) {
+        applyProgress(progress)
     }
 
     private suspend fun restore() {
@@ -259,32 +278,7 @@ class ImportController @Inject constructor(
                     }
                 }.getOrNull()
                 if (progress != null) {
-                    val include = progress.status == "review" ||
-                        progress.status == "done" ||
-                        progress.status == "failed" ||
-                        progress.status == "cancelled"
-                    val next = if (include && progress.items.isEmpty()) {
-                        runCatching { repository.getImportJob(id, includeItems = true) }.getOrNull()
-                            ?: progress
-                    } else {
-                        progress
-                    }
-                    val nextState = next.toState(_state.value, includeItems = true)
-                    val prevCreated = _state.value.createdCount
-                    val becameDone = nextState.status == ImportStatus.Done &&
-                        _state.value.status != ImportStatus.Done
-                    val becameFailed = nextState.status == ImportStatus.Failed &&
-                        _state.value.status != ImportStatus.Failed
-                    if (becameDone || becameFailed) {
-                        runCatching { repository.refreshLocalAfterImport(nextState.targetListId) }
-                        if (becameDone) watchImportedCards(nextState)
-                    } else if (
-                        nextState.createdCount > prevCreated &&
-                        (nextState.createdCount == 1 || nextState.createdCount % 10 == 0)
-                    ) {
-                        repository.requestBackgroundSync()
-                    }
-                    _state.value = nextState
+                    applyProgress(progress)
                     if (_state.value.status == ImportStatus.Cancelled) {
                         dismissResult()
                         break
@@ -300,6 +294,36 @@ class ImportController @Inject constructor(
                 delay(1_000)
             }
         }
+    }
+
+    private suspend fun applyProgress(progress: ImportJobProgressResponse) {
+        val id = progress.job_id
+        val include = progress.status == "review" ||
+            progress.status == "done" ||
+            progress.status == "failed" ||
+            progress.status == "cancelled"
+        val next = if (include && progress.items.isEmpty()) {
+            runCatching { repository.getImportJob(id, includeItems = true) }.getOrNull()
+                ?: progress
+        } else {
+            progress
+        }
+        val nextState = next.toState(_state.value, includeItems = true)
+        val prevCreated = _state.value.createdCount
+        val becameDone = nextState.status == ImportStatus.Done &&
+            _state.value.status != ImportStatus.Done
+        val becameFailed = nextState.status == ImportStatus.Failed &&
+            _state.value.status != ImportStatus.Failed
+        if (becameDone || becameFailed) {
+            runCatching { repository.refreshLocalAfterImport(nextState.targetListId) }
+            if (becameDone) watchImportedCards(nextState)
+        } else if (
+            nextState.createdCount > prevCreated &&
+            (nextState.createdCount == 1 || nextState.createdCount % 10 == 0)
+        ) {
+            repository.requestBackgroundSync()
+        }
+        _state.value = nextState
     }
 
     private fun stopPoll() {

@@ -164,6 +164,7 @@
 
     <string name="settings_syn_ant">En torno a la palabra</string>
     <string name="settings_word_family">Familia de palabras</string>
+    <string name="settings_associations">Asociaciones</string>
 
     <string name="settings_conjugation">Conjugación</string>
 
@@ -642,6 +643,7 @@
 
     <string name="section_antonyms_short">Antónimos</string>
     <string name="section_word_family">Familia de palabras</string>
+    <string name="section_associations">Asociaciones</string>
 
     <string name="action_show_more">Más</string>
 
@@ -701,6 +703,7 @@
     <string name="correction_section_pronunciation">Pronunciación</string>
     <string name="correction_section_other">Otro</string>
     <string name="correction_section_family">Familia de palabras</string>
+    <string name="correction_section_associations">Asociaciones</string>
     <string name="correction_section_synonyms">Sinónimos</string>
     <string name="correction_section_antonyms">Antónimos</string>
     <string name="correction_note_label">Nota</string>
