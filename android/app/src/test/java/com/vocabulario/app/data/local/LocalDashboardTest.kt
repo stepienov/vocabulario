@@ -2,6 +2,7 @@ package com.vocabulario.app.data.local
 
 import com.vocabulario.app.data.local.db.CachedCardEntity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -92,6 +93,20 @@ class LocalDashboardTest {
         val todayCell = stats.forecast.first { it.start_ms == today }
         assertEquals(1, todayCell.due_count)
         assertTrue(stats.forecast.filter { it.start_ms != today }.all { it.due_count == 0 })
+    }
+
+    @Test
+    fun missingNextReviewAtIsNotDue() {
+        val cards = listOf(
+            card("review-no-date", status = "review", intervalDays = 17.0),
+            card("learning-no-date", status = "learning"),
+            card("actually-due", status = "review", nextReviewAt = now - 1_000),
+        )
+        val stats = LocalDashboard.build(cards, newLimit = 20, nowMs = now, newDoneToday = 0)
+        assertEquals(1, stats.due_count)
+        assertFalse(LocalDashboard.isDue(cards[0], now))
+        assertFalse(LocalDashboard.isDue(cards[1], now))
+        assertTrue(LocalDashboard.isDue(cards[2], now))
     }
 
     @Test

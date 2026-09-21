@@ -329,6 +329,8 @@ data class CardResponse(
     val enrichment_error: String? = null,
     val srs_status: String? = null,
     val srs_interval_days: Double? = null,
+    val srs_next_review_at: String? = null,
+    val srs_last_reviewed_at: String? = null,
     val content_review_status: String? = null,
     val card_activity_status: String? = null,
     val has_content_changes: Boolean = false,

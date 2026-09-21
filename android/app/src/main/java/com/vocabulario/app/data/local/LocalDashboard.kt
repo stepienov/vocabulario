@@ -77,7 +77,7 @@ object LocalDashboard {
 
     fun isDue(card: CachedCardEntity, nowMs: Long): Boolean {
         if (card.status == "new" || card.status.isBlank()) return false
-        val next = card.nextReviewAt ?: return true
+        val next = card.nextReviewAt ?: return false
         return next <= nowMs
     }
 
@@ -142,7 +142,7 @@ object LocalDashboard {
             val isToday = start == todayStart
             val count = ready.count { card ->
                 if (card.status !in DUE_STATUSES) return@count false
-                val next = card.nextReviewAt ?: return@count isToday
+                val next = card.nextReviewAt ?: return@count false
                 if (isToday) next < todayEnd else next in start until end
             }
             DashboardForecastDay(

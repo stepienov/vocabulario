@@ -12,6 +12,7 @@ import com.vocabulario.app.data.api.SyncListItem
 import com.vocabulario.app.data.api.SyncPullResponse
 import com.vocabulario.app.data.api.SyncSrsState
 import com.vocabulario.app.data.api.UserSettingsResponse
+import com.vocabulario.app.data.EnrichmentStatus
 import com.vocabulario.app.data.SYSTEM_LIST_NAME
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.local.db.AppDatabase
@@ -201,6 +202,15 @@ class OfflineStore @Inject constructor(
             newDoneToday = newDoneToday,
         )
 
+    /** Karty w nauce bez daty due — po hydracji listy / reinstalce, zanim sync wgra SRS. */
+    suspend fun countStartedWithoutDue(profileId: String): Int =
+        cardDao.systemListCards(profileId).count { card ->
+            EnrichmentStatus.isStudyable(card.enrichmentStatus) &&
+                card.status.isNotBlank() &&
+                card.status != "new" &&
+                card.nextReviewAt == null
+        }
+
     /**
      * Karty z `deckId` = UUID listy systemowej są niewidoczne na „Uczę się”
      * (`systemListCards` = `deckId IS NULL`). Wcześniejszy zapis add tak robił.
@@ -244,8 +254,8 @@ class OfflineStore @Inject constructor(
                 cardActivityStatus = card.card_activity_status,
                 hasContentChanges = card.has_content_changes,
                 status = card.srs_status?.takeIf { it.isNotBlank() } ?: existing?.status ?: "new",
-                nextReviewAt = existing?.nextReviewAt,
-                lastReviewedAt = existing?.lastReviewedAt,
+                nextReviewAt = card.srs_next_review_at?.toEpochMillis() ?: existing?.nextReviewAt,
+                lastReviewedAt = card.srs_last_reviewed_at?.toEpochMillis() ?: existing?.lastReviewedAt,
                 intervalDays = card.srs_interval_days ?: existing?.intervalDays ?: 0.0,
                 ease = existing?.ease ?: 2.5,
                 repetitions = existing?.repetitions ?: 0,
@@ -581,7 +591,7 @@ class OfflineStore @Inject constructor(
         val now = System.currentTimeMillis()
         val all = cardDao.learningCards(profileId)
         val due = all.filter { card ->
-            card.status != "new" && (card.nextReviewAt == null || card.nextReviewAt <= now)
+            LocalDashboard.isDue(card, now)
         }.sortedBy { it.nextReviewAt ?: 0L }
         val newCards = all.filter { it.status == "new" }
         val offered = LocalDashboard.newOffered(newLimit, newDoneToday, newCards.size)
@@ -944,6 +954,7 @@ class OfflineStore @Inject constructor(
         }
         if (cards.isEmpty()) return
         val entities = cards.map { card ->
+            val existing = cardDao.byId(card.id)
             CachedCardEntity(
                 id = card.id,
                 profileId = profileId,
@@ -956,9 +967,18 @@ class OfflineStore @Inject constructor(
                 contentReviewStatus = card.content_review_status,
                 cardActivityStatus = card.card_activity_status,
                 hasContentChanges = card.has_content_changes,
-                status = card.srs_status?.takeIf { it.isNotBlank() } ?: "",
-                nextReviewAt = null,
-                intervalDays = card.srs_interval_days ?: 0.0,
+                status = card.srs_status?.takeIf { it.isNotBlank() } ?: existing?.status ?: "",
+                nextReviewAt = card.srs_next_review_at?.toEpochMillis() ?: existing?.nextReviewAt,
+                lastReviewedAt = card.srs_last_reviewed_at?.toEpochMillis() ?: existing?.lastReviewedAt,
+                intervalDays = card.srs_interval_days ?: existing?.intervalDays ?: 0.0,
+                ease = existing?.ease ?: 2.5,
+                repetitions = existing?.repetitions ?: 0,
+                lapses = existing?.lapses ?: 0,
+                stability = existing?.stability,
+                difficulty = existing?.difficulty,
+                fsrsStep = existing?.fsrsStep,
+                lastGrade = existing?.lastGrade,
+                updatedAt = System.currentTimeMillis(),
             )
         }
         cardDao.upsertAll(entities)
@@ -1041,6 +1061,8 @@ class OfflineStore @Inject constructor(
         has_content_changes = hasContentChanges,
         srs_status = status,
         srs_interval_days = intervalDays,
+        srs_next_review_at = nextReviewAt?.let { Instant.ofEpochMilli(it).toString() },
+        srs_last_reviewed_at = lastReviewedAt?.let { Instant.ofEpochMilli(it).toString() },
     )
 
     private fun PendingLookupEntity.toStubCard() = CardResponse(
