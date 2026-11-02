@@ -2,10 +2,13 @@ package com.vocabulario.app.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vocabulario.app.R
 import com.vocabulario.app.data.AuthRepository
+import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.sync.SyncScheduler
+import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,6 +34,8 @@ class AppViewModel @Inject constructor(
     private val learningRepository: LearningRepository,
     private val tokenStore: TokenStore,
     private val syncScheduler: SyncScheduler,
+    private val blockingBusy: BlockingBusy,
+    private val strings: UiStrings,
 ) : ViewModel() {
 
     val isLoggedIn: StateFlow<Boolean> = tokenStore.accessToken
@@ -110,16 +115,25 @@ class AppViewModel @Inject constructor(
 
     fun onAuthenticated(needsOnboarding: Boolean) {
         viewModelScope.launch {
-            if (!needsOnboarding) {
-                runCatching {
-                    authRepository.ensureActiveProfile()
-                    learningRepository.applyAppLocaleFromActiveProfile()
-                    learningRepository.syncThemeFromSettings()
-                }
-            }
-            _startRoute.value = if (needsOnboarding) AppStartRoute.ONBOARDING else AppStartRoute.HOME
-            if (!needsOnboarding) syncInBackground()
+            completeAuthenticated(needsOnboarding)
         }
+    }
+
+    suspend fun completeAuthenticated(needsOnboarding: Boolean) {
+        if (needsOnboarding) {
+            _startRoute.value = AppStartRoute.ONBOARDING
+            return
+        }
+        blockingBusy.run(strings.get(R.string.syncing_with_server)) {
+            runCatching {
+                authRepository.ensureActiveProfile()
+                learningRepository.applyAppLocaleFromActiveProfile()
+                learningRepository.syncThemeFromSettings()
+            }
+            runCatching { learningRepository.syncNow(awaitLock = true) }
+            _startRoute.value = AppStartRoute.HOME
+        }
+        syncScheduler.schedulePeriodic()
     }
 
     fun onOnboardingComplete() {

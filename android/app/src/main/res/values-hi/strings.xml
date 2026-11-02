@@ -92,6 +92,7 @@
 
 
     <string name="auth_have_account">मेरा पहले से खाता है</string>
+    <string name="syncing_with_server">सर्वर से सिंक हो रहा है…</string>
 
     <string name="onboarding_app_setup">ऐप सेटअप</string>
 

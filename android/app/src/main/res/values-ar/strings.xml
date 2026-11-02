@@ -92,6 +92,7 @@
 
 
     <string name="auth_have_account">لديّ حساب بالفعل</string>
+    <string name="syncing_with_server">جارٍ المزامنة مع الخادم…</string>
 
     <string name="onboarding_app_setup">إعداد التطبيق</string>
 

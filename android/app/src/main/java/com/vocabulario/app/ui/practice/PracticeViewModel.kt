@@ -3,6 +3,7 @@ package com.vocabulario.app.ui.practice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
+import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.ChoiceOption
 import com.vocabulario.app.data.api.SrsQueueItem
@@ -116,6 +117,7 @@ class PracticeViewModel @Inject constructor(
     private val repository: LearningRepository,
     private val strings: UiStrings,
     private val networkMonitor: com.vocabulario.app.data.NetworkMonitor,
+    private val blockingBusy: BlockingBusy,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PracticeUiState(isOnline = networkMonitor.isCurrentlyOnline()))
@@ -337,7 +339,8 @@ class PracticeViewModel @Inject constructor(
     fun submitTyped() {
         val item = currentItem() ?: return
         if (_state.value.phase != PracticePhase.ANSWERING) return
-        viewModelScope.launch {
+        if (blockingBusy.busy.value) return
+        blockingBusy.launchIn(viewModelScope) {
             runCatching {
                 repository.checkAnswer(item.card_id, _state.value.typedAnswer, currentDirection())
             }.onSuccess { result ->
@@ -492,10 +495,9 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun openOtherLists() {
-        viewModelScope.launch {
+        blockingBusy.launchIn(viewModelScope) {
             runCatching { repository.listWordLists() }
                 .onSuccess { lists ->
-                    val custom = lists.filterNot { it.is_system }
                     _state.value = _state.value.copy(
                         lists = lists,
                         pickListOpen = true,
@@ -595,7 +597,7 @@ class PracticeViewModel @Inject constructor(
     fun addRelatedToList(listId: String) {
         val word = _state.value.addTarget ?: return
         dismissAddSheet()
-        viewModelScope.launch {
+        blockingBusy.launchIn(viewModelScope) {
             runCatching {
                 repository.addWordToList(
                     listId,
@@ -622,7 +624,7 @@ class PracticeViewModel @Inject constructor(
             return
         }
         dismissAddSheet()
-        viewModelScope.launch {
+        blockingBusy.launchIn(viewModelScope) {
             runCatching {
                 val list = repository.createWordList(name)
                 repository.addWordToList(

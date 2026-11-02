@@ -197,12 +197,21 @@ def assemble_core_card(
     """vocabulario.card.v1 z rdzenia — bez similar_words i odmiany."""
     manifest = get_manifest(profile.learning_lang)
     core_lemma = core.get("lemma") or lemma
+    pos_lookup = _resolve_pos(pos) or pos or "unknown"
     # Headword z lookupu zostaje; LLM nie może „naprawić” karty tłumaczeniem na inny język.
+    # canonical_lemma zdejmuje rodzajnik, więc ten sam rzeczownik (el cerrajero / cerrajero)
+    # nie może wygrać nagą formą z modelu — cache zapisałby hasło bez el/la.
     if lemma and core_lemma and not _same_headword(lemma, core_lemma):
         lemma_final = lemma
     else:
-        lemma_final = core_lemma or lemma
-    pos_lookup = _resolve_pos(pos) or pos or "unknown"
+        from app.services.pos_normalize import prefer_citation_headword
+
+        lemma_final = prefer_citation_headword(
+            lemma,
+            core_lemma,
+            pos=pos_lookup,
+            learning_lang=profile.learning_lang,
+        ) or core_lemma or lemma
     if pos_lookup in {"phrase", "construction"}:
         pos_final = pos_lookup
     else:

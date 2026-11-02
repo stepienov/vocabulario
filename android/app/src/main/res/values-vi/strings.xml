@@ -113,6 +113,7 @@
 
 
     <string name="auth_have_account">Tôi đã có tài khoản</string>
+    <string name="syncing_with_server">Đang đồng bộ với máy chủ…</string>
 
     <string name="onboarding_app_setup">Cài đặt ứng dụng</string>
 

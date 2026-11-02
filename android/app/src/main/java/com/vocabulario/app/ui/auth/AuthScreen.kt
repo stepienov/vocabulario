@@ -86,8 +86,8 @@ private val DividerTextLight = Color(0xFF57606A)
 
 @Composable
 fun AuthScreen(
-    onAuthenticated: (needsOnboarding: Boolean) -> Unit,
-    onRegisterComplete: () -> Unit,
+    onAuthenticated: suspend (needsOnboarding: Boolean) -> Unit,
+    onRegisterComplete: suspend () -> Unit,
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
     var email by remember { mutableStateOf("") }

@@ -92,6 +92,7 @@
 
 
     <string name="auth_have_account">I already have an account</string>
+    <string name="syncing_with_server">Syncing with the server…</string>
 
     <string name="onboarding_app_setup">App setup</string>
 

@@ -114,6 +114,7 @@
 
 
     <string name="auth_have_account">Zaten bir hesabım var</string>
+    <string name="syncing_with_server">Sunucu ile senkronize ediliyor…</string>
 
     <string name="onboarding_app_setup">Uygulama kurulumu</string>
 

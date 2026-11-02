@@ -92,6 +92,7 @@
 
 
     <string name="auth_have_account">已有账户</string>
+    <string name="syncing_with_server">正在与服务器同步…</string>
 
     <string name="onboarding_app_setup">应用设置</string>
 

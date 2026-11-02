@@ -109,6 +109,7 @@
 
     <string name="cd_hide_password">Nascondi password</string>
 <string name="auth_have_account">Ho già un account</string>
+    <string name="syncing_with_server">Sincronizzazione con il server…</string>
 
     <string name="onboarding_app_setup">Configurazione dell\'app</string>
 

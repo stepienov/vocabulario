@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
 import com.vocabulario.app.auth.GoogleAuthHelper
 import com.vocabulario.app.data.AuthRepository
+import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.local.TokenStore
@@ -26,6 +27,7 @@ class AuthViewModel @Inject constructor(
     private val tokenStore: TokenStore,
     private val googleAuthHelper: GoogleAuthHelper,
     private val strings: UiStrings,
+    private val blockingBusy: BlockingBusy,
 ) : ViewModel() {
 
     val isLoggedIn: StateFlow<Boolean> = tokenStore.accessToken
@@ -52,73 +54,85 @@ class AuthViewModel @Inject constructor(
         return null
     }
 
-    fun login(email: String, password: String, onSuccess: (needsOnboarding: Boolean) -> Unit) {
+    fun login(email: String, password: String, onSuccess: suspend (needsOnboarding: Boolean) -> Unit) {
         validate(email, password, isRegister = false)?.let {
             _errorMessage.value = it
             return
         }
         viewModelScope.launch {
-            _errorMessage.value = null
-            _debugLoginError.value = null
-            runCatching {
-                authRepository.login(email.trim(), password)
-            }.onSuccess {
-                val needsOnboarding = runCatching { !authRepository.hasProfile() }.getOrDefault(false)
-                if (!needsOnboarding) {
-                    runCatching { authRepository.ensureActiveProfile() }
-                    runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
+            blockingBusy.run {
+                _errorMessage.value = null
+                _debugLoginError.value = null
+                runCatching {
+                    authRepository.login(email.trim(), password)
+                }.onSuccess {
+                    val needsOnboarding = runCatching { !authRepository.hasProfile() }.getOrDefault(false)
+                    if (!needsOnboarding) {
+                        runCatching { authRepository.ensureActiveProfile() }
+                        runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
+                    }
+                    runCatching { learningRepository.syncThemeFromSettings() }
+                    onSuccess(needsOnboarding)
+                }.onFailure {
+                    if (com.vocabulario.app.BuildConfig.DEBUG) {
+                        _debugLoginError.value = it.javaClass.simpleName + ": " + (it.message ?: it.toString())
+                    }
+                    _errorMessage.value = it.userMessage(strings, R.string.err_login)
                 }
-                runCatching { learningRepository.syncThemeFromSettings() }
-                onSuccess(needsOnboarding)
-            }.onFailure {
-                if (com.vocabulario.app.BuildConfig.DEBUG) {
-                    _debugLoginError.value = it.javaClass.simpleName + ": " + (it.message ?: it.toString())
-                }
-                _errorMessage.value = it.userMessage(strings, R.string.err_login)
             }
         }
     }
 
-    fun register(email: String, password: String, onSuccess: () -> Unit) {
+    fun register(email: String, password: String, onSuccess: suspend () -> Unit) {
         validate(email, password, isRegister = true)?.let {
             _errorMessage.value = it
             return
         }
         viewModelScope.launch {
-            _errorMessage.value = null
-            runCatching {
-                authRepository.register(email.trim(), password)
-            }.onSuccess { onSuccess() }
-                .onFailure {
-                    _errorMessage.value = it.userMessage(strings, R.string.err_register)
-                }
-        }
-    }
-
-    fun googleSignIn(activityContext: android.content.Context, onSuccess: (needsOnboarding: Boolean) -> Unit) {
-        viewModelScope.launch {
-            _errorMessage.value = null
-            runCatching {
-                val idToken = googleAuthHelper.signIn(activityContext)
-                authRepository.googleLogin(idToken)
-            }.onSuccess {
-                val needsOnboarding = runCatching { !authRepository.hasProfile() }.getOrDefault(false)
-                if (!needsOnboarding) {
-                    runCatching { authRepository.ensureActiveProfile() }
-                    runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
-                }
-                runCatching { learningRepository.syncThemeFromSettings() }
-                onSuccess(needsOnboarding)
-            }.onFailure {
-                _errorMessage.value = it.userMessage(strings, R.string.err_google_login)
+            blockingBusy.run {
+                _errorMessage.value = null
+                runCatching {
+                    authRepository.register(email.trim(), password)
+                }.onSuccess { onSuccess() }
+                    .onFailure {
+                        _errorMessage.value = it.userMessage(strings, R.string.err_register)
+                    }
             }
         }
     }
 
-    fun logout(onDone: () -> Unit) {
+    fun googleSignIn(activityContext: android.content.Context, onSuccess: suspend (needsOnboarding: Boolean) -> Unit) {
         viewModelScope.launch {
-            authRepository.logout()
-            onDone()
+            _errorMessage.value = null
+            val idToken = runCatching { googleAuthHelper.signIn(activityContext) }
+                .onFailure {
+                    _errorMessage.value = it.userMessage(strings, R.string.err_google_login)
+                }
+                .getOrNull() ?: return@launch
+            blockingBusy.run {
+                runCatching {
+                    authRepository.googleLogin(idToken)
+                }.onSuccess {
+                    val needsOnboarding = runCatching { !authRepository.hasProfile() }.getOrDefault(false)
+                    if (!needsOnboarding) {
+                        runCatching { authRepository.ensureActiveProfile() }
+                        runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
+                    }
+                    runCatching { learningRepository.syncThemeFromSettings() }
+                    onSuccess(needsOnboarding)
+                }.onFailure {
+                    _errorMessage.value = it.userMessage(strings, R.string.err_google_login)
+                }
+            }
+        }
+    }
+
+    fun logout(onDone: suspend () -> Unit) {
+        viewModelScope.launch {
+            blockingBusy.run {
+                authRepository.logout()
+                onDone()
+            }
         }
     }
 }

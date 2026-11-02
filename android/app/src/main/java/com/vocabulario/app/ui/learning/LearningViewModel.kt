@@ -3,6 +3,7 @@ package com.vocabulario.app.ui.learning
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
+import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.EnrichmentStatus
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.CardResponse
@@ -50,6 +51,7 @@ data class LearningUiState(
 class LearningViewModel @Inject constructor(
     private val repository: LearningRepository,
     private val strings: UiStrings,
+    private val blockingBusy: BlockingBusy,
 ) : ViewModel() {
     private val _state = MutableStateFlow(LearningUiState())
     val state: StateFlow<LearningUiState> = _state.asStateFlow()
@@ -123,10 +125,9 @@ class LearningViewModel @Inject constructor(
     }
 
     fun openOtherLists() {
-        viewModelScope.launch {
+        blockingBusy.launchIn(viewModelScope) {
             runCatching { repository.listWordLists() }
                 .onSuccess { lists ->
-                    val custom = lists.filterNot { it.is_system }
                     _state.value = _state.value.copy(
                         lists = lists,
                         pickListOpen = true,
@@ -200,7 +201,7 @@ class LearningViewModel @Inject constructor(
     fun addRelatedToList(listId: String) {
         val word = _state.value.addTarget ?: return
         dismissAddSheet()
-        viewModelScope.launch {
+        blockingBusy.launchIn(viewModelScope) {
             runCatching {
                 repository.addWordToList(
                     listId,
@@ -232,7 +233,7 @@ class LearningViewModel @Inject constructor(
             return
         }
         dismissAddSheet()
-        viewModelScope.launch {
+        blockingBusy.launchIn(viewModelScope) {
             runCatching {
                 val list = repository.createWordList(name)
                 repository.addWordToList(

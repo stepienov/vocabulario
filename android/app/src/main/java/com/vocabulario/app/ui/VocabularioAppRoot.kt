@@ -21,11 +21,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import android.net.Uri
+import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.imports.ImportController
 import com.vocabulario.app.ui.auth.AuthScreen
 import com.vocabulario.app.ui.auth.AuthViewModel
-import com.vocabulario.app.ui.components.PairSwitchHost
+import com.vocabulario.app.ui.components.BusyOverlayHost
 import com.vocabulario.app.ui.home.HomeScreen
 import com.vocabulario.app.ui.learning.LearningScreen
 import com.vocabulario.app.ui.onboarding.OnboardingScreen
@@ -60,6 +61,12 @@ interface PairSessionEntryPoint {
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
+interface BlockingBusyEntryPoint {
+    fun blockingBusy(): BlockingBusy
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
 interface ImportControllerEntryPoint {
     fun importController(): ImportController
 }
@@ -71,8 +78,11 @@ fun VocabularioAppRoot(
 ) {
     val startRoute by appViewModel.startRoute.collectAsState()
     val pairSession = rememberPairSession()
+    val blockingBusy = rememberBlockingBusy()
     rememberImportController()
     val pairBusy by pairSession.busy.collectAsState()
+    val requestBusy by blockingBusy.busy.collectAsState()
+    val requestMessage by blockingBusy.message.collectAsState()
 
     LaunchedEffect(Unit) { appViewModel.bootstrap() }
 
@@ -93,7 +103,10 @@ fun VocabularioAppRoot(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
-        PairSwitchHost(busy = pairBusy) {
+        BusyOverlayHost(
+            busy = pairBusy || requestBusy,
+            message = requestMessage,
+        ) {
             // Przebuduj graf przy zmianie trasy startowej (HOME ↔ AUTH ↔ ONBOARDING).
             key(startRoute) {
                 val navController = rememberNavController()
@@ -115,10 +128,10 @@ fun VocabularioAppRoot(
                     composable(Routes.AUTH) {
                         AuthScreen(
                             onAuthenticated = { needsOnboarding ->
-                                appViewModel.onAuthenticated(needsOnboarding)
+                                appViewModel.completeAuthenticated(needsOnboarding)
                             },
                             onRegisterComplete = {
-                                appViewModel.onAuthenticated(needsOnboarding = true)
+                                appViewModel.completeAuthenticated(needsOnboarding = true)
                             },
                         )
                     }
@@ -206,6 +219,14 @@ private fun rememberPairSession(): PairSession {
     val context = LocalContext.current.applicationContext
     return remember {
         EntryPointAccessors.fromApplication(context, PairSessionEntryPoint::class.java).pairSession()
+    }
+}
+
+@Composable
+private fun rememberBlockingBusy(): BlockingBusy {
+    val context = LocalContext.current.applicationContext
+    return remember {
+        EntryPointAccessors.fromApplication(context, BlockingBusyEntryPoint::class.java).blockingBusy()
     }
 }
 

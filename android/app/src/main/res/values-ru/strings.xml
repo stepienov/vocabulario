@@ -92,6 +92,7 @@
 
 
     <string name="auth_have_account">У меня уже есть аккаунт</string>
+    <string name="syncing_with_server">Синхронизация с сервером…</string>
 
     <string name="onboarding_app_setup">Настройка приложения</string>
 

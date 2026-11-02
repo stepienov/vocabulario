@@ -142,3 +142,23 @@ def test_lexical_id_never_falls_back_to_other_pos():
     by_key = {("play", "verb"): verb}
     assert lexical_entry_for_candidate(by_key, "play", "verb") is verb
     assert lexical_entry_for_candidate(by_key, "play", "noun") is None
+
+
+def test_lookup_card_chip_matches_like_full_card():
+    from uuid import uuid4
+
+    from app.services.lexical import _LookupCardChip, _card_matches_lookup
+
+    card_id = uuid4()
+    entry_id = uuid4()
+    chip = _LookupCardChip(
+        id=card_id,
+        lemma_l2="Casa",
+        pos="noun",
+        deck_id=None,
+        lexical_entry_id=entry_id,
+        enrichment_status="ready",
+    )
+    assert _card_matches_lookup(chip, "casa", "noun", str(entry_id))
+    assert not _card_matches_lookup(chip, "casa", "verb", str(entry_id))
+    assert not _card_matches_lookup(chip, "perro", "noun", str(entry_id))

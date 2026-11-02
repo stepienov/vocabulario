@@ -114,6 +114,7 @@
 
 
     <string name="auth_have_account">すでにアカウントを持っています</string>
+    <string name="syncing_with_server">サーバーと同期しています…</string>
 
     <string name="onboarding_app_setup">アプリの設定</string>
 

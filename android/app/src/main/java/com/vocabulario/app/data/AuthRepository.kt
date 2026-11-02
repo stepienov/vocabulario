@@ -24,11 +24,13 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun login(email: String, password: String) {
+        beginNewSession()
         val tokens = api.login(LoginRequest(email, password))
         tokenStore.saveTokens(tokens.access_token, tokens.refresh_token)
     }
 
     suspend fun googleLogin(idToken: String) {
+        beginNewSession()
         val tokens = api.googleAuth(GoogleAuthRequest(idToken))
         tokenStore.saveTokens(tokens.access_token, tokens.refresh_token)
     }

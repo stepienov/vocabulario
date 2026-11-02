@@ -311,6 +311,23 @@ def _has_verb_inflection(content: dict) -> bool:
     return bool(has_inflection or content.get("conjugation"))
 
 
+def _has_required_inflection(
+    content: dict, *, pos: str, lemma: str, learning_lang: str
+) -> bool:
+    """Odmiana, której LSP chce dla tego POS — nie tylko czasownik."""
+    key = inflect_pos_key(pos, lemma=lemma, learning_lang=learning_lang)
+    if key is None:
+        return True
+    inf = content.get("inflection") if isinstance(content.get("inflection"), dict) else {}
+    if key == "noun":
+        nouns = inf.get("nouns") if isinstance(inf.get("nouns"), dict) else None
+        return bool(nouns)
+    if key == "adj":
+        adjs = inf.get("adjectives") if isinstance(inf.get("adjectives"), dict) else None
+        return bool(adjs)
+    return _has_verb_inflection(content)
+
+
 def content_is_complete(content: dict | None, *, learning_lang: str | None = None) -> bool:
     """Pełna treść do cache: learnable + dystraktory (+ odmiana, gdy LSP jej chce).
 
@@ -325,8 +342,9 @@ def content_is_complete(content: dict | None, *, learning_lang: str | None = Non
     lemma = str(content.get("lemma") or "")
     lang = learning_lang or str(content.get("language") or "")
     if content.get("schema_version") != "vocabulario.adaptive.v1":
-        needs_infl = inflect_pos_key(pos, lemma=lemma, learning_lang=lang) is not None
-        if needs_infl and not _has_verb_inflection(content):
+        if not _has_required_inflection(
+            content, pos=pos, lemma=lemma, learning_lang=lang
+        ):
             return False
     return len(content.get("similar_words") or []) >= MIN_SIMILAR_FOR_QUIZ
 
@@ -579,11 +597,15 @@ def _apply_entry_to_card(
     card.gloss_primary = (
         meanings[0].get("gloss_l1") if meanings else None
     ) or entry.lemma_l1_primary or card.gloss_primary
-    articles = articles_for(profile.learning_lang)
-    if same_headword(card.lemma_l2, entry.lemma_l2) and not in_learning_lemma(
-        card.lemma_l2, lemma_keys(entry.lemma_l2, articles), articles
-    ):
-        card.lemma_l2 = entry.lemma_l2
+    if same_headword(card.lemma_l2, entry.lemma_l2):
+        from app.services.pos_normalize import prefer_citation_headword
+
+        card.lemma_l2 = prefer_citation_headword(
+            card.lemma_l2,
+            entry.lemma_l2,
+            pos=card.pos,
+            learning_lang=profile.learning_lang,
+        )
     elif not same_headword(card.lemma_l2, entry.lemma_l2):
         content["lemma"] = card.lemma_l2
     card.enrichment_status = STATUS_READY
@@ -896,6 +918,8 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
 
 def _guard_enrichment_lemma(card: LearningCard, content: dict) -> dict:
     """Hasło karty zostaje; LLM nie może podmienić go tłumaczeniem."""
+    from app.services.pos_normalize import prefer_citation_headword
+
     content = dict(content)
     returned = content.get("lemma")
     if not card.lemma_l2:
@@ -904,6 +928,12 @@ def _guard_enrichment_lemma(card: LearningCard, content: dict) -> dict:
         content["lemma"] = card.lemma_l2
         return content
     if same_headword(returned, card.lemma_l2):
+        content["lemma"] = prefer_citation_headword(
+            card.lemma_l2,
+            str(returned),
+            pos=card.pos or content.get("pos"),
+            learning_lang=str(content.get("language") or ""),
+        )
         return content
     kind = resolve_enrichment_entry_kind(content, pos=card.pos)
     if kind in ADAPTIVE_ENTRY_KINDS or content.get("schema_version") == "vocabulario.adaptive.v1":

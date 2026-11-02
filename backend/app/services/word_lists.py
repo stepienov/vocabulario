@@ -129,6 +129,40 @@ async def list_word_lists(
     return out
 
 
+def select_live_card_for_lemma(
+    cards: list[LearningCard],
+    lemma: str,
+    pos: str | None = None,
+) -> LearningCard | None:
+    """Exact lemma first; same canonical headword (el cerrajero / cerrajero) next."""
+    from app.core.deps import normalize_text
+    from app.core.lemma_keys import canonical_lemma
+    from app.services.pos_normalize import normalize_pos_bucket
+
+    lemma_norm = normalize_text(lemma)
+    canon = canonical_lemma(lemma)
+    want = normalize_pos_bucket(pos)
+    exact: LearningCard | None = None
+    canonical_hit: LearningCard | None = None
+
+    def pos_ok(card: LearningCard) -> bool:
+        got = normalize_pos_bucket(card.pos)
+        if want == "unknown":
+            return got == "unknown"
+        return got == want
+
+    for card in cards:
+        if not pos_ok(card):
+            continue
+        if normalize_text(card.lemma_l2) == lemma_norm:
+            exact = card
+            break
+        if canon and canonical_lemma(card.lemma_l2) == canon:
+            if canonical_hit is None or len(card.lemma_l2 or "") > len(canonical_hit.lemma_l2 or ""):
+                canonical_hit = card
+    return exact or canonical_hit
+
+
 async def find_card_anywhere(
     db: AsyncSession,
     user_id: UUID,
@@ -136,28 +170,14 @@ async def find_card_anywhere(
     lemma: str,
     pos: str | None = None,
 ) -> LearningCard | None:
-    from app.core.deps import normalize_text
-    from app.services.pos_normalize import normalize_pos_bucket
-
-    lemma_norm = normalize_text(lemma)
-    q = select(LearningCard).where(
-        LearningCard.user_id == user_id,
-        LearningCard.profile_id == profile_id,
-        LearningCard.deleted_at.is_(None),
-        func.lower(LearningCard.lemma_l2) == lemma_norm,
+    result = await db.execute(
+        select(LearningCard).where(
+            LearningCard.user_id == user_id,
+            LearningCard.profile_id == profile_id,
+            LearningCard.deleted_at.is_(None),
+        )
     )
-    result = await db.execute(q)
-    want = normalize_pos_bucket(pos)
-    for card in result.scalars().all():
-        if normalize_text(card.lemma_l2) != lemma_norm:
-            continue
-        if want == "unknown":
-            if normalize_pos_bucket(card.pos) == "unknown":
-                return card
-            continue
-        if normalize_pos_bucket(card.pos) == want:
-            return card
-    return None
+    return select_live_card_for_lemma(list(result.scalars().all()), lemma, pos)
 
 
 async def resolve_list_for_card(

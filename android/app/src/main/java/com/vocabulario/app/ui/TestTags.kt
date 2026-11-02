@@ -2,6 +2,9 @@ package com.vocabulario.app.ui
 
 /** Stable Maestro / Compose UI test selectors (`Modifier.testTag`). */
 object TestTags {
+    const val BUSY_OVERLAY = "busy_overlay"
+    const val BUSY_OVERLAY_MESSAGE = "busy_overlay_message"
+
     const val AUTH_EMAIL = "auth_email"
     const val AUTH_PASSWORD = "auth_password"
     const val AUTH_PASSWORD_TOGGLE = "auth_password_toggle"

@@ -1,6 +1,7 @@
 package com.vocabulario.app.data.imports
 
 import com.vocabulario.app.R
+import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.NetworkMonitor
 import com.vocabulario.app.data.api.ImportJobProgressResponse
@@ -31,6 +32,7 @@ class ImportController @Inject constructor(
     private val strings: UiStrings,
     private val networkMonitor: NetworkMonitor,
     private val backgroundJobs: BackgroundJobScheduler,
+    private val blockingBusy: BlockingBusy,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -62,26 +64,34 @@ class ImportController @Inject constructor(
             publishLocalError(strings.get(R.string.err_import_empty_file))
             return
         }
-        scope.launch {
-            runCatching { repository.createImportJobFile(bytes, filename, listId, mode) }
-                .onSuccess { progress ->
-                    persistence.saveJobId(progress.job_id)
-                    _state.value = progress.toState(
-                        ImportJobState(targetListName = listName, sourceName = filename, mode = mode),
+        blockingBusy.launchIn(scope) { runStartFromFile(bytes, filename, mode, listId, listName) }
+    }
+
+    suspend fun runStartFromFile(
+        bytes: ByteArray,
+        filename: String,
+        mode: String,
+        listId: String,
+        listName: String,
+    ) {
+        runCatching { repository.createImportJobFile(bytes, filename, listId, mode) }
+            .onSuccess { progress ->
+                persistence.saveJobId(progress.job_id)
+                _state.value = progress.toState(
+                    ImportJobState(targetListName = listName, sourceName = filename, mode = mode),
+                )
+                backgroundJobs.enqueueImport(replace = true)
+                startPoll()
+            }
+            .onFailure { e ->
+                if (e is HttpException && e.code() == 409) {
+                    restoreActive()
+                } else {
+                    publishLocalError(
+                        e.userMessage(strings.get(R.string.err_import_file), strings),
                     )
-                    backgroundJobs.enqueueImport(replace = true)
-                    startPoll()
                 }
-                .onFailure { e ->
-                    if (e is HttpException && e.code() == 409) {
-                        restoreActive()
-                    } else {
-                        publishLocalError(
-                            e.userMessage(strings.get(R.string.err_import_file), strings),
-                        )
-                    }
-                }
-        }
+            }
     }
 
     fun startFromPaste(
@@ -100,28 +110,35 @@ class ImportController @Inject constructor(
             publishLocalError(strings.get(R.string.err_import_empty))
             return
         }
-        scope.launch {
-            runCatching { repository.createImportJob(trimmed, listId, mode) }
-                .onSuccess { progress ->
-                    persistence.saveJobId(progress.job_id)
-                    _state.value = progress.toState(
-                        ImportJobState(
-                            targetListName = listName,
-                            sourceName = "paste",
-                            mode = mode,
-                        ),
-                    )
-                    backgroundJobs.enqueueImport(replace = true)
-                    startPoll()
+        blockingBusy.launchIn(scope) { runStartFromPaste(trimmed, mode, listId, listName) }
+    }
+
+    suspend fun runStartFromPaste(
+        text: String,
+        mode: String,
+        listId: String,
+        listName: String,
+    ) {
+        runCatching { repository.createImportJob(text, listId, mode) }
+            .onSuccess { progress ->
+                persistence.saveJobId(progress.job_id)
+                _state.value = progress.toState(
+                    ImportJobState(
+                        targetListName = listName,
+                        sourceName = "paste",
+                        mode = mode,
+                    ),
+                )
+                backgroundJobs.enqueueImport(replace = true)
+                startPoll()
+            }
+            .onFailure { e ->
+                if (e is HttpException && e.code() == 409) {
+                    restoreActive()
+                } else {
+                    publishLocalError(e.userMessage(strings.get(R.string.err_import), strings))
                 }
-                .onFailure { e ->
-                    if (e is HttpException && e.code() == 409) {
-                        restoreActive()
-                    } else {
-                        publishLocalError(e.userMessage(strings.get(R.string.err_import), strings))
-                    }
-                }
-        }
+            }
     }
 
     fun requestCancel() {
@@ -150,7 +167,8 @@ class ImportController @Inject constructor(
         if (cur.status != ImportStatus.Review) return
         val jobId = cur.jobId ?: return
         if (cur.readyCount <= 0) return
-        scope.launch {
+        if (blockingBusy.busy.value) return
+        blockingBusy.launchIn(scope) {
             runCatching { repository.commitImportJob(jobId) }
                 .onSuccess {
                     val next = it.toState(cur)

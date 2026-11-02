@@ -852,9 +852,9 @@ class LearningRepository @Inject constructor(
      */
     private val syncMutex = Mutex()
 
-    suspend fun syncNow(fullReplace: Boolean = false) {
+    suspend fun syncNow(fullReplace: Boolean = false, awaitLock: Boolean = false) {
         if (!networkMonitor.isCurrentlyOnline()) return
-        if (!syncMutex.tryLock()) return
+        if (awaitLock) syncMutex.lock() else if (!syncMutex.tryLock()) return
         try {
             runCatching { withTimeout(FLUSH_LOOKUPS_TIMEOUT_MS) { flushPendingLookups() } }
             runCatching { withTimeout(API_SYNC_TIMEOUT_MS) { pushOutbox() } }

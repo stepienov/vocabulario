@@ -407,6 +407,31 @@ def lemma_has_article(lemma: str, learning_lang: str) -> bool:
     return len(words) >= 2 and words[0].lower().rstrip("'") in articles
 
 
+def prefer_citation_headword(
+    preferred: str | None,
+    other: str | None,
+    *,
+    pos: str | None,
+    learning_lang: str | None,
+) -> str:
+    """Keep el/la/los… on the noun headword when LLM returns the bare stem."""
+    left = (preferred or "").strip()
+    right = (other or "").strip()
+    if not left:
+        return right
+    if not right:
+        return left
+    lang = (learning_lang or "").strip()
+    if lang and normalize_pos_bucket(pos) == "noun":
+        left_art = lemma_has_article(left, lang)
+        right_art = lemma_has_article(right, lang)
+        if left_art and not right_art:
+            return left
+        if right_art and not left_art:
+            return right
+    return left
+
+
 def lemma_stem(lemma: str, learning_lang: str) -> str:
     """Headword without leading article."""
     articles = _article_set(learning_lang)

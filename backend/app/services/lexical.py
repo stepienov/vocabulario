@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
@@ -116,11 +116,37 @@ async def collect_first_lookup_hits(
     return results
 
 
+@dataclass(frozen=True, slots=True)
+class _LookupCardChip:
+    """Lookup chips need list membership — never the card JSON payload."""
+
+    id: UUID
+    lemma_l2: str
+    pos: str | None
+    deck_id: UUID | None
+    lexical_entry_id: UUID | None
+    enrichment_status: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class _LookupEntryRef:
+    id: UUID
+    lemma_l2: str
+    pos: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class _LookupListChip:
+    id: UUID
+    name: str
+    is_system: bool
+
+
 def lexical_entry_for_candidate(
-    by_key: dict[tuple[str, str], LexicalEntry],
+    by_key: dict[tuple[str, str], object],
     lemma: str,
     pos: str | None,
-) -> LexicalEntry | None:
+) -> object | None:
     """Resolve a cached entry by lemma + POS only — never fall back to another POS."""
     bucket = normalize_pos_bucket(pos)
     if bucket == "unknown":
@@ -129,7 +155,7 @@ def lexical_entry_for_candidate(
 
 
 def _card_matches_lookup(
-    card: LearningCard,
+    card: LearningCard | _LookupCardChip,
     lemma_norm: str,
     pos: str | None,
     lexical_entry_id: str | None,
@@ -217,20 +243,44 @@ class LexicalService:
         await ensure_system_list(self.db, user_id, profile_id)
 
         cards_result = await self.db.execute(
-            select(LearningCard).where(
+            select(
+                LearningCard.id,
+                LearningCard.lemma_l2,
+                LearningCard.pos,
+                LearningCard.deck_id,
+                LearningCard.lexical_entry_id,
+                LearningCard.enrichment_status,
+            ).where(
                 LearningCard.user_id == user_id,
                 LearningCard.profile_id == profile_id,
                 LearningCard.deleted_at.is_(None),
             )
         )
-        cards = list(cards_result.scalars().all())
+        cards = [
+            _LookupCardChip(
+                id=row.id,
+                lemma_l2=row.lemma_l2,
+                pos=row.pos,
+                deck_id=row.deck_id,
+                lexical_entry_id=row.lexical_entry_id,
+                enrichment_status=row.enrichment_status,
+            )
+            for row in cards_result.all()
+        ]
         lists_result = await self.db.execute(
-            select(WordList).where(
+            select(
+                WordList.id,
+                WordList.name,
+                WordList.is_system,
+            ).where(
                 WordList.profile_id == profile_id,
                 WordList.deleted_at.is_(None),
             )
         )
-        lists_by_id = {wl.id: wl for wl in lists_result.scalars().all()}
+        lists_by_id = {
+            row.id: _LookupListChip(id=row.id, name=row.name, is_system=row.is_system)
+            for row in lists_result.all()
+        }
 
         annotated = []
         for c in candidates:
@@ -287,20 +337,27 @@ class LexicalService:
         lemmas = [normalize_text(c["lemma"]) for c in candidates if c.get("lemma")]
         if not lemmas:
             return candidates
-        from sqlalchemy import func
 
         result = await self.db.execute(
-            select(LexicalEntry).where(
+            select(
+                LexicalEntry.id,
+                LexicalEntry.lemma_l2,
+                LexicalEntry.pos,
+            ).where(
                 LexicalEntry.lang_pair == pair,
                 func.lower(LexicalEntry.lemma_l2).in_(lemmas),
             )
         )
-        by_key: dict[tuple[str, str], LexicalEntry] = {}
-        for entry in result.scalars().all():
-            bucket = normalize_pos_bucket(entry.pos)
+        by_key: dict[tuple[str, str], _LookupEntryRef] = {}
+        for row in result.all():
+            bucket = normalize_pos_bucket(row.pos)
             if bucket == "unknown":
                 continue
-            by_key[(normalize_text(entry.lemma_l2), bucket)] = entry
+            by_key[(normalize_text(row.lemma_l2), bucket)] = _LookupEntryRef(
+                id=row.id,
+                lemma_l2=row.lemma_l2,
+                pos=row.pos,
+            )
         out = []
         for c in candidates:
             entry = lexical_entry_for_candidate(by_key, c.get("lemma") or "", c.get("pos"))

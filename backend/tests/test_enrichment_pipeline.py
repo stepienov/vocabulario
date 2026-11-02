@@ -165,6 +165,83 @@ def test_content_complete_verb_needs_inflection_and_similar():
     assert content_is_complete(content)
 
 
+def test_content_complete_noun_needs_noun_forms_not_verb_tenses():
+    content = {
+        "schema_version": "vocabulario.card.v1",
+        "lemma": "la botella",
+        "language": "es",
+        "pos": "noun",
+        "meanings": [{"gloss_l1": "butelka", "examples": [{"l2": "a", "l1": "b"}]}],
+        "similar_words": _similar(MIN_SIMILAR_FOR_QUIZ),
+        "inflection": {
+            "verbs": None,
+            "nouns": {"singular": "el correo electrónico", "plural": "los correos electrónicos"},
+            "adjectives": None,
+        },
+    }
+    assert content_is_complete(content, learning_lang="es")
+    content["inflection"] = {"verbs": None, "nouns": None, "adjectives": None}
+    assert not content_is_complete(content, learning_lang="es")
+
+
+def test_content_complete_adj_needs_adjective_forms():
+    content = {
+        "schema_version": "vocabulario.card.v1",
+        "lemma": "cariñoso",
+        "language": "es",
+        "pos": "adj",
+        "meanings": [{"gloss_l1": "czuły", "examples": [{"l2": "a", "l1": "b"}]}],
+        "similar_words": _similar(MIN_SIMILAR_FOR_QUIZ),
+        "inflection": {
+            "verbs": None,
+            "nouns": None,
+            "adjectives": {"forms": {"m_sg": "cariñoso"}},
+        },
+    }
+    assert content_is_complete(content, learning_lang="es")
+
+
+def test_assemble_keeps_spanish_noun_article_when_llm_returns_stem():
+    core = _core_payload(lemma="cerrajero", pos="noun")
+    card = assemble_core_card(_profile(), "el cerrajero", "noun", core)
+    assert card["lemma"] == "el cerrajero"
+
+
+def test_assemble_promotes_article_from_llm_when_lookup_is_bare():
+    core = _core_payload(lemma="el cerrajero", pos="noun")
+    card = assemble_core_card(_profile(), "cerrajero", "noun", core)
+    assert card["lemma"] == "el cerrajero"
+
+
+def test_guard_keeps_article_when_llm_returns_stem():
+    from types import SimpleNamespace
+
+    from app.services.card_jobs import _guard_enrichment_lemma
+
+    card = SimpleNamespace(lemma_l2="el cerrajero", pos="noun")
+    pinned = _guard_enrichment_lemma(
+        card,
+        {
+            "schema_version": "vocabulario.card.v1",
+            "lemma": "cerrajero",
+            "pos": "noun",
+            "language": "es",
+        },
+    )
+    assert pinned["lemma"] == "el cerrajero"
+
+
+def test_select_live_card_treats_article_variant_as_same_word():
+    from types import SimpleNamespace
+
+    from app.services.word_lists import select_live_card_for_lemma
+
+    existing = SimpleNamespace(lemma_l2="el cerrajero", pos="noun")
+    assert select_live_card_for_lemma([existing], "cerrajero", "noun") is existing
+    assert select_live_card_for_lemma([existing], "el cerrajero", "noun") is existing
+    assert select_live_card_for_lemma([existing], "cerrajero", "verb") is None
+
+
 def test_assemble_core_keeps_lookup_lemma_not_translation():
     core = _core_payload(lemma="do something gradually", pos="verb")
     card = assemble_core_card(_profile(), "ir haciendo algo", "construction", core)
