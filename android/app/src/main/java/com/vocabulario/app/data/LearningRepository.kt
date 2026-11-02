@@ -96,6 +96,7 @@ class LearningRepository @Inject constructor(
     private companion object {
         const val API_FAST_TIMEOUT_MS = 8_000L
         const val API_SYNC_TIMEOUT_MS = 12_000L
+        const val API_FULL_PULL_TIMEOUT_MS = 90_000L
         const val FLUSH_LOOKUPS_TIMEOUT_MS = 30_000L
 
         const val OP_SETTINGS_UPDATE = "settings_update"
@@ -653,6 +654,9 @@ class LearningRepository @Inject constructor(
 
     suspend fun dashboardStats(days: Int = 7): DashboardStatsResponse {
         val profileId = activeProfileId()
+        if (offlineStore.countStartedWithoutDue(profileId) >= 5) {
+            syncNow(fullReplace = true)
+        }
         val settings = getSettings()
         val newDone = dailyNewCounter.get(profileId)
         return offlineStore.buildDashboardStats(profileId, settings.new_cards_per_day, days, newDone)
@@ -859,11 +863,12 @@ class LearningRepository @Inject constructor(
             runCatching { withTimeout(FLUSH_LOOKUPS_TIMEOUT_MS) { flushPendingLookups() } }
             runCatching { withTimeout(API_SYNC_TIMEOUT_MS) { pushOutbox() } }
             runCatching {
-                withTimeout(API_SYNC_TIMEOUT_MS) {
-                    val profileId = activeProfileId()
-                    val lastPulled = offlineStore.lastPulledAt(profileId)
-                    val doFull = fullReplace || lastPulled == null
-                    val since = if (doFull) null else lastPulled
+                val profileId = activeProfileId()
+                val lastPulled = offlineStore.lastPulledAt(profileId)
+                val doFull = fullReplace || lastPulled == null
+                val since = if (doFull) null else lastPulled
+                val pullTimeout = if (doFull) API_FULL_PULL_TIMEOUT_MS else API_SYNC_TIMEOUT_MS
+                withTimeout(pullTimeout) {
                     val pull = api.syncPull(profileId, since = since)
                     offlineStore.applyPull(profileId, pull, fullReplace = doFull)
                     offlineStore.localUserSettings()?.theme?.let { tokenStore.saveTheme(it) }

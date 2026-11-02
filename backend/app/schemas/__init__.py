@@ -491,6 +491,8 @@ class CardResponse(BaseModel):
     enrichment_error: str | None = None
     srs_status: str | None = None
     srs_interval_days: float | None = None
+    srs_next_review_at: datetime | None = None
+    srs_last_reviewed_at: datetime | None = None
     content_review_status: str | None = None
     card_activity_status: str | None = None
     has_content_changes: bool = False
