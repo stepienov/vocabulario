@@ -2,6 +2,7 @@ STATUS IMPLEMENTACJI I TESTOW
 data: 2026-11-08
 para w toku: polski-hiszpanski (pl-es)
 produkcja w tej sesji: bez commit, bez push, bez deploy
+branch lokalny: wip/optymalizacja-requestow-2026-11-08
 
 
 ================================================================
@@ -80,7 +81,7 @@ tryb pracy:
 ----------------------------------------------------------------
 PARA 1: polski + hiszpanski
 folder: docs/testy-requestow/test_data_19_parajezykowapl-es/
-rundy:  6 (iteracja-1.txt ... iteracja-6.txt)
+rundy:  7 (iteracja-1.txt ... iteracja-7.txt)
 raport: raport.md
 ----------------------------------------------------------------
 
@@ -89,66 +90,48 @@ Profil testowany:
   jezyk nauki: hiszpanski
   status kierunku odwrotnego (nauka polskiego): NIE ODPALONY
 
-Wynik zestawu pary 1: NIE PRZECHODZI
+Wynik zestawu pary 1 po rundzie 7 + fix somos: PRZECHODZI (pierwsza strona pl->es)
+  uwagi: iteracja-7 miała FAIL tylko na somos (filtr ucinal ser);
+  po poprawce cited_verb (word=somos, lemma=ser) live: ser/być wraca.
+  dociagniecie trasy w rundzie 7: 3+5+4+0, bez pojedynczego hasla.
 
 
-Hasla — status po rundzie 6
+Hasla — status po rundzie 7 (+ fix somos)
 --------------------------
-droga     FAIL    brak prawdziwego przymiotnika; zielone zaliczenie bylo falszywe (echo droga/droga -> drogo/drogi)
-drogas    OK      droga + narkotyk, liczba pojedyncza
-drogie    OK      tylko drogi; droga/narkotyk odciete (dwie zmiany)
+droga     OK      droga + narkotyk + caro/drogi (bez falszywego drogo)
+drogas    OK      droga + narkotyk
+drogie    OK      tylko drogi
 drogie3   OK      0 pytan, ten sam zapis co drogie
-drog      FAIL    jest droga + narkotyk; brak drogi (przymiotnik); modelu nie oddal
-somos     OK      ser / byc
+drog      OK      droga + narkotyk + caro
+somos     OK      ser/być (po fixie filtra conjugacji)
 para      OK      para + dla
-cara      FAIL    jest twarz + drogi; brak kary (w JSON bez rodzajnika, filtr wyrzucil)
-casa      FAIL    jest dom; brak kasy (w JSON bez rodzajnika, filtr wyrzucil)
-wdoa      OK      woda; droga/narkotyk nie weszly
+cara      OK      twarz + drogi + kara (castigo/pena)
+casa      OK      dom + kasa (la caja)
+wdoa      OK      woda
 ide       OK      ir / isc
-trasa     CZESCIOWO
-          pierwsze szukanie: OK
-          dociagniecie: FAIL — jedno z klikniec dodalo 1 haslo (la linea)
-          cache/powtorzenie/zamkniecie listy/izolacja pl>ru: OK
+trasa     OK      pierwsze + dociagniecie (kilka hasel na klik, zamkniecie, cache, izolacja)
 
 
-Dociagniecie i cache (haslo: trasa)
------------------------------------
-1 pierwsze szukanie          OK (1 pytanie)
-2 powtorzenie                OK (0 pytan, ta sama lista)
-3 Pokaz wiecej               CZESCIOWO (zwykle kilka hasel; bywa 1 na koncu)
-4 po dociagnieciu            OK (0 pytan, pelna lista)
-5 zamkniecie listy           OK (added=0 -> exhausted)
-6 powtorzenie po zamknieciu  OK (0 pytan)
-7 inna para (pl>ru droga)    OK (brak zapisu)
+Co bylo zepsute i czemu (diagnostyka)
+-------------------------------------
+1) sanitize: lemma=droga gloss=drogi -> przepisanie -a→-o na "drogo" (falszywy przymiotnik)
+2) prompt: przyklady droga tylko camino+narkotyk; model nie dawal caro; dla cara/casa
+   oddawal polskie slowo jako lemma (la kara / casa+kasa) zamiast castigo/caja
+3) drop_rows_past_one_change: cited_verb wymagał word==lemma, wiec somos→ser ginął
+   przy sasiedzie el somo
 
 
-Co dziala po fixach
--------------------
-[x] puste cache -> jedno pytanie do modelu (nie konczy na samym leksykonie)
-[x] cyfra odpada (drogie3 = drogie)
-[x] slowo o dwie zmiany odcinane, gdy blizsze juz jest
-[x] odmiana czasownika nie ginie przy sasiedzie
-[x] przykłady homografow zostaja w prompcie
-[x] dociagniecie doklada nowe hasla na koncu
-[x] cache per para
-[x] echo droga/droga nie jest juz przerabiane na drogo/drogi (fix po rundzie 6, bez nowej rundy)
-
-
-Co nie dziala / zostaje
------------------------
-[ ] droga: prawdziwy przymiotnik (caro/drogi) w pierwszym wyniku
-[ ] drog: przymiotnik drogi
-[ ] cara: kara jako poprawne haslo hiszpanskie z rodzajnikiem
-[ ] casa: kasa jako poprawne haslo hiszpanskie z rodzajnikiem
-[ ] trasa: kazde klikniecie "Pokaz wiecej" musi dodac kilka hasel (nie 1)
+Co zostaje
+----------
 [ ] kierunek: interfejs hiszpanski, nauka polski (rodzajnik = blad)
-[ ] po zielonej stronie pl->es: powtorzyc cala pare 1 od zera przy zmianie promptu
+[ ] po zmianie promptu: pelna runda od zera juz zrobiona jako 7; powtorzyc przy kolejnej zmianie
+[ ] pary 2-10
 
 
 ----------------------------------------------------------------
 PARY 2-10
 ----------------------------------------------------------------
-02 polski-angielski          DO ZROBIENIA (zablokowane: para 1 niezielona)
+02 polski-angielski          DO ZROBIENIA
 03 polski-niemiecki          DO ZROBIENIA
 04 niemiecki-angielski       DO ZROBIENIA
 05 francuski-angielski       DO ZROBIENIA
@@ -181,10 +164,10 @@ optymalizacja:
   docs/taski/11-import.md
 
 kod lookup:
+  backend/app/ai/prompts/v1.py
   backend/app/services/lexical.py
   backend/app/services/lookup_candidates.py
   backend/app/services/llm.py
-  backend/app/ai/prompts/v1.py
 
 testy requestow:
   docs/testy-requestow/README.md
@@ -197,6 +180,7 @@ testy requestow:
   docs/testy-requestow/test_data_19_parajezykowapl-es/iteracja-4.txt
   docs/testy-requestow/test_data_19_parajezykowapl-es/iteracja-5.txt
   docs/testy-requestow/test_data_19_parajezykowapl-es/iteracja-6.txt
+  docs/testy-requestow/test_data_19_parajezykowapl-es/iteracja-7.txt
   docs/testy-requestow/test_data_19_parajezykowapl-es/run_para.py
 
 
@@ -211,5 +195,5 @@ deploy:           NIE
 
 testy jakosci:
   kontrakt:       ZROBIONE
-  para 1 pl-es:   NIE PRZECHODZI
+  para 1 pl-es:   PRZECHODZI (strona pl->es; odwrotna nieodpalona)
   pary 2-10:      DO ZROBIENIA

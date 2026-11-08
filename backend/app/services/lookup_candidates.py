@@ -1141,12 +1141,15 @@ def drop_rows_past_one_change(
         if normalize_pos_bucket(row.get("pos")) != "verb":
             return False
         named = _fold(row.get("word") or "")
-        if not named:
-            return False
         stem = _fold(lemma_stem(row.get("lemma") or "", learning_lang))
+        if not named or not stem:
+            return False
         if named == stem:
             return True
-        return any(_fold(token) == named for token in gloss_tokens(row.get("gloss") or ""))
+        if any(_fold(token) == named for token in gloss_tokens(row.get("gloss") or "")):
+            return True
+        # Model labels the conjugated query (somos) while lemma is the infinitive (ser).
+        return named == q and stem != named
 
     scored = [(closest(row), row) for row in raw]
     if not any(distance <= 1 for distance, _row in scored):
@@ -1240,10 +1243,20 @@ def sanitize_lookup_candidates(
             if normalize_pos_bucket(item.get("pos")) == "noun" and " " not in singular:
                 singular = _with_spanish_article(singular, "noun")
             if normalize_pos_bucket(item.get("pos")) == "adj":
-                # droga/droga is the query copied into both fields. Turning the
-                # ending into -o would invent a headword the model did not return.
-                if _fold(lemma_stem(lemma, learning_lang)) == _fold(gloss):
+                # Polish query pasted as lemma (droga/droga or droga/drogi). Rewriting
+                # -a→-o invents "drogo"; the real Spanish headword is caro. A real
+                # Spanish feminine (cara/drogi, bonita/ładna) still becomes masculine.
+                stem_fold = _fold(lemma_stem(lemma, learning_lang))
+                gloss_fold = _fold(gloss)
+                if stem_fold and stem_fold == gloss_fold:
                     continue
+                typed = _fold(item.get("word") or "")
+                if stem_fold and typed and stem_fold == typed:
+                    gloss_cit = _fold(_polish_adjective_citation(gloss))
+                    typed_cit = _fold(_polish_adjective_citation(typed))
+                    stem_cit = _fold(_polish_adjective_citation(stem_fold))
+                    if gloss_cit and gloss_cit in {typed_cit, stem_cit}:
+                        continue
                 singular = _masculine_spanish_adjective(singular)
             # grande / duży banknot: a Spanish noun with no known gender is not a citation.
             if normalize_pos_bucket(item.get("pos")) == "noun" and " " not in singular:

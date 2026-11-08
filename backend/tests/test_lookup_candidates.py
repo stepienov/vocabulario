@@ -493,6 +493,23 @@ def test_adjective_echo_is_not_rewritten_into_a_spanish_word():
     assert out == []
 
 
+def test_polish_adjective_query_pasted_as_lemma_is_dropped():
+    """droga/drogi must not become drogo; caro has to come from the model."""
+    out = sanitize_lookup_candidates(
+        [{"lemma": "droga", "pos": "adj", "gloss": "drogi", "word": "droga"}],
+        learning_lang="es",
+    )
+    assert out == []
+
+
+def test_spanish_feminine_adjective_still_becomes_masculine():
+    out = sanitize_lookup_candidates(
+        [{"lemma": "cara", "pos": "adj", "gloss": "drogi", "word": "cara"}],
+        learning_lang="es",
+    )
+    assert [c["lemma"] for c in out] == ["caro"]
+
+
 def test_spanish_noun_without_article_is_dropped():
     out = sanitize_lookup_candidates(
         [
@@ -554,6 +571,16 @@ def test_a_farther_word_drops_when_a_closer_one_is_present():
         learning_lang="es",
     )
     assert [row["lemma"] for row in verb_beside_neighbor] == ["ser", "la somos"]
+
+    conjugated_label = drop_rows_past_one_change(
+        [
+            {"word": "somos", "lemma": "ser", "pos": "verb", "gloss": "być"},
+            {"word": "somos", "lemma": "el somo", "pos": "noun", "gloss": "grzbiet"},
+        ],
+        "somos",
+        learning_lang="es",
+    )
+    assert [row["lemma"] for row in conjugated_label] == ["ser", "el somo"]
 
 
 def test_digits_fall_off_before_the_lookup_key():
