@@ -184,6 +184,8 @@ class LanguageProfileUpdate(BaseModel):
 class LookupRequest(BaseModel):
     text: str = Field(min_length=1, max_length=200)
     profile_id: UUID
+    local_membership: bool = False
+    more: bool = False
 
 
 class LookupCandidate(BaseModel):
@@ -209,6 +211,8 @@ class LookupResponse(BaseModel):
     confident: bool = False
     # True gdy ostatnie uzupełnienie OpenAI nie dodało nowych par lemat+POS.
     ai_complete: bool = False
+    added: int | None = None
+    suggestions_exhausted: bool = False
 
 
 class ImportValidateRequest(BaseModel):
@@ -489,6 +493,7 @@ class CardResponse(BaseModel):
     persisted: bool = True
     enrichment_status: str = "ready"
     enrichment_error: str | None = None
+    enrichment_active: bool = False
     srs_status: str | None = None
     srs_interval_days: float | None = None
     srs_next_review_at: datetime | None = None

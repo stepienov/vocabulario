@@ -18,6 +18,7 @@ class LookupQueryPersistence @Inject constructor(
 ) {
     private val queryKey = stringPreferencesKey("active_lookup_query")
     private val byCategoryKey = booleanPreferencesKey("active_lookup_by_category")
+    private val moreKey = booleanPreferencesKey("active_lookup_more")
 
     suspend fun loadQuery(): String? =
         context.lookupQueryDataStore.data.first()[queryKey]?.takeIf { it.isNotBlank() }
@@ -25,14 +26,19 @@ class LookupQueryPersistence @Inject constructor(
     suspend fun loadByCategory(): Boolean =
         context.lookupQueryDataStore.data.first()[byCategoryKey] == true
 
-    suspend fun saveQuery(query: String?, byCategory: Boolean = false) {
+    suspend fun loadMore(): Boolean =
+        context.lookupQueryDataStore.data.first()[moreKey] == true
+
+    suspend fun saveQuery(query: String?, byCategory: Boolean = false, more: Boolean = false) {
         context.lookupQueryDataStore.edit { prefs ->
             if (query.isNullOrBlank()) {
                 prefs.remove(queryKey)
                 prefs.remove(byCategoryKey)
+                prefs.remove(moreKey)
             } else {
                 prefs[queryKey] = query
                 prefs[byCategoryKey] = byCategory
+                prefs[moreKey] = more
             }
         }
     }

@@ -1,0 +1,42 @@
+start 2026-11-08T19:48:50.851026+00:00 profile 891f6e8c-fc1d-49b6-bcb0-4b6bbd1e9353
+FAIL droga calls=1 source=ai exhausted=False
+     la droga/noun/narkotyk | el camino/noun/droga
+     -> brak:drogi
+ok   drogas calls=1 source=ai exhausted=False
+     la droga/noun/narkotyk | el camino/noun/droga | la carretera/noun/droga | la vía/noun/droga
+FAIL drogie calls=1 source=ai exhausted=False
+     la droga/noun/narkotyk | caro/adj/drogi | el camino/noun/droga
+     -> za-daleko:droga
+     -> za-daleko:narkotyk
+FAIL drogie3 calls=0 source=db exhausted=False
+     la droga/noun/narkotyk | caro/adj/drogi | el camino/noun/droga
+     -> za-daleko:droga
+     -> za-daleko:narkotyk
+FAIL drog calls=1 source=ai exhausted=False
+     la droga/noun/narkotyk | el camino/noun/droga
+     -> brak:drogi
+ok   somos calls=1 source=ai exhausted=False
+     ser/verb/być
+ok   para calls=1 source=ai exhausted=False
+     para/prep/dla | el par/noun/para
+FAIL cara calls=1 source=ai exhausted=False
+     la cara/noun/twarz
+     -> brak:drogi
+     -> brak:kara
+FAIL casa calls=1 source=ai exhausted=False
+     la casa/noun/dom
+     -> brak:kasa
+ok   wdoa calls=1 source=ai exhausted=False
+     el agua/noun/woda
+ok   idę calls=1 source=ai exhausted=False
+     ir/verb/iść
+ok   trasa calls=1 source=ai exhausted=False
+     el trazado/noun/trasa | la traza/noun/ślad
+--- trasa cache ---
+1 pierwsze calls=0 n=2 el trazado/noun/trasa | la traza/noun/ślad
+2 powtorzenie calls=0 te-same=True
+3.1 wiecej calls=1 added=5 exhausted=False el trazado/noun/trasa | la ruta/noun/trasa | el itinerario/noun/trasa | el recorrido/noun/trasa | el trayecto/noun/trasa | el circuito/noun/trasa | la traza/noun/ślad
+     -> stare-wiersze-nie-zostaly-na-gorze
+3.2 wiecej calls=1 added=0 exhausted=True el trazado/noun/trasa | la ruta/noun/trasa | el itinerario/noun/trasa | el recorrido/noun/trasa | el trayecto/noun/trasa | el circuito/noun/trasa | la traza/noun/ślad
+4 po-dociaganiu calls=0 n=7 exhausted=True
+7 zapis-pl>ru-dla-droga count=0

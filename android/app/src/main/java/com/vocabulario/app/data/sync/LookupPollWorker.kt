@@ -32,18 +32,15 @@ class LookupPollWorker @AssistedInject constructor(
         val query = persistence.loadQuery() ?: return Result.success()
         val byCategory = persistence.loadByCategory()
         return try {
-            val cached = if (byCategory) {
-                repository.lookupCategoryCached(query)
-            } else {
-                repository.lookupCached(query)
+            if (!byCategory) {
+                val expanded = repository.lookupExpand(query, more = persistence.loadMore())
+                accept(query, byCategory = false, expanded)
+                return Result.success()
             }
-            accept(query, byCategory, cached)
+            val cached = repository.lookupCategoryCached(query)
+            accept(query, byCategory = true, cached)
             if (cached.ai_complete) return Result.success()
-            val expanded = if (byCategory) {
-                repository.lookupCategoryExpand(query)
-            } else {
-                repository.lookupExpand(query)
-            }
+            val expanded = repository.lookupCategoryExpand(query)
             accept(query, byCategory, expanded)
             Result.success()
         } catch (e: CancellationException) {

@@ -16,6 +16,20 @@ from app.models import User
 security = HTTPBearer(auto_error=False)
 
 
+async def get_current_user_id(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> UUID:
+    if credentials is None:
+        raise api_error(status.HTTP_401_UNAUTHORIZED, "not_authenticated", "Not authenticated")
+    try:
+        from app.core.security import decode_token
+
+        payload = decode_token(credentials.credentials)
+        return verify_token_type(payload, "access")
+    except (JWTError, ValueError) as exc:
+        raise api_error(status.HTTP_401_UNAUTHORIZED, "invalid_token", "Invalid token") from exc
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: AsyncSession = Depends(get_db),

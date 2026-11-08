@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
 import com.vocabulario.app.data.BlockingBusy
+import com.vocabulario.app.data.EnrichmentPollPolicy
 import com.vocabulario.app.data.EnrichmentStatus
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.CardResponse
@@ -56,6 +57,9 @@ class LearningViewModel @Inject constructor(
     private val _state = MutableStateFlow(LearningUiState())
     val state: StateFlow<LearningUiState> = _state.asStateFlow()
     private var pollJob: Job? = null
+    private val pollStartedAt = mutableMapOf<String, Long>()
+    private val pollStopped = mutableSetOf<String>()
+    private val lastEnrichmentActive = mutableMapOf<String, Boolean?>()
 
     fun load() {
         viewModelScope.launch {
@@ -259,8 +263,14 @@ class LearningViewModel @Inject constructor(
 
     private fun startPollingIfNeeded(cards: List<CardResponse>) {
         pollJob?.cancel()
+        pollStartedAt.clear()
+        pollStopped.clear()
+        lastEnrichmentActive.clear()
+        val now = System.currentTimeMillis()
         val pollIds = cards.mapNotNull { card ->
-            card.id.takeIf { EnrichmentStatus.needsPoll(card.enrichment_status) }
+            val watch = EnrichmentStatus.needsPoll(card.enrichment_status) ||
+                !card.card_activity_status.isNullOrBlank()
+            if (!watch) null else card.id.also { pollStartedAt[it] = now }
         }
         if (pollIds.isEmpty()) return
         repository.requestBackgroundSync()
@@ -269,7 +279,19 @@ class LearningViewModel @Inject constructor(
             var ids = pollIds
             while (isActive) {
                 if (ids.isEmpty()) break
-                runCatching { repository.refreshCardsFromServer(ids) }
+                val fetched = runCatching { repository.refreshCardsFromServer(ids) }.getOrNull().orEmpty()
+                val fetchedAt = System.currentTimeMillis()
+                fetched.forEach { card ->
+                    lastEnrichmentActive[card.id] = card.enrichment_active
+                    val started = pollStartedAt.getOrPut(card.id) { fetchedAt }
+                    val keep = EnrichmentPollPolicy.shouldKeepPolling(
+                        status = card.enrichment_status,
+                        enrichmentActive = card.enrichment_active,
+                        hasCardActivity = !card.card_activity_status.isNullOrBlank(),
+                        elapsedMillis = fetchedAt - started,
+                    )
+                    if (!keep) pollStopped.add(card.id)
+                }
                 val refreshed = runCatching { repository.listCards() }.getOrNull() ?: continue
                 val current = _state.value
                 _state.value = current.copy(
@@ -278,8 +300,24 @@ class LearningViewModel @Inject constructor(
                     learningLemmas = refreshed.flatMap { lemmaKeys(it.lemma_l2) }.toSet() +
                         current.learningLemmas,
                 )
+                val tick = System.currentTimeMillis()
                 ids = refreshed.mapNotNull { card ->
-                    card.id.takeIf { EnrichmentStatus.needsPoll(card.enrichment_status) }
+                    if (card.id in pollStopped) return@mapNotNull null
+                    val hasActivity = !card.card_activity_status.isNullOrBlank()
+                    val watch = EnrichmentStatus.needsPoll(card.enrichment_status) || hasActivity
+                    if (!watch) return@mapNotNull null
+                    val started = pollStartedAt[card.id]
+                    if (started != null && !EnrichmentPollPolicy.shouldKeepPolling(
+                            status = card.enrichment_status,
+                            enrichmentActive = lastEnrichmentActive[card.id],
+                            hasCardActivity = hasActivity,
+                            elapsedMillis = tick - started,
+                        )
+                    ) {
+                        pollStopped.add(card.id)
+                        return@mapNotNull null
+                    }
+                    card.id
                 }
                 if (ids.isEmpty()) break
                 if (++iterations > 20) break

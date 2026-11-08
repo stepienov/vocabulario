@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -594,6 +594,10 @@
     <string name="err_search">검색 실패</string>
 
     <string name="err_lookup_expand">더 많은 제안을 찾지 못했습니다. 있는 내용을 표시합니다.</string>
+    <string name="lookup_more_suggestions">제안 더 보기</string>
+    <string name="lookup_no_more_suggestions">더 이상 일치하는 항목이 없습니다.</string>
+    <string name="lookup_longer_analysis">\'%1$s\'은(는) 더 긴 분석이 필요합니다</string>
+    <string name="lookup_nothing_found">\'%1$s\'에 대한 일치 항목이 없습니다.</string>
     <string name="err_import_empty">가져올 단어가 없습니다</string>
 
     <string name="err_import">가져오기 실패</string>

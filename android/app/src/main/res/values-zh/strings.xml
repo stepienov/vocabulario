@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -562,6 +562,10 @@
     <string name="err_search">搜索失败</string>
 
     <string name="err_lookup_expand">找不到更多建议。显示现有内容。</string>
+    <string name="lookup_more_suggestions">显示更多建议</string>
+    <string name="lookup_no_more_suggestions">没有找到更多匹配。</string>
+    <string name="lookup_longer_analysis">“%1$s”需要更长时间的分析</string>
+    <string name="lookup_nothing_found">没有找到“%1$s”的匹配。</string>
     <string name="err_import_empty">没有可导入的单词</string>
 
     <string name="err_import">导入失败</string>

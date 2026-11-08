@@ -351,6 +351,10 @@ def normalize_pos_bucket(pos: str | None) -> str:
     raw = (pos or "").strip().lower()
     if not raw or raw == "unknown":
         return "unknown"
+    # "adjective/adverb" names two labels; the substring "verb" must not win.
+    first = re.split(r"[/,|;]", raw, maxsplit=1)[0].strip()
+    if first and first != raw:
+        return normalize_pos_bucket(first)
 
     if raw in _POS_ALIASES:
         return _POS_ALIASES[raw]

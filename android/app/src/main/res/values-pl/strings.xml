@@ -584,6 +584,10 @@
     <string name="err_search">Błąd wyszukiwania</string>
 
     <string name="err_lookup_expand">Nie udało się dodać kolejnych propozycji. Pokazujemy to, co już jest.</string>
+    <string name="lookup_more_suggestions">Pokaż więcej propozycji</string>
+    <string name="lookup_no_more_suggestions">Nie znaleziono więcej dopasowań.</string>
+    <string name="lookup_longer_analysis">Twoje hasło „%1$s” wymaga dłuższej analizy</string>
+    <string name="lookup_nothing_found">Nie znaleziono dopasowania dla „%1$s”.</string>
 
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>

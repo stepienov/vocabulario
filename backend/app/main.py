@@ -33,6 +33,9 @@ async def lifespan(app: FastAPI):
     watchdog = asyncio.create_task(start_heartbeat_watchdog())
     enrich_resume = asyncio.create_task(resume_pending_enrichment())
     yield
+    from app.services.background import drain_background
+
+    await drain_background(5)
     enrich_resume.cancel()
     watchdog.cancel()
     await asyncio.gather(enrich_resume, watchdog, return_exceptions=True)

@@ -113,7 +113,12 @@ data class LanguageProfileUpdate(
 )
 
 @Serializable
-data class LookupRequest(val text: String, val profile_id: String)
+data class LookupRequest(
+    val text: String,
+    val profile_id: String,
+    val local_membership: Boolean = false,
+    val more: Boolean = false,
+)
 
 @Serializable
 data class LookupCandidate(
@@ -129,6 +134,8 @@ data class LookupCandidate(
     val source_card_id: String? = null,
     val reading: String? = null,
     val typed_as: String? = null,
+    @kotlinx.serialization.Transient
+    val membershipUnknown: Boolean = false,
 ) {
     val onList: Boolean get() = !list_name.isNullOrBlank()
     val isCreating: Boolean get() = EnrichmentStatus.isCreating(enrichment_status)
@@ -140,6 +147,8 @@ data class LookupResponse(
     val source: String,
     val confident: Boolean = false,
     val ai_complete: Boolean = false,
+    val added: Int? = null,
+    val suggestions_exhausted: Boolean = false,
 )
 
 @Serializable
@@ -327,6 +336,7 @@ data class CardResponse(
     val persisted: Boolean = true,
     val enrichment_status: String = "ready",
     val enrichment_error: String? = null,
+    val enrichment_active: Boolean? = null,
     val srs_status: String? = null,
     val srs_interval_days: Double? = null,
     val srs_next_review_at: String? = null,

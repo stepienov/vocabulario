@@ -27,11 +27,11 @@ class CategoryLookupCoordinator @Inject constructor(
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val session = LookupSession(
         lookupCached = { repository.lookupCategoryCached(it) },
-        lookupExpand = { repository.lookupCategoryExpand(it) },
+        lookupExpand = { text, _ -> repository.lookupCategoryExpand(text) },
         mapSearchError = { it.userMessage(strings, R.string.err_search) },
         expandFailedNotice = strings.get(R.string.err_lookup_expand),
         parent = appScope,
-        onActiveQuery = { query ->
+        onActiveQuery = { query, _ ->
             appScope.launch { persistence.saveQuery(query, byCategory = true) }
         },
     )

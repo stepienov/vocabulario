@@ -10,6 +10,7 @@ import re
 import unicodedata
 
 # Artykuły wszystkich L2, które aplikacja obsługuje — zdejmujemy z CZOŁA, nie ze środka.
+# Zmiana zbioru tylko razem z android/.../data/CardMembership.kt.
 _ARTICLES = frozenset(
     {
         "el",

@@ -16,6 +16,7 @@ from app.services.app_log import (
     log_event,
     should_log_http,
 )
+from app.services.background import spawn_background
 from app.services.llm_usage import clear_llm_usage_context
 
 _BODY_KEYS = ("text", "lemma", "pos", "gloss", "profile_id", "lexical_entry_id")
@@ -113,16 +114,19 @@ class AppLogMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         except Exception as exc:
             duration_ms = int((time.perf_counter() - started) * 1000)
-            await log_event(
-                level="error",
-                category=category_for_path(path),
-                event="http_unhandled",
-                status="error",
-                http_method=method,
-                http_path=path,
-                duration_ms=duration_ms,
-                message=f"{method} {path} crashed",
-                exc=exc,
+            spawn_background(
+                lambda: log_event(
+                    level="error",
+                    category=category_for_path(path),
+                    event="http_unhandled",
+                    status="error",
+                    http_method=method,
+                    http_path=path,
+                    duration_ms=duration_ms,
+                    message=f"{method} {path} crashed",
+                    exc=exc,
+                ),
+                name="app_log_http",
             )
             clear_request_context()
             raise
@@ -133,17 +137,20 @@ class AppLogMiddleware(BaseHTTPMiddleware):
             payload: dict = {"query": dict(request.query_params)}
             if body_slim:
                 payload["body"] = body_slim
-            await log_event(
-                level=level,
-                category=category_for_path(path),
-                event="http_request",
-                status="error" if status >= 400 else "ok",
-                http_method=method,
-                http_path=path,
-                http_status=status,
-                duration_ms=duration_ms,
-                message=f"{method} {path} → {status}",
-                payload=payload,
+            spawn_background(
+                lambda: log_event(
+                    level=level,
+                    category=category_for_path(path),
+                    event="http_request",
+                    status="error" if status >= 400 else "ok",
+                    http_method=method,
+                    http_path=path,
+                    http_status=status,
+                    duration_ms=duration_ms,
+                    message=f"{method} {path} → {status}",
+                    payload=payload,
+                ),
+                name="app_log_http",
             )
         clear_request_context()
         return response

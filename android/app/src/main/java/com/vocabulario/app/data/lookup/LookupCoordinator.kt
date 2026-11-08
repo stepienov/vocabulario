@@ -27,11 +27,13 @@ data class LookupSessionState(
     val query: String = "",
     val candidates: List<LookupCandidate> = emptyList(),
     val expanding: Boolean = false,
+    val loadingMore: Boolean = false,
+    val suggestionsExhausted: Boolean = false,
     val error: String? = null,
     val notice: String? = null,
 ) {
     val hasResultsOrProgress: Boolean
-        get() = expanding || candidates.isNotEmpty() || error != null
+        get() = expanding || loadingMore || candidates.isNotEmpty() || error != null || notice != null
 }
 
 /**
@@ -51,11 +53,14 @@ class LookupCoordinator @Inject constructor(
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val session = LookupSession(
         lookupCached = { repository.lookupCached(it) },
-        lookupExpand = { repository.lookupExpand(it) },
+        lookupExpand = { text, more -> repository.lookupExpand(text, more) },
         mapSearchError = { it.userMessage(strings, R.string.err_search) },
         expandFailedNotice = strings.get(R.string.err_lookup_expand),
+        longerAnalysisNotice = { strings.get(R.string.lookup_longer_analysis, it) },
+        nothingFoundNotice = { strings.get(R.string.lookup_nothing_found, it) },
         parent = appScope,
-        onActiveQuery = { query -> appScope.launch { persistence.saveQuery(query) } },
+        singleRequest = true,
+        onActiveQuery = { query, more -> appScope.launch { persistence.saveQuery(query, more = more) } },
     )
 
     val state: StateFlow<LookupSessionState> get() = session.state
@@ -74,9 +79,11 @@ class LookupCoordinator @Inject constructor(
         session.start(query)
         appScope.launch {
             persistence.saveQuery(query.trim())
-            backgroundJobs.enqueueLookup(replace = true)
+            backgroundJobs.cancelLookup()
         }
     }
+
+    fun showMore() = session.showMore()
 
     fun clear() {
         session.clear()
@@ -92,10 +99,10 @@ class LookupCoordinator @Inject constructor(
      */
     fun retryPending() {
         val current = session.state.value
-        if (current.expanding || current.query.isNotBlank()) {
+        if (current.expanding || current.loadingMore) {
             session.refreshFromCache()
         }
-        if (current.expanding) return
+        if (current.expanding || current.loadingMore) return
         if (current.error != null && current.query.isNotBlank()) {
             start(current.query)
             return
@@ -104,7 +111,7 @@ class LookupCoordinator @Inject constructor(
             if (persistence.loadByCategory()) return@launch
             val stored = persistence.loadQuery() ?: return@launch
             val now = session.state.value
-            if (now.expanding) {
+            if (now.expanding || now.loadingMore) {
                 now.query.takeIf { it.isNotBlank() }?.let { session.refreshFromCache() }
                 return@launch
             }
@@ -119,14 +126,17 @@ class LookupCoordinator @Inject constructor(
 
 internal class LookupSession(
     private val lookupCached: suspend (String) -> LookupResponse,
-    private val lookupExpand: suspend (String) -> LookupResponse,
+    private val lookupExpand: suspend (String, Boolean) -> LookupResponse,
     private val mapSearchError: (Throwable) -> String,
     private val expandFailedNotice: String,
     parent: CoroutineScope,
+    private val longerAnalysisNotice: (String) -> String = { "" },
+    private val nothingFoundNotice: (String) -> String = { "" },
+    private val singleRequest: Boolean = false,
     private val ioRetryDelayMs: Long = 1_500L,
     private val cachedPollDelayMs: Long = 2_000L,
     private val cachedPollAttempts: Int = 90,
-    private val onActiveQuery: (String?) -> Unit = {},
+    private val onActiveQuery: (String?, Boolean) -> Unit = { _, _ -> },
 ) {
     private val scope = CoroutineScope(parent.coroutineContext + SupervisorJob())
     private val _state = MutableStateFlow(LookupSessionState())
@@ -138,7 +148,7 @@ internal class LookupSession(
         if (text.isBlank()) return
         val gen = _state.value.generation + 1
         job?.cancel()
-        onActiveQuery(text)
+        onActiveQuery(text, false)
         _state.value = LookupSessionState(
             generation = gen,
             query = text,
@@ -164,8 +174,46 @@ internal class LookupSession(
     fun clear() {
         job?.cancel()
         job = null
-        onActiveQuery(null)
+        onActiveQuery(null, false)
         _state.value = LookupSessionState(generation = _state.value.generation + 1)
+    }
+
+    fun showMore() {
+        val current = _state.value
+        val text = current.query
+        if (text.isBlank() || current.candidates.isEmpty()) return
+        val gen = current.generation
+        job?.cancel()
+        onActiveQuery(text, true)
+        _state.value = current.copy(loadingMore = true, notice = null)
+        job = scope.launch {
+            try {
+                val response = withIoRetry { lookupExpand(text, true) }
+                if (!stillCurrent(gen)) return@launch
+                publish(gen) {
+                    if (response.added == 0) {
+                        it.copy(
+                            loadingMore = false,
+                            suggestionsExhausted = true,
+                            notice = null,
+                        )
+                    } else {
+                        it.copy(
+                            loadingMore = false,
+                            suggestionsExhausted = false,
+                            candidates = mergeShownCandidates(it.candidates, response.candidates),
+                            notice = null,
+                        )
+                    }
+                }
+                finishActive(gen)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                publish(gen) { it.copy(loadingMore = false, notice = expandFailedNotice) }
+                finishActive(gen)
+            }
+        }
     }
 
     /** Nie restartuje joba — dokłada wynik z cache do aktualnej generacji. */
@@ -212,6 +260,10 @@ internal class LookupSession(
     }
 
     private suspend fun runLookup(text: String, gen: Long) {
+        if (singleRequest) {
+            runSingleLookup(text, gen)
+            return
+        }
         val cached = try {
             withIoRetry { lookupCached(text) }
         } catch (e: CancellationException) {
@@ -225,7 +277,7 @@ internal class LookupSession(
         coroutineScope {
             val expandJob = launch {
                 try {
-                    val expanded = withIoRetry { lookupExpand(text) }
+                    val expanded = withIoRetry { lookupExpand(text, false) }
                     if (!stillCurrent(gen)) return@launch
                     publish(gen) {
                         it.copy(
@@ -338,7 +390,145 @@ internal class LookupSession(
 
     private fun finishActive(gen: Long) {
         if (!stillCurrent(gen)) return
-        onActiveQuery(null)
+        onActiveQuery(null, false)
+    }
+
+    private suspend fun runSingleLookup(text: String, gen: Long) {
+        val cached = try {
+            withIoRetry { lookupCached(text) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+        if (!stillCurrent(gen)) return
+        if (cached != null && cached.candidates.isNotEmpty()) {
+            publish(gen) {
+                it.copy(
+                    candidates = cached.candidates,
+                    expanding = false,
+                    error = null,
+                    notice = null,
+                    suggestionsExhausted = cached.suggestions_exhausted,
+                )
+            }
+            finishActive(gen)
+            return
+        }
+        if (cached != null && cached.ai_complete) {
+            publish(gen) {
+                it.copy(
+                    expanding = false,
+                    error = null,
+                    notice = nothingFoundNotice(text).ifBlank { null },
+                )
+            }
+            finishActive(gen)
+            return
+        }
+        if (cached == null) {
+            publish(gen) {
+                it.copy(expanding = false, error = mapSearchError(IOException("lookup cached failed")))
+            }
+            return
+        }
+        val longer = longerAnalysisNotice(text).ifBlank { null }
+        if (longer != null) {
+            publish(gen) { it.copy(expanding = true, notice = longer, error = null) }
+        }
+        try {
+            val expanded = withIoRetry { lookupExpand(text, false) }
+            if (!stillCurrent(gen)) return
+            val found = expanded.candidates.ifEmpty { emptyList() }
+            publish(gen) {
+                it.copy(
+                    candidates = found.ifEmpty { it.candidates },
+                    expanding = false,
+                    error = null,
+                    suggestionsExhausted = expanded.suggestions_exhausted,
+                    notice = if (found.isEmpty() && it.candidates.isEmpty()) {
+                        nothingFoundNotice(text).ifBlank { null }
+                    } else {
+                        null
+                    },
+                )
+            }
+            finishActive(gen)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: IOException) {
+            val again = try {
+                lookupCached(text)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            if (!stillCurrent(gen)) return
+            if (again != null && again.candidates.isNotEmpty()) {
+                publish(gen) {
+                    it.copy(candidates = again.candidates, expanding = false, error = null, notice = null)
+                }
+                finishActive(gen)
+            } else {
+                publish(gen) {
+                    it.copy(
+                        expanding = false,
+                        error = if (it.candidates.isEmpty()) {
+                            mapSearchError(IOException("lookup expand failed"))
+                        } else {
+                            null
+                        },
+                        notice = if (it.candidates.isNotEmpty()) expandFailedNotice else null,
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            publish(gen) {
+                it.copy(
+                    expanding = false,
+                    error = if (it.candidates.isEmpty()) mapSearchError(e) else null,
+                    notice = if (it.candidates.isNotEmpty()) expandFailedNotice else null,
+                )
+            }
+        }
+    }
+
+    private fun mergeShownCandidates(
+        current: List<LookupCandidate>,
+        incoming: List<LookupCandidate>,
+    ): List<LookupCandidate> {
+        if (current.isEmpty()) return incoming
+        if (incoming.isEmpty()) return current
+        val used = BooleanArray(incoming.size)
+        val out = ArrayList<LookupCandidate>(incoming.size)
+        for (cur in current) {
+            val match = incoming.withIndex().firstOrNull { (i, inc) ->
+                !used[i] && sameShownLemma(cur, inc)
+            } ?: continue
+            used[match.index] = true
+            val inc = match.value
+            out.add(inc.copy(
+                in_learning = cur.in_learning || inc.in_learning,
+                learning_card_id = cur.learning_card_id ?: inc.learning_card_id,
+                list_id = cur.list_id ?: inc.list_id,
+                list_name = cur.list_name ?: inc.list_name,
+                enrichment_status = cur.enrichment_status ?: inc.enrichment_status,
+                membershipUnknown = cur.membershipUnknown,
+            ))
+        }
+        incoming.forEachIndexed { i, inc ->
+            if (!used[i]) out.add(inc)
+        }
+        return out
+    }
+
+    private fun sameShownLemma(a: LookupCandidate, b: LookupCandidate): Boolean {
+        if (!a.lemma.equals(b.lemma, ignoreCase = true)) return false
+        val left = com.vocabulario.app.data.normalizePosKey(a.pos)
+        val right = com.vocabulario.app.data.normalizePosKey(b.pos)
+        if (left != "unknown" && right != "unknown" && left != right) return false
+        return true
     }
 
     private suspend fun <T> withIoRetry(block: suspend () -> T): T {

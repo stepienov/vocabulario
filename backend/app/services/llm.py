@@ -20,8 +20,11 @@ from app.ai.prompts.v1 import (
     LOOKUP_CATEGORY_DRAFT_PROMPT_V1,
     LOOKUP_CATEGORY_EXPAND_PROMPT_V1,
     LOOKUP_CATEGORY_SYSTEM_V1,
-    LOOKUP_DRAFT_PROMPT_V1,
-    LOOKUP_EXPAND_PROMPT_V1,
+    LOOKUP_DRAFT_SYSTEM_V2,
+    LOOKUP_DRAFT_USER_V2,
+    LOOKUP_EXPAND_SYSTEM_V2,
+    LOOKUP_EXPAND_PL_ES_EXAMPLE,
+    LOOKUP_EXPAND_USER_V2,
     LOOKUP_L1_TYPO_PROMPT_V1,
     LOOKUP_PROMPT_V1,
     LOOKUP_SYSTEM_V1,
@@ -51,7 +54,11 @@ from app.ai.schemas.similar_words import similar_words_response_schema
 from app.core.config import get_settings
 from app.core.deps import lang_pair_key
 from app.services.llm_pricing import parse_anthropic_usage, parse_openai_usage
-from app.services.llm_usage import bind_llm_usage_context, build_llm_request_json, record_llm_usage
+from app.services.llm_usage import (
+    bind_llm_usage_context,
+    build_llm_request_json,
+    schedule_llm_meter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +137,7 @@ class LLMService:
         prompt_static: str | None = None,
         prompt_dynamic: str | None = None,
         purpose: str = "chat_json",
+        reasoning_effort: str | None = None,
     ) -> dict[str, Any]:
         if self.mock:
             mock_prompt = prompt
@@ -137,20 +145,23 @@ class LLMService:
                 mock_prompt = prompt_static + "\n" + prompt_dynamic
             data = self._mock_response(mock_prompt)
             schema_name = (json_schema or {}).get("name") or "chat_json"
-            await record_llm_usage(
-                provider="mock",
-                model=model,
-                purpose=purpose,
-                status="ok",
-                request_json=build_llm_request_json(
-                    purpose=purpose,
-                    model=model,
-                    schema_name=schema_name,
-                    prompt=prompt,
-                    prompt_dynamic=prompt_dynamic,
-                    cache_key=cache_key,
-                ),
-                response_json=data if isinstance(data, dict) else None,
+            schedule_llm_meter(
+                {
+                    "provider": "mock",
+                    "model": model,
+                    "purpose": purpose,
+                    "status": "ok",
+                    "request_json": build_llm_request_json(
+                        purpose=purpose,
+                        model=model,
+                        schema_name=schema_name,
+                        prompt=prompt,
+                        prompt_dynamic=prompt_dynamic,
+                        cache_key=cache_key,
+                        reasoning_effort=reasoning_effort,
+                    ),
+                    "response_json": data if isinstance(data, dict) else None,
+                }
             )
             return data
         use_provider = (provider or "openai").strip().lower()
@@ -182,19 +193,76 @@ class LLMService:
                     cache_key=cache_key,
                     prompt_static=prompt_static,
                     prompt_dynamic=prompt_dynamic,
+                    reasoning_effort=reasoning_effort,
                 )
         except Exception as exc:
-            from app.services.app_log import log_event
-
             duration_ms = int((time.perf_counter() - started) * 1000)
-            await log_event(
-                level="error",
-                category="llm",
-                event="llm_call",
-                status="error",
-                duration_ms=duration_ms,
-                message=f"{use_provider}:{model} {schema_name} failed",
-                payload={
+            schedule_llm_meter(
+                {
+                    "provider": use_provider,
+                    "model": model,
+                    "purpose": purpose,
+                    "status": "error",
+                    "duration_ms": duration_ms,
+                    "usage": usage,
+                    "request_json": build_llm_request_json(
+                        purpose=purpose,
+                        model=model,
+                        schema_name=schema_name,
+                        prompt=prompt,
+                        prompt_dynamic=prompt_dynamic,
+                        cache_key=cache_key,
+                        reasoning_effort=reasoning_effort,
+                    ),
+                },
+                {
+                    "level": "error",
+                    "category": "llm",
+                    "event": "llm_call",
+                    "status": "error",
+                    "duration_ms": duration_ms,
+                    "message": f"{use_provider}:{model} {schema_name} failed",
+                    "payload": {
+                        "provider": use_provider,
+                        "model": model,
+                        "schema": schema_name,
+                        "prompt_chars": prompt_len,
+                        "cache_key": cache_key,
+                        "purpose": purpose,
+                    },
+                    "exc": exc,
+                },
+            )
+            raise
+
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        schedule_llm_meter(
+            {
+                "provider": use_provider,
+                "model": model,
+                "purpose": purpose,
+                "status": "ok",
+                "duration_ms": duration_ms,
+                "usage": usage,
+                "request_json": build_llm_request_json(
+                    purpose=purpose,
+                    model=model,
+                    schema_name=schema_name,
+                    prompt=prompt,
+                    prompt_dynamic=prompt_dynamic,
+                    cache_key=cache_key,
+                    reasoning_effort=reasoning_effort,
+                ),
+                "response_json": data if isinstance(data, dict) else None,
+            },
+            {
+                "level": "info",
+                "category": "llm",
+                "event": "llm_call",
+                "status": "ok",
+                "duration_ms": duration_ms,
+                "message": f"{use_provider}:{model} {schema_name}",
+                "payload": {
                     "provider": use_provider,
                     "model": model,
                     "schema": schema_name,
@@ -202,60 +270,7 @@ class LLMService:
                     "cache_key": cache_key,
                     "purpose": purpose,
                 },
-                exc=exc,
-            )
-            await record_llm_usage(
-                provider=use_provider,
-                model=model,
-                purpose=purpose,
-                status="error",
-                duration_ms=duration_ms,
-                usage=usage,
-                request_json=build_llm_request_json(
-                    purpose=purpose,
-                    model=model,
-                    schema_name=schema_name,
-                    prompt=prompt,
-                    prompt_dynamic=prompt_dynamic,
-                    cache_key=cache_key,
-                ),
-            )
-            raise
-        from app.services.app_log import log_event
-
-        duration_ms = int((time.perf_counter() - started) * 1000)
-        await log_event(
-            level="info",
-            category="llm",
-            event="llm_call",
-            status="ok",
-            duration_ms=duration_ms,
-            message=f"{use_provider}:{model} {schema_name}",
-            payload={
-                "provider": use_provider,
-                "model": model,
-                "schema": schema_name,
-                "prompt_chars": prompt_len,
-                "cache_key": cache_key,
-                "purpose": purpose,
             },
-        )
-        await record_llm_usage(
-            provider=use_provider,
-            model=model,
-            purpose=purpose,
-            status="ok",
-            duration_ms=duration_ms,
-            usage=usage,
-            request_json=build_llm_request_json(
-                purpose=purpose,
-                model=model,
-                schema_name=schema_name,
-                prompt=prompt,
-                prompt_dynamic=prompt_dynamic,
-                cache_key=cache_key,
-            ),
-            response_json=data if isinstance(data, dict) else None,
         )
         return data
 
@@ -271,6 +286,7 @@ class LLMService:
         cache_key: str | None = None,
         prompt_static: str | None = None,
         prompt_dynamic: str | None = None,
+        reasoning_effort: str | None = None,
     ) -> tuple[dict[str, Any], Any]:
         assert self.client is not None
         system_content = system or (
@@ -323,6 +339,8 @@ class LLMService:
                 else "max_tokens"
             )
             kwargs[limit_key] = max_tokens
+        if self._is_reasoning_model(model) and reasoning_effort is not None:
+            kwargs["reasoning_effort"] = reasoning_effort
         response = await self.client.chat.completions.create(**kwargs)
         usage = parse_openai_usage(response)
         content = response.choices[0].message.content or "{}"
@@ -600,29 +618,45 @@ class LLMService:
             )
         return "\n".join(lines)
 
+    @staticmethod
+    def _expand_already_block(already: list[dict[str, Any]]) -> str:
+        rows = [
+            c
+            for c in already
+            if isinstance(c, dict) and (c.get("lemma") or "").strip()
+        ]
+        if not rows:
+            return "Nothing shown yet."
+        lines = ["Already shown, do not repeat these lemma+pos pairs:"]
+        for c in rows:
+            lines.append(
+                f"- lemma={c.get('lemma')}; pos={c.get('pos')}; gloss={c.get('gloss')}"
+            )
+        return "\n".join(lines)
+
     async def lookup_expand(
         self,
         text: str,
         native: str,
         learning: str,
-        cefr: str,
         already: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
         """One-shot lookup: full union on cold start, only new rows when cache exists."""
-        prompt = LOOKUP_EXPAND_PROMPT_V1.format(
+        prompt = LOOKUP_EXPAND_USER_V2.format(
             native_name=lang_name_en(native),
             learning_name=lang_name_en(learning),
             text=text,
-            cefr=cefr,
-            pair_guidance=language_pair_guidance(native=native, learning=learning),
-            lookup_output_form_rules=lookup_output_form_rules_text(native, learning),
-            already_block=self._already_block(already or []),
+            already_block=self._expand_already_block(already or []),
         )
+        if (native or "").lower().startswith("pl") and (learning or "").lower().startswith("es"):
+            prompt += "\n" + LOOKUP_EXPAND_PL_ES_EXAMPLE
         bind_llm_usage_context(query=text, lang_pair=lang_pair_key(native, learning))
         data = await self._chat_json(
             self.lookup_model,
             prompt,
-            system=LOOKUP_SYSTEM_V1,
+            system=LOOKUP_EXPAND_SYSTEM_V2,
+            max_tokens=500,
+            reasoning_effort="none",
             purpose="lookup_expand",
         )
         return data.get("candidates", [])
@@ -632,21 +666,20 @@ class LLMService:
         text: str,
         native: str,
         learning: str,
-        cefr: str,
     ) -> list[dict[str, Any]]:
-        """Cheap first-paint lookup on the light model (~2–3s)."""
-        prompt = LOOKUP_DRAFT_PROMPT_V1.format(
+        """Cheap first-paint lookup on the light model."""
+        prompt = LOOKUP_DRAFT_USER_V2.format(
             native_name=lang_name_en(native),
             learning_name=lang_name_en(learning),
             text=text,
-            pair_guidance=language_pair_guidance(native=native, learning=learning),
         )
         bind_llm_usage_context(query=text, lang_pair=lang_pair_key(native, learning))
         data = await self._chat_json(
-            self.light_model,
+            self.lookup_model,
             prompt,
-            system=LOOKUP_SYSTEM_V1,
-            max_tokens=1200,
+            system=LOOKUP_DRAFT_SYSTEM_V2,
+            max_tokens=400,
+            reasoning_effort="none",
             purpose="lookup_draft",
         )
         return data.get("candidates", [])

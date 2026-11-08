@@ -228,6 +228,7 @@ fun HomeScreen(
                     onQueryChange = viewModel::onQueryChange,
                     onClearSearch = viewModel::clearSearch,
                     onSearch = viewModel::search,
+                    onShowMore = viewModel::showMoreSuggestions,
                     onToggleSearchByCategory = viewModel::setSearchByCategory,
                     onPrepareVoiceSearch = viewModel::prepareVoiceSearch,
                     onAdd = viewModel::openAddSheet,
@@ -901,6 +902,7 @@ private fun AddTab(
     onQueryChange: (String) -> Unit,
     onClearSearch: () -> Unit,
     onSearch: () -> Unit,
+    onShowMore: () -> Unit,
     onToggleSearchByCategory: (Boolean) -> Unit,
     onPrepareVoiceSearch: () -> Unit,
     onAdd: (LookupCandidate) -> Unit,
@@ -1147,17 +1149,29 @@ private fun AddTab(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        if ((state.searchLoading || (state.expanding && state.candidates.isEmpty())) && !importBusy) {
-            CircularProgressIndicator(
+        if ((state.searchLoading || ((state.expanding || state.loadingMore) && state.candidates.isEmpty())) && !importBusy) {
+            Column(
                 modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
+                    .fillMaxWidth()
                     .padding(24.dp),
-                color = scheme.primary,
-                strokeWidth = 3.dp,
-            )
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                CircularProgressIndicator(
+                    color = scheme.primary,
+                    strokeWidth = 3.dp,
+                )
+                state.notice?.let { notice ->
+                    Text(
+                        notice,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = scheme.primary,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
         }
         state.error?.let { Text(it, color = scheme.error) }
-        state.notice?.let { Text(it, color = scheme.onSurfaceVariant) }
 
         if (!importBusy) {
             val showReadingChip = lookupShowsReadingChips(
@@ -1168,6 +1182,26 @@ private fun AddTab(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(bottom = 12.dp),
             ) {
+                val idleNotice = state.notice
+                if (
+                    state.candidates.isEmpty() &&
+                    idleNotice != null &&
+                    !state.searchLoading &&
+                    !state.expanding &&
+                    !state.loadingMore
+                ) {
+                    item {
+                        Text(
+                            idleNotice,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.primary,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
                 items(state.candidates) { candidate ->
                     CandidateRow(
                         candidate = candidate,
@@ -1178,7 +1212,7 @@ private fun AddTab(
                         onOpenWord = onOpenWord,
                     )
                 }
-                if (state.expanding && state.candidates.isNotEmpty()) {
+                if ((state.expanding || state.loadingMore) && state.candidates.isNotEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -1194,7 +1228,35 @@ private fun AddTab(
                         }
                     }
                 }
-                if (state.candidates.isEmpty() && !state.searchLoading && !state.expanding && state.query.isBlank()) {
+                if (
+                    !state.searchByCategory &&
+                    state.candidates.isNotEmpty() &&
+                    !state.expanding &&
+                    !state.loadingMore &&
+                    !state.searchLoading
+                ) {
+                    item {
+                        if (state.suggestionsExhausted) {
+                            Text(
+                                stringResource(R.string.lookup_no_more_suggestions),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = scheme.primary,
+                                textAlign = TextAlign.Center,
+                            )
+                        } else {
+                            TextButton(
+                                onClick = onShowMore,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.lookup_more_suggestions))
+                            }
+                        }
+                    }
+                }
+                if (state.candidates.isEmpty() && !state.searchLoading && !state.expanding && !state.loadingMore && state.query.isBlank()) {
                     item {
                         if (isOnline) {
                             Text(
@@ -1250,7 +1312,7 @@ private fun AddTab(
         nativeLang = nativeLang,
         learningLang = learningLang,
         candidates = state.candidates,
-        loading = state.searchLoading || state.expanding,
+        loading = state.searchLoading || state.expanding || state.loadingMore,
         searchError = state.error,
         onDismiss = { showVoiceSheet = false },
         onResult = { text ->
@@ -1308,13 +1370,20 @@ private fun CandidateRow(
                     )
                 }
             }
-            if (candidate.isCreating) {
+            if (candidate.isCreating && !candidate.membershipUnknown) {
                 Spacer(modifier = Modifier.height(8.dp))
                 CreatingCardHint()
             }
         },
         trailing = {
             when {
+                candidate.membershipUnknown -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        strokeWidth = 3.dp,
+                        color = scheme.primary,
+                    )
+                }
                 candidate.isCreating -> {
                     CircularProgressIndicator(
                         modifier = Modifier.size(28.dp),

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -589,6 +589,10 @@
     <string name="err_search">Ricerca fallita</string>
 
     <string name="err_lookup_expand">Impossibile trovare altri suggerimenti. Mostriamo quelli già disponibili.</string>
+    <string name="lookup_more_suggestions">Mostra altri suggerimenti</string>
+    <string name="lookup_no_more_suggestions">Nessun\'altra corrispondenza trovata.</string>
+    <string name="lookup_longer_analysis">La tua parola «%1$s» richiede un\'analisi più lunga</string>
+    <string name="lookup_nothing_found">Nessuna corrispondenza per «%1$s».</string>
     <string name="err_import_empty">Nessuna parola da importare</string>
 
     <string name="err_import">Importazione fallita</string>

@@ -235,27 +235,110 @@ Return ONLY JSON:
 }}
 """
 
-LOOKUP_DRAFT_PROMPT_V1 = """Fast bilingual dictionary draft for ONE language pair.
+NOUN_ARTICLE_RULE = (
+    "Noun lemma: in Spanish, French, Italian, Portuguese and German it starts with the "
+    "singular definite article (el/la, le/la/l', il/lo/la/l', o/a, der/die/das); in other "
+    "languages it has no article and no classifier."
+)
 
-{pair_guidance}
+CITATION_FORM_RULE = (
+    "lemma and gloss are both dictionary citation forms, whatever form was typed: a noun in "
+    "the singular, an adjective in the masculine singular where the language has that form, "
+    "a verb in the infinitive. "
+    "word is the citation form of the word this row translates, in whichever language that "
+    "word belongs to. lemma is never a native-language word."
+)
 
-L1 (native): {native_name}
-L2 (learning — every lemma MUST be in this language): {learning_name}
-User query: "{text}"
+TYPO_RULE = (
+    "Return every dictionary word of either language that matches the query. A word matches "
+    "when it is the query, or the query is a real inflected form of that word, or the two "
+    "differ by exactly one change: one letter replaced, one letter added, one letter removed, "
+    "or two adjacent letters swapped. Ignore characters that are not letters before comparing. "
+    "Two or more changes is not a match. Each matching word comes back with every meaning it "
+    "has in this pair, each meaning as its own row. Do not stop after the first matching word "
+    "or the first meaning. The gloss of a row is the meaning of that row's lemma, not the "
+    "meaning of a different word."
+)
 
-Return up to 8 DISTINCT L2 headword proposals the user might mean.
-Interpret generously: typos, missing diacritics, inflections, stray punctuation.
-lemma = L2 citation form; gloss = L1 citation form.
-pos = one of: noun, verb, adj, adv, prep, conj, pron, det, interj, phrase, construction, particle.
-If the string is a word in BOTH languages, return both readings.
-If several candidates share a gloss, add a short parenthetical.
-JSON only:
-{{
-  "candidates": [
-    {{"lemma": "...", "pos": "...", "gloss": "..."}}
-  ]
-}}
-"""
+LOOKUP_DRAFT_SYSTEM_V2 = (
+    "The query's own meanings come first, in both languages of this pair, and they are never "
+    "dropped to make room for a neighbor. Then add every other dictionary word of these two "
+    "languages that is exactly one letter-change away, each with its own headword and all of "
+    "its meanings. A different letter is a change even when the two letters can sound alike. "
+    "Never return a third language. A word two changes away is not in the list. "
+    "Bilingual dictionary. JSON only. lemma is the learning-language citation. "
+    "gloss is the native-language citation of that same meaning. "
+    "The query may be a native word, a learning-language word, or both. "
+    "When the same spelling is a real word in both languages, return both readings "
+    "before any extra synonym. A concrete everyday meaning is required when it exists. "
+    "A plural form is returned as its singular citation, unless the headword exists only "
+    "in the plural. "
+    "Worked homographs, which are not the whole answer: "
+    "Polish to Spanish, ser the food is el queso gloss ser, and the verb is ser gloss być. "
+    "Polish to Spanish, droga is el camino gloss droga, and also la droga gloss narkotyk. "
+    "Polish to Spanish, para is el par gloss para, and also para gloss dla. "
+    "Polish to English, pies is dog gloss pies, and also pie gloss ciasto. "
+    "The same pattern applies to every other query. A worked example lists some readings, not all: "
+    "a real word one letter away, in the other language or another part of speech, is still required. "
+    "Do not copy an example whose word is not the query. "
+    "A preposition or conjunction still gets its real native gloss, not a copy of the query. "
+    "Do not gloss a lemma with the query when that lemma is only the query plus an article "
+    "and the two languages do not share that meaning. "
+    + CITATION_FORM_RULE
+    + " "
+    + TYPO_RULE
+    + " If nothing matches, return no rows. At most 8 rows. "
+    + NOUN_ARTICLE_RULE
+)
+# Only the Polish→Spanish expand. A global example made "pies" lose "el perro".
+LOOKUP_EXPAND_PL_ES_EXAMPLE = (
+    "Worked example, Polish to Spanish: dużo is lemma mucho, pos adv, gloss dużo. "
+    "It is not an adjective, and bardzo is muy, not mucho. "
+    "The noun mucha, a fly, is la mosca. "
+    "A real L1 word still returns its common L2 translations. "
+    "Polish droga, a road, is el camino or la carretera. "
+    "la droga is a drug, gloss narkotyk, never droga. "
+    "A plural noun is the singular citation: las drogas is la droga. los cascos stays plural. "
+    "lemma is always the Spanish word. ciudad → la ciudad, gloss miasto. "
+    "siempre → siempre, gloss zawsze. Never put the Polish word in lemma. "
+    "If the query is not a real word and not that obvious completion, return no rows."
+)
+
+NO_MORE_RULE = "If no other real reading exists, return an empty candidates list."
+
+LOOKUP_EXPAND_SYSTEM_V2 = (
+    "Bilingual dictionary for one language pair. JSON only. lemma is the L2 dictionary "
+    "headword. gloss is the L1 dictionary form of that same meaning. The query may be L1, "
+    "L2, or both, and it may contain a missing diacritic, one small typo, a phonetic "
+    "spelling, or an inflected form. Recover the intended word and return its citation "
+    "form. An L1 word yields its common L2 translations. An L2 word yields that headword "
+    "with an L1 gloss. A fixed phrase stays a phrase: do not reduce it to one word inside "
+    "it. Return the part of speech the query actually is. A plural noun becomes the "
+    "singular citation of that same noun. A conjugated verb becomes the infinitive. The "
+    "gloss is that citation too, never the inflected text the user typed. When the same "
+    "string is a real word in both languages, return both readings. "
+    "This one answer adds several new headwords of the meanings already found, three or more "
+    "when that many real synonyms exist. One new headword is not a complete answer. "
+    "Return an empty list only when no further real headword exists. At most 6 new rows. "
+    + CITATION_FORM_RULE
+    + " "
+    + TYPO_RULE
+    + " Never return another form of a row already shown. "
+    + NOUN_ARTICLE_RULE
+    + " "
+    + NO_MORE_RULE
+)
+
+LOOKUP_EXPAND_USER_V2 = """L1: {native_name}. L2: {learning_name}. Query: "{text}".
+{already_block}
+pos is one of noun, verb, adj, adv, prep, conj, pron, det, interj, phrase, particle.
+JSON: {{"candidates":[{{"word":"...","lemma":"...","pos":"...","gloss":"..."}}]}}"""
+
+LOOKUP_DRAFT_USER_V2 = (
+    'Native: {native_name}. Learning: {learning_name}. Query: "{text}". '
+    "pos is one of noun, verb, adj, adv, prep, conj, pron, det, interj, phrase, particle. "
+    'JSON: {{"candidates":[{{"word":"...","lemma":"...","pos":"...","gloss":"..."}}]}}'
+)
 
 LOOKUP_CATEGORY_SYSTEM_V1 = (
     "You build one learner vocabulary theme from a single query. "

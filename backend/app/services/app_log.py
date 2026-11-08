@@ -199,3 +199,9 @@ async def log_event(
             await db.commit()
     except Exception:
         logger.exception("app_log write failed event=%s", event)
+
+
+def log_event_background(**kwargs: Any) -> None:
+    from app.services.background import spawn_background
+
+    spawn_background(lambda: log_event(**kwargs), name="app_log")

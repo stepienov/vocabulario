@@ -70,6 +70,27 @@ def _same_headword(left: str | None, right: str | None) -> bool:
     return bool(a and b and a == b)
 
 
+def has_required_inflection(
+    content: dict, *, pos: str, lemma: str, learning_lang: str
+) -> bool:
+    """Odmiana, której LSP chce dla tego POS. Puste klucze to brak, nie sukces."""
+    if content.get("inflection_status") == "not_applicable":
+        return True
+    key = inflect_pos_key(pos, lemma=lemma, learning_lang=learning_lang)
+    if key is None:
+        return True
+    inf = content.get("inflection") if isinstance(content.get("inflection"), dict) else {}
+    if key == "noun":
+        nouns = inf.get("nouns") if isinstance(inf.get("nouns"), dict) else None
+        return bool(nouns)
+    if key == "adj":
+        adjs = inf.get("adjectives") if isinstance(inf.get("adjectives"), dict) else None
+        return bool(adjs)
+    verbs = inf.get("verbs") if isinstance(inf, dict) else None
+    has_forms = isinstance(verbs, dict) and (verbs.get("tenses") or verbs.get("non_finite"))
+    return bool(has_forms or content.get("conjugation"))
+
+
 def inflect_pos_key(pos: str | None, lemma: str = "", learning_lang: str = "") -> str | None:
     bucket = _resolve_pos(pos) or "unknown"
     if bucket in {"noun", "adj"}:
@@ -313,6 +334,67 @@ async def _await_task(task: asyncio.Task, default: Any) -> Any:
         return default
 
 
+async def _await_inflection(task: asyncio.Task) -> dict | None:
+    """None = błąd albo anulowanie. Słownik, także pusty, = odpowiedź modelu."""
+    try:
+        result = await task
+    except asyncio.CancelledError:
+        return None
+    except Exception:
+        logger.exception("Side-job enrichment failed")
+        return None
+    return result if isinstance(result, dict) else {}
+
+
+def inflection_not_applicable(
+    content: dict,
+    inflection: dict | None,
+    *,
+    pos: str,
+    lemma: str,
+    learning_lang: str,
+) -> bool:
+    """Pusta, poprawna odpowiedź dla zwrotu: odmiana tego hasła nie dotyczy."""
+    if inflection is None:
+        return False
+    bucket = _resolve_pos(pos)
+    if bucket not in {"phrase", "construction"}:
+        return False
+    if inflect_pos_key(pos, lemma=lemma, learning_lang=learning_lang) != "verb":
+        return False
+    probe = dict(content)
+    probe["inflection"] = inflection
+    probe["conjugation"] = None
+    probe.pop("inflection_status", None)
+    return not has_required_inflection(
+        probe, pos=pos, lemma=lemma, learning_lang=learning_lang
+    )
+
+
+def _with_inflection_outcome(
+    content: dict,
+    similar: list[dict] | None,
+    inflection: dict | None,
+    profile: LanguageProfile,
+    *,
+    pos: str,
+    lemma: str,
+) -> dict:
+    if inflection is not None and inflection_not_applicable(
+        content,
+        inflection,
+        pos=pos,
+        lemma=lemma,
+        learning_lang=profile.learning_lang,
+    ):
+        merged = merge_side_jobs(content, similar, {}, profile)
+        merged["inflection"] = None
+        merged["conjugation"] = None
+        merged["inflection_status"] = "not_applicable"
+        return merged
+    return merge_side_jobs(content, similar, inflection or {}, profile)
+
+
 def _cancel_if_pending(task: asyncio.Task | None) -> None:
     if task is not None and not task.done():
         task.cancel()
@@ -326,13 +408,12 @@ async def finish_side_jobs(
 ) -> dict:
     """Dociąga brakujące similar_words / odmianę do karty, która ma już rdzeń."""
     llm = llm or LLMService()
-    lemma = content.get("lemma") or ""
-    pos = content.get("pos")
+    lemma = str(content.get("lemma") or "")
+    pos = str(content.get("pos") or "")
     need_similar = len(content.get("similar_words") or []) < MIN_SIMILAR_WORDS
-    has_infl = bool(content.get("inflection") or content.get("conjugation"))
-    need_inflection = inflect_pos_key(
-        pos, lemma=lemma, learning_lang=profile.learning_lang
-    ) is not None and not has_infl
+    need_inflection = not has_required_inflection(
+        content, pos=pos, lemma=lemma, learning_lang=profile.learning_lang
+    )
 
     similar_task = (
         asyncio.create_task(fetch_similar_words(llm, profile, lemma, pos))
@@ -349,12 +430,18 @@ async def finish_side_jobs(
         if similar_task
         else (content.get("similar_words") or [])
     )
-    inflection = (
-        await _await_task(inflection_task, content.get("inflection") or {})
-        if inflection_task
-        else (content.get("inflection") or {})
+    if inflection_task is None:
+        existing = content.get("inflection")
+        return merge_side_jobs(
+            content,
+            similar,
+            existing if isinstance(existing, dict) else {},
+            profile,
+        )
+    inflection = await _await_inflection(inflection_task)
+    return _with_inflection_outcome(
+        content, similar, inflection, profile, pos=pos, lemma=lemma
     )
-    return merge_side_jobs(content, similar, inflection, profile)
 
 
 async def run_lemma_enrichment(
@@ -426,8 +513,15 @@ async def run_lemma_enrichment(
         if similar_task is not None
         else []
     )
-    inflection = await _await_task(inflection_task, {})
-    card = merge_side_jobs(card, similar, inflection, profile)
+    inflection = await _await_inflection(inflection_task)
+    card = _with_inflection_outcome(
+        card,
+        similar,
+        inflection,
+        profile,
+        pos=str(pos_final or ""),
+        lemma=str(lemma_final or ""),
+    )
 
     if require_similar and len(card.get("similar_words") or []) < MIN_SIMILAR_FOR_QUIZ:
         raise ValueError(

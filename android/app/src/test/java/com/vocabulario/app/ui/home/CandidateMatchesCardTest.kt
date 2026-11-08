@@ -51,6 +51,14 @@ class CandidateMatchesCardTest {
     }
 
     @Test
+    fun candidateMatchesCard_doesNotTreatMissingPosAsNoun() {
+        val bare = LookupCandidate(lemma = "play", pos = null, gloss = "gra")
+        assertFalse(candidateMatchesCard(bare, card(pos = "noun", entry = null)))
+        val noun = LookupCandidate(lemma = "play", pos = "noun", gloss = "gra")
+        assertFalse(candidateMatchesCard(noun, card(pos = null, entry = null)))
+    }
+
+    @Test
     fun candidateMatchesCard_byLearningCardId() {
         val candidate = LookupCandidate(
             lemma = "casa",
@@ -85,15 +93,18 @@ class CandidateMatchesCardTest {
     }
 
     @Test
-    fun mergeLookupCandidates_doesNotDropUnseenCurrent() {
+    fun mergeLookupCandidates_appendsNewAndDropsRowsTheServerRemoved() {
         val current = listOf(
             candidate(pos = "verb", entry = null),
-            candidate(pos = "noun", entry = null).copy(gloss = "sztuka"),
+            candidate(pos = "noun", entry = null).copy(lemma = "la droga", gloss = "droga"),
         )
-        val incoming = listOf(candidate(pos = "verb", entry = "lex-verb"))
+        val incoming = listOf(
+            candidate(pos = "noun", entry = null).copy(lemma = "el camino", gloss = "droga"),
+            candidate(pos = "verb", entry = "lex-verb"),
+        )
         val merged = mergeLookupCandidates(current, incoming)
-        assertEquals(2, merged.size)
-        assertTrue(merged.any { it.pos == "noun" && it.gloss == "sztuka" })
+        assertEquals(listOf("play", "el camino"), merged.map { it.lemma })
+        assertEquals("lex-verb", merged[0].lexical_entry_id)
     }
 
     @Test

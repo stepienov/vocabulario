@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -562,6 +562,10 @@
     <string name="err_search">Suche fehlgeschlagen</string>
 
     <string name="err_lookup_expand">Keine weiteren Vorschläge gefunden. Wir zeigen, was vorhanden ist.</string>
+    <string name="lookup_more_suggestions">Weitere Vorschläge anzeigen</string>
+    <string name="lookup_no_more_suggestions">Keine weiteren Treffer gefunden.</string>
+    <string name="lookup_longer_analysis">Dein Wort „%1$s“ braucht eine genauere Prüfung</string>
+    <string name="lookup_nothing_found">Kein Treffer für „%1$s“.</string>
     <string name="err_import_empty">Keine Wörter zum Importieren</string>
 
     <string name="err_import">Import fehlgeschlagen</string>

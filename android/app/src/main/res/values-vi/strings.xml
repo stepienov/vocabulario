@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -593,6 +593,10 @@
     <string name="err_search">Tìm kiếm không thành công</string>
 
     <string name="err_lookup_expand">Không tìm thêm được gợi ý. Hiển thị những gì đang có.</string>
+    <string name="lookup_more_suggestions">Hiện thêm gợi ý</string>
+    <string name="lookup_no_more_suggestions">Không tìm thấy thêm kết quả phù hợp.</string>
+    <string name="lookup_longer_analysis">Từ \"%1$s\" cần phân tích lâu hơn</string>
+    <string name="lookup_nothing_found">Không tìm thấy kết quả cho \"%1$s\".</string>
     <string name="err_import_empty">Không có từ nào để nhập</string>
 
     <string name="err_import">Nhập không thành công</string>

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -562,6 +562,10 @@
     <string name="err_search">Échec de la recherche</string>
 
     <string name="err_lookup_expand">Impossible de trouver plus de suggestions. Voici ce que nous avons.</string>
+    <string name="lookup_more_suggestions">Afficher plus de suggestions</string>
+    <string name="lookup_no_more_suggestions">Aucune autre correspondance trouvée.</string>
+    <string name="lookup_longer_analysis">Votre mot « %1$s » nécessite une analyse plus longue</string>
+    <string name="lookup_nothing_found">Aucune correspondance pour « %1$s ».</string>
     <string name="err_import_empty">Aucun mot à importer</string>
 
     <string name="err_import">Échec de l’import</string>

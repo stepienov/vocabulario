@@ -36,7 +36,8 @@ class AppVisibilityHandler @Inject constructor(
     }
 
     override fun onStop(owner: LifecycleOwner) {
-        val lookupBusy = lookupCoordinator.state.value.expanding ||
+        val lookupState = lookupCoordinator.state.value
+        val lookupBusy = lookupState.expanding || lookupState.loadingMore ||
             categoryLookupCoordinator.state.value.expanding
         if (lookupBusy) scheduler.enqueueLookup(replace = false)
         if (importController.state.value.busy) scheduler.enqueueImport(replace = false)

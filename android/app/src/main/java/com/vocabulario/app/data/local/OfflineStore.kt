@@ -27,8 +27,10 @@ import com.vocabulario.app.data.local.db.PendingReviewEntity
 import com.vocabulario.app.data.local.db.PendingUndoEntity
 import com.vocabulario.app.data.local.db.SyncMetaEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -128,6 +130,10 @@ class OfflineStore @Inject constructor(
     suspend fun lastPulledAt(profileId: String): String? =
         syncMetaDao.get(profileId)?.lastPulledAt
 
+    fun observeMembershipRows(profileId: String) = cardDao.observeMembershipRows(profileId)
+
+    fun observeLastPulledAt(profileId: String) = syncMetaDao.observeLastPulledAt(profileId)
+
     suspend fun saveSettings(settings: UserSettingsResponse) {
         settingsDao.upsert(
             LocalSettingsEntity(
@@ -167,7 +173,9 @@ class OfflineStore @Inject constructor(
     }
 
     suspend fun clearAll() {
-        db.clearAllTables()
+        withContext(Dispatchers.IO) {
+            db.clearAllTables()
+        }
     }
 
     suspend fun cardCount(profileId: String): Int = cardDao.countForProfile(profileId)

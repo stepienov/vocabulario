@@ -100,9 +100,19 @@ def _fold(text: str) -> str:
     return _strip_diacritics(t)
 
 
+def letters_of_query(text: str) -> str:
+    """Drop digits and symbols before a lookup. Letters of any script stay."""
+    kept = [
+        ch
+        for ch in (text or "")
+        if ch.isspace() or ch in "-'" or unicodedata.category(ch).startswith("L")
+    ]
+    return re.sub(r"\s+", " ", "".join(kept)).strip()
+
+
 def normalize_lookup_query(text: str) -> str:
     """Cache key for a typed lookup: folded query, fallback to trimmed casefold."""
-    folded = _fold(text)
+    folded = _fold(letters_of_query(text))
     if folded:
         return folded[:200]
     return _norm_token(text)[:200]
@@ -339,6 +349,10 @@ def rank_lookup_candidates(
         idx, c = item
         lemma = c.get("lemma") or ""
         gloss = c.get("gloss") or ""
+        # Exact lemma or exact gloss stays above every near-miss, in model order.
+        exact = lemma_matches_query(
+            lemma, q, learning_lang=learning_lang
+        ) or gloss_identifies_query(gloss, q)
         gloss_hit = gloss_query_score(gloss, q)
         if gloss_identifies_query(gloss, q):
             effective_gloss = 1.0
@@ -347,7 +361,12 @@ def rank_lookup_candidates(
             effective_gloss = 0.71
         else:
             effective_gloss = gloss_hit
-        return (-lemma_component(lemma, gloss), -effective_gloss, idx)
+        return (
+            0 if exact else 1,
+            -lemma_component(lemma, gloss),
+            -effective_gloss,
+            idx,
+        )
 
     indexed = list(enumerate(candidates))
     indexed.sort(key=sort_key)
@@ -577,6 +596,628 @@ def append_lookup_candidates(
     return [by_key[k] for k in order], added
 
 
+# Słowniki trzymają te hiszpańskie rzeczowniki w liczbie mnogiej. Reszta idzie do liczby pojedynczej.
+_ES_PLURALIA = {
+    "cascos",
+    "gafas",
+    "tijeras",
+    "pantalones",
+    "vaqueros",
+    "vacaciones",
+    "celos",
+    "alrededores",
+    "viveres",
+    "víveres",
+}
+_ES_PLURAL_ARTICLE = {"los": "el", "las": "la"}
+_POLISH_LETTERS = set("ąćęłńóśźż")
+
+
+def _singular_spanish_noun(lemma: str) -> str:
+    """las drogas → la droga. los cascos zostaje."""
+    words = lemma.split()
+    if len(words) != 2:
+        return lemma
+    article = words[0].casefold().rstrip("'")
+    singular_article = _ES_PLURAL_ARTICLE.get(article)
+    if singular_article is None:
+        return lemma
+    noun = words[1]
+    key = _norm_token(_strip_diacritics(noun))
+    if key in _ES_PLURALIA or noun.casefold() in _ES_PLURALIA:
+        return lemma
+    folded = noun.casefold()
+    if len(folded) < 4 or not folded.endswith("s"):
+        return lemma
+    # paises / leones zostawiamy modelowi. Bezpieczne jest tylko samogłoska + s.
+    if folded.endswith("es"):
+        return lemma
+    if folded[-2] not in "aeiouáéíóúü":
+        return lemma
+    return f"{singular_article} {noun[:-1]}"
+
+
+# Adjectives that end in -a in the masculine singular too.
+_ES_INVARIABLE_A = {
+    "rosa",
+    "naranja",
+    "lila",
+    "violeta",
+    "malva",
+    "fucsia",
+    "turquesa",
+    "agrícola",
+    "hipócrita",
+    "idiota",
+    "patriota",
+    "persa",
+    "maya",
+    "celta",
+    "belga",
+    "azteca",
+    "inca",
+    "cosmopolita",
+    "homicida",
+    "suicida",
+    "entusiasta",
+}
+_ES_ARTICLES = {"el", "la", "los", "las", "un", "una", "unos", "unas", "lo"}
+
+
+def _masculine_spanish_adjective(lemma: str) -> str:
+    """bonitas / la bonita → bonito, queridos → querido, grandes → grande, felices → feliz."""
+    words = lemma.split()
+    if len(words) == 2 and words[0].casefold() in _ES_ARTICLES:
+        words = words[1:]
+    if len(words) != 1:
+        return lemma
+    word = words[0]
+    low = word.casefold()
+    if len(low) < 4 or low in _ES_INVARIABLE_A:
+        return word
+    if low.endswith("ces"):
+        return word[:-3] + "z"
+    if low.endswith(("os", "as")):
+        word, low = word[:-1], low[:-1]
+    elif low.endswith("es"):
+        base = low[:-2]
+        if base.endswith(("nd", "nt", "rd", "rt", "bl", "pl", "rv", "lc", "ld")):
+            return word[:-1]
+        if base.endswith(("l", "r", "n", "d", "j", "s")):
+            return word[:-2]
+        return word[:-1]
+    if low in _ES_INVARIABLE_A or low.endswith("ista"):
+        return word
+    if low.endswith("ora") and len(low) > 5:
+        return word[:-1]
+    if low.endswith("a"):
+        return word[:-1] + "o"
+    return word
+
+
+def _is_extension(word: str, query: str) -> bool:
+    """word is the query plus at most two letters. Equality does not count."""
+    return bool(query) and word.startswith(query) and 0 < len(word) - len(query) <= 2
+
+
+def _near_query(word: str, query: str) -> bool:
+    """True when one string is the other, or the other plus at most two letters."""
+    if not word or not query or len(word) < 3 or len(query) < 3:
+        return False
+    if word == query:
+        return True
+    short, long = (word, query) if len(word) <= len(query) else (query, word)
+    return long.startswith(short) and 0 < len(long) - len(short) <= 2
+
+
+_SHADOWED_BY_ADVERB = {"adj", "pron", "det"}
+
+# Glosses that are adverbs. The model keeps pasting them onto an adjective.
+_ADVERB_GLOSSES = {
+    "dużo",
+    "mało",
+    "bardzo",
+    "trochę",
+    "nagle",
+    "często",
+    "zawsze",
+    "nigdy",
+    "tutaj",
+    "wcale",
+    "dobrze",
+    "źle",
+}
+
+
+def drop_implausible_lookup_rows(
+    candidates: list[dict],
+    query: str,
+    *,
+    learning_lang: str,
+    native_lang: str | None = None,
+) -> list[dict]:
+    """Drop a lemma invented by stretching the query, and a duplicate part of speech.
+
+    `much` / `mucha` is the query with one letter added, not a Spanish headword.
+    `mucho` glossed `dużo` is an adverb; the same gloss on an adjective is the same
+    meaning labeled twice.
+    """
+    q = _norm_token(_strip_diacritics(query))
+    lang = (learning_lang or "").lower()
+    kept: list[dict] = []
+    for item in candidates:
+        item = _swap_reversed_reading(item, q, learning_lang)
+        item = _native_gloss_citation(item, native_lang)
+        if _is_grammar_note(item.get("gloss") or "", native_lang):
+            continue
+        if _is_corrected_echo(item, query, learning_lang):
+            continue
+        if _is_proper_name(item, query, learning_lang):
+            continue
+        stem = _norm_token(
+            _strip_diacritics(lemma_stem(item.get("lemma") or "", learning_lang))
+        )
+        gloss_plain = _norm_token(item.get("gloss") or "")
+        gloss = _norm_token(_strip_diacritics(gloss_plain))
+        if _is_extension(stem, q) and (gloss == q or _is_extension(gloss, q)):
+            continue
+        if (
+            _noun_citation_has_article(lang)
+            and _is_extension(gloss, q)
+            and stem == q
+            and not _has_article(item.get("lemma") or "", learning_lang)
+        ):
+            continue
+        if (
+            _noun_citation_has_article(lang)
+            and normalize_pos_bucket(item.get("pos")) == "noun"
+            and not _has_article(item.get("lemma") or "", learning_lang)
+            and gloss == q
+            and stem != q
+        ):
+            continue
+        if lang.startswith("es") and stem.endswith("h") and " " not in stem:
+            continue
+        bare_noun = normalize_pos_bucket(item.get("pos")) == "noun" and not _has_article(
+            item.get("lemma") or "", learning_lang
+        )
+        if (
+            bare_noun
+            and _article_set(learning_lang)
+            and stem == gloss
+            and _near_query(stem, q)
+        ):
+            continue
+        if stem == "mucho" and gloss in {"bardzo", "wielki", "liczny", "duzy"}:
+            continue
+        if gloss_plain in _ADVERB_GLOSSES and normalize_pos_bucket(item.get("pos")) in _SHADOWED_BY_ADVERB:
+            item = dict(item)
+            item["pos"] = "adv"
+        kept.append(item)
+    collapsed = _collapse_adverb_shadows(kept, learning_lang)
+    seen: set[tuple[str, str, str]] = set()
+    unique: list[dict] = []
+    for item in collapsed:
+        key = (
+            _norm_token(lemma_stem(item.get("lemma") or "", learning_lang)),
+            normalize_pos_bucket(item.get("pos")) or "",
+            _norm_token(item.get("gloss") or ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+    unique = _drop_native_word_lemmas(unique, query, learning_lang)
+    return _drop_spelling_echoes(unique, learning_lang)
+
+
+def _gloss_is_the_query(gloss: str, query: str) -> bool:
+    g = _norm_token(_strip_diacritics(gloss))
+    if not g or not query:
+        return False
+    if g == query:
+        return True
+    # libros → glosa libro
+    return query.startswith(g) and query[len(g):] in {"s", "es"}
+
+
+def _lemma_looks_polish(lemma: str) -> bool:
+    folded = lemma.casefold()
+    if any(ch in folded for ch in _POLISH_LETTERS):
+        return True
+    # okulary, tani — hiszpańskie lematy prawie nigdy nie kończą się na samo y.
+    return " " not in folded and folded.endswith("y") and len(folded) > 3
+
+
+def _swap_reversed_reading(item: dict, query: str, learning_lang: str) -> dict:
+    """Lemat po polsku i glosa będąca zapytaniem: pola są zamienione."""
+    if not (learning_lang or "").lower().startswith("es"):
+        return item
+    lemma = (item.get("lemma") or "").strip()
+    gloss = (item.get("gloss") or "").strip()
+    stem = lemma_stem(lemma, learning_lang) or lemma
+    if _has_article(lemma, learning_lang) and not _lemma_looks_polish(stem):
+        return item
+    if not _lemma_looks_polish(stem):
+        return item
+    if not _gloss_is_the_query(gloss, query):
+        return item
+    swapped = dict(item)
+    swapped["lemma"] = _with_spanish_article(gloss, item.get("pos"))
+    swapped["gloss"] = stem
+    return swapped
+
+
+_MASCULINE_A = {
+    "problema",
+    "mapa",
+    "planeta",
+    "dia",
+    "día",
+    "sistema",
+    "clima",
+    "idioma",
+    "tema",
+    "programa",
+    "poema",
+}
+_PLURALIA_ARTICLE = {
+    "cascos": "los",
+    "gafas": "las",
+    "tijeras": "las",
+    "pantalones": "los",
+    "vaqueros": "los",
+    "vacaciones": "las",
+    "celos": "los",
+    "auriculares": "los",
+}
+
+
+def _with_spanish_article(lemma: str, pos: str | None) -> str:
+    word = lemma.strip()
+    if " " in word or normalize_pos_bucket(pos) != "noun":
+        return word
+    key = word.casefold()
+    article = _PLURALIA_ARTICLE.get(key) or _PLURALIA_ARTICLE.get(_norm_token(_strip_diacritics(key)))
+    if article:
+        return f"{article} {word}"
+    if key in _MASCULINE_A:
+        return f"el {word}"
+    if key.endswith("o"):
+        return f"el {word}"
+    if key.endswith(("a", "á")):
+        return f"la {word}"
+    return word
+
+
+def _drop_spelling_echoes(candidates: list[dict], learning_lang: str) -> list[dict]:
+    """la droga / droga odpada, gdy obok jest el camino / droga. Sam hotel zostaje."""
+    translated: set[str] = set()
+    stems: list[tuple[str, str]] = []
+    for item in candidates:
+        stem = _norm_token(
+            _strip_diacritics(lemma_stem(item.get("lemma") or "", learning_lang))
+        )
+        gloss = _norm_token(_strip_diacritics(item.get("gloss") or ""))
+        stems.append((stem, gloss))
+        if stem != gloss:
+            translated.add(gloss)
+    return [
+        item
+        for item, (stem, gloss) in zip(candidates, stems)
+        if not (stem == gloss and gloss in translated)
+    ]
+
+
+def _noun_citation_has_article(learning_lang: str) -> bool:
+    """Spanish, French, Italian, Portuguese and German nouns carry an article.
+
+    English does not, so a bare noun glossed with the query is a normal translation.
+    """
+    lang = (learning_lang or "").lower()
+    return lang.startswith(("es", "fr", "it", "pt", "de"))
+
+
+def _has_article(lemma: str, learning_lang: str) -> bool:
+    words = lemma.split()
+    return len(words) >= 2 and words[0].lower().rstrip("'") in _article_set(learning_lang)
+
+
+def _collapse_adverb_shadows(
+    candidates: list[dict], learning_lang: str
+) -> list[dict]:
+    groups: dict[tuple[str, str], list[int]] = {}
+    for index, item in enumerate(candidates):
+        stem = _norm_token(lemma_stem(item.get("lemma") or "", learning_lang))
+        gloss = _norm_token(item.get("gloss") or "")
+        groups.setdefault((stem, gloss), []).append(index)
+    drop: set[int] = set()
+    for indexes in groups.values():
+        buckets = {normalize_pos_bucket(candidates[i].get("pos")) for i in indexes}
+        if "adv" not in buckets:
+            continue
+        for index in indexes:
+            if normalize_pos_bucket(candidates[index].get("pos")) in _SHADOWED_BY_ADVERB:
+                drop.add(index)
+    return [item for index, item in enumerate(candidates) if index not in drop]
+
+
+def _query_is_inflection_of(query: str, lemma: str, learning_lang: str) -> bool:
+    """pies is the plural citation's query; el pie stays."""
+    stem = _fold(lemma_stem(lemma, learning_lang))
+    q = _fold(query)
+    if not stem or not q or stem == q:
+        return False
+    if q in {stem + "s", stem + "es"}:
+        return True
+    return stem.endswith("z") and q == stem[:-1] + "ces"
+
+
+def _drop_native_word_lemmas(
+    candidates: list[dict], query: str, learning_lang: str
+) -> list[dict]:
+    """drogi / drogi, kosztowny next to caro / drogi: drogi is the native word, not an L2 headword.
+
+    The lemma is dropped when another row uses it as the native gloss of a different lemma.
+    A homograph typed exactly (para / dla beside el par / para) and an inflected L2 query
+    (drogas → la droga) keep their row; a noun carrying an L2 article is L2 by form.
+    """
+    q = _fold(query)
+    glossed_by: dict[str, set[str]] = {}
+    for item in candidates:
+        lemma_key = _norm_token(item.get("lemma") or "")
+        for token in gloss_tokens(item.get("gloss") or ""):
+            glossed_by.setdefault(_fold(token), set()).add(lemma_key)
+    kept: list[dict] = []
+    for item in candidates:
+        lemma = item.get("lemma") or ""
+        if _has_article(lemma, learning_lang):
+            kept.append(item)
+            continue
+        stem = _fold(lemma_stem(lemma, learning_lang))
+        others = glossed_by.get(stem, set()) - {_norm_token(lemma)}
+        if (
+            others
+            and stem != q
+            and not _query_is_inflection_of(query, lemma, learning_lang)
+        ):
+            continue
+        kept.append(item)
+    return kept
+
+
+_PL_GRAMMAR_NOTE = (
+    "dopełniacz",
+    "biernik",
+    "celownik",
+    "narzędnik",
+    "miejscownik",
+    "wołacz",
+    "mianownik",
+    "liczba mnoga",
+    "liczby mnogiej",
+    "rodzaju",
+    "forma ",
+    " od „",
+)
+
+# Polish adjective endings → citation ending. Longest first; k/g stems take -i.
+_PL_ADJ_ENDINGS = (
+    ("iego", "i"),
+    ("iemu", "i"),
+    ("ego", "y"),
+    ("emu", "y"),
+    ("iej", "i"),
+    ("ich", "i"),
+    ("imi", "i"),
+    ("ych", "y"),
+    ("ymi", "y"),
+    ("dzy", "gi"),
+    ("rzy", "ry"),
+    ("ej", "y"),
+    ("ą", ""),
+    ("a", ""),
+    ("e", ""),
+)
+
+
+def _polish_adjective_citation(word: str) -> str:
+    """droga, drogie, drogiego, drodzy → drogi; ładna → ładny; tania → tani."""
+    if " " in word or len(word) < 3:
+        return word
+    lower = word.casefold()
+    if lower.endswith(("y", "i")) and not lower.endswith(("dzy", "rzy")):
+        return word
+    for ending, citation in _PL_ADJ_ENDINGS:
+        if not lower.endswith(ending):
+            continue
+        stem = word[: len(word) - len(ending)]
+        if citation:
+            return stem + citation
+        if not stem:
+            return word
+        if stem.casefold().endswith("i"):
+            return stem
+        if stem.casefold().endswith(("k", "g")):
+            return stem + "i"
+        return stem + "y"
+    return word
+
+
+def _native_gloss_citation(item: dict, native_lang: str | None) -> dict:
+    """Polish adjective glosses come back as the masculine singular citation."""
+    if not (native_lang or "").lower().startswith("pl"):
+        return item
+    if normalize_pos_bucket(item.get("pos")) != "adj":
+        return item
+    gloss = (item.get("gloss") or "").strip()
+    parts = [p.strip() for p in re.split(r"[,;]", gloss) if p.strip()]
+    fixed = [_polish_adjective_citation(p) for p in parts]
+    if fixed == parts:
+        return item
+    out = dict(item)
+    seen: list[str] = []
+    for word in fixed:
+        if word not in seen:
+            seen.append(word)
+    out["gloss"] = ", ".join(seen)
+    return out
+
+
+def _is_corrected_echo(item: dict, query: str, learning_lang: str) -> bool:
+    """el oko / oko for okon: the typo was fixed into the native word and copied as the lemma.
+
+    A copy is only trusted when it is what the user typed (el hotel / hotel for hotel)
+    or its plural (hoteles).
+    """
+    lemma = item.get("lemma") or ""
+    stem = _fold(lemma_stem(lemma, learning_lang))
+    tokens = gloss_tokens(item.get("gloss") or "")
+    if not stem or not tokens or stem != _fold(tokens[0]):
+        return False
+    return stem != _fold(query) and not _query_is_inflection_of(query, lemma, learning_lang)
+
+
+def _is_proper_name(item: dict, query: str, learning_lang: str) -> bool:
+    """la Tania / Tania is a first name, not vocabulary. German nouns are capitalized."""
+    if (learning_lang or "").lower().startswith("de") or query[:1].isupper():
+        return False
+    lemma = (item.get("lemma") or "").strip()
+    words = lemma.split()
+    if _has_article(lemma, learning_lang):
+        words = words[1:]
+    return bool(words) and words[0][:1].isupper()
+
+
+def _same_word(a: str, b: str) -> bool:
+    """drogie and drogi are one word; rodzian and rozrodziany are not."""
+    a, b = _fold(a), _fold(b)
+    if not a or not b:
+        return False
+    if a == b or _fold(_polish_adjective_citation(a)) == _fold(_polish_adjective_citation(b)):
+        return True
+    prefix = 0
+    for x, y in zip(a, b):
+        if x != y:
+            break
+        prefix += 1
+    return prefix >= max(3, min(len(a), len(b)) - 2)
+
+
+def _one_change_away(a: str, b: str) -> bool:
+    """Exact match, or one replacement, insertion, deletion, or adjacent swap."""
+    fa, fb = _fold(a), _fold(b)
+    if not fa or not fb or abs(len(fa) - len(fb)) > 1:
+        return False
+    if fa == fb:
+        return True
+    return edit_distance(fa, fb) == 1
+
+
+def drop_rows_past_one_change(
+    raw: list[dict], query: str, *, learning_lang: str
+) -> list[dict]:
+    """When a row is the query or one change away, drop rows that are farther.
+
+    An answer made only of inflections, all farther than one change, stays.
+    """
+    q = _fold(query)
+    if not q:
+        return raw
+
+    def closest(row: dict) -> int:
+        parts = [lemma_stem(row.get("lemma") or "", learning_lang)]
+        parts.extend(gloss_tokens(row.get("gloss") or ""))
+        best = None
+        for part in parts:
+            folded = _fold(part)
+            if not folded:
+                continue
+            distance = edit_distance(folded, q)
+            best = distance if best is None else min(best, distance)
+        return 99 if best is None else best
+
+    def cited_verb(row: dict) -> bool:
+        if normalize_pos_bucket(row.get("pos")) != "verb":
+            return False
+        named = _fold(row.get("word") or "")
+        if not named:
+            return False
+        stem = _fold(lemma_stem(row.get("lemma") or "", learning_lang))
+        if named == stem:
+            return True
+        return any(_fold(token) == named for token in gloss_tokens(row.get("gloss") or ""))
+
+    scored = [(closest(row), row) for row in raw]
+    if not any(distance <= 1 for distance, _row in scored):
+        return raw
+    return [row for distance, row in scored if distance <= 1 or cited_verb(row)]
+
+
+def row_translates_its_word(raw: dict, query: str, *, learning_lang: str) -> bool:
+    """Keep a row that translates the word it names, or whose lemma or gloss is one change from the query.
+
+    A row without `word`, or whose `word` is the query itself, is kept. A row that
+    names a different word is kept when the visible lemma or gloss is the query
+    or one letter away from it.
+    """
+    word = (raw.get("word") or "").strip()
+    stem = lemma_stem(raw.get("lemma") or "", learning_lang)
+    glosses = gloss_tokens(raw.get("gloss") or "")
+    if not word or _fold(word) == _fold(query):
+        return True
+    if _one_change_away(stem, query) or any(_one_change_away(token, query) for token in glosses):
+        return True
+    if _same_word(word, stem):
+        return True
+    return any(_same_word(word, token) for token in glosses)
+
+
+def _is_grammar_note(gloss: str, native_lang: str | None) -> bool:
+    if not (native_lang or "").lower().startswith("pl"):
+        return False
+    low = (gloss or "").casefold()
+    return any(term in low for term in _PL_GRAMMAR_NOTE)
+
+
+def rows_are_spelling_echoes(
+    candidates: list[dict], query: str, *, learning_lang: str
+) -> bool:
+    """Same word copied into lemma and gloss, with no real translation beside it."""
+    if not candidates:
+        return False
+    q = _norm_token(_strip_diacritics(query))
+    if len(q) < 3:
+        return False
+    for item in candidates:
+        stem = _norm_token(
+            _strip_diacritics(lemma_stem(item.get("lemma") or "", learning_lang))
+        )
+        gloss = _norm_token(_strip_diacritics(item.get("gloss") or ""))
+        if stem != q or gloss != q:
+            return False
+    return True
+
+
+def count_new_lookup_rows(
+    before: list[dict], after: list[dict], *, learning_lang: str
+) -> int:
+    old = {
+        lookup_dedup_key(item.get("lemma") or "", item.get("pos"), learning_lang=learning_lang)
+        for item in before
+        if (item.get("lemma") or "").strip()
+    }
+    return sum(
+        1
+        for item in after
+        if (item.get("lemma") or "").strip()
+        and lookup_dedup_key(
+            item.get("lemma") or "", item.get("pos"), learning_lang=learning_lang
+        )
+        not in old
+    )
+
+
 def sanitize_lookup_candidates(
     candidates: list[dict],
     *,
@@ -594,6 +1235,22 @@ def sanitize_lookup_candidates(
         gloss = (item.get("gloss") or "").strip()
         if not lemma or not gloss:
             continue
+        if (learning_lang or "").lower().startswith("es"):
+            singular = _singular_spanish_noun(lemma)
+            if normalize_pos_bucket(item.get("pos")) == "noun" and " " not in singular:
+                singular = _with_spanish_article(singular, "noun")
+            if normalize_pos_bucket(item.get("pos")) == "adj":
+                # droga/droga is the query copied into both fields. Turning the
+                # ending into -o would invent a headword the model did not return.
+                if _fold(lemma_stem(lemma, learning_lang)) == _fold(gloss):
+                    continue
+                singular = _masculine_spanish_adjective(singular)
+            # grande / duży banknot: a Spanish noun with no known gender is not a citation.
+            if normalize_pos_bucket(item.get("pos")) == "noun" and " " not in singular:
+                continue
+            if singular != lemma:
+                item = dict(item)
+                item["lemma"] = singular
 
         item = canonicalize_lookup_candidate(item, learning_lang=learning_lang)
         lemma = (item.get("lemma") or "").strip()

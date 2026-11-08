@@ -9,6 +9,8 @@ from uuid import uuid4
 from app.ai.schemas.similar_words import MIN_SIMILAR_FOR_QUIZ
 from app.lsp.enrichment import (
     assemble_core_card,
+    finish_side_jobs,
+    has_required_inflection,
     side_jobs_need_retry,
     run_lemma_enrichment,
 )
@@ -404,3 +406,104 @@ def test_pos_mismatch_refetches_similar(monkeypatch):
     )
     assert "noun" in similar_calls
     assert "verb" in similar_calls
+
+
+def test_has_required_inflection_treats_null_forms_as_missing():
+    empty = {"verbs": {"tenses": None, "non_finite": None}}
+    assert has_required_inflection(
+        {"inflection": empty}, pos="phrase", lemma="de repente", learning_lang="es"
+    ) is False
+    assert has_required_inflection(
+        {"inflection": empty, "inflection_status": "not_applicable"},
+        pos="phrase",
+        lemma="de repente",
+        learning_lang="es",
+    ) is True
+    assert has_required_inflection(
+        {}, pos="phrase", lemma="la red social", learning_lang="es"
+    ) is True
+    assert has_required_inflection(
+        {"inflection": empty}, pos="verb", lemma="enviar", learning_lang="es"
+    ) is False
+
+
+def _phrase_shell(lemma: str, pos: str = "phrase") -> dict:
+    return {
+        "lemma": lemma,
+        "pos": pos,
+        "language": "es",
+        "meanings": [{"gloss_l1": "nagle", "examples": [{"l2": "a", "l1": "b"}]}],
+        "similar_words": _similar(),
+        "inflection": {"verbs": {"tenses": None, "non_finite": None}},
+    }
+
+
+def test_finish_side_jobs_calls_model_for_null_inflection(monkeypatch):
+    from app.lsp import enrichment as enrich_mod
+
+    calls: list[str] = []
+
+    async def fake_infl(llm, profile, lemma, pos):
+        calls.append(lemma)
+        return {"verbs": {"tenses": None, "non_finite": None}}
+
+    monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
+    result = asyncio.run(finish_side_jobs(_profile(), _phrase_shell("de repente"), llm=object()))
+    assert calls == ["de repente"]
+    assert result["inflection_status"] == "not_applicable"
+    assert result["inflection"] is None
+    assert result["conjugation"] is None
+
+
+def test_finish_side_jobs_keeps_phrase_open_when_inflection_fails(monkeypatch):
+    from app.lsp import enrichment as enrich_mod
+
+    async def fake_infl(llm, profile, lemma, pos):
+        raise RuntimeError("model down")
+
+    monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
+    result = asyncio.run(finish_side_jobs(_profile(), _phrase_shell("de repente"), llm=object()))
+    assert "inflection_status" not in result
+
+
+def test_empty_verb_inflection_is_not_marked_inapplicable(monkeypatch):
+    from app.lsp import enrichment as enrich_mod
+
+    async def fake_infl(llm, profile, lemma, pos):
+        return {"verbs": {"tenses": None, "non_finite": None}}
+
+    monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
+    result = asyncio.run(
+        finish_side_jobs(_profile(), _phrase_shell("enviar", pos="verb"), llm=object())
+    )
+    assert result.get("inflection_status") != "not_applicable"
+
+
+def test_run_lemma_marks_empty_phrase_not_applicable(monkeypatch):
+    from app.lsp import enrichment as enrich_mod
+
+    async def fake_core(llm, profile, lemma, pos, *, gloss_hint=None):
+        return _core_payload(lemma=lemma, pos="phrase")
+
+    async def fake_similar(llm, profile, lemma, pos):
+        return _similar()
+
+    async def fake_infl(llm, profile, lemma, pos):
+        return {}
+
+    async def fake_fill(llm, core, lang):
+        return None
+
+    monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
+    monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
+    monkeypatch.setattr(
+        "app.services.related_articles.fill_related_articles_on_core", fake_fill
+    )
+    result = asyncio.run(
+        run_lemma_enrichment(
+            _profile(), "de repente", "phrase", require_similar=False
+        )
+    )
+    assert result["inflection_status"] == "not_applicable"
+    assert result["inflection"] is None

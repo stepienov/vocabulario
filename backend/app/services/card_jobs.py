@@ -13,7 +13,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,13 +21,14 @@ from app.ai.schemas.similar_words import MIN_SIMILAR_FOR_QUIZ
 from app.core.deps import lang_pair_key, normalize_text
 from app.core.lemma_keys import cache_lookup_keys, canonical_lemma
 from app.db.session import async_session_factory
-from app.lsp.enrichment import finish_side_jobs, inflect_pos_key, run_lemma_enrichment
+from app.lsp.enrichment import finish_side_jobs, has_required_inflection, run_lemma_enrichment
 from app.lsp.lang_utils import articles_for
 from app.models import LanguageProfile, LearningCard, LexicalEntry, User
 from app.services.distractors import in_learning_lemma, lemma_keys
 from app.services.enrichment import enrich_adaptive_card_content, enrich_card_content
 from app.services.lexical import LexicalService
 from app.services.app_log import log_event
+from app.services.background import spawn_background
 from app.services.llm_usage import bind_llm_usage_context
 from app.services.pos_normalize import normalize_pos_bucket
 from app.services.similar_words import ensure_similar_words
@@ -58,7 +59,8 @@ async def _log_enrich_pipeline(
     data = content if content is not None else dict(card.content or {})
     family = data.get("word_family_l2") or []
     syn = data.get("synonyms_l2") or []
-    await log_event(
+    spawn_background(
+        lambda: log_event(
         level="info",
         category="enrichment",
         event=event,
@@ -76,7 +78,10 @@ async def _log_enrich_pipeline(
             "source": source,
             "lookup_event_id": str(card.lookup_event_id) if card.lookup_event_id else None,
             "enrichment_status": card.enrichment_status,
+            "side_retries": int(getattr(card, "enrichment_side_retries", 0) or 0),
         },
+    ),
+        name="enrich_pipeline",
     )
 
 
@@ -97,6 +102,7 @@ def resolve_enrichment_entry_kind(content: dict | None, *, pos: str | None = Non
 
 
 _MAX_MANUAL_ENRICH_RETRIES = 3
+_MAX_SIDE_RETRIES = 3
 _AUTO_RETRY_DELAY = timedelta(minutes=15)
 
 # Max kart wzbogacanych naraz. 9× równolegle = ~36 calli reasoning-modelu i lawina.
@@ -166,13 +172,19 @@ def _apply_enrich_retry(card: LearningCard, exc: BaseException) -> None:
 
     if card.enrichment_status == STATUS_LEARNABLE:
         card.enrichment_error = err
-        card.enrichment_retry_at = datetime.now(UTC) + _AUTO_RETRY_DELAY
+        retries = int(getattr(card, "enrichment_side_retries", 0) or 0) + 1
+        card.enrichment_side_retries = retries
+        if retries >= _MAX_SIDE_RETRIES:
+            card.enrichment_retry_at = None
+        else:
+            card.enrichment_retry_at = datetime.now(UTC) + _AUTO_RETRY_DELAY
         if not bool(getattr(card, "enrichment_auto_retry_used", False)):
             card.enrichment_auto_retry_used = True
         logger.info(
-            "Enrichment karty %s zostaje learnable; retry side-jobs za %s (%s)",
+            "Enrichment karty %s zostaje learnable; side-retry %s/%s (%s)",
             card.id,
-            _AUTO_RETRY_DELAY,
+            retries,
+            _MAX_SIDE_RETRIES,
             card.lemma_l2,
         )
         return
@@ -231,6 +243,7 @@ def _clear_enrich_retry(card: LearningCard) -> None:
     card.enrichment_error = None
     card.enrichment_auto_retry_used = False
     card.enrichment_manual_triggered = False
+    card.enrichment_side_retries = 0
 
 
 async def request_manual_enrichment_retry(db: AsyncSession, card: LearningCard) -> None:
@@ -302,32 +315,6 @@ def content_is_learnable(content: dict | None) -> bool:
     return _meanings_have_examples(content)
 
 
-def _has_verb_inflection(content: dict) -> bool:
-    inf = content.get("inflection") or {}
-    verbs = inf.get("verbs") if isinstance(inf, dict) else None
-    has_inflection = isinstance(verbs, dict) and (
-        verbs.get("tenses") or verbs.get("non_finite")
-    )
-    return bool(has_inflection or content.get("conjugation"))
-
-
-def _has_required_inflection(
-    content: dict, *, pos: str, lemma: str, learning_lang: str
-) -> bool:
-    """Odmiana, której LSP chce dla tego POS — nie tylko czasownik."""
-    key = inflect_pos_key(pos, lemma=lemma, learning_lang=learning_lang)
-    if key is None:
-        return True
-    inf = content.get("inflection") if isinstance(content.get("inflection"), dict) else {}
-    if key == "noun":
-        nouns = inf.get("nouns") if isinstance(inf.get("nouns"), dict) else None
-        return bool(nouns)
-    if key == "adj":
-        adjs = inf.get("adjectives") if isinstance(inf.get("adjectives"), dict) else None
-        return bool(adjs)
-    return _has_verb_inflection(content)
-
-
 def content_is_complete(content: dict | None, *, learning_lang: str | None = None) -> bool:
     """Pełna treść do cache: learnable + dystraktory (+ odmiana, gdy LSP jej chce).
 
@@ -342,7 +329,7 @@ def content_is_complete(content: dict | None, *, learning_lang: str | None = Non
     lemma = str(content.get("lemma") or "")
     lang = learning_lang or str(content.get("language") or "")
     if content.get("schema_version") != "vocabulario.adaptive.v1":
-        if not _has_required_inflection(
+        if not has_required_inflection(
             content, pos=pos, lemma=lemma, learning_lang=lang
         ):
             return False
@@ -495,15 +482,21 @@ async def find_ready_entry(
             rows = [e for e in legacy_rows if _entry_has_paid_content(e)]
     if not rows:
         logger.info("lexical cache MISS pair=%s keys=%s lemma=%r gloss=%r", lang_pair, keys, lemma, gloss)
-        from app.services.app_log import log_event
-
-        await log_event(
-            level="info",
-            category="enrichment",
-            event="lexical_cache_miss",
-            status="ok",
-            message=f"cache miss {lemma!r}",
-            payload={"lang_pair": lang_pair, "keys": sorted(keys), "lemma": lemma, "gloss": gloss},
+        spawn_background(
+            lambda: log_event(
+                level="info",
+                category="enrichment",
+                event="lexical_cache_miss",
+                status="ok",
+                message=f"cache miss {lemma!r}",
+                payload={
+                    "lang_pair": lang_pair,
+                    "keys": sorted(keys),
+                    "lemma": lemma,
+                    "gloss": gloss,
+                },
+            ),
+            name="lexical_cache_miss",
         )
         return None
     hit = pick_ready_entry(rows, pos, require_lemma=lemma if require_l2 else None)
@@ -783,6 +776,8 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
         if card.enrichment_status == STATUS_PREPARATION_PROBLEM:
             return
         if card.enrichment_status == STATUS_LEARNABLE:
+            if int(card.enrichment_side_retries or 0) >= _MAX_SIDE_RETRIES:
+                return
             retry_at = card.enrichment_retry_at
             if retry_at is not None and retry_at > datetime.now(UTC):
                 return
@@ -983,10 +978,44 @@ async def _persist_enrichment_result(
 
     if content_is_learnable(content):
         content = await sync_word_family(db, profile, content, None)
+        was_learnable = card.enrichment_status == STATUS_LEARNABLE
+        unchanged = was_learnable and content == dict(card.content or {})
+        retries = int(card.enrichment_side_retries or 0)
+        if was_learnable:
+            retries += 1
+        now = datetime.now(UTC)
+        if retries >= _MAX_SIDE_RETRIES:
+            retry_at = None
+        elif card.enrichment_retry_at is None or card.enrichment_retry_at <= now:
+            retry_at = now + _AUTO_RETRY_DELAY
+        else:
+            retry_at = card.enrichment_retry_at
+        if unchanged:
+            kept_error = card.enrichment_error
+            db.expunge(card)
+            await db.execute(
+                update(LearningCard)
+                .where(LearningCard.id == card.id)
+                .values(
+                    enrichment_side_retries=retries,
+                    enrichment_retry_at=retry_at,
+                    enrichment_error=kept_error,
+                    updated_at=LearningCard.updated_at,
+                )
+            )
+            card.enrichment_status = STATUS_LEARNABLE
+            card.enrichment_side_retries = retries
+            card.enrichment_retry_at = retry_at
+            card.enrichment_error = kept_error
+            await db.commit()
+            await _log_enrich_pipeline(
+                card, "enrich_side_retry", source="llm", content=content
+            )
+            return
         _apply_content_fields(card, content)
         card.enrichment_status = STATUS_LEARNABLE
-        if card.enrichment_retry_at is None or card.enrichment_retry_at <= datetime.now(UTC):
-            card.enrichment_retry_at = datetime.now(UTC) + _AUTO_RETRY_DELAY
+        card.enrichment_side_retries = retries
+        card.enrichment_retry_at = retry_at
         await db.commit()
         await _log_enrich_pipeline(card, "enrich_ready", source="llm", content=content)
         if not notified:
@@ -1018,7 +1047,12 @@ async def _enrich_lemma_staged(
     ):
         content = await finish_side_jobs(profile, dict(content0))
         await _persist_enrichment_result(
-            db, card, profile, content, entry=None, notified=False
+            db,
+            card,
+            profile,
+            content,
+            entry=None,
+            notified=card.enrichment_status == STATUS_LEARNABLE,
         )
         return
 
@@ -1067,6 +1101,7 @@ async def _resume_pending_enrichment(*, stale_only: bool = False) -> None:
     )
     learnable_due = and_(
         LearningCard.enrichment_status == STATUS_LEARNABLE,
+        LearningCard.enrichment_side_retries < _MAX_SIDE_RETRIES,
         or_(
             LearningCard.enrichment_retry_at.is_(None),
             LearningCard.enrichment_retry_at <= now,

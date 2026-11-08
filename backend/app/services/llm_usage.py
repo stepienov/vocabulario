@@ -74,6 +74,22 @@ def clear_llm_usage_context() -> None:
     _usage_ctx.set(LlmUsageContext())
 
 
+def schedule_llm_meter(
+    usage_kwargs: dict[str, Any],
+    log_kwargs: dict[str, Any] | None = None,
+) -> None:
+    from app.services.background import spawn_background
+
+    async def _write() -> None:
+        if log_kwargs is not None:
+            from app.services.app_log import log_event
+
+            await log_event(**log_kwargs)
+        await record_llm_usage(**usage_kwargs)
+
+    spawn_background(_write, name="llm_usage")
+
+
 def _as_uuid(value: object) -> UUID | None:
     if value is None:
         return None
@@ -99,15 +115,19 @@ def build_llm_request_json(
     prompt: str,
     prompt_dynamic: str | None = None,
     cache_key: str | None = None,
+    reasoning_effort: str | None = None,
 ) -> dict[str, Any]:
     dynamic = prompt_dynamic if prompt_dynamic is not None else prompt
-    return {
+    payload = {
         "purpose": purpose,
         "model": model,
         "schema": schema_name,
         "prompt_dynamic": _clip(dynamic, _PROMPT_CLIP),
         "cache_key": cache_key,
     }
+    if reasoning_effort is not None:
+        payload["reasoning_effort"] = reasoning_effort
+    return payload
 
 
 def payload_cutoff(*, now: datetime | None = None, days: int | None = None) -> datetime:
@@ -167,38 +187,37 @@ async def record_llm_usage(
         store = bool(settings.llm_store_payloads) and (
             request_json is not None or response_json is not None
         )
-        # Commit usage before payload. A combined flush can insert the child
-        # first, trip llm_call_payloads_llm_usage_id_fkey, and drop the metric.
+        from app.models import LlmCallPayload
+
+        # Flush the parent before the child. A combined flush can insert the
+        # payload first, trip llm_call_payloads_llm_usage_id_fkey, and drop
+        # the metric. A payload error rolls back only its savepoint.
         async with async_session_factory() as db:
             db.add(row)
+            await db.flush()
+            if store:
+                try:
+                    async with db.begin_nested():
+                        db.add(
+                            LlmCallPayload(
+                                llm_usage_id=row_id,
+                                request_json=request_json,
+                                response_json=response_json
+                                if isinstance(response_json, (dict, list))
+                                else None,
+                            )
+                        )
+                except Exception:
+                    logger.exception(
+                        "llm payload write failed id=%s purpose=%s model=%s",
+                        row_id,
+                        purpose,
+                        model,
+                    )
             await db.commit()
     except Exception:
         logger.exception("llm_usage write failed purpose=%s model=%s", purpose, model)
         return None
-
-    if store:
-        try:
-            from app.db.session import async_session_factory
-            from app.models import LlmCallPayload
-
-            async with async_session_factory() as db:
-                db.add(
-                    LlmCallPayload(
-                        llm_usage_id=row_id,
-                        request_json=request_json,
-                        response_json=response_json
-                        if isinstance(response_json, (dict, list))
-                        else None,
-                    )
-                )
-                await db.commit()
-        except Exception:
-            logger.exception(
-                "llm payload write failed id=%s purpose=%s model=%s",
-                row_id,
-                purpose,
-                model,
-            )
     return row_id
 
 

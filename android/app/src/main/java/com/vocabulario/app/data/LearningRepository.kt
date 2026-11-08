@@ -213,13 +213,26 @@ class LearningRepository @Inject constructor(
 
     suspend fun lookupCached(text: String): LookupResponse {
         val profileId = activeProfileId()
-        return api.lookupCached(LookupRequest(text = text, profile_id = profileId))
+        return api.lookupCached(
+            LookupRequest(text = text, profile_id = profileId, local_membership = true),
+        )
     }
 
-    suspend fun lookupExpand(text: String): LookupResponse {
+    suspend fun lookupExpand(text: String, more: Boolean = false): LookupResponse {
         val profileId = activeProfileId()
-        return api.lookupExpand(LookupRequest(text = text, profile_id = profileId))
+        return api.lookupExpand(
+            LookupRequest(
+                text = text,
+                profile_id = profileId,
+                local_membership = true,
+                more = more,
+            ),
+        )
     }
+
+    fun observeMembershipRows(profileId: String) = offlineStore.observeMembershipRows(profileId)
+
+    fun observeLastPulledAt(profileId: String) = offlineStore.observeLastPulledAt(profileId)
 
     suspend fun lookupCategoryCached(text: String): LookupResponse {
         val profileId = activeProfileId()
