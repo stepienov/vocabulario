@@ -69,20 +69,17 @@ def test_rank_union_puts_closest_first():
     assert {c["lemma"] for c in ranked} == {"el libro", "la tripa"}
 
 
-def test_draft_prompt_names_the_query_and_the_article_rule():
-    from app.ai.prompts.v1 import (
-        LOOKUP_DRAFT_SYSTEM_V2,
-        LOOKUP_DRAFT_USER_V2,
-        NOUN_ARTICLE_RULE,
-    )
+def test_draft_prompt_names_the_query():
+    from app.ai.prompts.v1 import LOOKUP_DRAFT_PROMPT_V1, LOOKUP_SYSTEM_V1
 
-    assert LOOKUP_DRAFT_SYSTEM_V2.endswith(NOUN_ARTICLE_RULE)
-    draft = LOOKUP_DRAFT_USER_V2.format(
+    assert "Bilingual dictionary lookup" in LOOKUP_SYSTEM_V1
+    draft = LOOKUP_DRAFT_PROMPT_V1.format(
+        pair_guidance="pair",
         native_name="Polish",
         learning_name="Spanish",
         text="zamek",
     )
-    assert 'Query: "zamek"' in draft
+    assert 'User query: "zamek"' in draft
 
 
 def test_expand_prompt_lists_existing_candidates():
@@ -101,28 +98,10 @@ def test_expand_prompt_lists_existing_candidates():
         lookup_output_form_rules=lookup_output_form_rules_text("pl", "es"),
         already_block=already,
     )
-    assert "User query string: \"ksiazka\"" in prompt
+    assert 'User query string: "ksiazka"' in prompt
     assert "el libro" in prompt
     assert "do NOT repeat" in prompt
     assert LLMService._already_block([]) == (
         "None yet — this is a cold start. Return the full high-recall "
         "union of all plausible readings (up to 16)."
     )
-
-
-def test_expand_v2_prompt_ends_with_the_empty_list_rule():
-    from app.ai.prompts.v1 import (
-        LOOKUP_EXPAND_SYSTEM_V2,
-        NO_MORE_RULE,
-        NOUN_ARTICLE_RULE,
-    )
-    from app.services.llm import LLMService
-
-    assert NOUN_ARTICLE_RULE in LOOKUP_EXPAND_SYSTEM_V2
-    assert LOOKUP_EXPAND_SYSTEM_V2.endswith(NO_MORE_RULE)
-    shown = LLMService._expand_already_block(
-        [{"lemma": "el perro", "pos": "noun", "gloss": "pies"}]
-    )
-    assert shown.startswith("Already shown, do not repeat these lemma+pos pairs:")
-    assert "lemma=el perro; pos=noun; gloss=pies" in shown
-    assert LLMService._expand_already_block([]) == "Nothing shown yet."

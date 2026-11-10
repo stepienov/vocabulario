@@ -20,11 +20,10 @@ from app.ai.prompts.v1 import (
     LOOKUP_CATEGORY_DRAFT_PROMPT_V1,
     LOOKUP_CATEGORY_EXPAND_PROMPT_V1,
     LOOKUP_CATEGORY_SYSTEM_V1,
-    LOOKUP_DRAFT_SYSTEM_V2,
-    LOOKUP_DRAFT_USER_V2,
-    LOOKUP_EXPAND_SYSTEM_V2,
-    LOOKUP_EXPAND_PL_ES_EXAMPLE,
-    LOOKUP_EXPAND_USER_V2,
+    LOOKUP_DRAFT_MODEL,
+    LOOKUP_DRAFT_PROMPT_V1,
+    LOOKUP_EXPAND_MODEL,
+    LOOKUP_EXPAND_PROMPT_V1,
     LOOKUP_L1_TYPO_PROMPT_V1,
     LOOKUP_PROMPT_V1,
     LOOKUP_SYSTEM_V1,
@@ -61,6 +60,7 @@ from app.services.llm_usage import (
 )
 
 logger = logging.getLogger(__name__)
+
 
 ENRICH_CORE_SYSTEM = (
     "You work like a bilingual dictionary. Meanings in frequency order; "
@@ -121,7 +121,7 @@ class LLMService:
     def _is_reasoning_model(model: str) -> bool:
         """Rodzina GPT-5 / o-series: brak temperature, limit jako max_completion_tokens."""
         name = model.lower()
-        return name.startswith(("gpt-5", "o1", "o3", "o4"))
+        return name.startswith(("gpt-5", "gpt-6", "o1", "o3", "o4"))
 
     async def _chat_json(
         self,
@@ -138,6 +138,7 @@ class LLMService:
         prompt_dynamic: str | None = None,
         purpose: str = "chat_json",
         reasoning_effort: str | None = None,
+        service_tier: str | None = None,
     ) -> dict[str, Any]:
         if self.mock:
             mock_prompt = prompt
@@ -194,6 +195,7 @@ class LLMService:
                     prompt_static=prompt_static,
                     prompt_dynamic=prompt_dynamic,
                     reasoning_effort=reasoning_effort,
+                    service_tier=service_tier,
                 )
         except Exception as exc:
             duration_ms = int((time.perf_counter() - started) * 1000)
@@ -287,6 +289,7 @@ class LLMService:
         prompt_static: str | None = None,
         prompt_dynamic: str | None = None,
         reasoning_effort: str | None = None,
+        service_tier: str | None = None,
     ) -> tuple[dict[str, Any], Any]:
         assert self.client is not None
         system_content = system or (
@@ -341,6 +344,8 @@ class LLMService:
             kwargs[limit_key] = max_tokens
         if self._is_reasoning_model(model) and reasoning_effort is not None:
             kwargs["reasoning_effort"] = reasoning_effort
+        if service_tier:
+            kwargs["service_tier"] = service_tier
         response = await self.client.chat.completions.create(**kwargs)
         usage = parse_openai_usage(response)
         content = response.choices[0].message.content or "{}"
@@ -618,22 +623,6 @@ class LLMService:
             )
         return "\n".join(lines)
 
-    @staticmethod
-    def _expand_already_block(already: list[dict[str, Any]]) -> str:
-        rows = [
-            c
-            for c in already
-            if isinstance(c, dict) and (c.get("lemma") or "").strip()
-        ]
-        if not rows:
-            return "Nothing shown yet."
-        lines = ["Already shown, do not repeat these lemma+pos pairs:"]
-        for c in rows:
-            lines.append(
-                f"- lemma={c.get('lemma')}; pos={c.get('pos')}; gloss={c.get('gloss')}"
-            )
-        return "\n".join(lines)
-
     async def lookup_expand(
         self,
         text: str,
@@ -641,22 +630,24 @@ class LLMService:
         learning: str,
         already: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
-        """One-shot lookup: full union on cold start, only new rows when cache exists."""
-        prompt = LOOKUP_EXPAND_USER_V2.format(
+        """High-recall second pass: missing senses, typos, both languages."""
+        prompt = LOOKUP_EXPAND_PROMPT_V1.format(
             native_name=lang_name_en(native),
             learning_name=lang_name_en(learning),
             text=text,
-            already_block=self._expand_already_block(already or []),
+            cefr="B1",
+            pair_guidance=language_pair_guidance(native=native, learning=learning),
+            lookup_output_form_rules=lookup_output_form_rules_text(native, learning),
+            already_block=self._already_block(already or []),
         )
-        if (native or "").lower().startswith("pl") and (learning or "").lower().startswith("es"):
-            prompt += "\n" + LOOKUP_EXPAND_PL_ES_EXAMPLE
         bind_llm_usage_context(query=text, lang_pair=lang_pair_key(native, learning))
         data = await self._chat_json(
-            self.lookup_model,
+            LOOKUP_EXPAND_MODEL,
             prompt,
-            system=LOOKUP_EXPAND_SYSTEM_V2,
-            max_tokens=500,
-            reasoning_effort="none",
+            system=LOOKUP_SYSTEM_V1,
+            max_tokens=1200,
+            reasoning_effort="low",
+            service_tier="priority",
             purpose="lookup_expand",
         )
         return data.get("candidates", [])
@@ -667,19 +658,21 @@ class LLMService:
         native: str,
         learning: str,
     ) -> list[dict[str, Any]]:
-        """Cheap first-paint lookup on the light model."""
-        prompt = LOOKUP_DRAFT_USER_V2.format(
+        """Fast first paint: main draft prompt on gpt-6-sol without reasoning."""
+        prompt = LOOKUP_DRAFT_PROMPT_V1.format(
             native_name=lang_name_en(native),
             learning_name=lang_name_en(learning),
             text=text,
+            pair_guidance=language_pair_guidance(native=native, learning=learning),
         )
         bind_llm_usage_context(query=text, lang_pair=lang_pair_key(native, learning))
         data = await self._chat_json(
-            self.lookup_model,
+            LOOKUP_DRAFT_MODEL,
             prompt,
-            system=LOOKUP_DRAFT_SYSTEM_V2,
-            max_tokens=400,
+            system=LOOKUP_SYSTEM_V1,
+            max_tokens=1200,
             reasoning_effort="none",
+            service_tier="priority",
             purpose="lookup_draft",
         )
         return data.get("candidates", [])

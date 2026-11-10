@@ -385,21 +385,42 @@ Gałąź gotowego wiersza zostaje przy punkcie 1. Tu wchodzi tylko brak wiersza 
 - temperatury nie ustawiamy,
 - `response_format` zostaje `json_object`.
 
+#### Exact-only (pierwszy lekki request)
+
+Ten przebieg zwraca **wyłącznie** prawdziwe słowa pary, które są **dokładnie** wpisem. Nie literówka, nie sąsiad o jedną literę, nie „brzmi podobnie”, nie uzupełnienie.
+
+Reguła dopasowania:
+
+- wpis jest dokładnie tym słowem w L1 albo w L2 (ignoruj wielkość liter i diakrytyki);
+- przy rzeczowniku wiodący rodzajnik określony nie zmienia tożsamości słowa: `ser` i `el ser` to to samo hasło L2; tak samo w innych językach z rodzajnikiem;
+- jeśli wpis jest prawdziwym słowem L1 — wracają **wszystkie** zwykłe tłumaczenia L2 tego słowa;
+- jeśli wpis jest prawdziwym słowem L2 — wraca to hasło L2 ze **wszystkimi** osobnymi glossami L1;
+- homograf w obu językach: oba odczyty;
+- jeśli w żadnym z dwóch języków nie ma takiego słowa — **pusta lista** (zero kafelków).
+
+Przykłady (L1=polski, L2=hiszpański):
+
+- `ser` → dokładnie trzy odczyty (nie mniej, nie więcej z tej reguły): `el queso` / ser (PL), `ser` / być (ES czasownik), `el ser` / istota (ES rzeczownik); jeśli słownik ma jeszcze inne dokładne znaczenie tego samego słowa — też;
+- `serr` → pusto;
+- `drogie32` → pusto (cyfry nie robią z tego prawdziwego słowa).
+
+Sąsiedzi i literówki nie należą do tego requestu. Idą dopiero w dociągnięciu (punkt 3), osobnym poleceniem.
+
 Prompt systemowy, po angielsku:
 
 ```
-Dictionary lookup. JSON only. If the query is a real L1 word, the first candidates are its ordinary L2 translations and the gloss is that L1 word. Add an L2 headword only when the query is exactly that headword, ignoring case and diacritics. Do not return a word only because it sounds similar. lemma is the L2 citation form. gloss is the L1 citation form. Noun lemma: in Spanish, French, Italian, Portuguese and German it starts with the singular definite article (el/la, le/la/l', il/lo/la/l', o/a, der/die/das); in other languages it has no article and no classifier.
+Dictionary lookup. JSON only. Two independent checks, then their union. 1) If the query is a real L1 word, emit every ordinary L2 translation of that L1 word (gloss = that L1 word). Do this even when step 2 also matches. 2) If the query is a real L2 word (a leading definite article on a noun does not change identity), emit that L2 headword once per distinct L1 gloss. Return every row from both steps — no fewer, no more. Never stop after the first language or the first sense. Do not return a neighbor, typo, completion, or sound-alike. If neither step matches, return no rows. lemma is the L2 citation form. gloss is the L1 citation form. Noun lemma: in Spanish, French, Italian, Portuguese and German it starts with the singular definite article (el/la, le/la/l', il/lo/la/l', o/a, der/die/das); in other languages it has no article and no classifier.
 ```
 
-Ostatnie zdanie to ART2. To samo zdanie, dosłownie, dochodzi do promptów systemowych z punktów 3 i 4. Nazwy języków w zdaniu są stałe, bez wstawiania pary, żeby prompt był identyczny dla wszystkich par.
+Ostatnie zdanie to ART2. To samo zdanie, dosłownie, dochodzi do promptów systemowych z punktów 3 i 4. Nazwy języków w zdaniu są stałe, bez wstawiania pary, żeby prompt był identyczny dla wszystkich par. Brak przykładów PL/ES ani jakiejkolwiek innej pary w system promptcie.
 
 Prompt użytkownika:
 
 ```
-L1: {native_name}. L2: {learning_name}. Query: "{text}". At most 4 candidates. pos: noun, verb, adj, adv, or other. JSON: {"candidates":[{"lemma":"...","pos":"...","gloss":"..."}]}
+L1: {native_name}. L2: {learning_name}. Query: "{text}". Run both checks. Put L1→L2 translations first, then L2 headword senses. pos: noun, verb, adj, adv, or other. JSON: {"candidates":[{"lemma":"...","pos":"...","gloss":"..."}]}
 ```
 
-`{native_name}` i `{learning_name}` to dotychczasowe angielskie nazwy z `lang_name_en`. Długi `language_pair_guidance` do tego przebiegu nie wchodzi.
+`{native_name}` i `{learning_name}` to dotychczasowe angielskie nazwy z `lang_name_en`. Długi `language_pair_guidance` do tego przebiegu nie wchodzi. Limitu „at most N” nie ma: liczba kafelków = liczba dokładnych odczytów.
 
 Odpowiedź do telefonu jest taka sama jak w szybkiej ścieżce punktu 1: bez identyfikatorów kart i list, bez czytania kart użytkownika. `source` przy trafieniu w naszą bazę to `db`, przy modelu `ai`. `ai_complete` jest fałszywe.
 

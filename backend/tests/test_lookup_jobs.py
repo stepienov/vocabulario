@@ -97,7 +97,6 @@ def test_more_uses_its_own_inflight_task(monkeypatch):
 def test_lookup_expand_sends_a_short_prompt_without_temperature():
     from types import SimpleNamespace
 
-    from app.ai.prompts.v1 import NO_MORE_RULE
     from app.services.llm import LLMService
 
     seen: dict = {}
@@ -109,7 +108,6 @@ def test_lookup_expand_sends_a_short_prompt_without_temperature():
 
     llm = LLMService()
     llm.mock = False
-    llm.lookup_model = "gpt-5.6-terra"
     llm.client = SimpleNamespace(
         chat=SimpleNamespace(completions=SimpleNamespace(create=create))
     )
@@ -122,15 +120,16 @@ def test_lookup_expand_sends_a_short_prompt_without_temperature():
         )
     )
     assert result == []
-    assert seen["model"] == "gpt-5.6-terra"
-    assert seen["reasoning_effort"] == "none"
-    assert seen["max_completion_tokens"] == 500
+    assert seen["model"] == "gpt-6-sol"
+    assert seen["reasoning_effort"] == "low"
+    assert seen["max_completion_tokens"] == 1200
+    assert seen["service_tier"] == "priority"
     assert "temperature" not in seen
-    assert seen["messages"][0]["content"].endswith(NO_MORE_RULE)
-    assert "Already shown" in seen["messages"][1]["content"]
-    assert "la mosca" in seen["messages"][1]["content"]
+    assert "Bilingual dictionary lookup" in seen["messages"][0]["content"]
+    assert "Already stored" in seen["messages"][1]["content"]
+    assert "el perro" in seen["messages"][1]["content"]
     asyncio.run(llm.lookup_expand("Haus", "de", "en"))
-    assert "la mosca" not in seen["messages"][1]["content"]
+    assert "el perro" not in seen["messages"][1]["content"]
 
 
 import pytest

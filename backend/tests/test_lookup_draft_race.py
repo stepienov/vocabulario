@@ -16,8 +16,6 @@ def _run(coro):
 
 
 def test_lookup_draft_sends_a_short_prompt_without_temperature():
-    from app.ai.prompts.v1 import NOUN_ARTICLE_RULE
-
     seen: dict = {}
 
     async def create(**kwargs):
@@ -29,18 +27,20 @@ def test_lookup_draft_sends_a_short_prompt_without_temperature():
 
     llm = LLMService()
     llm.mock = False
-    llm.lookup_model = "gpt-5.6-terra"
     llm.client = SimpleNamespace(
         chat=SimpleNamespace(completions=SimpleNamespace(create=create))
     )
 
     result = _run(llm.lookup_draft("casa", "pt", "tr"))
     assert result[0]["lemma"] == "ev"
-    assert seen["model"] == "gpt-5.6-terra"
+    assert result[0]["gloss"] == "casa"
+    assert seen["model"] == "gpt-6-sol"
     assert seen["reasoning_effort"] == "none"
-    assert seen["max_completion_tokens"] == 400
+    assert seen["max_completion_tokens"] == 1200
+    assert seen["service_tier"] == "priority"
     assert "temperature" not in seen
-    assert seen["messages"][0]["content"].endswith(NOUN_ARTICLE_RULE)
+    assert "Bilingual dictionary lookup" in seen["messages"][0]["content"]
+    assert 'User query: "casa"' in seen["messages"][1]["content"]
 
 
 def test_lookup_draft_mock_returns_candidates():
