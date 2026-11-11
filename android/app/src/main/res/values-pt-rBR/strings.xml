@@ -385,7 +385,7 @@
     <string name="section_usages">expressões</string>
 
     <string name="home_search_hint">Buscar uma palavra…</string>
-    <string name="search_by_category">Buscar palavras desta categoria</string>
+    <string name="search_by_category">Buscar associações</string>
 
     <string name="home_due_now">Pronto para revisar</string>
 
@@ -566,6 +566,9 @@
     <string name="lookup_no_more_suggestions">Não foram encontradas mais correspondências.</string>
     <string name="lookup_longer_analysis">Sua palavra \"%1$s\" precisa de uma análise mais longa</string>
     <string name="lookup_nothing_found">Nenhuma correspondência para \"%1$s\".</string>
+    <string name="lookup_assoc_searching">buscando associações</string>
+    <string name="lookup_assoc_more">buscar mais associações</string>
+    <string name="lookup_assoc_no_more">sem mais associações</string>
     <string name="err_import_empty">Nenhuma palavra para importar</string>
 
     <string name="err_import">Falha na importação</string>

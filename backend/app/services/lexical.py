@@ -11,20 +11,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.deps import lang_pair_key, normalize_text
+from app.core.lemma_keys import canonical_lemma
 from app.models import LanguageProfile, LearningCard, LexicalEntry, LookupQueryCache, User
 from app.services.llm import LLMService
 from app.services.llm_usage import bind_llm_usage_context
 from app.services.enrichment import enrich_card_content
 from app.services.lookup_candidates import (
     LOOKUP_CACHE_LIMIT,
-    LOOKUP_CATEGORY_DRAFT_LIMIT,
-    LOOKUP_CATEGORY_LIMIT,
     append_lookup_candidates,
     candidate_is_confident,
     count_new_lookup_rows,
     drop_implausible_lookup_rows,
-    drop_rows_past_one_change,
-    rows_are_spelling_echoes,
     gloss_query_score,
     letters_of_query,
     normalize_lookup_query,
@@ -51,6 +48,25 @@ logger = logging.getLogger(__name__)
 CATEGORY_QUERY_PREFIX = "cat:"
 
 
+class AssocRoundNotReady(Exception):
+    """Runda 2 albo 3, zanim poprzednia ósemka jest zapisana."""
+
+
+def _assoc_words_and_meaning(candidates: list) -> tuple[list[dict], str]:
+    words: list[dict] = []
+    meaning = ""
+    for item in candidates or []:
+        if not isinstance(item, dict):
+            continue
+        saved = item.get("_meaning")
+        if isinstance(saved, str) and saved.strip():
+            meaning = saved.strip()
+            continue
+        if (item.get("lemma") or "").strip():
+            words.append(item)
+    return words, meaning
+
+
 @dataclass(frozen=True)
 class LookupOutcome:
     candidates: list[dict]
@@ -61,6 +77,7 @@ class LookupOutcome:
     lang_pair: str | None = None
     persist: bool = False
     suggestions_exhausted: bool = False
+    headword_meaning: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -323,10 +340,6 @@ class LexicalService:
         query: str | None = None,
         learning_lang: str | None = None,
     ) -> list[dict]:
-        if query and learning_lang:
-            raw = drop_rows_past_one_change(
-                raw, query, learning_lang=learning_lang
-            )
         out: list[dict] = []
         for c in raw:
             if not c.get("lemma"):
@@ -749,10 +762,6 @@ class LexicalService:
             text,
             profile,
         )
-        if rows_are_spelling_echoes(
-            model_rows, text, learning_lang=profile.learning_lang
-        ):
-            model_rows = []
         combined, _added = append_lookup_candidates(
             confident, model_rows, learning_lang=profile.learning_lang
         )
@@ -904,157 +913,171 @@ class LexicalService:
             return cached
         return await self.lookup_expand(user.id, profile_id, text)
 
-    def _category_cache_key(self, text: str) -> str:
-        return CATEGORY_QUERY_PREFIX + self._query_cache_key(text)
-
-    async def _category_draft_candidates(
-        self, profile: LanguageProfile, text: str, *, user_id: UUID | None = None
-    ) -> list[dict]:
-        try:
-            bind_llm_usage_context(
-                overwrite_operation=True,
-                operation_id=uuid4(),
-                operation_kind="lookup_category_draft",
-                query=text,
-                lang_pair=lang_pair_key(profile.app_lang, profile.learning_lang),
-                user_id=user_id,
-                profile_id=profile.id,
-            )
-            raw = await self.llm.lookup_category_draft(
-                text,
-                profile.app_lang,
-                profile.learning_lang,
-                profile.cefr_level,
-            )
-            return self._raw_to_candidates(raw)
-        except Exception:
-            logger.warning("category draft failed for %r", text, exc_info=True)
-            return []
+    def _assoc_key(self, text: str, round: int | None = None) -> str:
+        base = "assoc:" + self._query_cache_key(text)[:190]
+        return base if round is None else f"{base}:{round}"
 
     async def lookup_category_cached(
         self, user: User, profile_id: UUID, text: str
     ) -> LookupOutcome:
-        """Osobny flow kategorii: cache PG, seed z leksykonu, potem luna."""
+        """Jedno słowo tematu. Zapis assoc: albo jedno krótkie pytanie do modelu."""
         profile = await self.get_profile(user.id, profile_id)
+        text = letters_of_query(text)
         pair = lang_pair_key(profile.app_lang, profile.learning_lang)
-        key = self._category_cache_key(text)
+        key = self._assoc_key(text)
+        if not text:
+            return LookupOutcome([], "db", False, lang_pair=pair)
         row = await self._fetch_query_cache(pair, key)
-        if row is not None and (row.candidates or row.ai_complete):
-            row.hit_count = (row.hit_count or 0) + 1
-            return await self._present_lookup(
-                user,
-                profile,
-                text,
-                list(row.candidates or []),
+        if row is not None and row.candidates:
+            return LookupOutcome(
+                list(row.candidates)[:1],
                 "db",
-                bool(row.ai_complete),
-                category=True,
-            )
-
-        lexicon = await self._db_first_candidates(profile, text)
-        seed = [
-            c
-            for c in lexicon
-            if candidate_is_confident(c, text, learning_lang=profile.learning_lang)
-        ]
-        draft: list[dict] = []
-        if len(seed) < LOOKUP_CATEGORY_DRAFT_LIMIT:
-            draft = await self._category_draft_candidates(
-                profile, text, user_id=user.id
-            )
-        incoming, _ = append_lookup_candidates(
-            seed,
-            draft,
-            learning_lang=profile.learning_lang,
-            limit=LOOKUP_CATEGORY_LIMIT,
-        )
-        if incoming:
-            merged = await self._merge_into_query_cache(
-                pair,
-                key,
-                incoming,
-                learning_lang=profile.learning_lang,
-                limit=LOOKUP_CATEGORY_LIMIT,
-            )
-            return await self._present_lookup(
-                user,
-                profile,
-                text,
-                merged,
-                "ai" if draft else "db",
                 False,
-                category=True,
+                cache_row_id=row.id,
+                lang_pair=pair,
             )
-        return LookupOutcome([], "db", False)
+        await self.db.commit()
+        bind_llm_usage_context(
+            overwrite_operation=True,
+            operation_id=uuid4(),
+            operation_kind="lookup_category_draft",
+            query=text,
+            lang_pair=pair,
+            user_id=user.id,
+            profile_id=profile.id,
+        )
+        raw = await self.llm.lookup_category_draft(
+            text, profile.app_lang, profile.learning_lang
+        )
+        incoming = sanitize_lookup_candidates(
+            self._raw_to_candidates(
+                raw, query=text, learning_lang=profile.learning_lang
+            ),
+            learning_lang=profile.learning_lang,
+            limit=1,
+        )
+        if not incoming:
+            return LookupOutcome([], "ai", False, lang_pair=pair)
+        merged = await self._merge_into_query_cache(
+            pair, key, incoming, learning_lang=profile.learning_lang, limit=1
+        )
+        stored = await self._fetch_query_cache(pair, key)
+        if stored is not None:
+            stored.ai_complete = False
+        await self.db.commit()
+        return LookupOutcome(
+            merged[:1],
+            "ai",
+            False,
+            cache_row_id=stored.id if stored is not None else None,
+            lang_pair=pair,
+            persist=True,
+        )
 
-    async def lookup_category_expand(
-        self, user: User, profile_id: UUID, text: str
+    async def lookup_assoc_round(
+        self, user_id: UUID, profile_id: UUID, text: str, round: int
     ) -> LookupOutcome:
-        """Terra dociąga zestaw tematyczny do ~21 haseł."""
-        profile = await self.get_profile(user.id, profile_id)
+        """Jedna ósemka skojarzeń. Runda 2 i 3 czekają na poprzedni zapis."""
+        if round > 3:
+            return LookupOutcome([], "db", True, added=0)
+        profile = await self.get_profile(user_id, profile_id)
+        text = letters_of_query(text)
         pair = lang_pair_key(profile.app_lang, profile.learning_lang)
-        key = self._category_cache_key(text)
-
-        existing = await self._fetch_query_cache(pair, key)
-        if existing is not None and existing.ai_complete:
-            existing.hit_count = (existing.hit_count or 0) + 1
-            return await self._present_lookup(
-                user,
-                profile,
-                text,
-                list(existing.candidates or []),
+        key = self._assoc_key(text, round)
+        row = await self._fetch_query_cache(pair, key)
+        if row is not None and row.candidates:
+            words, meaning = _assoc_words_and_meaning(list(row.candidates))
+            return LookupOutcome(
+                words,
                 "db",
                 True,
-                category=True,
+                added=len(words),
+                cache_row_id=row.id,
+                lang_pair=pair,
+                headword_meaning=meaning,
             )
-
-        already = list(existing.candidates or []) if existing is not None else []
-        theme = ""
+        if round >= 2:
+            previous = await self._fetch_query_cache(pair, self._assoc_key(text, round - 1))
+            if previous is None or not previous.candidates:
+                raise AssocRoundNotReady()
+        already = await self._assoc_already_lemmas(pair, text, round)
+        await self.db.commit()
         bind_llm_usage_context(
             overwrite_operation=True,
             operation_id=uuid4(),
             operation_kind="lookup_category",
             query=text,
             lang_pair=pair,
-            user_id=user.id,
+            user_id=user_id,
             profile_id=profile.id,
         )
-        raw = await self.llm.lookup_category_expand(
+        raw, meaning = await self.llm.lookup_category_expand(
             text,
             profile.app_lang,
             profile.learning_lang,
-            profile.cefr_level,
             already,
-            theme=theme,
         )
-        incoming = self._raw_to_candidates(raw)
-        row = await self._ensure_query_cache_row(pair, key)
-        if row.ai_complete:
-            row.hit_count = (row.hit_count or 0) + 1
-            return await self._present_lookup(
-                user,
-                profile,
-                text,
-                list(row.candidates or []),
+        incoming = sanitize_lookup_candidates(
+            self._raw_to_candidates(
+                raw, query=text, learning_lang=profile.learning_lang
+            ),
+            learning_lang=profile.learning_lang,
+        )
+        incoming = [
+            item
+            for item in incoming
+            if canonical_lemma(item.get("lemma")) not in already
+        ]
+        if not incoming:
+            return LookupOutcome([], "ai", True, added=0, lang_pair=pair, headword_meaning=meaning)
+        fresh = await self._ensure_query_cache_row(pair, key)
+        if fresh.candidates:
+            words, stored_meaning = _assoc_words_and_meaning(list(fresh.candidates))
+            return LookupOutcome(
+                words,
                 "db",
                 True,
-                category=True,
+                added=len(words),
+                cache_row_id=fresh.id,
+                lang_pair=pair,
+                headword_meaning=stored_meaning or meaning,
             )
-        merged, _added = append_lookup_candidates(
-            list(row.candidates or []),
-            incoming,
-            learning_lang=profile.learning_lang,
-            limit=LOOKUP_CATEGORY_LIMIT,
-        )
-        row.candidates = merged
-        flag_modified(row, "candidates")
-        row.ai_complete = True
-        row.hit_count = (row.hit_count or 0) + 1
-        row.updated_at = datetime.now(UTC)
+        fresh.candidates = ([{"_meaning": meaning}] if meaning else []) + incoming
+        flag_modified(fresh, "candidates")
+        fresh.ai_complete = True
+        fresh.hit_count = (fresh.hit_count or 0) + 1
+        fresh.updated_at = datetime.now(UTC)
         await self.db.flush()
-        return await self._present_lookup(
-            user, profile, text, merged, "ai", True, category=True
+        return LookupOutcome(
+            incoming,
+            "ai",
+            True,
+            added=len(incoming),
+            cache_row_id=fresh.id,
+            lang_pair=pair,
+            persist=True,
+            headword_meaning=meaning,
         )
+
+    async def _assoc_already_lemmas(self, pair: str, text: str, round: int) -> set[str]:
+        keys = [self._assoc_key(text)]
+        keys.extend(self._assoc_key(text, index) for index in range(1, round))
+        rows = (
+            await self.db.execute(
+                select(LookupQueryCache).where(
+                    LookupQueryCache.lang_pair == pair,
+                    LookupQueryCache.input_norm.in_(keys),
+                )
+            )
+        ).scalars().all()
+        seen: set[str] = set()
+        for row in rows:
+            for item in row.candidates or []:
+                if isinstance(item, dict):
+                    key = canonical_lemma(item.get("lemma"))
+                    if key:
+                        seen.add(key)
+        return seen
 
     async def best_lookup_candidate(
         self, user: User, profile_id: UUID, text: str

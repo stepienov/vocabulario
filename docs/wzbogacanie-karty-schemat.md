@@ -75,6 +75,19 @@ Kolejność powrotów na wykresie jest typowa, nie obowiązkowa. Powiązane, kt�
 
 Odmiana, która „nie dotyczy” hasła (zwrot bez czasownika, na przykład `de repente`), jest zapisana jako wynik końcowy i nie blokuje `ready` (`docs/taski/03-petla-learnable.md`). Dziś takie karty zostają `learnable` na zawsze.
 
+## Ekran, niezależnie od widoku
+
+Ustalone 11 listopada 2026. Karta jest widoczna od razu po zapisie wiersza. Uczyć się da się, gdy są znaczenia, zdania i zwroty. Reszta dochodzi w swoich sekcjach. Żadna czynność użytkownika nie zatrzymuje dociągania.
+
+1. Po dodaniu karta jest zapisana. Na liście i w wyniku szukania widać hasło, wybrane tłumaczenie i nazwę listy. Nie czeka się z pokazaniem karty na przykłady, odmianę ani powiązane.
+2. Ćwiczenie (fiszka, wpisywanie) włącza się, gdy doszła nauka. Nie czeka na synonimy, rodzinę, skojarzenia, słowa podobne ani odmianę.
+3. Oglądanie karty w nauce, otwarcie jej z listy, zamknięcie karty, przerwanie nauki, wyjście z aplikacji i każde inne przejście między ekranami nie anuluje zadania na serwerze. Serwer dociąga dalej.
+4. Otwarta karta pokazuje treść sekcji natychmiast, jeśli ta treść już jest w karcie. Nie ma osobnego odświeżenia.
+5. Sekcja bez treści pokazuje kółko tylko wtedy, gdy dociąganie tej sekcji jeszcze trwa. Gdy zadanie się skończyło, a sekcja została pusta, kółka nie ma.
+6. Gdy karta jest otwarta i w sekcji widać kółko, treść zastępuje kółko w chwili zapisu tej sekcji. Dotyczy listy, podglądu karty i nauki. Użytkownik nie zamyka karty, żeby zobaczyć nową treść.
+
+Instrukcja telefonu: `docs/taski/10-nauka-i-powiazane.md`, sekcja „Zachowanie telefonu”. Odpytywanie: `EnrichmentPoller` (scope procesu). Kółka per sekcja: `CardSectionWaiting`. Otwarta karta: `observeCard` z Room.
+
 ## Skąd który fragment
 
 | Fragment | Wywołanie | Model | Kiedy wchodzi na kartę |

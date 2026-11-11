@@ -35,7 +35,10 @@ from app.services.similar_words import fetch_similar_words
 
 logger = logging.getLogger(__name__)
 
-OnCore = Callable[[dict], Awaitable[None]]
+OnStudy = Callable[[dict], Awaitable[None]]
+OnRelated = Callable[[dict], Awaitable[None]]
+# Alias dla starych testów / wywołań.
+OnCore = OnStudy
 
 _STEM_CHANGE_NOTE = re.compile(
     r"([a-záéíóúüñ])\s*[>:]\s*([a-záéíóúüñ]{1,3})",
@@ -135,7 +138,7 @@ def side_jobs_need_retry(
     return retry_similar, retry_inflection
 
 
-async def _fetch_core_with_examples(
+async def _fetch_study_with_examples(
     llm: LLMService,
     profile: LanguageProfile,
     lemma: str,
@@ -143,45 +146,34 @@ async def _fetch_core_with_examples(
     *,
     gloss_hint: str | None,
 ) -> dict:
-    """Rdzeń + przykłady w jednym callu; fallback na osobny generate_examples (Luna)."""
-    core = await llm.enrich_core(
-        lemma=lemma,
-        pos=pos,
-        native=profile.app_lang,
-        learning=profile.learning_lang,
-        cefr=profile.cefr_level,
-        gloss_hint=gloss_hint,
-    )
-    meanings = [m for m in (core.get("meanings") or []) if isinstance(m, dict)]
+    """Nauka + przykłady; fallback na osobny generate_examples (Luna)."""
+    study = await llm.enrich_study(profile, lemma, pos, gloss_hint)
+    meanings = [m for m in (study.get("meanings") or []) if isinstance(m, dict)]
     if _core_examples_valid(meanings):
-        return core
+        return study
 
-    core = await llm.enrich_core(
-        lemma=lemma,
-        pos=pos,
-        native=profile.app_lang,
-        learning=profile.learning_lang,
-        cefr=profile.cefr_level,
-        gloss_hint=gloss_hint,
-        retry=True,
-    )
-    meanings = [m for m in (core.get("meanings") or []) if isinstance(m, dict)]
+    study = await llm.enrich_study(profile, lemma, pos, gloss_hint)
+    meanings = [m for m in (study.get("meanings") or []) if isinstance(m, dict)]
     if _core_examples_valid(meanings):
-        return core
+        return study
 
     glosses = [m["gloss_l1"] for m in meanings if m.get("gloss_l1")]
     if glosses:
-        pos_final = _resolve_pos(core.get("pos")) or _resolve_pos(pos) or "unknown"
+        pos_final = _resolve_pos(study.get("pos")) or _resolve_pos(pos) or "unknown"
         examples_data = await llm.generate_examples(
-            lemma=core.get("lemma") or lemma,
+            lemma=study.get("lemma") or lemma,
             pos=pos_final,
             glosses=glosses,
             native=profile.app_lang,
             learning=profile.learning_lang,
             retry=True,
         )
-        _merge_examples_into_meanings(core, examples_data)
-    return core
+        _merge_examples_into_meanings(study, examples_data)
+    return study
+
+
+# Stare testy patchują tę nazwę.
+_fetch_core_with_examples = _fetch_study_with_examples
 
 
 async def fetch_lsp_inflection(
@@ -209,67 +201,40 @@ async def fetch_lsp_inflection(
     return validate_inflection(raw, manifest, pos=pos_final)
 
 
-def assemble_core_card(
+def assemble_study_card(
     profile: LanguageProfile,
     lemma: str,
     pos: str | None,
-    core: dict,
+    study: dict,
 ) -> dict:
-    """vocabulario.card.v1 z rdzenia — bez similar_words i odmiany."""
+    """vocabulario.card.v1 — część nauki (bez powiązanych, similar, odmiany)."""
     manifest = get_manifest(profile.learning_lang)
-    core_lemma = core.get("lemma") or lemma
+    study_lemma = study.get("lemma") or lemma
     pos_lookup = _resolve_pos(pos) or pos or "unknown"
-    # Headword z lookupu zostaje; LLM nie może „naprawić” karty tłumaczeniem na inny język.
-    # canonical_lemma zdejmuje rodzajnik, więc ten sam rzeczownik (el cerrajero / cerrajero)
-    # nie może wygrać nagą formą z modelu — cache zapisałby hasło bez el/la.
-    if lemma and core_lemma and not _same_headword(lemma, core_lemma):
+    if lemma and study_lemma and not _same_headword(lemma, study_lemma):
         lemma_final = lemma
     else:
         from app.services.pos_normalize import prefer_citation_headword
 
         lemma_final = prefer_citation_headword(
             lemma,
-            core_lemma,
+            study_lemma,
             pos=pos_lookup,
             learning_lang=profile.learning_lang,
-        ) or core_lemma or lemma
+        ) or study_lemma or lemma
     if pos_lookup in {"phrase", "construction"}:
         pos_final = pos_lookup
     else:
-        pos_final = _resolve_pos(core.get("pos")) or pos_lookup or "unknown"
+        pos_final = _resolve_pos(study.get("pos")) or pos_lookup or "unknown"
 
-    meanings = [m for m in (core.get("meanings") or []) if isinstance(m, dict)]
+    meanings = [m for m in (study.get("meanings") or []) if isinstance(m, dict)]
     _normalize_usages(meanings)
     meanings = strip_prepositional_construction_meanings(
         lemma_final, meanings, profile.learning_lang
     )
     meanings = meanings[:MAX_MEANINGS]
-    pos_for_related = pos_final if pos_final != "unknown" else None
-    lang = profile.learning_lang
-    synonyms = _normalize_related_words(
-        core.get("synonyms_l2"), fallback_pos=pos_for_related, learning_lang=lang
-    )
-    antonyms = _normalize_related_words(
-        core.get("antonyms_l2"), fallback_pos=pos_for_related, learning_lang=lang
-    )
-    family = _normalize_related_words(
-        core.get("word_family_l2"), fallback_pos=None, learning_lang=lang
-    )
-    family, antonyms = filter_word_family(
-        lemma_final, pos_final, family, antonyms, lang
-    )
-    associations = _normalize_related_words(
-        core.get("associations_l2"), fallback_pos=None, learning_lang=lang
-    )
-    associations = filter_associations(
-        lemma_final,
-        associations,
-        synonyms=synonyms,
-        antonyms=antonyms,
-        family=family,
-    )
 
-    ui_hints = core.get("ui_hints") if isinstance(core.get("ui_hints"), dict) else {}
+    ui_hints = study.get("ui_hints") if isinstance(study.get("ui_hints"), dict) else {}
     ui_hints = dict(ui_hints)
     ui_hints.setdefault("script", manifest.script)
     ui_hints["rtl"] = manifest.rtl
@@ -284,21 +249,85 @@ def assemble_core_card(
         "lemma": lemma_final,
         "language": profile.learning_lang,
         "pos": pos_final,
-        "ipa": core.get("ipa"),
-        "headword_note": normalize_headword_note(core.get("headword_note")),
+        "ipa": study.get("ipa"),
+        "headword_note": normalize_headword_note(study.get("headword_note")),
         "ui_hints": ui_hints,
         "meanings": meanings,
+        "synonyms_l2": [],
+        "antonyms_l2": [],
+        "word_family_l2": [],
+        "associations_l2": [],
+        "similar_words": [],
+        "inflection": None,
+        "conjugation": None,
+        "language_specific": {},
+        "notes": None,
+        "confidence": None,
+        "related_pending": True,
+    })
+
+
+def assemble_related_part(
+    profile: LanguageProfile,
+    lemma_final: str,
+    pos_final: str | None,
+    related: dict,
+) -> dict:
+    """Cztery listy powiązanych po normalizacji i filtrach."""
+    pos_for_related = (
+        (_resolve_pos(pos_final) or pos_final)
+        if pos_final and pos_final != "unknown"
+        else None
+    )
+    lang = profile.learning_lang
+    synonyms = _normalize_related_words(
+        related.get("synonyms_l2"), fallback_pos=pos_for_related, learning_lang=lang
+    )
+    antonyms = _normalize_related_words(
+        related.get("antonyms_l2"), fallback_pos=pos_for_related, learning_lang=lang
+    )
+    family = _normalize_related_words(
+        related.get("word_family_l2"), fallback_pos=None, learning_lang=lang
+    )
+    family, antonyms = filter_word_family(
+        lemma_final, pos_final or "unknown", family, antonyms, lang
+    )
+    associations = _normalize_related_words(
+        related.get("associations_l2"), fallback_pos=None, learning_lang=lang
+    )
+    associations = filter_associations(
+        lemma_final,
+        associations,
+        synonyms=synonyms,
+        antonyms=antonyms,
+        family=family,
+    )
+    return {
         "synonyms_l2": synonyms,
         "antonyms_l2": antonyms,
         "word_family_l2": family,
         "associations_l2": associations,
-        "similar_words": [],
-        "inflection": None,
-        "conjugation": None,
-        "language_specific": core.get("language_specific") or {},
-        "notes": core.get("notes"),
-        "confidence": core.get("confidence"),
-    })
+    }
+
+
+def assemble_core_card(
+    profile: LanguageProfile,
+    lemma: str,
+    pos: str | None,
+    core: dict,
+) -> dict:
+    """Składa naukę + powiązane (bez related_pending) — kompatybilność testów."""
+    card = assemble_study_card(profile, lemma, pos, core)
+    part = assemble_related_part(profile, card["lemma"], card.get("pos"), core)
+    card.update(part)
+    card.pop("related_pending", None)
+    if "language_specific" in core:
+        card["language_specific"] = core.get("language_specific") or {}
+    if "notes" in core:
+        card["notes"] = core.get("notes")
+    if "confidence" in core:
+        card["confidence"] = core.get("confidence")
+    return repair_strings(card)
 
 
 def merge_side_jobs(
@@ -400,21 +429,48 @@ def _cancel_if_pending(task: asyncio.Task | None) -> None:
         task.cancel()
 
 
+async def _fetch_related_part(
+    llm: LLMService,
+    profile: LanguageProfile,
+    lemma: str,
+    pos: str | None,
+    *,
+    gloss_hint: str | None,
+) -> dict:
+    from app.services.related_articles import fill_related_articles_on_core
+
+    related = await llm.enrich_related(profile, lemma, pos, gloss_hint)
+    await fill_related_articles_on_core(llm, related, profile.learning_lang)
+    return assemble_related_part(profile, lemma, pos, related)
+
+
 async def finish_side_jobs(
     profile: LanguageProfile,
     content: dict,
     *,
     llm: LLMService | None = None,
 ) -> dict:
-    """Dociąga brakujące similar_words / odmianę do karty, która ma już rdzeń."""
+    """Dociąga brakujące powiązane / similar_words / odmianę do karty z nauką."""
     llm = llm or LLMService()
     lemma = str(content.get("lemma") or "")
     pos = str(content.get("pos") or "")
+    gloss = None
+    meanings = content.get("meanings") or []
+    if meanings and isinstance(meanings[0], dict):
+        gloss = meanings[0].get("gloss_l1")
+    need_related = bool(content.get("related_pending"))
     need_similar = len(content.get("similar_words") or []) < MIN_SIMILAR_WORDS
     need_inflection = not has_required_inflection(
         content, pos=pos, lemma=lemma, learning_lang=profile.learning_lang
     )
 
+    related_task = (
+        asyncio.create_task(
+            _fetch_related_part(llm, profile, lemma, pos, gloss_hint=gloss)
+        )
+        if need_related
+        else None
+    )
     similar_task = (
         asyncio.create_task(fetch_similar_words(llm, profile, lemma, pos))
         if need_similar
@@ -425,22 +481,34 @@ async def finish_side_jobs(
         if need_inflection
         else None
     )
+
+    out = dict(content)
+    if related_task is not None:
+        try:
+            part = await related_task
+        except Exception:
+            logger.exception("finish_side_jobs related failed for %r", lemma)
+            part = None
+        if isinstance(part, dict):
+            out.update(part)
+            out.pop("related_pending", None)
+
     similar = (
-        await _await_task(similar_task, content.get("similar_words") or [])
+        await _await_task(similar_task, out.get("similar_words") or [])
         if similar_task
-        else (content.get("similar_words") or [])
+        else (out.get("similar_words") or [])
     )
     if inflection_task is None:
-        existing = content.get("inflection")
+        existing = out.get("inflection")
         return merge_side_jobs(
-            content,
+            out,
             similar,
             existing if isinstance(existing, dict) else {},
             profile,
         )
     inflection = await _await_inflection(inflection_task)
     return _with_inflection_outcome(
-        content, similar, inflection, profile, pos=pos, lemma=lemma
+        out, similar, inflection, profile, pos=pos, lemma=lemma
     )
 
 
@@ -450,73 +518,168 @@ async def run_lemma_enrichment(
     pos: str | None,
     *,
     gloss_hint: str | None = None,
+    on_study: OnStudy | None = None,
+    on_related: OnRelated | None = None,
     on_core: OnCore | None = None,
     require_similar: bool = True,
     llm: LLMService | None = None,
 ) -> dict:
-    """Pełna karta: core ∥ similar ∥ inflection; retry side-jobs gdy core zmieni POS/lemat.
+    """Nauka ∥ powiązane ∥ similar ∥ odmiana; callbacki w kolejności powrotu.
 
-    ``on_core`` dostaje kartę zaraz po rdzeniu (learnable), zanim skończą się side-jobs.
+    ``on_study`` (alias ``on_core``) dostaje kartę nauki zaraz po ``learnable``.
+    ``on_related`` dokleja powiązane, gdy wrócą po nauce.
     """
     llm = llm or LLMService()
+    on_study = on_study or on_core
     pos_lookup = _resolve_pos(pos) or pos or "unknown"
 
-    core_task = asyncio.create_task(
-        _fetch_core_with_examples(llm, profile, lemma, pos_lookup, gloss_hint=gloss_hint)
+    study_task: asyncio.Task = asyncio.create_task(
+        _fetch_core_with_examples(
+            llm, profile, lemma, pos_lookup, gloss_hint=gloss_hint
+        )
+    )
+    related_task: asyncio.Task | None = asyncio.create_task(
+        _fetch_related_part(
+            llm, profile, lemma, pos_lookup, gloss_hint=gloss_hint
+        )
     )
     similar_task: asyncio.Task | None = asyncio.create_task(
         fetch_similar_words(llm, profile, lemma, pos_lookup)
     )
-    inflection_task: asyncio.Task = asyncio.create_task(
+    inflection_task: asyncio.Task | None = asyncio.create_task(
         fetch_lsp_inflection(llm, profile, lemma, pos_lookup)
     )
 
-    try:
-        core = await core_task
-    except Exception:
-        _cancel_if_pending(similar_task)
-        _cancel_if_pending(inflection_task)
-        raise
+    card: dict | None = None
+    related_part: dict | None = None
+    related_done = False
+    related_failed = False
+    study_delivered = False
+    lemma_final = lemma
+    pos_final = pos_lookup
+    similar: list | None = None
+    inflection: dict | None = None
 
-    from app.services.related_articles import fill_related_articles_on_core
+    pending: set[asyncio.Task] = {
+        t
+        for t in (study_task, related_task, similar_task, inflection_task)
+        if t is not None
+    }
 
-    await fill_related_articles_on_core(llm, core, profile.learning_lang)
-    card = assemble_core_card(profile, lemma, pos_lookup, core)
-    lemma_final = card.get("lemma") or lemma
-    pos_final = card.get("pos") or pos_lookup
+    def _discard(task: asyncio.Task | None) -> None:
+        if task is not None:
+            pending.discard(task)
 
-    if on_core is not None:
-        try:
-            await on_core(dict(card))
-        except Exception:
-            logger.exception("on_core callback failed for %r", lemma_final)
+    while pending:
+        done, _ = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        for task in done:
+            pending.discard(task)
+            if task is study_task:
+                try:
+                    study = task.result()
+                except Exception:
+                    _cancel_if_pending(related_task)
+                    _cancel_if_pending(similar_task)
+                    _cancel_if_pending(inflection_task)
+                    raise
+                card = assemble_study_card(profile, lemma, pos_lookup, study)
+                lemma_final = card.get("lemma") or lemma
+                pos_final = card.get("pos") or pos_lookup
+                if related_part is not None:
+                    card.update(related_part)
+                    card.pop("related_pending", None)
+                if on_study is not None:
+                    try:
+                        await on_study(dict(card))
+                    except Exception:
+                        logger.exception("on_study callback failed for %r", lemma_final)
+                study_delivered = True
 
-    retry_similar, retry_inflection = side_jobs_need_retry(
-        lemma, pos_lookup, lemma_final, pos_final
-    )
-    if retry_similar:
-        _cancel_if_pending(similar_task)
-        if similar_task is not None:
-            await _await_task(similar_task, [])
-        similar_task = asyncio.create_task(
-            fetch_similar_words(llm, profile, lemma_final, pos_final)
-        )
-    if retry_inflection:
-        _cancel_if_pending(inflection_task)
-        await _await_task(inflection_task, {})
-        inflection_task = asyncio.create_task(
-            fetch_lsp_inflection(llm, profile, lemma_final, pos_final)
-        )
+                retry_similar, retry_inflection = side_jobs_need_retry(
+                    lemma, pos_lookup, lemma_final, pos_final
+                )
+                retry_related = retry_similar
+                if retry_related and not related_done:
+                    _cancel_if_pending(related_task)
+                    if related_task is not None:
+                        await _await_task(related_task, {})
+                        _discard(related_task)
+                    related_part = None
+                    related_failed = False
+                    related_task = asyncio.create_task(
+                        _fetch_related_part(
+                            llm,
+                            profile,
+                            lemma_final,
+                            pos_final,
+                            gloss_hint=gloss_hint,
+                        )
+                    )
+                    pending.add(related_task)
+                if retry_similar:
+                    _cancel_if_pending(similar_task)
+                    if similar_task is not None:
+                        await _await_task(similar_task, [])
+                        _discard(similar_task)
+                    similar = None
+                    similar_task = asyncio.create_task(
+                        fetch_similar_words(llm, profile, lemma_final, pos_final)
+                    )
+                    pending.add(similar_task)
+                if retry_inflection:
+                    _cancel_if_pending(inflection_task)
+                    if inflection_task is not None:
+                        await _await_task(inflection_task, {})
+                        _discard(inflection_task)
+                    inflection = None
+                    inflection_task = asyncio.create_task(
+                        fetch_lsp_inflection(llm, profile, lemma_final, pos_final)
+                    )
+                    pending.add(inflection_task)
+                continue
 
-    similar = (
-        await _await_task(similar_task, [])
-        if similar_task is not None
-        else []
-    )
-    inflection = await _await_inflection(inflection_task)
+            if task is related_task:
+                related_done = True
+                try:
+                    related_part = task.result()
+                except Exception:
+                    logger.exception("enrich_related failed for %r", lemma)
+                    related_part = None
+                    related_failed = True
+                    continue
+                if study_delivered and card is not None and related_part is not None:
+                    if on_related is not None:
+                        try:
+                            await on_related(dict(related_part))
+                        except Exception:
+                            logger.exception(
+                                "on_related callback failed for %r", lemma_final
+                            )
+                    else:
+                        card.update(related_part)
+                        card.pop("related_pending", None)
+                continue
+
+            if task is similar_task:
+                similar = await _await_task(task, [])
+                continue
+
+            if task is inflection_task:
+                inflection = await _await_inflection(task)
+                continue
+
+    if card is None:
+        raise RuntimeError("enrich_study did not return a card")
+
+    if related_part is not None and card.get("related_pending"):
+        card.update(related_part)
+        card.pop("related_pending", None)
+    elif related_failed:
+        card.setdefault("related_pending", True)
+
     card = _with_inflection_outcome(
         card,
-        similar,
+        similar if similar is not None else [],
         inflection,
         profile,
         pos=str(pos_final or ""),

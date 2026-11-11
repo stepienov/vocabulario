@@ -105,15 +105,27 @@ Walidacja nauki: `_core_examples_valid` jak dziś. Gdy zdań brakuje, dotychczas
 
 ## Zachowanie telefonu
 
-`CardDetailContent` i `FlashcardBackContent` dostają `sectionsLoading: Boolean`. Wołający liczy:
+Wymaganie ekranu: `docs/wzbogacanie-karty-schemat.md`, sekcja „Ekran, niezależnie od widoku”.
 
-```kotlin
-sectionsLoading = status in (pending, preparing, learnable) && karta jest w odpytywaniu (task 03)
-```
+Dziś serwer już nie przerywa dociągania, gdy użytkownik wyjdzie. `spawn_enrich` (`backend/app/services/card_jobs.py`) jest zadaniem procesu API, nie żądania HTTP. Zamknięcie aplikacji, wyjście z nauki i zamknięcie karty go nie kasują. Telefon tylko przestaje pytać.
 
-Przy `sectionsLoading = true` sekcje synonimów, przeciwieństw, rodziny, skojarzeń, słów podobnych i odmiany z pustą listą pokazują nagłówek i kółko. Dziś pusta sekcja jest ukryta (`synonymsL2.isNotEmpty()` i podobne). Przy `false` zostaje dzisiejsze ukrycie pustej sekcji.
+Ekran tego nie wykorzystuje. `CardDetailContent` przy `pending` i `preparing` rysuje jeden napis `card_preparing` zamiast karty z sekcjami. Pusta sekcja jest ukryta (`synonymsL2.isNotEmpty()` i tak samo przeciwieństwa, rodzina, skojarzenia, słowa podobne, odmiana). Podgląd z listy to kopia `HomeViewModel.detailCard`. Nauka to osobna kopia `LearningViewModel.selectedCard`. Odpytywanie listy żyje w `HomeViewModel.startPollingIfNeeded` (co 2,5 s, karty z otwartej listy i z wyniku szukania). Odpytywanie nauki żyje w `LearningViewModel` (co 3 s, najwyżej 20 razy) i ginie razem z tym ekranem. Otwarta karta nie dostaje nowego wiersza, dopóki któreś z tych odpytywań nie zapisze go do swojej kopii.
 
-Znaczenia przy `pending` i `preparing` zostają przy dzisiejszym `card_preparing`.
+### Instrukcja
+
+Jedno odpytywanie karty żyje tak długo jak proces aplikacji, obok `LookupCoordinator`, nie w ViewModelu ekranu. `onStop`, `clearSelection` i wyjście z fiszki go nie anulują. Bierze `GET /cards/{id}` co 2,5 s dla kart, które nie są `ready` i dla których `EnrichmentPollPolicy.shouldKeepPolling` jeszcze jest prawdziwe. Każdy GET robi dotychczasowe `refreshCardsFromServer` (zapis do Room).
+
+Podgląd z listy (`ListCardDetailOverlay`), nauka (`LearningScreen`) i fiszka czytają tę kartę z Room po `id`, nie ze zrzutu w ViewModelu. Nowy wiersz w Room podmienia otwarty ekran. Osobnego gestu odświeżenia nie ma.
+
+`CardDetailContent` / `FlashcardBackContent` dostają `stillPolling` z `EnrichmentPoller.pollingIds`. Kółko liczy `CardSectionWaiting` (`android/.../EnrichmentStatus.kt`):
+
+- znaczenia: puste i status `pending`/`preparing` i nadal odpytywane,
+- synonimy / przeciwieństwa / rodzina / skojarzenia: puste i nadal odpytywane oraz (`related_pending == true` albo status przed `learnable`; przy `related_pending == false` bez kółka),
+- odmiana: brak conjugacji i status jeszcze w `needsPoll` i nadal odpytywane.
+
+Dla każdej sekcji: jest treść → treść; pusto i warunek kółka → nagłówek i kółko; pusto bez warunku → ukryte. Wejście w ćwiczenie jest aktywne, gdy znaczenia już są (`learnable`), także gdy reszta sekcji ma kółko.
+
+Nie dodawać anulowania `spawn_enrich` przy zmianie ekranu. Takiego wywołania w telefonie nie ma i nie dochodzi.
 
 ## Kroki
 
@@ -143,7 +155,7 @@ Produkcja (po 01, 02, 03, 09), konto kontrolne: lista z sekcji „Jak sprawdzimy
 - od wiersza do `ready`: poniżej 25 s przy typowej odmianie (dziś typowo 43 s),
 - `pensar` ma `headword_note` z obocznością.
 
-Telefon: karta nowego hasła pokazuje kółka przy pustych sekcjach, kółka schodzą, gdy sekcja dostaje treść, a karta, która wypadła z odpytywania, pokazuje sekcje bez kółek.
+Telefon: po dodaniu karta jest na liście z hasłem i tłumaczeniem, zanim dojdą sekcje. Wejście w ćwiczenie działa, gdy są znaczenia, przy kółkach na reszcie. Zamknięcie karty, przerwanie nauki i wyjście z aplikacji nie kasują zadania. Otwarta karta (lista, podgląd, nauka) podmienia kółko na treść bez ponownego otwarcia. Sekcja, której zadanie już nie dociąga, nie ma kółka.
 
 ## Ryzyka
 

@@ -2,9 +2,7 @@ package com.vocabulario.app.data.lookup
 
 import com.vocabulario.app.R
 import com.vocabulario.app.data.LearningRepository
-import com.vocabulario.app.data.api.LookupResponse
 import com.vocabulario.app.data.api.userMessage
-import com.vocabulario.app.data.sync.BackgroundJobScheduler
 import com.vocabulario.app.i18n.UiStrings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,28 +13,23 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Osobny flow „szukaj w kategorii" — nie dzieli jobów ze zwykłym lookupiem.
+ * Szukanie skojarzeń: słowo i ósemka naraz, potem dwie kolejne ósemki.
  */
 @Singleton
 class CategoryLookupCoordinator @Inject constructor(
     repository: LearningRepository,
     strings: UiStrings,
     private val persistence: LookupQueryPersistence,
-    private val backgroundJobs: BackgroundJobScheduler,
 ) {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val session = LookupSession(
-        lookupCached = { repository.lookupCategoryCached(it) },
-        lookupExpand = { text, _ -> repository.lookupCategoryExpand(text) },
-        mapSearchError = { it.userMessage(strings, R.string.err_search) },
-        expandFailedNotice = strings.get(R.string.err_lookup_expand),
+    private val session = AssociationSession(
+        lookupWord = { repository.lookupCategoryCached(it) },
+        lookupRound = { text, round -> repository.lookupCategoryExpand(text, round) },
+        mapError = { it.userMessage(strings, R.string.err_lookup_expand) },
         parent = appScope,
-        onActiveQuery = { query, _ ->
-            appScope.launch { persistence.saveQuery(query, byCategory = true) }
-        },
     )
 
-    val state: StateFlow<LookupSessionState> get() = session.state
+    val state: StateFlow<AssociationState> get() = session.state
 
     init {
         appScope.launch {
@@ -50,43 +43,15 @@ class CategoryLookupCoordinator @Inject constructor(
 
     fun start(query: String) {
         session.start(query)
-        appScope.launch {
-            persistence.saveQuery(query.trim(), byCategory = true)
-            backgroundJobs.enqueueLookup(replace = true)
-        }
+        appScope.launch { persistence.saveQuery(query.trim(), byCategory = true) }
     }
+
+    fun more() = session.more()
 
     fun clear() {
         session.clear()
-        backgroundJobs.cancelLookup()
+        appScope.launch { persistence.saveQuery(null, byCategory = false) }
     }
 
-    fun acceptServerResult(query: String, response: LookupResponse) =
-        session.acceptServerResult(query, response)
-
-    fun retryPending() {
-        val current = session.state.value
-        if (current.expanding || current.query.isNotBlank()) {
-            session.refreshFromCache()
-        }
-        if (current.expanding) return
-        if (current.error != null && current.query.isNotBlank()) {
-            start(current.query)
-            return
-        }
-        appScope.launch {
-            if (!persistence.loadByCategory()) return@launch
-            val stored = persistence.loadQuery() ?: return@launch
-            val now = session.state.value
-            if (now.expanding) {
-                now.query.takeIf { it.isNotBlank() }?.let { session.refreshFromCache() }
-                return@launch
-            }
-            if (now.candidates.isNotEmpty() && now.error == null) {
-                persistence.saveQuery(null)
-                return@launch
-            }
-            start(stored)
-        }
-    }
+    fun retryPending() = session.retryPending()
 }

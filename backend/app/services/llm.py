@@ -17,9 +17,14 @@ from app.ai.prompts.v1 import (
     IMPORT_FORMAT_PROMPT_V1,
     IMPORT_FORMAT_SYSTEM_V1,
     IMPORT_STRUCTURE_SYSTEM_V1,
-    LOOKUP_CATEGORY_DRAFT_PROMPT_V1,
-    LOOKUP_CATEGORY_EXPAND_PROMPT_V1,
-    LOOKUP_CATEGORY_SYSTEM_V1,
+    ASSOC_SCENE_SYSTEM,
+    ASSOC_SCENE_USER,
+    ASSOC_WORD_SYSTEM,
+    ASSOC_WORD_USER,
+    ENRICH_RELATED_SYSTEM,
+    ENRICH_RELATED_USER,
+    ENRICH_STUDY_SYSTEM,
+    ENRICH_STUDY_USER,
     LOOKUP_DRAFT_MODEL,
     LOOKUP_DRAFT_PROMPT_V1,
     LOOKUP_EXPAND_MODEL,
@@ -52,6 +57,7 @@ from app.ai.schemas.import_structure import import_structure_schema
 from app.ai.schemas.similar_words import similar_words_response_schema
 from app.core.config import get_settings
 from app.core.deps import lang_pair_key
+from app.models import LanguageProfile
 from app.services.llm_pricing import parse_anthropic_usage, parse_openai_usage
 from app.services.llm_usage import (
     bind_llm_usage_context,
@@ -546,14 +552,51 @@ class LLMService:
                     {"lemma": f"{lemma}2", "pos": "verb", "gloss": f"mock gloss 2 for {lemma}"},
                 ]
             }
-        match = re.search(r"Lemat \(L2\):\s*(\S+)", prompt)
-        lemma = match.group(1) if match else "palabra"
+        if re.search(r'JSON:\s*\{\s*"synonyms_l2"', prompt):
+            match = re.search(r"Lemma:\s*(\S+)", prompt)
+            lemma = (match.group(1).strip().rstrip(".,;") if match else "palabra")
+            pos_match = re.search(r"POS:\s*(\S+)", prompt)
+            pos = (pos_match.group(1).strip().rstrip(".") if pos_match else "verb")
+            return {
+                "synonyms_l2": [
+                    {
+                        "lemma": f"{lemma}_syn",
+                        "pos": pos,
+                        "article": None,
+                        "gloss_l1": "mock synonim",
+                    }
+                ],
+                "antonyms_l2": [],
+                "word_family_l2": [
+                    {
+                        "lemma": f"{lemma}_fam",
+                        "pos": "noun",
+                        "article": "la",
+                        "gloss_l1": "mock rodzina",
+                    }
+                ],
+                "associations_l2": [
+                    {
+                        "lemma": "escena",
+                        "pos": "noun",
+                        "article": "la",
+                        "gloss_l1": "scena",
+                    }
+                ],
+            }
+        match = re.search(r"Lemma:\s*(\S+)", prompt)
+        if not match:
+            match = re.search(r"Lemat \(L2\):\s*(\S+)", prompt)
+        lemma = match.group(1).strip().rstrip(".,;") if match else "palabra"
+        pos_match = re.search(r"POS:\s*(\S+)", prompt)
+        pos = (pos_match.group(1).strip().rstrip(".") if pos_match else "verb")
         return {
             "schema_version": "vocabulario.card.v1",
             "lemma": lemma,
             "language": "es",
-            "pos": "verb",
+            "pos": pos,
             "ipa": "",
+            "headword_note": None,
             "meanings": [
                 {
                     "gloss_l1": "przykładowe znaczenie",
@@ -563,7 +606,7 @@ class LLMService:
                         {"l2": f"Ejemplo B2 con {lemma}.", "l1": "Przykład B2.", "cefr": "B2"},
                         {"l2": f"Ejemplo C2 con {lemma}.", "l1": "Przykład C2.", "cefr": "C2"},
                     ],
-                    "usages": [],
+                    "usages": [{"l2": f"uso de {lemma}", "l1": "użycie"}],
                 }
             ],
             "synonyms_l2": [],
@@ -682,20 +725,19 @@ class LLMService:
         text: str,
         native: str,
         learning: str,
-        cefr: str,
     ) -> list[dict[str, Any]]:
-        prompt = LOOKUP_CATEGORY_DRAFT_PROMPT_V1.format(
+        prompt = ASSOC_WORD_USER.format(
             native_name=lang_name_en(native),
             learning_name=lang_name_en(learning),
             text=text,
-            pair_guidance=language_pair_guidance(native=native, learning=learning),
         )
         bind_llm_usage_context(query=text, lang_pair=lang_pair_key(native, learning))
         data = await self._chat_json(
             self.light_model,
             prompt,
-            system=LOOKUP_CATEGORY_SYSTEM_V1,
-            max_tokens=1200,
+            system=ASSOC_WORD_SYSTEM,
+            max_tokens=120,
+            reasoning_effort="none",
             purpose="lookup_category_draft",
         )
         return data.get("candidates", [])
@@ -705,27 +747,32 @@ class LLMService:
         text: str,
         native: str,
         learning: str,
-        cefr: str,
-        already: list[dict[str, Any]] | None = None,
-        theme: str = "",
+        already: list[str] | None = None,
     ) -> list[dict[str, Any]]:
-        prompt = LOOKUP_CATEGORY_EXPAND_PROMPT_V1.format(
+        shown = "We do not have any associations yet."
+        lemmas = [item.strip() for item in (already or []) if item and item.strip()]
+        if lemmas:
+            shown = "We already have these associations: " + ", ".join(lemmas) + "."
+        prompt = ASSOC_SCENE_USER.format(
             native_name=lang_name_en(native),
             learning_name=lang_name_en(learning),
             text=text,
-            theme=(theme or "").strip() or "same theme as the seed",
-            pair_guidance=language_pair_guidance(native=native, learning=learning),
-            lookup_output_form_rules=lookup_output_form_rules_text(native, learning),
-            already_block=self._already_block(already or []),
+            shown=shown,
         )
         bind_llm_usage_context(query=text, lang_pair=lang_pair_key(native, learning))
         data = await self._chat_json(
             self.lookup_model,
             prompt,
-            system=LOOKUP_CATEGORY_SYSTEM_V1,
+            system=ASSOC_SCENE_SYSTEM,
+            max_tokens=400,
+            reasoning_effort="none",
             purpose="lookup_category_expand",
         )
-        return data.get("candidates", [])
+        meaning = data.get("meaning") if isinstance(data, dict) else ""
+        if not isinstance(meaning, str):
+            meaning = ""
+        candidates = data.get("candidates", []) if isinstance(data, dict) else []
+        return candidates, meaning.strip()
 
     async def lookup_l1_typo(
         self, text: str, native: str, learning: str, cefr: str
@@ -751,6 +798,68 @@ class LLMService:
             purpose="lookup_l1_typo",
         )
         return data.get("candidates", [])
+
+    async def enrich_study(
+        self,
+        profile: LanguageProfile,
+        lemma: str,
+        pos: str | None,
+        gloss: str | None = None,
+    ) -> dict[str, Any]:
+        pos_val = pos or "unknown"
+        native = profile.app_lang
+        learning = profile.learning_lang
+        prompt = ENRICH_STUDY_USER.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            lemma=lemma,
+            pos=pos_val,
+            gloss=(gloss or "").strip() or "(none)",
+        )
+        bind_llm_usage_context(
+            lemma=lemma,
+            pos=pos_val,
+            lang_pair=lang_pair_key(native, learning),
+        )
+        return await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=ENRICH_STUDY_SYSTEM,
+            max_tokens=2200,
+            purpose="enrich_study",
+            reasoning_effort="none",
+        )
+
+    async def enrich_related(
+        self,
+        profile: LanguageProfile,
+        lemma: str,
+        pos: str | None,
+        gloss: str | None = None,
+    ) -> dict[str, Any]:
+        pos_val = pos or "unknown"
+        native = profile.app_lang
+        learning = profile.learning_lang
+        prompt = ENRICH_RELATED_USER.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            lemma=lemma,
+            pos=pos_val,
+            gloss=(gloss or "").strip() or "(none)",
+        )
+        bind_llm_usage_context(
+            lemma=lemma,
+            pos=pos_val,
+            lang_pair=lang_pair_key(native, learning),
+        )
+        return await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=ENRICH_RELATED_SYSTEM,
+            max_tokens=2200,
+            purpose="enrich_related",
+            reasoning_effort="none",
+        )
 
     async def enrich_core(
         self,

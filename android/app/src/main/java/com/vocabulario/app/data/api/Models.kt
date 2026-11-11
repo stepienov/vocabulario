@@ -118,6 +118,7 @@ data class LookupRequest(
     val profile_id: String,
     val local_membership: Boolean = false,
     val more: Boolean = false,
+    val round: Int? = null,
 )
 
 @Serializable
@@ -149,6 +150,7 @@ data class LookupResponse(
     val ai_complete: Boolean = false,
     val added: Int? = null,
     val suggestions_exhausted: Boolean = false,
+    val headword_meaning: String = "",
 )
 
 @Serializable

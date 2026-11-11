@@ -32,7 +32,7 @@ from app.services.background import spawn_background
 from app.services.llm_usage import bind_llm_usage_context
 from app.services.pos_normalize import normalize_pos_bucket
 from app.services.similar_words import ensure_similar_words
-from app.services.word_families import sync_word_family
+from app.services.word_families import attach_card_to_word_family, sync_word_family
 
 logger = logging.getLogger(__name__)
 
@@ -131,12 +131,15 @@ def _card_lookup_resolved(card: LearningCard) -> bool:
     return bool(gloss and pos)
 
 
-def spawn_enrich(card_id: UUID) -> None:
+def spawn_enrich(card_id: UUID, *, source_card_id: UUID | None = None) -> None:
     """Odpal enrichment w tle. Bezpieczne do wielokrotnego wołania."""
     if card_id in _claimed:
         return
     _claimed.add(card_id)
-    task = asyncio.create_task(_run_claimed_enrich(card_id), name=f"enrich:{card_id}")
+    task = asyncio.create_task(
+        _run_claimed_enrich(card_id, source_card_id=source_card_id),
+        name=f"enrich:{card_id}",
+    )
 
     def _done(done: asyncio.Task) -> None:
         _claimed.discard(card_id)
@@ -325,6 +328,8 @@ def content_is_complete(content: dict | None, *, learning_lang: str | None = Non
     if not content_is_learnable(content):
         return False
     assert content is not None
+    if content.get("related_pending"):
+        return False
     pos = str(content.get("pos") or "").strip().lower()
     lemma = str(content.get("lemma") or "")
     lang = learning_lang or str(content.get("language") or "")
@@ -732,12 +737,74 @@ async def enrich_card(card_id: UUID) -> None:
         _claimed.discard(card_id)
 
 
-async def _run_claimed_enrich(card_id: UUID) -> None:
+async def _hydrate_before_queue(
+    card_id: UUID,
+    source_card_id: UUID | None = None,
+) -> bool:
+    """Hydracja i rodzina przed semaforem. True = zadanie skończone."""
+    async with async_session_factory() as db:
+        card = (
+            await db.execute(select(LearningCard).where(LearningCard.id == card_id))
+        ).scalar_one_or_none()
+        if card is None:
+            return True
+        if card.enrichment_status == STATUS_READY and content_is_complete(card.content):
+            return True
+        if card.enrichment_status == STATUS_FAILED:
+            return True
+        if card.enrichment_status == STATUS_PREPARATION_PROBLEM:
+            return True
+        if card.enrichment_status == STATUS_LEARNABLE:
+            if int(card.enrichment_side_retries or 0) >= _MAX_SIDE_RETRIES:
+                return True
+            retry_at = card.enrichment_retry_at
+            if retry_at is not None and retry_at > datetime.now(UTC):
+                return True
+
+        profile = (
+            await db.execute(
+                select(LanguageProfile).where(LanguageProfile.id == card.profile_id)
+            )
+        ).scalar_one_or_none()
+        if profile is None:
+            return True
+
+        if not await hydrate_from_lexical_cache(db, card, profile):
+            return False
+
+        await db.commit()
+        source = None
+        if source_card_id is not None:
+            source = (
+                await db.execute(
+                    select(LearningCard).where(
+                        LearningCard.id == source_card_id,
+                        LearningCard.user_id == card.user_id,
+                        LearningCard.profile_id == card.profile_id,
+                        LearningCard.deleted_at.is_(None),
+                    )
+                )
+            ).scalar_one_or_none()
+        await attach_card_to_word_family(db, profile, card, source_card=source)
+        await db.commit()
+        from app.services.push import notify_cards_ready
+
+        await notify_cards_ready(db, card.user_id, card_id=card.id)
+        return True
+
+
+async def _run_claimed_enrich(
+    card_id: UUID,
+    *,
+    source_card_id: UUID | None = None,
+) -> None:
     try:
+        if await _hydrate_before_queue(card_id, source_card_id):
+            return
         async with _enrich_semaphore():
             try:
                 await asyncio.wait_for(
-                    _enrich_card_unlocked(card_id),
+                    _enrich_card_unlocked(card_id, source_card_id=source_card_id),
                     timeout=_ENRICH_TIMEOUT_S,
                 )
             except TimeoutError:
@@ -762,7 +829,11 @@ async def _run_claimed_enrich(card_id: UUID) -> None:
         await _mark_enrich_failed(card_id, "enrichment_crash")
 
 
-async def _enrich_card_unlocked(card_id: UUID) -> None:
+async def _enrich_card_unlocked(
+    card_id: UUID,
+    *,
+    source_card_id: UUID | None = None,
+) -> None:
     async with async_session_factory() as db:
         card = (
             await db.execute(select(LearningCard).where(LearningCard.id == card_id))
@@ -794,19 +865,29 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
         if profile is None:
             return
 
+        source = None
+        if source_card_id is not None:
+            source = (
+                await db.execute(
+                    select(LearningCard).where(
+                        LearningCard.id == source_card_id,
+                        LearningCard.user_id == card.user_id,
+                        LearningCard.profile_id == card.profile_id,
+                        LearningCard.deleted_at.is_(None),
+                    )
+                )
+            ).scalar_one_or_none()
+
         try:
-            if await hydrate_from_lexical_cache(db, card, profile):
-                await db.commit()
-                from app.services.push import notify_cards_ready
-
-                await notify_cards_ready(db, card.user_id, card_id=card.id)
-                return
-
             content0 = dict(card.content or {})
             if content_is_complete(content0, learning_lang=profile.learning_lang):
                 await _persist_enrichment_result(
                     db, card, profile, content0, entry=None, notified=False
                 )
+                await attach_card_to_word_family(
+                    db, profile, card, source_card=source
+                )
+                await db.commit()
                 return
 
             bind_llm_usage_context(
@@ -883,9 +964,15 @@ async def _enrich_card_unlocked(card_id: UUID) -> None:
                 await _persist_enrichment_result(
                     db, card, profile, content, entry=None, notified=False
                 )
+                await attach_card_to_word_family(
+                    db, profile, card, source_card=source
+                )
+                await db.commit()
                 return
 
-            await _enrich_lemma_staged(db, card, profile, content0)
+            await _enrich_lemma_staged(
+                db, card, profile, content0, source_card=source
+            )
             return
         except asyncio.CancelledError:
             raise
@@ -1030,16 +1117,21 @@ async def _enrich_lemma_staged(
     card: LearningCard,
     profile: LanguageProfile,
     content0: dict,
+    *,
+    source_card: LearningCard | None = None,
 ) -> None:
-    """Rdzeń → learnable (SRS), potem similar+odmiana → ready + LexicalEntry."""
+    """Nauka → learnable, powiązane doklejane, similar+odmiana → ready."""
     from app.services.push import notify_cards_ready
 
     notified = False
+    family_attached = False
 
     if content_is_complete(content0, learning_lang=profile.learning_lang):
         await _persist_enrichment_result(
             db, card, profile, content0, entry=None, notified=False
         )
+        await attach_card_to_word_family(db, profile, card, source_card=source_card)
+        await db.commit()
         return
 
     if content_is_learnable(content0) and not content_is_complete(
@@ -1054,30 +1146,61 @@ async def _enrich_lemma_staged(
             entry=None,
             notified=card.enrichment_status == STATUS_LEARNABLE,
         )
+        if content_is_complete(content, learning_lang=profile.learning_lang) or not content.get(
+            "related_pending"
+        ):
+            await attach_card_to_word_family(db, profile, card, source_card=source_card)
+            await db.commit()
         return
 
-    async def on_core(core_card: dict) -> None:
-        nonlocal notified
-        if not content_is_learnable(core_card):
+    async def on_study(study_card: dict) -> None:
+        nonlocal notified, family_attached
+        if not content_is_learnable(study_card):
             return
-        core_card = await sync_word_family(db, profile, core_card, None)
-        _apply_content_fields(card, core_card)
+        await db.refresh(card, with_for_update=True)
+        study_card = await sync_word_family(db, profile, study_card, None)
+        _apply_content_fields(card, study_card)
         card.enrichment_status = STATUS_LEARNABLE
         await db.commit()
         await notify_cards_ready(db, card.user_id, card_id=card.id)
         notified = True
+        if not study_card.get("related_pending"):
+            await attach_card_to_word_family(
+                db, profile, card, source_card=source_card
+            )
+            await db.commit()
+            family_attached = True
+
+    async def on_related(part: dict) -> None:
+        nonlocal family_attached
+        await db.refresh(card, with_for_update=True)
+        content = dict(card.content or {})
+        for key in ("synonyms_l2", "antonyms_l2", "word_family_l2", "associations_l2"):
+            if key in part:
+                content[key] = part[key]
+        content.pop("related_pending", None)
+        content = await sync_word_family(db, profile, content, None)
+        _apply_content_fields(card, content)
+        await db.commit()
+        await attach_card_to_word_family(db, profile, card, source_card=source_card)
+        await db.commit()
+        family_attached = True
 
     content = await run_lemma_enrichment(
         profile,
         card.lemma_l2,
         card.pos,
         gloss_hint=card.gloss_primary,
-        on_core=on_core,
+        on_study=on_study,
+        on_related=on_related,
         require_similar=False,
     )
     await _persist_enrichment_result(
         db, card, profile, content, entry=None, notified=notified
     )
+    if not family_attached:
+        await attach_card_to_word_family(db, profile, card, source_card=source_card)
+        await db.commit()
 
 
 async def resume_pending_enrichment(*, stale_only: bool = False) -> None:

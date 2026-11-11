@@ -341,6 +341,9 @@ class OfflineStore @Inject constructor(
 
     suspend fun cardById(id: String): CachedCardEntity? = cardDao.byId(id)
 
+    fun observeCardById(id: String): Flow<CardResponse?> =
+        cardDao.observeById(id).map { it?.toCardResponse() }
+
     suspend fun localLists(profileId: String): List<WordListResponse> {
         consolidatePendingInboxes(profileId)
         return listDao.forProfile(profileId).map { it.toResponse() }

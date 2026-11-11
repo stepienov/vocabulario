@@ -29,6 +29,9 @@ interface CachedCardDao {
     @Query("SELECT * FROM cached_cards WHERE id = :id LIMIT 1")
     suspend fun byId(id: String): CachedCardEntity?
 
+    @Query("SELECT * FROM cached_cards WHERE id = :id LIMIT 1")
+    fun observeById(id: String): Flow<CachedCardEntity?>
+
     @Query(
         """
         SELECT * FROM cached_cards

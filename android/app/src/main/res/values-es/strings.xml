@@ -386,7 +386,7 @@
     <string name="section_usages">expresiones</string>
 
     <string name="home_search_hint">Buscar una palabra…</string>
-    <string name="search_by_category">Buscar palabras de esta categoría</string>
+    <string name="search_by_category">Buscar asociaciones</string>
 
     <string name="home_due_now">Listo para repasar</string>
 
@@ -566,6 +566,9 @@
     <string name="lookup_no_more_suggestions">No se encontraron más coincidencias.</string>
     <string name="lookup_longer_analysis">Tu palabra «%1$s» necesita un análisis más largo</string>
     <string name="lookup_nothing_found">No se encontró coincidencia para «%1$s».</string>
+    <string name="lookup_assoc_searching">buscando asociaciones</string>
+    <string name="lookup_assoc_more">buscar más asociaciones</string>
+    <string name="lookup_assoc_no_more">no hay más asociaciones</string>
     <string name="err_import_empty">No hay palabras para importar</string>
 
     <string name="err_import">Error al importar</string>

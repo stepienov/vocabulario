@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
+import com.vocabulario.app.data.EnrichmentPoller
+import com.vocabulario.app.data.EnrichmentStatus
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.LanguageProfileResponse
@@ -11,6 +13,7 @@ import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.normalizeTenseKeys
 import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,15 +49,18 @@ data class ListFlashcardsUiState(
 class ListFlashcardsViewModel @Inject constructor(
     private val repository: LearningRepository,
     private val strings: UiStrings,
+    private val enrichmentPoller: EnrichmentPoller,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val listId: String = savedStateHandle.get<String>("listId").orEmpty()
     private var queue = ListFlashcardQueue(emptyList())
     private var systemListId: String? = null
+    private var currentCardJob: Job? = null
 
     private val _state = MutableStateFlow(ListFlashcardsUiState())
     val state: StateFlow<ListFlashcardsUiState> = _state.asStateFlow()
+    val enrichmentPollingIds: StateFlow<Set<String>> = enrichmentPoller.pollingIds
 
     init {
         load()
@@ -102,6 +108,13 @@ class ListFlashcardsViewModel @Inject constructor(
                     conjugationExpandedDefault = settings.conjugation_expanded_default,
                     relatedWordsExpandedDefault = settings.related_words_expanded_default,
                 )
+                enrichmentPoller.watchCards(
+                    cards.filter {
+                        EnrichmentStatus.needsPoll(it.enrichment_status) ||
+                            !it.card_activity_status.isNullOrBlank()
+                    },
+                )
+                observeCurrentCard()
             }.onFailure {
                 _state.value = _state.value.copy(
                     loading = false,
@@ -167,6 +180,24 @@ class ListFlashcardsViewModel @Inject constructor(
             progress = queue.progress,
             empty = queue.isFinished,
         )
+        observeCurrentCard()
+    }
+
+    private fun observeCurrentCard() {
+        val card = queue.current ?: run {
+            currentCardJob?.cancel()
+            currentCardJob = null
+            return
+        }
+        enrichmentPoller.watchCard(card)
+        currentCardJob?.cancel()
+        currentCardJob = viewModelScope.launch {
+            repository.observeCard(card.id).collect { updated ->
+                if (updated == null) return@collect
+                if (_state.value.current?.id != card.id) return@collect
+                _state.value = _state.value.copy(current = updated)
+            }
+        }
     }
 
     private fun finish(summary: ListFlashcardSummary) {

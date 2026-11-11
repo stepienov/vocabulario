@@ -54,6 +54,7 @@ fun ListFlashcardsScreen(
     viewModel: ListFlashcardsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val enrichmentPollingIds by viewModel.enrichmentPollingIds.collectAsState()
 
     LaunchedEffect(state.finishedSummary) {
         val summary = state.finishedSummary ?: return@LaunchedEffect
@@ -164,6 +165,8 @@ fun ListFlashcardsScreen(
                                 lemmaFallback = card.lemma_l2,
                                 userTenses = state.userTenses,
                                 userCefr = state.userCefr,
+                                enrichmentStatus = card.enrichment_status,
+                                stillPolling = card.id in enrichmentPollingIds,
                                 showUsages = state.showUsages,
                                 showExampleSentences = state.showExampleSentences,
                                 showSynonyms = state.showSynonyms,

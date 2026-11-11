@@ -186,6 +186,7 @@ class LookupRequest(BaseModel):
     profile_id: UUID
     local_membership: bool = False
     more: bool = False
+    round: int | None = None
 
 
 class LookupCandidate(BaseModel):
@@ -213,6 +214,7 @@ class LookupResponse(BaseModel):
     ai_complete: bool = False
     added: int | None = None
     suggestions_exhausted: bool = False
+    headword_meaning: str = ""
 
 
 class ImportValidateRequest(BaseModel):

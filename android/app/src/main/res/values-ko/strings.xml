@@ -417,7 +417,7 @@
     <string name="section_usages">표현</string>
 
     <string name="home_search_hint">단어 검색…</string>
-    <string name="search_by_category">이 카테고리의 단어 검색</string>
+    <string name="search_by_category">연상 단어 검색</string>
 
     <string name="home_due_now">지금 복습할 준비 완료</string>
 
@@ -598,6 +598,9 @@
     <string name="lookup_no_more_suggestions">더 이상 일치하는 항목이 없습니다.</string>
     <string name="lookup_longer_analysis">\'%1$s\'은(는) 더 긴 분석이 필요합니다</string>
     <string name="lookup_nothing_found">\'%1$s\'에 대한 일치 항목이 없습니다.</string>
+    <string name="lookup_assoc_searching">연상 단어를 찾는 중</string>
+    <string name="lookup_assoc_more">더 많은 연상 단어 검색</string>
+    <string name="lookup_assoc_no_more">더 이상 연상 단어가 없습니다</string>
     <string name="err_import_empty">가져올 단어가 없습니다</string>
 
     <string name="err_import">가져오기 실패</string>

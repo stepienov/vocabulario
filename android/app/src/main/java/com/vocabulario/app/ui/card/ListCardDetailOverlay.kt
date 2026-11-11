@@ -43,6 +43,7 @@ fun ListCardDetailOverlay(
     onAddRelated: ((RelatedWord) -> Unit)? = null,
     learningLemmas: Set<String> = emptySet(),
     relatedMembership: RelatedMembershipIndex = RelatedMembershipIndex.Empty,
+    stillPolling: Boolean = false,
     addSheet: @Composable () -> Unit = {},
 ) {
     BackHandler(onBack = onDismiss)
@@ -102,6 +103,7 @@ fun ListCardDetailOverlay(
                         userCefr = profile?.cefr_level ?: "C2",
                         enrichmentStatus = card.enrichment_status,
                         enrichmentError = card.enrichment_error,
+                        stillPolling = stillPolling,
                         profile = profile,
                         onAddRelated = onAddRelated,
                         learningLemmas = learningLemmas,

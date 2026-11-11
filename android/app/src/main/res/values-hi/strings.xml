@@ -385,7 +385,7 @@
     <string name="section_usages">मुहावरे</string>
 
     <string name="home_search_hint">शब्द खोजें…</string>
-    <string name="search_by_category">इस श्रेणी के शब्द खोजें</string>
+    <string name="search_by_category">संबंध खोजें</string>
 
     <string name="home_due_now">अभी दोहराने के लिए तैयार</string>
 
@@ -566,6 +566,9 @@
     <string name="lookup_no_more_suggestions">और कोई मिलान नहीं मिला.</string>
     <string name="lookup_longer_analysis">आपके शब्द \"%1$s\" के लिए लंबा विश्लेषण चाहिए</string>
     <string name="lookup_nothing_found">\"%1$s\" के लिए कोई मिलान नहीं मिला.</string>
+    <string name="lookup_assoc_searching">संबंध खोज रहा हूँ</string>
+    <string name="lookup_assoc_more">और संबंध खोजें</string>
+    <string name="lookup_assoc_no_more">और संबंध नहीं हैं</string>
     <string name="err_import_empty">आयात के लिए कोई शब्द नहीं</string>
 
     <string name="err_import">आयात विफल</string>

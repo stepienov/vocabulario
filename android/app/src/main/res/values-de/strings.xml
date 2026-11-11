@@ -385,7 +385,7 @@
     <string name="section_usages">Wendungen</string>
 
     <string name="home_search_hint">Wort suchen…</string>
-    <string name="search_by_category">Wörter für diese Kategorie suchen</string>
+    <string name="search_by_category">Assoziationen suchen</string>
 
     <string name="home_due_now">Jetzt fällig</string>
 
@@ -566,6 +566,9 @@
     <string name="lookup_no_more_suggestions">Keine weiteren Treffer gefunden.</string>
     <string name="lookup_longer_analysis">Dein Wort „%1$s“ braucht eine genauere Prüfung</string>
     <string name="lookup_nothing_found">Kein Treffer für „%1$s“.</string>
+    <string name="lookup_assoc_searching">suche Assoziationen</string>
+    <string name="lookup_assoc_more">weitere Assoziationen suchen</string>
+    <string name="lookup_assoc_no_more">keine weiteren Assoziationen</string>
     <string name="err_import_empty">Keine Wörter zum Importieren</string>
 
     <string name="err_import">Import fehlgeschlagen</string>

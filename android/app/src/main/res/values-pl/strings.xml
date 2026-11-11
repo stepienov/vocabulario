@@ -398,7 +398,7 @@
     <string name="section_usages">zwroty</string>
 
     <string name="home_search_hint">Szukaj słowa…</string>
-    <string name="search_by_category">Szukaj słów dla podanej kategorii</string>
+    <string name="search_by_category">Szukaj skojarzeń</string>
 
     <string name="home_due_now">Gotowe do powtórki teraz</string>
 
@@ -588,6 +588,9 @@
     <string name="lookup_no_more_suggestions">Nie znaleziono więcej dopasowań.</string>
     <string name="lookup_longer_analysis">Twoje hasło „%1$s” wymaga dłuższej analizy</string>
     <string name="lookup_nothing_found">Nie znaleziono dopasowania dla „%1$s”.</string>
+    <string name="lookup_assoc_searching">szukam słów skojarzeń</string>
+    <string name="lookup_assoc_more">szukaj dalszych skojarzeń</string>
+    <string name="lookup_assoc_no_more">brak dalszych skojarzeń</string>
 
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>

@@ -412,7 +412,7 @@
     <string name="section_usages">espressioni</string>
 
     <string name="home_search_hint">Cerca una parola…</string>
-    <string name="search_by_category">Cerca parole per questa categoria</string>
+    <string name="search_by_category">Cerca associazioni</string>
 
     <string name="home_due_now">Pronto per la revisione ora</string>
 
@@ -593,6 +593,9 @@
     <string name="lookup_no_more_suggestions">Nessun\'altra corrispondenza trovata.</string>
     <string name="lookup_longer_analysis">La tua parola «%1$s» richiede un\'analisi più lunga</string>
     <string name="lookup_nothing_found">Nessuna corrispondenza per «%1$s».</string>
+    <string name="lookup_assoc_searching">cerco associazioni</string>
+    <string name="lookup_assoc_more">cerca altre associazioni</string>
+    <string name="lookup_assoc_no_more">non ci sono altre associazioni</string>
     <string name="err_import_empty">Nessuna parola da importare</string>
 
     <string name="err_import">Importazione fallita</string>

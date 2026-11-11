@@ -417,7 +417,7 @@
     <string name="section_usages">ifadeler</string>
 
     <string name="home_search_hint">Bir kelime ara…</string>
-    <string name="search_by_category">Bu kategori için sözcük ara</string>
+    <string name="search_by_category">Çağrışım ara</string>
 
     <string name="home_due_now">Şimdi gözden geçirmeye hazır</string>
 
@@ -598,6 +598,9 @@
     <string name="lookup_no_more_suggestions">Başka eşleşme bulunamadı.</string>
     <string name="lookup_longer_analysis">\"%1$s\" sözcüğü daha uzun bir inceleme gerektiriyor</string>
     <string name="lookup_nothing_found">\"%1$s\" için eşleşme bulunamadı.</string>
+    <string name="lookup_assoc_searching">çağrışımları arıyorum</string>
+    <string name="lookup_assoc_more">daha fazla çağrışım ara</string>
+    <string name="lookup_assoc_no_more">başka çağrışım yok</string>
     <string name="err_import_empty">İçe aktarılacak kelime yok</string>
 
     <string name="err_import">İçe aktarma başarısız</string>

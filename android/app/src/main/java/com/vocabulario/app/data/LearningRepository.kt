@@ -236,12 +236,21 @@ class LearningRepository @Inject constructor(
 
     suspend fun lookupCategoryCached(text: String): LookupResponse {
         val profileId = activeProfileId()
-        return api.lookupCategoryCached(LookupRequest(text = text, profile_id = profileId))
+        return api.lookupCategoryCached(
+            LookupRequest(text = text, profile_id = profileId, local_membership = true),
+        )
     }
 
-    suspend fun lookupCategoryExpand(text: String): LookupResponse {
+    suspend fun lookupCategoryExpand(text: String, round: Int): LookupResponse {
         val profileId = activeProfileId()
-        return api.lookupCategoryExpand(LookupRequest(text = text, profile_id = profileId))
+        try {
+            return api.lookupCategoryExpand(
+                LookupRequest(text = text, profile_id = profileId, round = round),
+            )
+        } catch (error: retrofit2.HttpException) {
+            if (error.code() == 409) throw com.vocabulario.app.data.lookup.AssocRoundNotReady()
+            throw error
+        }
     }
 
     suspend fun validateImport(words: List<String>): ImportValidateResponse {
@@ -954,6 +963,10 @@ class LearningRepository @Inject constructor(
     /** Ustawienia jako strumień — odzwierciedla zmiany lokalne i te dociągnięte z sync. */
     fun observeSettings(): Flow<UserSettingsResponse?> =
         offlineStore.observeSettings().distinctUntilChanged()
+
+    /** Otwarta karta z Room — treść sekcji podmienia się przy zapisie polla bez osobnego refresh. */
+    fun observeCard(cardId: String): Flow<CardResponse?> =
+        offlineStore.observeCardById(cardId).distinctUntilChanged()
 
     private suspend fun flushPendingUndos() {
         for (item in offlineStore.pendingUndos()) {

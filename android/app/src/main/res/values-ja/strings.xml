@@ -417,7 +417,7 @@
     <string name="section_usages">フレーズ</string>
 
     <string name="home_search_hint">単語を検索…</string>
-    <string name="search_by_category">このカテゴリの単語を検索</string>
+    <string name="search_by_category">関連語を検索</string>
 
     <string name="home_due_now">今すぐレビューの準備ができました</string>
 
@@ -598,6 +598,9 @@
     <string name="lookup_no_more_suggestions">これ以上の一致は見つかりませんでした。</string>
     <string name="lookup_longer_analysis">「%1$s」はより詳しい分析が必要です</string>
     <string name="lookup_nothing_found">「%1$s」の一致は見つかりませんでした。</string>
+    <string name="lookup_assoc_searching">関連語を検索しています</string>
+    <string name="lookup_assoc_more">さらに関連語を検索</string>
+    <string name="lookup_assoc_no_more">これ以上の関連語はありません</string>
     <string name="err_import_empty">インポートする単語がありません</string>
 
     <string name="err_import">インポートに失敗しました</string>

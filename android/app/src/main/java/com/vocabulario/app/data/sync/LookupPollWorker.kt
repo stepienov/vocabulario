@@ -5,8 +5,6 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.vocabulario.app.data.LearningRepository
-import com.vocabulario.app.data.api.LookupResponse
-import com.vocabulario.app.data.lookup.CategoryLookupCoordinator
 import com.vocabulario.app.data.lookup.LookupCoordinator
 import com.vocabulario.app.data.lookup.LookupQueryPersistence
 import dagger.assisted.Assisted
@@ -24,41 +22,20 @@ class LookupPollWorker @AssistedInject constructor(
     private val repository: LearningRepository,
     private val persistence: LookupQueryPersistence,
     private val lookupCoordinator: LookupCoordinator,
-    private val categoryLookupCoordinator: CategoryLookupCoordinator,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         if (!repository.hasSyncableSession()) return Result.success()
         val query = persistence.loadQuery() ?: return Result.success()
-        val byCategory = persistence.loadByCategory()
+        if (persistence.loadByCategory()) return Result.success()
         return try {
-            if (!byCategory) {
-                val expanded = repository.lookupExpand(query, more = persistence.loadMore())
-                accept(query, byCategory = false, expanded)
-                return Result.success()
-            }
-            val cached = repository.lookupCategoryCached(query)
-            accept(query, byCategory = true, cached)
-            if (cached.ai_complete) return Result.success()
-            val expanded = repository.lookupCategoryExpand(query)
-            accept(query, byCategory, expanded)
+            val expanded = repository.lookupExpand(query, more = persistence.loadMore())
+            lookupCoordinator.acceptServerResult(query, expanded)
             Result.success()
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
             if (runAttemptCount >= 6) Result.failure() else Result.retry()
-        }
-    }
-
-    private fun accept(
-        query: String,
-        byCategory: Boolean,
-        response: LookupResponse,
-    ) {
-        if (byCategory) {
-            categoryLookupCoordinator.acceptServerResult(query, response)
-        } else {
-            lookupCoordinator.acceptServerResult(query, response)
         }
     }
 }

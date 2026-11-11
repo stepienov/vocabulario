@@ -273,6 +273,7 @@ User query: "{text}"
 Return up to 8 DISTINCT L2 headword proposals the user might mean.
 Interpret generously: typos, missing diacritics, inflections, stray punctuation.
 lemma = L2 citation form; gloss = L1 citation form.
+Noun lemma: in Spanish, French, Italian, Portuguese and German it starts with the singular definite article (el/la, le/la/l', il/lo/la/l', o/a, der/die/das); in other languages it has no article and no classifier.
 pos = one of: noun, verb, adj, adv, prep, conj, pron, det, interj, phrase, construction, particle.
 If the string is a word in BOTH languages, return both readings.
 If several candidates share a gloss, add a short parenthetical.
@@ -286,6 +287,38 @@ JSON only:
 
 # Expand / "show more": main high-recall expand, gpt-6-sol with low reasoning.
 LOOKUP_EXPAND_MODEL = "gpt-6-sol"
+
+ASSOC_WORD_SYSTEM = (
+    "Bilingual dictionary. JSON only. lemma is the L2 citation form and is written in L2, "
+    "never in L1. gloss is the L1 citation form and is written in L1, never in L2. "
+    "An L1 query returns its ordinary L2 translation. An L2 query returns that L2 headword. "
+    "One small typo or a missing diacritic still counts as that word. After the intended word "
+    "is clear, do not switch to a similar-sounding word. Exactly one candidate. No neighbours. "
+    "Noun lemma: in Spanish, French, Italian, Portuguese and German it starts with the singular "
+    "definite article (el/la, le/la/l', il/lo/la/l', o/a, der/die/das); in other languages it "
+    "has no article and no classifier."
+)
+
+ASSOC_WORD_USER = """L1: {native_name}. L2: {learning_name}. Query: "{text}". The lemma must be in {learning_name}. The gloss must be in {native_name}. At most 1 candidate. pos: noun, verb, adj, adv, or other. JSON: {{"candidates":[{{"lemma":"...","pos":"...","gloss":"..."}}]}}"""
+
+ASSOC_SCENE_SYSTEM = (
+    "JSON only. First decide whether the headword is a word of L1 or of L2, and what it means. "
+    "One small typo or a missing diacritic still counts as that word. "
+    "Then return other dictionary words associated with that meaning. "
+    "lemma is the L2 citation form, written in L2. gloss is the L1 citation form, written in L1. "
+    "pos is noun, verb, adj, or adv. Do not return the headword. "
+    "Do not repeat an association that is already listed. "
+    "Also return meaning: one sentence that says whether the headword is in L1 or in L2 "
+    "and what it means. Do not put that sentence into candidates. "
+    "Noun lemma: in Spanish, French, Italian, Portuguese and German it starts with the singular "
+    "definite article (el/la, le/la/l', il/lo/la/l', o/a, der/die/das); in other languages it "
+    "has no article and no classifier."
+)
+
+ASSOC_SCENE_USER = """L1: {native_name}. L2: {learning_name}. Headword: "{text}".
+{shown}
+Return 8 words associated with this headword.
+JSON: {{"meaning":"L1 or L2, and what the headword means","candidates":[{{"lemma":"...","pos":"...","gloss":"..."}}]}}"""
 
 LOOKUP_CATEGORY_SYSTEM_V1 = (
     "You build one learner vocabulary theme from a single query. "
@@ -458,6 +491,44 @@ def lookup_output_form_rules_text(native: str, learning: str) -> str:
         + "\n"
         + lookup_multiword_pos_rules(learning)
     )
+
+
+ENRICH_STUDY_SYSTEM = (
+    "You write the study part of one flashcard. JSON only. lemma is the same L2 "
+    "headword. When this L2 writes a noun with a dictionary article, the lemma "
+    "includes that article even if the input omitted it. Do not translate the lemma "
+    "into L1. gloss_l1, example l1 and usage l1 are L1. Example l2 and usage l2 are "
+    "L2. Meanings in frequency order. Include every common everyday meaning. The "
+    "gloss hint is the first meaning, not a reason to drop another common one. Each "
+    "meaning has exactly 3 full sentences: A2 short, B2 complex, C2 idiomatic. No "
+    "repeated l2 sentence. Each meaning has 2 or 3 short usages: a collocation or "
+    "fixed phrase in L2 with an L1 translation. ipa transcribes the word itself, "
+    "without the article. No synonyms, antonyms, word family, associations, "
+    "conjugation, or similar words. headword_note is a short grammar note shown "
+    "next to the headword, such as a stem change \"(e>ie)\" or an irregular plural, "
+    "otherwise null."
+)
+
+ENRICH_STUDY_USER = """L1: {native_name}. L2: {learning_name}. Lemma: {lemma}. POS: {pos}. Gloss hint: {gloss}.
+JSON: {{"lemma":"...","pos":"{pos}","ipa":"...","headword_note":null,"meanings":[{{"gloss_l1":"...","examples":[{{"l2":"...","l1":"...","cefr":"A2"}},{{"l2":"...","l1":"...","cefr":"B2"}},{{"l2":"...","l1":"...","cefr":"C2"}}],"usages":[{{"l2":"...","l1":"..."}}]}}]}}"""
+
+ENRICH_RELATED_SYSTEM = (
+    "You add related words to one flashcard whose meanings already exist. JSON only. "
+    "Every item is {lemma, pos, article, gloss_l1}. lemma is the L2 citation form "
+    "without any article. article is the singular definite article of a noun in "
+    "Spanish, French, Italian, Portuguese or German, otherwise null; never guess it. "
+    "pos is exactly noun, verb, adj, adv, or phrase. gloss_l1 is L1. synonyms_l2 and "
+    "antonyms_l2 match the headword POS and are real single words or fixed phrases, "
+    "never the headword with an article or a number. An empty list is correct when no "
+    "real synonym or antonym exists. Do not repeat the headword. word_family_l2 is "
+    "same-root derivation only, other POS allowed, never a negative prefix, never the "
+    "headword. associations_l2 is one everyday scene of the gloss hint, 16 to 18 "
+    "items, other roots: about half nouns, at least 4 verbs, at least 3 adjectives, "
+    "one adverb if it fits. Not synonyms and not the word family."
+)
+
+ENRICH_RELATED_USER = """L1: {native_name}. L2: {learning_name}. Lemma: {lemma}. POS: {pos}. Gloss hint: {gloss}.
+JSON: {{"synonyms_l2":[{{"lemma":"...","pos":"{pos}","article":null,"gloss_l1":"..."}}],"antonyms_l2":[],"word_family_l2":[],"associations_l2":[]}}"""
 
 
 ENRICHMENT_CORE_STATIC_V1 = """Jesteś ekspertem leksykograficznym. Tworzysz pełny rdzeń karty słówka ze znaczeniami

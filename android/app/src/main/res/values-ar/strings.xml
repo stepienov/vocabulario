@@ -385,7 +385,7 @@
     <string name="section_usages">عبارات</string>
 
     <string name="home_search_hint">ابحث عن كلمة…</string>
-    <string name="search_by_category">ابحث عن كلمات لهذه الفئة</string>
+    <string name="search_by_category">ابحث عن كلمات مرتبطة</string>
 
     <string name="home_due_now">جاهز للمراجعة الآن</string>
 
@@ -566,6 +566,9 @@
     <string name="lookup_no_more_suggestions">لم يُعثر على المزيد من المطابقات.</string>
     <string name="lookup_longer_analysis">كلمتك «%1$s» تحتاج إلى تحليل أطول</string>
     <string name="lookup_nothing_found">لم يُعثر على مطابقة لـ «%1$s».</string>
+    <string name="lookup_assoc_searching">أبحث عن كلمات مرتبطة</string>
+    <string name="lookup_assoc_more">ابحث عن المزيد</string>
+    <string name="lookup_assoc_no_more">لا مزيد من الكلمات</string>
     <string name="err_import_empty">لا كلمات للاستيراد</string>
 
     <string name="err_import">فشل الاستيراد</string>

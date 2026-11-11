@@ -278,6 +278,15 @@ def test_guard_pins_lemma_on_lemma_path_and_raises_on_adaptive():
         raise AssertionError("expected adaptive_lemma_mismatch")
 
 
+async def _fake_related(llm, profile, lemma, pos, *, gloss_hint=None):
+    return {
+        "synonyms_l2": [],
+        "antonyms_l2": [],
+        "word_family_l2": [],
+        "associations_l2": [],
+    }
+
+
 def test_run_lemma_enrichment_fetches_similar_for_construction(monkeypatch):
     from app.lsp import enrichment as enrich_mod
 
@@ -294,6 +303,7 @@ def test_run_lemma_enrichment_fetches_similar_for_construction(monkeypatch):
         return {}
 
     monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    monkeypatch.setattr(enrich_mod, "_fetch_related_part", _fake_related)
     monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
     monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
 
@@ -357,11 +367,12 @@ def test_core_callback_runs_before_slow_similar(monkeypatch):
         return {"verbs": {"tenses": {"present": {}}}}
 
     monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    monkeypatch.setattr(enrich_mod, "_fetch_related_part", _fake_related)
     monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
     monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
 
-    async def on_core(card: dict):
-        order.append("on_core")
+    async def on_study(card: dict):
+        order.append("on_study")
         assert content_is_learnable(card)
         assert card["similar_words"] == []
 
@@ -370,13 +381,13 @@ def test_core_callback_runs_before_slow_similar(monkeypatch):
             _profile(),
             "hablar",
             "verb",
-            on_core=on_core,
+            on_study=on_study,
             require_similar=False,
         )
 
     result = asyncio.run(run())
-    assert "on_core" in order
-    assert order.index("on_core") < order.index("similar_done")
+    assert "on_study" in order
+    assert order.index("on_study") < order.index("similar_done")
     assert "similar_start" in order
     assert "infl_start" in order
     assert len(result.get("similar_words") or []) >= MIN_SIMILAR_FOR_QUIZ
@@ -398,6 +409,7 @@ def test_pos_mismatch_refetches_similar(monkeypatch):
         return {"verbs": {"tenses": {"present": {}}}}
 
     monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    monkeypatch.setattr(enrich_mod, "_fetch_related_part", _fake_related)
     monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
     monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
 
@@ -495,6 +507,7 @@ def test_run_lemma_marks_empty_phrase_not_applicable(monkeypatch):
         return None
 
     monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    monkeypatch.setattr(enrich_mod, "_fetch_related_part", _fake_related)
     monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
     monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
     monkeypatch.setattr(
@@ -507,3 +520,94 @@ def test_run_lemma_marks_empty_phrase_not_applicable(monkeypatch):
     )
     assert result["inflection_status"] == "not_applicable"
     assert result["inflection"] is None
+
+
+def test_related_pending_blocks_complete():
+    content = {
+        "schema_version": "vocabulario.card.v1",
+        "pos": "verb",
+        "lemma": "hablar",
+        "language": "es",
+        "meanings": [{"gloss_l1": "mówić", "examples": [{"l2": "a", "l1": "b"}]}],
+        "similar_words": _similar(),
+        "inflection": {"verbs": {"tenses": {"present": {}}}},
+        "related_pending": True,
+    }
+    assert content_is_learnable(content)
+    assert not content_is_complete(content, learning_lang="es")
+    content.pop("related_pending")
+    assert content_is_complete(content, learning_lang="es")
+
+
+def test_related_before_study_merges_without_pending(monkeypatch):
+    from app.lsp import enrichment as enrich_mod
+
+    events: list[str] = []
+
+    async def fake_core(llm, profile, lemma, pos, *, gloss_hint=None):
+        await asyncio.sleep(0.05)
+        return _core_payload()
+
+    async def fake_related(llm, profile, lemma, pos, *, gloss_hint=None):
+        events.append("related_done")
+        return {
+            "synonyms_l2": [
+                {"lemma": "decir", "pos": "verb", "article": None, "gloss_l1": "mówić"}
+            ],
+            "antonyms_l2": [],
+            "word_family_l2": [],
+            "associations_l2": [],
+        }
+
+    async def fake_similar(llm, profile, lemma, pos):
+        return _similar()
+
+    async def fake_infl(llm, profile, lemma, pos):
+        return {"verbs": {"tenses": {"present": {}}}}
+
+    monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    monkeypatch.setattr(enrich_mod, "_fetch_related_part", fake_related)
+    monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
+    monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
+
+    async def on_study(card: dict):
+        events.append("on_study")
+        assert card.get("related_pending") is not True
+        assert card.get("synonyms_l2")
+
+    result = asyncio.run(
+        run_lemma_enrichment(
+            _profile(), "hablar", "verb", on_study=on_study, require_similar=False
+        )
+    )
+    assert events.index("related_done") < events.index("on_study")
+    assert "related_pending" not in result or result.get("related_pending") is not True
+    assert result["synonyms_l2"]
+
+
+def test_related_failure_keeps_pending(monkeypatch):
+    from app.lsp import enrichment as enrich_mod
+
+    async def fake_core(llm, profile, lemma, pos, *, gloss_hint=None):
+        return _core_payload()
+
+    async def fake_related(llm, profile, lemma, pos, *, gloss_hint=None):
+        raise RuntimeError("related down")
+
+    async def fake_similar(llm, profile, lemma, pos):
+        return _similar()
+
+    async def fake_infl(llm, profile, lemma, pos):
+        return {"verbs": {"tenses": {"present": {}}}}
+
+    monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    monkeypatch.setattr(enrich_mod, "_fetch_related_part", fake_related)
+    monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
+    monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
+
+    result = asyncio.run(
+        run_lemma_enrichment(_profile(), "hablar", "verb", require_similar=False)
+    )
+    assert result.get("related_pending") is True
+    assert content_is_learnable(result)
+    assert not content_is_complete(result, learning_lang="es")

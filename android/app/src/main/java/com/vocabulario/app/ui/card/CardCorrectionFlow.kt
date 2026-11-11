@@ -49,6 +49,12 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/**
+ * Tymczasowo wyłączone: zgłoszenie / edycja karty nigdzie w UI.
+ * Kod zostaje — ustaw na `true`, żeby włączyć z powrotem.
+ */
+const val CARD_CORRECTION_ENABLED = false
+
 /** Orange accent for correction / self-edit processing (distinct from enrichment blue). */
 val CorrectionActivityColor @Composable get() = Color(0xFFE65100)
 

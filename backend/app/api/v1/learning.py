@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, get_current_user_id, normalize_text
+from app.core.deps import get_current_user, get_current_user_id, lang_pair_key, normalize_text
 from app.core.http_errors import api_error
 from app.db.session import get_db
 from app.models import CardCorrection, CardHistoryEvent, LanguageProfile, LearningCard, LexicalEntry, ReviewLog, SrsState, User, UserSettings, WordList
@@ -59,7 +59,6 @@ from app.services.card_jobs import (
     STATUS_PREPARING,
     STUDYABLE_STATUSES,
     build_pending_content,
-    hydrate_from_lexical_cache,
     _claimed,
     request_manual_enrichment_retry,
     spawn_enrich,
@@ -79,12 +78,12 @@ from app.services.lookup_events import (
 from app.services.lookup_candidates import has_confident_match
 from app.services.similar_words import ensure_similar_words
 from app.services.srs import apply_review
-from app.services.word_families import attach_card_to_word_family, backfill_card_word_family
+from app.services.word_families import backfill_card_word_family
 from app.services.word_lists import (
     RESERVED_LIST_NAMES,
     ensure_pending_inbox_list,
     ensure_system_list,
-    find_card_anywhere,
+    find_card_key_anywhere,
     list_word_lists,
 )
 from app.services.word_persistence import words_persistence_enabled
@@ -260,15 +259,39 @@ async def lookup_category_cached(
 async def lookup_category_expand(
     body: LookupRequest,
     user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
+    from app.services.lexical import AssocRoundNotReady
     from app.services.lookup_category_jobs import await_lookup_category_expand
 
+    effective = body.round or 1
     try:
         outcome = await await_lookup_category_expand(
-            user.id, body.profile_id, body.text
+            user.id, body.profile_id, body.text, effective
         )
+    except AssocRoundNotReady as exc:
+        raise api_error(409, "assoc_round_not_ready", "Previous association round is not ready") from exc
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if body.round is None:
+        service = LexicalService(db)
+        profile = await service.get_profile(user.id, body.profile_id)
+        pair = lang_pair_key(profile.app_lang, profile.learning_lang)
+        from app.services.lookup_candidates import letters_of_query
+
+        word = await service._fetch_query_cache(
+            pair, service._assoc_key(letters_of_query(body.text))
+        )
+        head = list(word.candidates or [])[:1] if word is not None else []
+        outcome = LookupOutcome(
+            head + list(outcome.candidates),
+            outcome.source,
+            outcome.ai_complete,
+            added=outcome.added,
+            cache_row_id=outcome.cache_row_id,
+            lang_pair=outcome.lang_pair,
+            headword_meaning=outcome.headword_meaning,
+        )
     return _lookup_http(outcome, body.text)
 
 
@@ -296,6 +319,7 @@ def _lookup_http(outcome: LookupOutcome, text: str) -> LookupResponse:
         ai_complete=outcome.ai_complete,
         added=outcome.added,
         suggestions_exhausted=outcome.suggestions_exhausted,
+        headword_meaning=outcome.headword_meaning,
     )
 
 
@@ -430,8 +454,8 @@ async def create_card(
             persisted=False,
         )
 
-    existing = await find_card_anywhere(db, user.id, profile.id, body.lemma, body.pos)
-    if existing is not None:
+    existing_id = await find_card_key_anywhere(db, user.id, profile.id, body.lemma, body.pos)
+    if existing_id is not None:
         raise api_error(409, "word_already_on_list", "This word is already on the list")
 
     card = LearningCard(
@@ -464,9 +488,7 @@ async def create_card(
     if matched is not None:
         card.lookup_event_id = matched.id
     db.add(SrsState(card_id=card.id, scope="main", status="new"))
-    await hydrate_from_lexical_cache(db, card, profile)
     source = await _owned_source_card(db, user.id, profile.id, body.source_card_id)
-    await attach_card_to_word_family(db, profile, card, source_card=source)
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -475,7 +497,7 @@ async def create_card(
     await db.refresh(card)
 
     if card.enrichment_status == STATUS_PENDING:
-        spawn_enrich(card.id)
+        spawn_enrich(card.id, source_card_id=source.id if source else None)
     return card
 
 
@@ -1267,8 +1289,8 @@ async def add_word_to_list(
             if resolved.get("lexical_entry_id") and lexical_entry_id is None:
                 lexical_entry_id = UUID(resolved["lexical_entry_id"])
 
-    existing = await find_card_anywhere(db, user.id, profile.id, lemma, pos)
-    if existing is not None:
+    existing_id = await find_card_key_anywhere(db, user.id, profile.id, lemma, pos)
+    if existing_id is not None:
         raise api_error(409, "word_already_on_list", "This word is already on the list")
 
     if wl.is_system:
@@ -1317,9 +1339,7 @@ async def add_word_to_list(
         db.add(card)
         await db.flush()
 
-    await hydrate_from_lexical_cache(db, card, profile)
     source = await _owned_source_card(db, user.id, profile.id, body.source_card_id)
-    await attach_card_to_word_family(db, profile, card, source_card=source)
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -1327,7 +1347,7 @@ async def add_word_to_list(
         raise api_error(409, "word_already_on_list", "This word is already on the list") from exc
     await db.refresh(card)
     if card.enrichment_status == STATUS_PENDING:
-        spawn_enrich(card.id)
+        spawn_enrich(card.id, source_card_id=source.id if source else None)
     return card
 
 

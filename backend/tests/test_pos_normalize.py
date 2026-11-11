@@ -153,11 +153,11 @@ def test_ensure_noun_article_spanish():
     assert ensure_noun_article("los cascos", learning_lang="es", gender="m") == "los cascos"
 
 
-def test_canonicalize_strips_verbose_pos_and_adds_article():
+def test_canonicalize_strips_verbose_pos_and_keeps_a_bare_lemma():
     raw = {"lemma": "libro", "pos": "sustantivo masculino", "gloss": "książka"}
     out = canonicalize_lookup_candidate(raw, learning_lang="es")
     assert out["pos"] == "noun"
-    assert out["lemma"] == "el libro"
+    assert out["lemma"] == "libro"
 
 
 def test_dedup_libro_sustantivo_and_noun():
@@ -170,10 +170,10 @@ def test_dedup_libro_sustantivo_and_noun():
     ]
     out = sanitize_lookup_candidates(cands, learning_lang="es")
     lemmas = [c["lemma"] for c in out]
-    assert lemmas.count("el libro") == 1
-    assert lemmas.count("la tripa") == 1
-    assert "libro" not in lemmas
-    assert "tripa" not in lemmas
+    assert lemmas.count("libro") == 1
+    assert lemmas.count("tripa") == 1
+    assert "el libro" not in lemmas
+    assert "la tripa" not in lemmas
     assert all(c["pos"] == "noun" for c in out)
     assert len(out) == 3
 
@@ -198,7 +198,7 @@ def test_german_noun_article():
         learning_lang="de",
     )
     assert out["pos"] == "noun"
-    assert out["lemma"] == "das Haus"
+    assert out["lemma"] == "Haus"
 
 
 def test_french_noun_article():
@@ -207,4 +207,4 @@ def test_french_noun_article():
         learning_lang="fr",
     )
     assert out["pos"] == "noun"
-    assert out["lemma"] == "la maison"
+    assert out["lemma"] == "maison"

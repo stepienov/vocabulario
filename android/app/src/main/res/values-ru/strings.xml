@@ -385,7 +385,7 @@
     <string name="section_usages">выражения</string>
 
     <string name="home_search_hint">Искать слово…</string>
-    <string name="search_by_category">Искать слова по этой категории</string>
+    <string name="search_by_category">Искать ассоциации</string>
 
     <string name="home_due_now">Готово к повторению</string>
 
@@ -566,6 +566,9 @@
     <string name="lookup_no_more_suggestions">Больше совпадений не найдено.</string>
     <string name="lookup_longer_analysis">Слово «%1$s» требует более долгого анализа</string>
     <string name="lookup_nothing_found">Совпадений для «%1$s» не найдено.</string>
+    <string name="lookup_assoc_searching">ищу слова-ассоциации</string>
+    <string name="lookup_assoc_more">искать ещё ассоциации</string>
+    <string name="lookup_assoc_no_more">больше ассоциаций нет</string>
     <string name="err_import_empty">Нет слов для импорта</string>
 
     <string name="err_import">Ошибка импорта</string>

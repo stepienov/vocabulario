@@ -177,6 +177,7 @@ fun HomeScreen(
     val state by viewModel.state.collectAsState()
     val importState by viewModel.importState.collectAsState()
     val isOnline by viewModel.connectivity.collectAsState()
+    val enrichmentPollingIds by viewModel.enrichmentPollingIds.collectAsState()
     val scheme = MaterialTheme.colorScheme
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -289,6 +290,7 @@ fun HomeScreen(
             onAddRelated = viewModel::openAddRelated,
             learningLemmas = state.learningLemmas,
             relatedMembership = state.relatedMembership,
+            stillPolling = card.id in enrichmentPollingIds,
             addSheet = { HomeAddToListSheet(state = state, viewModel = viewModel) },
         )
     }
@@ -1225,6 +1227,41 @@ private fun AddTab(
                                 color = scheme.primary,
                                 strokeWidth = 3.dp,
                             )
+                        }
+                    }
+                }
+                if (state.searchByCategory && state.assocSearching) {
+                    item {
+                        Text(
+                            stringResource(R.string.lookup_assoc_searching),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.primary,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+                if (state.searchByCategory && state.candidates.isNotEmpty() && !state.expanding) {
+                    item {
+                        if (state.assocNoMore) {
+                            Text(
+                                stringResource(R.string.lookup_assoc_no_more),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = scheme.primary,
+                                textAlign = TextAlign.Center,
+                            )
+                        } else if (state.assocCanMore) {
+                            TextButton(
+                                onClick = onShowMore,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.lookup_assoc_more))
+                            }
                         }
                     }
                 }
@@ -2564,14 +2601,16 @@ private fun ListWordTile(
                                             contentColor = scheme.onPrimaryContainer,
                                         )
                                     }
-                                    ListTileIconButton(
-                                        onClick = onFixCard,
-                                        icon = Icons.Outlined.Edit,
-                                        contentDescription = stringResource(R.string.correction_fix_card),
-                                        containerColor = scheme.tertiaryContainer,
-                                        contentColor = scheme.onTertiaryContainer,
-                                        modifier = Modifier.testTag(TestTags.BTN_FIX_CARD),
-                                    )
+                                    if (com.vocabulario.app.ui.card.CARD_CORRECTION_ENABLED) {
+                                        ListTileIconButton(
+                                            onClick = onFixCard,
+                                            icon = Icons.Outlined.Edit,
+                                            contentDescription = stringResource(R.string.correction_fix_card),
+                                            containerColor = scheme.tertiaryContainer,
+                                            contentColor = scheme.onTertiaryContainer,
+                                            modifier = Modifier.testTag(TestTags.BTN_FIX_CARD),
+                                        )
+                                    }
                                     if (card.has_content_changes) {
                                         ListTileIconButton(
                                             onClick = onHistory,

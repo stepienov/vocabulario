@@ -398,7 +398,7 @@
     <string name="section_usages">phrases</string>
 
     <string name="home_search_hint">Search a word…</string>
-    <string name="search_by_category">Search words for this category</string>
+    <string name="search_by_category">Search associations</string>
 
     <string name="home_due_now">Ready to review now</string>
 
@@ -588,6 +588,9 @@
     <string name="lookup_no_more_suggestions">No more matches found.</string>
     <string name="lookup_longer_analysis">Your word \"%1$s\" needs a closer look</string>
     <string name="lookup_nothing_found">No match found for \"%1$s\".</string>
+    <string name="lookup_assoc_searching">searching for associations</string>
+    <string name="lookup_assoc_more">search for more associations</string>
+    <string name="lookup_assoc_no_more">no more associations</string>
 
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>

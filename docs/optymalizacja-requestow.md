@@ -909,7 +909,9 @@ Polecenie powiązanych z pomiaru 8 listopada, w brzmieniu z tego dokumentu, zost
 
 Trafienie `hydrate_from_lexical_cache` dalej kopiuje gotową kartę i ustawia `ready` bez tych czterech pytań.
 
-Na ekranie od zera widać hasło, wybrane tłumaczenie i nazwę listy. Sekcja bez treści ma kółko, dopóki status nie jest `ready`. Przy `ready` pusta lista zostaje pusta. Tak jest przy haśle bez przeciwieństwa, na przykład przy „milion” z próbki z 6 listopada. Kółko na kafelku wyniku schodzi przy `learnable`, tak jak dziś schodzi `isCreating`. Pętla `GET /cards/{id}` co 2,5 s zostaje do `ready`, ale z limitem z taska 03: karta `learnable` wypada z odpytywania, gdy serwer odda `enrichment_active=false` (żadne zadanie tej karty nie trwa), a najpóźniej po 3 minutach od pierwszego odpytania w tej sesji ekranu. `CardResponse` nie ma `updated_at`, więc telefon nie może sam rozpoznać, że nic się nie zmienia. Sekcje z kółkiem pokazują wtedy pustą listę bez kółka, a następna synchronizacja przyniesie resztę.
+Na ekranie od zera widać hasło, wybrane tłumaczenie i nazwę listy. Zachowanie sekcji, kółka i ćwiczenia, także po zamknięciu karty albo aplikacji, jest w `docs/wzbogacanie-karty-schemat.md`, sekcja „Ekran, niezależnie od widoku”. Instrukcja telefonu jest w `docs/taski/10-nauka-i-powiazane.md`.
+
+Kółko na kafelku wyniku schodzi przy `learnable`, tak jak dziś schodzi `isCreating`. Pętla `GET /cards/{id}` co 2,5 s zostaje, dopóki którejś sekcji brakuje i zadanie tej karty jeszcze trwa. Karta `learnable` wypada z odpytywania, gdy serwer odda `enrichment_active=false`, a najpóźniej po 3 minutach od pierwszego odpytania w tej sesji (`docs/taski/03-petla-learnable.md`). `CardResponse` nie ma `updated_at`. Zamknięcie ekranu nie kasuje zadania na serwerze. Otwarta karta czyta ten sam wiersz, więc kółko znika w chwili, gdy treść sekcji jest już zapisana.
 
 Pomiar 8 listopada 2026, gołe API, terra, `reasoning_effort=none`. Para polski–hiszpański.
 

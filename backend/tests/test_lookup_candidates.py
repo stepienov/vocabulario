@@ -320,7 +320,7 @@ def test_sanitize_drops_missing_gloss_or_lemma():
         {"lemma": "casa", "pos": "noun", "gloss": "house"},
     ]
     out = sanitize_lookup_candidates(cands, learning_lang="es")
-    assert [c["lemma"] for c in out] == ["la casa"]
+    assert [c["lemma"] for c in out] == ["casa"]
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +335,32 @@ def test_dedupe_el_libro_and_libro():
     out = dedupe_lookup_candidates(cands, learning_lang="es")
     assert len(out) == 1
     assert out[0]["lemma"] == "el libro"
+
+
+def test_same_word_with_another_translation_stays():
+    out = dedupe_lookup_candidates(
+        [
+            {"lemma": "radio", "pos": "noun", "gloss": "radio (urządzenie)"},
+            {"lemma": "el radio", "pos": "noun", "gloss": "promień"},
+            {"lemma": "radio", "pos": "noun", "gloss": "promień"},
+        ],
+        learning_lang="es",
+    )
+    assert {(c["lemma"], c["gloss"]) for c in out} == {
+        ("radio", "radio (urządzenie)"),
+        ("el radio", "promień"),
+    }
+
+
+def test_german_bare_noun_drops_when_the_same_translation_has_an_article():
+    out = dedupe_lookup_candidates(
+        [
+            {"lemma": "Hund", "pos": "noun", "gloss": "pies"},
+            {"lemma": "der Hund", "pos": "noun", "gloss": "pies"},
+        ],
+        learning_lang="de",
+    )
+    assert [(c["lemma"], c["gloss"]) for c in out] == [("der Hund", "pies")]
 
 
 def test_dedupe_prefers_article_when_bare_comes_first():
@@ -510,15 +536,32 @@ def test_spanish_feminine_adjective_still_becomes_masculine():
     assert [c["lemma"] for c in out] == ["caro"]
 
 
-def test_spanish_noun_without_article_is_dropped():
+def test_bare_noun_translation_is_kept():
+    cases = [
+        ("książka", "libro", "książka"),
+        ("stół", "mesa", "stół"),
+        ("dzień", "día", "dzień"),
+        ("mapa", "mapa", "mapa"),
+    ]
+    for query, lemma, gloss in cases:
+        out = drop_implausible_lookup_rows(
+            [{"lemma": lemma, "pos": "noun", "gloss": gloss}],
+            query,
+            learning_lang="es",
+        )
+        assert [c["lemma"] for c in out] == [lemma]
+
+
+def test_spanish_noun_stays_bare_when_the_model_omits_the_article():
     out = sanitize_lookup_candidates(
         [
             {"lemma": "grande", "pos": "noun", "gloss": "duży banknot"},
             {"lemma": "camino", "pos": "noun", "gloss": "droga"},
+            {"lemma": "tranvía", "pos": "noun", "gloss": "tramwaj"},
         ],
         learning_lang="es",
     )
-    assert [c["lemma"] for c in out] == ["el camino"]
+    assert [c["lemma"] for c in out] == ["grande", "camino", "tranvía"]
 
 
 def test_row_must_translate_the_word_the_model_read():
@@ -540,47 +583,6 @@ def test_row_must_translate_the_word_the_model_read():
         {"word": "kara", "lemma": "la cara", "gloss": "twarz"},
         "cara",
     )
-
-
-def test_a_farther_word_drops_when_a_closer_one_is_present():
-    from app.services.lookup_candidates import drop_rows_past_one_change
-
-    kept = drop_rows_past_one_change(
-        [
-            {"word": "drogi", "lemma": "caro", "pos": "adj", "gloss": "drogi"},
-            {"word": "droga", "lemma": "el camino", "pos": "noun", "gloss": "droga"},
-            {"word": "drogie", "lemma": "la droga", "pos": "noun", "gloss": "narkotyk"},
-        ],
-        "drogie",
-        learning_lang="es",
-    )
-    assert [row["lemma"] for row in kept] == ["caro"]
-
-    inflection = drop_rows_past_one_change(
-        [{"word": "iść", "lemma": "ir", "pos": "verb", "gloss": "iść"}],
-        "idę",
-        learning_lang="es",
-    )
-    assert inflection[0]["lemma"] == "ir"
-    verb_beside_neighbor = drop_rows_past_one_change(
-        [
-            {"word": "ser", "lemma": "ser", "pos": "verb", "gloss": "być"},
-            {"word": "somos", "lemma": "la somos", "pos": "noun", "gloss": "suma"},
-        ],
-        "somos",
-        learning_lang="es",
-    )
-    assert [row["lemma"] for row in verb_beside_neighbor] == ["ser", "la somos"]
-
-    conjugated_label = drop_rows_past_one_change(
-        [
-            {"word": "somos", "lemma": "ser", "pos": "verb", "gloss": "być"},
-            {"word": "somos", "lemma": "el somo", "pos": "noun", "gloss": "grzbiet"},
-        ],
-        "somos",
-        learning_lang="es",
-    )
-    assert [row["lemma"] for row in conjugated_label] == ["ser", "el somo"]
 
 
 def test_digits_fall_off_before_the_lookup_key():
@@ -611,15 +613,6 @@ def test_two_labels_in_one_pos_take_the_first():
     assert normalize_pos_bucket("adjetivo/adverbio") == "adj"
 
 
-def test_a_copied_spelling_is_not_a_finished_answer():
-    from app.services.lookup_candidates import rows_are_spelling_echoes
-
-    echo = [{"lemma": "la droga", "pos": "noun", "gloss": "droga"}]
-    assert rows_are_spelling_echoes(echo, "droga", learning_lang="es")
-    roads = echo + [{"lemma": "el camino", "pos": "noun", "gloss": "droga"}]
-    assert not rows_are_spelling_echoes(roads, "droga", learning_lang="es")
-
-
 def test_cognate_gloss_is_not_thrown_away():
     out = drop_implausible_lookup_rows(
         [
@@ -635,7 +628,7 @@ def test_cognate_gloss_is_not_thrown_away():
         "noche",
         learning_lang="es",
     )
-    assert noche == []
+    assert [c["lemma"] for c in noche] == ["noc"]
 
 
 def test_plural_drug_becomes_the_singular_citation():
@@ -646,7 +639,7 @@ def test_plural_drug_becomes_the_singular_citation():
     assert out[0]["lemma"] == "la droga"
 
 
-def test_spelling_echo_drops_when_a_real_translation_is_present():
+def test_same_word_on_both_sides_stays_beside_a_real_translation():
     out = drop_implausible_lookup_rows(
         [
             {"lemma": "la droga", "pos": "noun", "gloss": "droga"},
@@ -656,7 +649,7 @@ def test_spelling_echo_drops_when_a_real_translation_is_present():
         "droga",
         learning_lang="es",
     )
-    assert [c["lemma"] for c in out] == ["el camino", "la carretera"]
+    assert [c["lemma"] for c in out] == ["la droga", "el camino", "la carretera"]
 
 
 def test_shared_loanword_stays_when_it_is_the_only_row():
@@ -677,14 +670,14 @@ def test_l2_query_does_not_keep_a_polish_lemma():
         "libros",
         learning_lang="es",
     )
-    assert out[0]["lemma"] == "el libro"
+    assert out[0]["lemma"] == "libro"
     assert out[0]["gloss"] == "książka"
     glasses = drop_implausible_lookup_rows(
         [{"lemma": "okulary", "pos": "noun", "gloss": "gafas"}],
         "gafas",
         learning_lang="es",
     )
-    assert glasses[0]["lemma"] == "las gafas"
+    assert glasses[0]["lemma"] == "gafas"
     assert glasses[0]["gloss"] == "okulary"
 
 
@@ -699,6 +692,26 @@ def test_reversed_polish_lemma_is_turned_back_into_spanish():
     )
     assert [(c["lemma"], c["pos"], c["gloss"]) for c in out] == [
         ("mucho", "adv", "dużo"),
+        ("mucho", "adj", "duży"),
+    ]
+
+
+def test_spanish_o_acute_does_not_look_like_a_polish_lemma():
+    """automóvil ma ó — ta sama litera co w polskim; nie wolno odwracać pól."""
+    out = drop_implausible_lookup_rows(
+        [
+            {"lemma": "el coche", "pos": "noun", "gloss": "samochód"},
+            {"lemma": "el automóvil", "pos": "noun", "gloss": "samochód"},
+            {"lemma": "el auto", "pos": "noun", "gloss": "samochód"},
+        ],
+        "samochod",
+        learning_lang="es",
+        native_lang="pl",
+    )
+    assert [(c["lemma"], c["gloss"]) for c in out] == [
+        ("el coche", "samochód"),
+        ("el automóvil", "samochód"),
+        ("el auto", "samochód"),
     ]
 
 
@@ -711,7 +724,11 @@ def test_drop_query_stretched_into_a_different_word():
         {"lemma": "el oído", "pos": "noun", "gloss": "ucho"},
     ]
     out = drop_implausible_lookup_rows(rows, "much", learning_lang="es")
-    assert [(c["lemma"], c["pos"]) for c in out] == [("mucho", "adv"), ("el oído", "noun")]
+    assert [(c["lemma"], c["pos"]) for c in out] == [
+        ("much", "noun"),
+        ("mucho", "adv"),
+        ("el oído", "noun"),
+    ]
 
 
 def test_adverb_gloss_is_not_left_on_an_adjective():
@@ -721,7 +738,10 @@ def test_adverb_gloss_is_not_left_on_an_adjective():
         {"lemma": "mucha", "pos": "noun", "gloss": "mucha"},
     ]
     out = drop_implausible_lookup_rows(rows, "much", learning_lang="es")
-    assert [(c["lemma"], c["pos"], c["gloss"]) for c in out] == [("mucho", "adv", "dużo")]
+    assert [(c["lemma"], c["pos"], c["gloss"]) for c in out] == [
+        ("mucho", "adv", "dużo"),
+        ("mucho", "adv", "bardzo"),
+    ]
 
 
 def test_drop_keeps_a_loanword_and_a_real_second_reading():
