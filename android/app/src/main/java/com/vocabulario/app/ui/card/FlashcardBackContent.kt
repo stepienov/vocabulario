@@ -115,6 +115,12 @@ fun FlashcardBackContent(
             else -> null
         }
     }
+    val examplesPending = content["examples_pending"].let { raw ->
+        when (raw) {
+            is JsonPrimitive -> raw.booleanOrNull
+            else -> null
+        }
+    }
     val synonymsL2 = parseFlashRelatedWords(content["synonyms_l2"].asJsonArray())
     val antonymsL2 = parseFlashRelatedWords(content["antonyms_l2"].asJsonArray())
     val wordFamilyL2 = parseFlashRelatedWords(content["word_family_l2"].asJsonArray())
@@ -251,6 +257,13 @@ fun FlashcardBackContent(
             val gloss = meaning["gloss_l1"].asJsonString().orEmpty()
             val syns = meaning["synonyms_l1"].asJsonArray()?.mapNotNull { it.asJsonString() }.orEmpty()
             val example = examplesForUserLevel(meaning["examples"].asJsonArray(), userCefr, maxCount = 1).firstOrNull()
+            val hasExamples = !(meaning["examples"].asJsonArray()?.isEmpty() ?: true)
+            val waitExamples = CardSectionWaiting.examples(
+                hasExamples = hasExamples,
+                status = enrichmentStatus,
+                stillPolling = stillPolling,
+                examplesPending = examplesPending,
+            )
             val usages = meaning["usages"].asJsonArray().orEmpty().mapNotNull { usageEl ->
                 when (usageEl) {
                     is JsonObject -> {
@@ -328,6 +341,11 @@ fun FlashcardBackContent(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
+                        }
+                    } else if (showExampleSentences && waitExamples) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp)
                         }
                     }
                     if (hasUsagesLink) {

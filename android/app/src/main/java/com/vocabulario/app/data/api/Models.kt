@@ -214,12 +214,13 @@ data class ImportJobItemResponse(
     val existing_card_id: String? = null,
     val created_card_id: String? = null,
     val attempt: Int = 0,
+    val list_name: String? = null,
 )
 
 @Serializable
 data class ImportJobProgressResponse(
-    val job_id: String,
-    val status: String,
+    val job_id: String? = null,
+    val status: String = "idle",
     val phase: String = "analyze",
     val stage: String = "queued",
     val source_name: String = "",
@@ -239,6 +240,8 @@ data class ImportJobProgressResponse(
     val error_code: String? = null,
     val error_message: String? = null,
     val heartbeat_at: String? = null,
+    val daily_used: Int = 0,
+    val daily_limit: Int = 25,
     val items: List<ImportJobItemResponse> = emptyList(),
 )
 

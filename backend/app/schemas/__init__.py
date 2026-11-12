@@ -273,16 +273,17 @@ class ImportJobItemResponse(BaseModel):
     existing_card_id: UUID | None = None
     created_card_id: UUID | None = None
     attempt: int = 0
+    list_name: str | None = None
 
 
 class ImportJobProgressResponse(BaseModel):
-    job_id: UUID
-    status: str
-    phase: str
-    stage: str
+    job_id: UUID | None = None
+    status: str = "idle"
+    phase: str = "idle"
+    stage: str = "idle"
     source_name: str = ""
     mode: str = "vocabulario"
-    list_id: UUID
+    list_id: UUID | None = None
     list_name: str | None = None
     processed: int = 0
     total: int = 0
@@ -297,6 +298,8 @@ class ImportJobProgressResponse(BaseModel):
     error_code: str | None = None
     error_message: str | None = None
     heartbeat_at: datetime | None = None
+    daily_used: int = 0
+    daily_limit: int = 25
 
 
 class ImportJobDetailResponse(ImportJobProgressResponse):

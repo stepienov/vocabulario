@@ -103,9 +103,8 @@
     <string name="auth_or_continue">Oppure continua con e-mail</string>
 
         <string name="auth_email">E-mail</string>
-        <string name="auth_password">Password</string>
-
-    <string name="cd_show_password">Mostra password</string>
+                <string name="auth_password">Password</string>
+<string name="cd_show_password">Mostra password</string>
 
     <string name="cd_hide_password">Nascondi password</string>
 <string name="auth_have_account">Ho già un account</string>
@@ -344,7 +343,7 @@
 
     <string name="import_empty_hint">Digita una parola o importa un elenco (CSV/TXT/apkg)</string>
 
-            <string name="import_file_label">File: \'%1$s\'</string>
+                    <string name="import_file_label">File: \'%1$s\'</string>
 <!-- TODO: translate import UI strings -->
     <string name="import_start_title">Importa flashcard</string>
     <string name="import_pick_list">Lista di destinazione</string>
@@ -729,7 +728,7 @@
 
     <string name="correction_report_title">Controlla e correggi la scheda</string>
 
-            <string name="correction_section_lemma">Lemma</string>
+                    <string name="correction_section_lemma">Lemma</string>
 <string name="correction_section_pos">Parte del discorso</string>
 
     <string name="correction_section_gloss">Glossario principale</string>
@@ -773,28 +772,12 @@
 
     <string name="correction_self_edit_title">Modifica scheda</string>
 
-            <string name="correction_field_lemma">Lemma</string>
+                    <string name="correction_field_lemma">Lemma</string>
 <string name="correction_field_pos">Parte del discorso</string>
 
     <string name="correction_field_gloss">Glossario principale</string>
 
     <string name="correction_field_extra_glosses">Glossari extra (uno per riga)</string>
-
-    <string name="cd_voice_search">Ricerca vocale</string>
-
-    <string name="voice_listening">In ascolto…</string>
-
-    <string name="voice_listening_hint">Parla ora</string>
-
-    <string name="voice_tap_to_start">Tocca Inizia per parlare</string>
-
-    <string name="voice_start">Inizia</string>
-
-    <string name="voice_stop">Ferma</string>
-
-    <string name="voice_permission_denied">Permesso del microfono negato.</string>
-
-    <string name="voice_unavailable">Riconoscimento vocale non disponibile su questo dispositivo.</string>
 
     <string name="settings_notifications">Notifiche</string>
 
@@ -888,11 +871,6 @@
     <string name="cd_card_history">Cronologia della scheda</string>
     <string name="cd_view_card">Vedi scheda completa</string>
     <string name="cd_list_word_actions">Azioni della parola</string>
-    <string name="voice_searching">Ricerca…</string>
-    <string name="voice_either_lang_hint">Parla in una delle due lingue</string>
-    <string name="voice_no_match">Non capito — riprova.</string>
-    <string name="voice_network_required">L’input vocale richiede una connessione a internet.</string>
-
     <string name="pos_noun">sostantivo</string>
     <string name="pos_verb">verbo</string>
     <string name="pos_adj">aggettivo</string>
@@ -923,5 +901,16 @@
     <string name="practice_almost">Quasi!</string>
     <string name="practice_typed_valid_synonym">Hai inserito un sinonimo corretto</string>
     <string name="practice_synonym_paren">(sinonimo)</string>
+
+    <string name="add_tab_search">Cerca</string>
+    <string name="add_tab_import">Importa</string>
+    <string name="import_analyzing">Analisi delle parole</string>
+    <string name="import_abandon">Annulla</string>
+    <string name="import_confirm">Conferma</string>
+    <string name="import_too_many_lines">Puoi inviare al massimo 25 elementi alla volta.</string>
+    <string name="import_daily_used">Il limite giornaliero di 25 carte è esaurito.</string>
+    <string name="import_daily_remaining">Oggi puoi importare ancora %1$d carte su 25.</string>
+    <string name="lookup_reading_learning">%1$s</string>
+    <string name="lookup_reading_native">%1$s: %2$s</string>
 
 </resources>

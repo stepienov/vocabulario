@@ -42,6 +42,27 @@ object CardSectionWaiting {
     }
 
     /**
+     * Zdania przykładowe przy już widocznym glosie.
+     * [examplesPending] z `content.examples_pending` (task 12); bez znacznika — kółko
+     * tylko w pending/preparing przy odpytywaniu.
+     */
+    fun examples(
+        hasExamples: Boolean,
+        status: String?,
+        stillPolling: Boolean,
+        examplesPending: Boolean? = null,
+    ): Boolean {
+        if (hasExamples) return false
+        if (examplesPending == false) return false
+        val s = status?.trim()?.lowercase().orEmpty()
+        if (examplesPending == true) {
+            return stillPolling || EnrichmentStatus.needsPoll(s)
+        }
+        if (!stillPolling) return false
+        return s == EnrichmentStatus.PENDING || s == EnrichmentStatus.PREPARING
+    }
+
+    /**
      * Synonimy / przeciwieństwa / rodzina / skojarzenia.
      * [relatedPending] pochodzi z `content.related_pending` (task 10); przy braku znacznika
      * kółko jest tylko przed `learnable`.

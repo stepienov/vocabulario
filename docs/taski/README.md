@@ -81,6 +81,7 @@ Jeden task na sesję. Następny task zaczyna się dopiero, gdy użytkownik go zl
 | 09 | [Lekki zapis karty](09-lekki-zapis-karty.md) | backend + Android | 02, 03; część telefonu 07 | Zapis karty w ułamku sekundy |
 | 10 | [Nauka i powiązane osobno](10-nauka-i-powiazane.md) | backend + Android | 02, 03, 09 | Fiszka po około 5 s zamiast 24 s |
 | 11 | [Import](11-import.md) | backend + Android | 03, 09, 10 | Ekran zatwierdzenia po około 10 s zamiast minuty |
+| 12 | [Wcześniejsze znaczenia](12-wczesniejsze-znaczenia.md) | backend + Android | 10 | Tłumaczenia znaczeń na karcie po ~1–3 s; zdania i reszta ze spinnerami |
 
 ```mermaid
 flowchart LR
@@ -103,6 +104,7 @@ flowchart LR
     T03 --> T10
     T10 --> T11[11 import]
     T09 --> T11
+    T10 --> T12[12 wcześniejsze znaczenia]
 ```
 
 ## Dlaczego taka kolejność
@@ -114,7 +116,8 @@ flowchart LR
 4. **04 → 05 → 06 na serwerze, potem 07 na telefonie.** 04 wprowadza odpowiedź bez czytania kart (`local_membership`) i zapis historii w tle. 05 i 06 z tego korzystają. Telefon (07) potrzebuje od serwera `more`, `added` i `local_membership`. Serwer jest zgodny wstecz, więc 04–06 mogą wyjść przed nową wersją telefonu.
 5. **08 po 07.** Skojarzenia używają zestawienia z Room, stanu „przynależność nieznana” i napisów z 07.
 6. **09 przed 10.** 10 przenosi rodzinę wyrazów i zapis do `lexical_entries` w zadaniu w tle. Zakłada, że to zadanie już robi hydrację poza semaforem i zna `source_card_id`, co wprowadza 09.
-7. **11 ostatni.** Import wstawia karty lekkim zapisem z 09, a kolejka profilu czeka na `learnable` z 10.
+7. **11 po 10.** Import wstawia karty lekkim zapisem z 09, a kolejka profilu czeka na `learnable` z 10.
+8. **12 po 10.** Rozcina naukę na znaczenia i zdania. Nie zmienia `ready`. Może iść niezależnie od 11.
 
 ## Wdrażanie
 

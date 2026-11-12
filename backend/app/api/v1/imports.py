@@ -19,9 +19,13 @@ from app.schemas import (
     ImportJobProgressResponse,
 )
 from app.services.import_jobs import (
+    DAILY_IMPORT_LIMIT,
     ActiveImportJobError,
+    ImportDailyLimitError,
+    ImportTooManyError,
     create_job_from_file,
     create_job_from_text,
+    daily_import_used,
     find_active_job,
     request_cancel,
     request_commit,
@@ -77,7 +81,12 @@ async def _list_name(db: AsyncSession, list_id: UUID) -> str | None:
     return wl.name if wl else None
 
 
-def _progress(job: ImportJob, list_name: str | None = None) -> ImportJobProgressResponse:
+def _progress(
+    job: ImportJob,
+    list_name: str | None = None,
+    *,
+    daily_used: int = 0,
+) -> ImportJobProgressResponse:
     return ImportJobProgressResponse(
         job_id=job.id,
         status=job.status,
@@ -100,10 +109,27 @@ def _progress(job: ImportJob, list_name: str | None = None) -> ImportJobProgress
         error_code=job.error_code,
         error_message=job.error_message,
         heartbeat_at=job.heartbeat_at,
+        daily_used=daily_used,
+        daily_limit=DAILY_IMPORT_LIMIT,
+    )
+
+
+def _idle_progress(*, daily_used: int) -> ImportJobProgressResponse:
+    return ImportJobProgressResponse(
+        job_id=None,
+        status="idle",
+        phase="idle",
+        stage="idle",
+        daily_used=daily_used,
+        daily_limit=DAILY_IMPORT_LIMIT,
     )
 
 
 def _item_out(it: ImportJobItem) -> ImportJobItemResponse:
+    list_name = None
+    if isinstance(it.display, dict):
+        raw = it.display.get("list_name")
+        list_name = str(raw) if raw else None
     return ImportJobItemResponse(
         id=it.id,
         ordinal=it.ordinal,
@@ -115,10 +141,11 @@ def _item_out(it: ImportJobItem) -> ImportJobItemResponse:
         gloss=it.gloss,
         pos=it.pos,
         entry_kind=it.entry_kind,
-        display=None,
+        display=it.display if isinstance(it.display, dict) else None,
         existing_card_id=it.existing_card_id,
         created_card_id=it.created_card_id,
         attempt=it.attempt,
+        list_name=list_name,
     )
 
 
@@ -130,7 +157,8 @@ async def _detail(db: AsyncSession, job: ImportJob) -> ImportJobDetailResponse:
             .order_by(ImportJobItem.ordinal)
         )
     ).scalars().all()
-    base = _progress(job, await _list_name(db, job.list_id))
+    used = await daily_import_used(db, job.profile_id)
+    base = _progress(job, await _list_name(db, job.list_id), daily_used=used)
     return ImportJobDetailResponse(**base.model_dump(), items=[_item_out(i) for i in items])
 
 
@@ -160,10 +188,23 @@ async def create_import_job(
                 "job_id": str(exc.job_id),
             },
         ) from exc
+    except ImportTooManyError as exc:
+        raise api_error(
+            400,
+            "import_too_many",
+            f"At most 25 items per import ({exc.count})",
+        ) from exc
+    except ImportDailyLimitError as exc:
+        raise api_error(
+            400,
+            "import_daily_limit",
+            f"Daily import limit reached ({exc.used}/25)",
+        ) from exc
     except (ImportPackageError, ImportUrlError) as exc:
         raise api_error(400, "import_empty", str(exc)) from exc
+    used = await daily_import_used(db, profile.id)
     spawn_job(job.id)
-    return _progress(job, word_list.name)
+    return _progress(job, word_list.name, daily_used=used)
 
 
 @router.post("/imports/jobs/file", response_model=ImportJobProgressResponse, status_code=202)
@@ -197,10 +238,23 @@ async def create_import_job_file(
                 "job_id": str(exc.job_id),
             },
         ) from exc
+    except ImportTooManyError as exc:
+        raise api_error(
+            400,
+            "import_too_many",
+            f"At most 25 items per import ({exc.count})",
+        ) from exc
+    except ImportDailyLimitError as exc:
+        raise api_error(
+            400,
+            "import_daily_limit",
+            f"Daily import limit reached ({exc.used}/25)",
+        ) from exc
     except ImportPackageError as exc:
         raise api_error(400, "import_empty", str(exc)) from exc
+    used = await daily_import_used(db, profile.id)
     spawn_job(job.id)
-    return _progress(job, word_list.name)
+    return _progress(job, word_list.name, daily_used=used)
 
 
 def _admin_job(job: ImportJob, list_name: str | None = None) -> ImportJobAdminResponse:
@@ -272,16 +326,18 @@ async def list_import_job_events(
     ]
 
 
-@router.get("/imports/jobs/active", response_model=ImportJobProgressResponse | None)
+@router.get("/imports/jobs/active", response_model=ImportJobProgressResponse)
 async def get_active_import_job(
     profile_id: UUID = Query(...),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await _profile(db, user, profile_id)
+    used = await daily_import_used(db, profile_id)
     job = await find_active_job(db, user.id, profile_id)
     if job is None:
-        return None
-    return _progress(job, await _list_name(db, job.list_id))
+        return _idle_progress(daily_used=used)
+    return _progress(job, await _list_name(db, job.list_id), daily_used=used)
 
 
 @router.get("/imports/jobs/{job_id}/progress", response_model=ImportJobProgressResponse)
@@ -291,7 +347,8 @@ async def get_import_job_progress(
     db: AsyncSession = Depends(get_db),
 ):
     job = await _owned_job(db, user, job_id)
-    return _progress(job, await _list_name(db, job.list_id))
+    used = await daily_import_used(db, job.profile_id)
+    return _progress(job, await _list_name(db, job.list_id), daily_used=used)
 
 
 @router.get("/imports/jobs/{job_id}", response_model=ImportJobDetailResponse)
@@ -303,7 +360,8 @@ async def get_import_job(
 ):
     job = await _owned_job(db, user, job_id)
     if not include_items:
-        base = _progress(job, await _list_name(db, job.list_id))
+        used = await daily_import_used(db, job.profile_id)
+        base = _progress(job, await _list_name(db, job.list_id), daily_used=used)
         return ImportJobDetailResponse(**base.model_dump(), items=[])
     return await _detail(db, job)
 
@@ -318,10 +376,17 @@ async def commit_import_job(
     job = await _owned_job(db, user, job_id)
     try:
         job = await request_commit(db, job, (body.item_ids if body else None))
+    except ImportDailyLimitError as exc:
+        raise api_error(
+            400,
+            "import_daily_limit",
+            f"Daily import limit reached ({exc.used}/25)",
+        ) from exc
     except ValueError as exc:
         code = str(exc)
         raise api_error(400, code, code) from exc
-    return _progress(job, await _list_name(db, job.list_id))
+    used = await daily_import_used(db, job.profile_id)
+    return _progress(job, await _list_name(db, job.list_id), daily_used=used)
 
 
 @router.post("/imports/jobs/{job_id}/cancel", response_model=ImportJobProgressResponse)
@@ -332,4 +397,5 @@ async def cancel_import_job(
 ):
     job = await _owned_job(db, user, job_id)
     job = await request_cancel(db, job)
-    return _progress(job, await _list_name(db, job.list_id))
+    used = await daily_import_used(db, job.profile_id)
+    return _progress(job, await _list_name(db, job.list_id), daily_used=used)

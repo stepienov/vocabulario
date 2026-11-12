@@ -138,11 +138,25 @@ fun CardDetailContent(
             else -> null
         }
     }
+    val examplesPending = content["examples_pending"].let { raw ->
+        when (raw) {
+            is JsonPrimitive -> raw.booleanOrNull
+            else -> null
+        }
+    }
     val synonymsL2 = parseRelatedWords(content["synonyms_l2"].asJsonArray())
     val antonymsL2 = parseRelatedWords(content["antonyms_l2"].asJsonArray())
     val wordFamilyL2 = parseRelatedWords(content["word_family_l2"].asJsonArray())
     val associationsL2 = parseRelatedWords(content["associations_l2"].asJsonArray())
     val waitMeanings = CardSectionWaiting.meanings(hasMeaningContent, enrichmentStatus, stillPolling)
+    val waitExamplesFor: (Boolean) -> Boolean = { hasExamples ->
+        CardSectionWaiting.examples(
+            hasExamples = hasExamples,
+            status = enrichmentStatus,
+            stillPolling = stillPolling,
+            examplesPending = examplesPending,
+        )
+    }
     val waitRelated = { empty: Boolean ->
         CardSectionWaiting.related(empty, enrichmentStatus, stillPolling, relatedPending)
     }
@@ -284,11 +298,14 @@ fun CardDetailContent(
         when {
             hasMeaningContent -> meanings.forEach { meaningEl ->
                 val meaning = meaningEl.asJsonObject() ?: return@forEach
+                val hasExamples = !(meaning["examples"].asJsonArray()?.isEmpty() ?: true)
+                val waitExamples = waitExamplesFor(hasExamples)
                 if (fullDetail) {
                     MeaningFullDetailCard(
                         meaning = meaning,
                         userCefr = userCefr,
                         tts = tts,
+                        waitExamples = waitExamples,
                     )
                 } else {
                     MeaningCompactCard(
@@ -296,6 +313,7 @@ fun CardDetailContent(
                         compact = compact,
                         userCefr = userCefr,
                         tts = tts,
+                        waitExamples = waitExamples,
                     )
                 }
             }
@@ -463,6 +481,7 @@ private fun MeaningFullDetailCard(
     meaning: JsonObject,
     userCefr: String,
     tts: L2TtsSpeaker,
+    waitExamples: Boolean = false,
 ) {
     val gloss = meaning["gloss_l1"].asJsonString().orEmpty()
     val extraGlosses = meaning["synonyms_l1"].asJsonArray()?.mapNotNull { it.asJsonString() }.orEmpty()
@@ -524,6 +543,13 @@ private fun MeaningFullDetailCard(
                         onSpeak = { tts.speak(exampleL2, "example-$index") },
                     )
                 }
+            } else if (waitExamples) {
+                CardSubsectionDivider()
+                CardSubsectionTitle(stringResource(R.string.correction_section_examples))
+                Spacer(Modifier.height(8.dp))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.5.dp)
+                }
             }
         }
     }
@@ -535,6 +561,7 @@ private fun MeaningCompactCard(
     compact: Boolean,
     userCefr: String,
     tts: L2TtsSpeaker,
+    waitExamples: Boolean = false,
 ) {
     AppCard {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -634,6 +661,12 @@ private fun MeaningCompactCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                }
+            }
+            if (waitExamples && visibleExamples.isEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp)
                 }
             }
         }

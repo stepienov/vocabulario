@@ -793,14 +793,42 @@ async def _hydrate_before_queue(
         return True
 
 
+async def _import_queue_allows(card_id: UUID) -> tuple[bool, UUID | None, bool]:
+    """(allowed, profile_id, is_import_card). Bramka kolejki importu."""
+    from app.services.import_jobs import import_queue_head
+
+    async with async_session_factory() as db:
+        card = (
+            await db.execute(select(LearningCard).where(LearningCard.id == card_id))
+        ).scalar_one_or_none()
+        if card is None or card.import_job_id is None:
+            return True, (card.profile_id if card else None), False
+        head = await import_queue_head(db, card.profile_id)
+        if head is None or head == card_id:
+            return True, card.profile_id, True
+        return False, card.profile_id, True
+
+
 async def _run_claimed_enrich(
     card_id: UUID,
     *,
     source_card_id: UUID | None = None,
 ) -> None:
+    passed_import_gate = False
+    import_profile_id: UUID | None = None
     try:
         if await _hydrate_before_queue(card_id, source_card_id):
+            _allowed, profile_id, is_import = await _import_queue_allows(card_id)
+            if is_import and profile_id is not None:
+                from app.services.import_jobs import spawn_next_import_card
+
+                spawn_next_import_card(profile_id)
             return
+        allowed, import_profile_id, is_import = await _import_queue_allows(card_id)
+        if is_import and not allowed:
+            return
+        if is_import:
+            passed_import_gate = True
         async with _enrich_semaphore():
             try:
                 await asyncio.wait_for(
@@ -827,6 +855,20 @@ async def _run_claimed_enrich(
     except Exception:
         logger.exception("Enrichment karty %s wywalił się", card_id)
         await _mark_enrich_failed(card_id, "enrichment_crash")
+    finally:
+        if passed_import_gate and import_profile_id is not None:
+            async with async_session_factory() as db:
+                card = (
+                    await db.execute(
+                        select(LearningCard.enrichment_status).where(
+                            LearningCard.id == card_id
+                        )
+                    )
+                ).scalar_one_or_none()
+            if card is not None and card != STATUS_PENDING:
+                from app.services.import_jobs import spawn_next_import_card
+
+                spawn_next_import_card(import_profile_id)
 
 
 async def _enrich_card_unlocked(
@@ -1153,6 +1195,14 @@ async def _enrich_lemma_staged(
             await db.commit()
         return
 
+    async def on_meanings(meanings_card: dict) -> None:
+        await db.refresh(card, with_for_update=True)
+        meanings_card = await sync_word_family(db, profile, meanings_card, None)
+        _apply_content_fields(card, meanings_card)
+        # Glosy bez zdań — status zostaje pending/preparing (nie learnable).
+        await db.commit()
+        await notify_cards_ready(db, card.user_id, card_id=card.id)
+
     async def on_study(study_card: dict) -> None:
         nonlocal notified, family_attached
         if not content_is_learnable(study_card):
@@ -1164,6 +1214,10 @@ async def _enrich_lemma_staged(
         await db.commit()
         await notify_cards_ready(db, card.user_id, card_id=card.id)
         notified = True
+        if card.import_job_id is not None:
+            from app.services.import_jobs import spawn_next_import_card
+
+            spawn_next_import_card(card.profile_id)
         if not study_card.get("related_pending"):
             await attach_card_to_word_family(
                 db, profile, card, source_card=source_card
@@ -1191,6 +1245,7 @@ async def _enrich_lemma_staged(
         card.lemma_l2,
         card.pos,
         gloss_hint=card.gloss_primary,
+        on_meanings=on_meanings,
         on_study=on_study,
         on_related=on_related,
         require_similar=False,

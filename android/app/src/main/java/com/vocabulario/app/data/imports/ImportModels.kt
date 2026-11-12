@@ -19,6 +19,7 @@ enum class ImportStatus {
 }
 
 fun parseImportStatus(raw: String?): ImportStatus = when (raw?.lowercase()) {
+    "idle", null, "" -> ImportStatus.Idle
     "queued" -> ImportStatus.Queued
     "analyzing" -> ImportStatus.Analyzing
     "review" -> ImportStatus.Review
@@ -47,13 +48,25 @@ data class ImportJobState(
     val duplicateCount: Int = 0,
     val failedCount: Int = 0,
     val createdCount: Int = 0,
+    val dailyUsed: Int = 0,
+    val dailyLimit: Int = 25,
     val items: List<ImportJobItemResponse> = emptyList(),
+    val selectedItemIds: Set<String> = emptySet(),
     val result: ImportResult? = null,
     val error: String? = null,
     val notice: String? = null,
     val showAbortConfirm: Boolean = false,
     val expandedSection: String? = null,
 ) {
+    val dailyRemaining: Int
+        get() = (dailyLimit - dailyUsed).coerceAtLeast(0)
+
+    val selectedReadyCount: Int
+        get() = readyItems.count { it.id in selectedItemIds }
+
+    val canConfirmSelected: Boolean
+        get() = selectedReadyCount > 0 && selectedReadyCount <= dailyRemaining
+
     val busy: Boolean
         get() = status == ImportStatus.Queued ||
             status == ImportStatus.Analyzing ||
@@ -97,7 +110,21 @@ fun ImportJobProgressResponse.toState(
     includeItems: Boolean = true,
 ): ImportJobState {
     val parsed = parseImportStatus(status)
+    if (parsed == ImportStatus.Idle || job_id.isNullOrBlank()) {
+        return previous.copy(
+            status = if (previous.blocksUi) previous.status else ImportStatus.Idle,
+            dailyUsed = daily_used,
+            dailyLimit = daily_limit,
+            jobId = previous.jobId,
+        )
+    }
     val nextItems = if (includeItems && items.isNotEmpty()) items else previous.items
+    val readyIds = nextItems.filter { it.verdict == "ready" }.map { it.id }.toSet()
+    val nextSelected = when {
+        previous.status != ImportStatus.Review && parsed == ImportStatus.Review -> readyIds
+        previous.selectedItemIds.isEmpty() && readyIds.isNotEmpty() -> readyIds
+        else -> previous.selectedItemIds.intersect(readyIds).ifEmpty { readyIds }
+    }
     return previous.copy(
         status = parsed,
         jobId = job_id,
@@ -114,7 +141,10 @@ fun ImportJobProgressResponse.toState(
         duplicateCount = duplicate_count,
         failedCount = failed_count,
         createdCount = created_count,
+        dailyUsed = daily_used,
+        dailyLimit = daily_limit,
         items = nextItems,
+        selectedItemIds = nextSelected,
         result = if (parsed == ImportStatus.Done) {
             ImportResult(created = created_count, duplicates = duplicate_count, failed = failed_count)
         } else {

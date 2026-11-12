@@ -467,7 +467,7 @@
 
     <string name="cd_list_options">Opciones de lista</string>
 
-            <string name="status_error">error</string>
+                    <string name="status_error">error</string>
 <string name="status_new">nueva</string>
 
     <string name="status_learning">aprendiendo</string>
@@ -731,14 +731,6 @@
     <string name="correction_field_pos">Categoría gramatical</string>
     <string name="correction_field_gloss">Traducción principal</string>
     <string name="correction_field_extra_glosses">Traducciones extra (una por línea)</string>
-    <string name="cd_voice_search">Búsqueda por voz</string>
-    <string name="voice_listening">Escuchando…</string>
-    <string name="voice_listening_hint">Habla ahora</string>
-    <string name="voice_tap_to_start">Toca Iniciar para hablar</string>
-<string name="voice_start">Start</string>
-    <string name="voice_stop">Stop</string>
-        <string name="voice_permission_denied">Permiso de micrófono denegado.</string>
-    <string name="voice_unavailable">El reconocimiento de voz no está disponible en este dispositivo.</string>
     <string name="settings_notifications">Notificaciones</string>
     <string name="settings_notifications_summary">Recordatorios de estudio y estado de las tarjetas</string>
     <string name="settings_notif_study">Recordatorios de estudio</string>
@@ -820,11 +812,6 @@
     <string name="cd_card_history">Historial de la tarjeta</string>
     <string name="cd_view_card">Ver tarjeta completa</string>
     <string name="cd_list_word_actions">Acciones de la palabra</string>
-    <string name="voice_searching">Buscando…</string>
-    <string name="voice_either_lang_hint">Habla en cualquiera de los dos idiomas</string>
-    <string name="voice_no_match">No se entendió — inténtalo de nuevo.</string>
-    <string name="voice_network_required">La entrada de voz necesita conexión a internet.</string>
-
     <string name="pos_noun">sustantivo</string>
     <string name="pos_verb">verbo</string>
     <string name="pos_adj">adjetivo</string>
@@ -855,6 +842,17 @@
     <string name="practice_almost">¡Casi!</string>
     <string name="practice_typed_valid_synonym">Has escrito un sinónimo correcto</string>
     <string name="practice_synonym_paren">(sinónimo)</string>
+
+    <string name="add_tab_search">Buscar</string>
+    <string name="add_tab_import">Importar</string>
+    <string name="import_analyzing">Analizando palabras</string>
+    <string name="import_abandon">Descartar</string>
+    <string name="import_confirm">Confirmar</string>
+    <string name="import_too_many_lines">Puedes enviar como máximo 25 elementos a la vez.</string>
+    <string name="import_daily_used">El límite diario de 25 tarjetas está agotado.</string>
+    <string name="import_daily_remaining">Hoy puedes importar %1$d de 25 tarjetas.</string>
+    <string name="lookup_reading_learning">%1$s</string>
+    <string name="lookup_reading_native">%1$s: %2$s</string>
 
 </resources>
 

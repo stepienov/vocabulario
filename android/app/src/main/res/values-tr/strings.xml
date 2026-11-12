@@ -787,22 +787,6 @@
 
     <string name="correction_field_extra_glosses">Ek açıklamalar (her satıra bir tane)</string>
 
-    <string name="cd_voice_search">Sesli arama</string>
-
-    <string name="voice_listening">Dinleniyor…</string>
-
-    <string name="voice_listening_hint">Şimdi konuşun</string>
-
-    <string name="voice_tap_to_start">Konuşmak için Başlat\'a dokunun</string>
-
-    <string name="voice_start">Başlat</string>
-
-    <string name="voice_stop">Durdur</string>
-
-    <string name="voice_permission_denied">Mikrofon izni reddedildi.</string>
-
-    <string name="voice_unavailable">Bu cihazda ses tanıma kullanılamıyor.</string>
-
     <string name="settings_notifications">Bildirimler</string>
 
     <string name="settings_notifications_summary">Çalışma hatırlatmaları ve kart durumu</string>
@@ -895,11 +879,6 @@
     <string name="cd_card_history">Kart geçmişi</string>
     <string name="cd_view_card">Tam kartı gör</string>
     <string name="cd_list_word_actions">Sözcük işlemleri</string>
-    <string name="voice_searching">Aranıyor…</string>
-    <string name="voice_either_lang_hint">İki dilden birinde konuşun</string>
-    <string name="voice_no_match">Anlaşılamadı — yeniden deneyin.</string>
-    <string name="voice_network_required">Sesli giriş internet bağlantısı gerektirir.</string>
-
     <string name="pos_noun">isim</string>
     <string name="pos_verb">fiil</string>
     <string name="pos_adj">sıfat</string>
@@ -930,5 +909,16 @@
     <string name="practice_almost">Neredeyse!</string>
     <string name="practice_typed_valid_synonym">Doğru bir eş anlamlı girdin</string>
     <string name="practice_synonym_paren">(eşanlamlı)</string>
+
+    <string name="add_tab_search">Ara</string>
+    <string name="add_tab_import">İçe aktar</string>
+    <string name="import_analyzing">Kelimeler analiz ediliyor</string>
+    <string name="import_abandon">Vazgeç</string>
+    <string name="import_confirm">Onayla</string>
+    <string name="import_too_many_lines">Bir seferde en fazla 25 öğe gönderebilirsiniz.</string>
+    <string name="import_daily_used">25 kartlık günlük limit doldu.</string>
+    <string name="import_daily_remaining">Bugün 25 karttan %1$d tanesini daha içe aktarabilirsiniz.</string>
+    <string name="lookup_reading_learning">%1$s</string>
+    <string name="lookup_reading_native">%1$s: %2$s</string>
 
 </resources>

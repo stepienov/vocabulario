@@ -787,22 +787,6 @@
 
     <string name="correction_field_extra_glosses">追加の意味（1行ごと）</string>
 
-    <string name="cd_voice_search">音声検索</string>
-
-    <string name="voice_listening">リスニング中…</string>
-
-    <string name="voice_listening_hint">今話してください</string>
-
-    <string name="voice_tap_to_start">話すにはスタートをタップ</string>
-
-    <string name="voice_start">スタート</string>
-
-    <string name="voice_stop">ストップ</string>
-
-    <string name="voice_permission_denied">マイクの権限が拒否されました。</string>
-
-    <string name="voice_unavailable">このデバイスでは音声認識が利用できません。</string>
-
     <string name="settings_notifications">通知</string>
 
     <string name="settings_notifications_summary">学習リマインダーとカードの状態</string>
@@ -902,11 +886,6 @@
     <string name="cd_card_history">カード履歴</string>
     <string name="cd_view_card">カード全体を見る</string>
     <string name="cd_list_word_actions">語の操作</string>
-    <string name="voice_searching">検索中…</string>
-    <string name="voice_either_lang_hint">どちらの言語でも話せます</string>
-    <string name="voice_no_match">聞き取れませんでした。もう一度どうぞ。</string>
-    <string name="voice_network_required">音声入力にはインターネット接続が必要です。</string>
-
     <string name="pos_noun">名詞</string>
     <string name="pos_verb">動詞</string>
     <string name="pos_adj">形容詞</string>
@@ -937,5 +916,16 @@
     <string name="practice_almost">おしい！</string>
     <string name="practice_typed_valid_synonym">正しい類義語を入力しました</string>
     <string name="practice_synonym_paren">(類義語)</string>
+
+    <string name="add_tab_search">検索</string>
+    <string name="add_tab_import">インポート</string>
+    <string name="import_analyzing">単語を分析中</string>
+    <string name="import_abandon">破棄</string>
+    <string name="import_confirm">確定</string>
+    <string name="import_too_many_lines">一度に送信できるのは最大 25 件です。</string>
+    <string name="import_daily_used">1日25枚の上限に達しました。</string>
+    <string name="import_daily_remaining">今日はあと %1$d / 25 枚インポートできます。</string>
+    <string name="lookup_reading_learning">%1$s</string>
+    <string name="lookup_reading_native">%1$s: %2$s</string>
 
 </resources>

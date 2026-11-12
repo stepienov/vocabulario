@@ -134,4 +134,48 @@ class CardSectionWaitingTest {
             ),
         )
     }
+
+    @Test
+    fun examplesSpinnerRespectsExamplesPending() {
+        assertTrue(
+            CardSectionWaiting.examples(
+                hasExamples = false,
+                status = EnrichmentStatus.PREPARING,
+                stillPolling = true,
+                examplesPending = true,
+            ),
+        )
+        assertFalse(
+            CardSectionWaiting.examples(
+                hasExamples = true,
+                status = EnrichmentStatus.PREPARING,
+                stillPolling = true,
+                examplesPending = true,
+            ),
+        )
+        assertFalse(
+            CardSectionWaiting.examples(
+                hasExamples = false,
+                status = EnrichmentStatus.PREPARING,
+                stillPolling = true,
+                examplesPending = false,
+            ),
+        )
+        assertTrue(
+            CardSectionWaiting.examples(
+                hasExamples = false,
+                status = EnrichmentStatus.PENDING,
+                stillPolling = true,
+                examplesPending = null,
+            ),
+        )
+        assertFalse(
+            CardSectionWaiting.examples(
+                hasExamples = false,
+                status = EnrichmentStatus.LEARNABLE,
+                stillPolling = true,
+                examplesPending = null,
+            ),
+        )
+    }
 }

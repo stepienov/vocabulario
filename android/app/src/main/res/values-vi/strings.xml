@@ -103,7 +103,7 @@
 
     <string name="auth_or_continue">Hoặc tiếp tục bằng email</string>
 
-            <string name="auth_email">Email</string>
+                    <string name="auth_email">Email</string>
 <string name="auth_password">Mật khẩu</string>
 
     <string name="cd_show_password">Hiện mật khẩu</string>
@@ -785,22 +785,6 @@
 
     <string name="correction_field_extra_glosses">Giải thích bổ sung (mỗi dòng một)</string>
 
-    <string name="cd_voice_search">Tìm kiếm bằng giọng nói</string>
-
-    <string name="voice_listening">Đang lắng nghe…</string>
-
-    <string name="voice_listening_hint">Nói ngay bây giờ</string>
-
-    <string name="voice_tap_to_start">Chạm Bắt đầu để nói</string>
-
-    <string name="voice_start">Bắt đầu</string>
-
-    <string name="voice_stop">Dừng</string>
-
-    <string name="voice_permission_denied">Không được cấp quyền sử dụng microphone.</string>
-
-    <string name="voice_unavailable">Nhận diện giọng nói không khả dụng trên thiết bị này.</string>
-
     <string name="settings_notifications">Thông báo</string>
 
     <string name="settings_notifications_summary">Nhắc nhở học tập và trạng thái thẻ</string>
@@ -893,11 +877,6 @@
     <string name="cd_card_history">Lịch sử thẻ</string>
     <string name="cd_view_card">Xem thẻ đầy đủ</string>
     <string name="cd_list_word_actions">Thao tác với từ</string>
-    <string name="voice_searching">Đang tìm…</string>
-    <string name="voice_either_lang_hint">Nói bằng một trong hai ngôn ngữ</string>
-    <string name="voice_no_match">Không hiểu — hãy thử lại.</string>
-    <string name="voice_network_required">Nhập giọng nói cần kết nối internet.</string>
-
     <string name="pos_noun">danh từ</string>
     <string name="pos_verb">động từ</string>
     <string name="pos_adj">tính từ</string>
@@ -928,5 +907,16 @@
     <string name="practice_almost">Gần đúng!</string>
     <string name="practice_typed_valid_synonym">Bạn đã nhập một từ đồng nghĩa đúng</string>
     <string name="practice_synonym_paren">(đồng nghĩa)</string>
+
+    <string name="add_tab_search">Tìm</string>
+    <string name="add_tab_import">Nhập</string>
+    <string name="import_analyzing">Đang phân tích từ</string>
+    <string name="import_abandon">Hủy</string>
+    <string name="import_confirm">Xác nhận</string>
+    <string name="import_too_many_lines">Bạn chỉ có thể gửi tối đa 25 mục một lần.</string>
+    <string name="import_daily_used">Đã hết hạn mức 25 thẻ mỗi ngày.</string>
+    <string name="import_daily_remaining">Hôm nay bạn còn có thể nhập %1$d trên 25 thẻ.</string>
+    <string name="lookup_reading_learning">%1$s</string>
+    <string name="lookup_reading_native">%1$s: %2$s</string>
 
 </resources>

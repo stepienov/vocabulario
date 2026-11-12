@@ -21,8 +21,12 @@ from app.ai.prompts.v1 import (
     ASSOC_SCENE_USER,
     ASSOC_WORD_SYSTEM,
     ASSOC_WORD_USER,
+    ENRICH_MEANINGS_SYSTEM,
+    ENRICH_MEANINGS_USER,
     ENRICH_RELATED_SYSTEM,
     ENRICH_RELATED_USER,
+    ENRICH_STUDY_FINISH_SYSTEM,
+    ENRICH_STUDY_FINISH_USER,
     ENRICH_STUDY_SYSTEM,
     ENRICH_STUDY_USER,
     LOOKUP_DRAFT_MODEL,
@@ -584,6 +588,43 @@ class LLMService:
                     }
                 ],
             }
+        if "Fixed meanings" in prompt:
+            match = re.search(r"Lemma:\s*(\S+)", prompt)
+            lemma = match.group(1).strip().rstrip(".,;") if match else "palabra"
+            pos_match = re.search(r"POS:\s*(\S+)", prompt)
+            pos = (pos_match.group(1).strip().rstrip(".") if pos_match else "verb")
+            locked = re.findall(r"^-\s+(.+)$", prompt, re.M)
+            locked = [g.strip() for g in locked if g.strip() and g.strip() != "(none)"]
+            if not locked:
+                locked = ["przykładowe znaczenie"]
+            return {
+                "lemma": lemma,
+                "pos": pos,
+                "ipa": "",
+                "headword_note": None,
+                "meanings": [
+                    {
+                        "gloss_l1": g,
+                        "examples": [
+                            {"l2": f"Ejemplo A2 con {lemma}.", "l1": "Przykład A2.", "cefr": "A2"},
+                            {"l2": f"Ejemplo B2 con {lemma}.", "l1": "Przykład B2.", "cefr": "B2"},
+                            {"l2": f"Ejemplo C2 con {lemma}.", "l1": "Przykład C2.", "cefr": "C2"},
+                        ],
+                        "usages": [{"l2": f"uso de {lemma}", "l1": "użycie"}],
+                    }
+                    for g in locked
+                ],
+            }
+        if re.search(r'JSON:\s*\{\s*"lemma".*"meanings":\s*\[\s*\{\s*"gloss_l1"', prompt) and "examples" not in prompt.split("JSON:", 1)[-1][:120]:
+            match = re.search(r"Lemma:\s*(\S+)", prompt)
+            lemma = match.group(1).strip().rstrip(".,;") if match else "palabra"
+            pos_match = re.search(r"POS:\s*(\S+)", prompt)
+            pos = (pos_match.group(1).strip().rstrip(".") if pos_match else "verb")
+            return {
+                "lemma": lemma,
+                "pos": pos,
+                "meanings": [{"gloss_l1": "przykładowe znaczenie"}],
+            }
         match = re.search(r"Lemma:\s*(\S+)", prompt)
         if not match:
             match = re.search(r"Lemat \(L2\):\s*(\S+)", prompt)
@@ -799,6 +840,73 @@ class LLMService:
         )
         return data.get("candidates", [])
 
+    async def enrich_meanings(
+        self,
+        profile: LanguageProfile,
+        lemma: str,
+        pos: str | None,
+        gloss: str | None = None,
+    ) -> dict[str, Any]:
+        pos_val = pos or "unknown"
+        native = profile.app_lang
+        learning = profile.learning_lang
+        prompt = ENRICH_MEANINGS_USER.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            lemma=lemma,
+            pos=pos_val,
+            gloss=(gloss or "").strip() or "(none)",
+        )
+        bind_llm_usage_context(
+            lemma=lemma,
+            pos=pos_val,
+            lang_pair=lang_pair_key(native, learning),
+        )
+        return await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=ENRICH_MEANINGS_SYSTEM,
+            max_tokens=800,
+            purpose="enrich_meanings",
+            reasoning_effort="none",
+        )
+
+    async def enrich_study_finish(
+        self,
+        profile: LanguageProfile,
+        lemma: str,
+        pos: str | None,
+        locked_meanings: list[dict],
+    ) -> dict[str, Any]:
+        pos_val = pos or "unknown"
+        native = profile.app_lang
+        learning = profile.learning_lang
+        glosses_block = "\n".join(
+            f"- {str(m.get('gloss_l1') or '').strip()}"
+            for m in locked_meanings
+            if isinstance(m, dict) and str(m.get("gloss_l1") or "").strip()
+        )
+        prompt = ENRICH_STUDY_FINISH_USER.format(
+            native_name=lang_name_en(native),
+            learning_name=lang_name_en(learning),
+            lemma=lemma,
+            pos=pos_val,
+            glosses_block=glosses_block or "- (none)",
+        )
+        bind_llm_usage_context(
+            lemma=lemma,
+            pos=pos_val,
+            lang_pair=lang_pair_key(native, learning),
+        )
+        return await self._chat_json(
+            self.lookup_model,
+            prompt,
+            system=ENRICH_STUDY_FINISH_SYSTEM,
+            max_tokens=2200,
+            purpose="enrich_study_finish",
+            reasoning_effort="none",
+        )
+
     async def enrich_study(
         self,
         profile: LanguageProfile,
@@ -806,6 +914,7 @@ class LLMService:
         pos: str | None,
         gloss: str | None = None,
     ) -> dict[str, Any]:
+        """Legacy one-shot study. Lemma pipeline uses enrich_meanings + enrich_study_finish."""
         pos_val = pos or "unknown"
         native = profile.app_lang
         learning = profile.learning_lang
@@ -1164,9 +1273,9 @@ class LLMService:
             prompt,
             system=IMPORT_CLASSIFY_SYSTEM_V1,
             json_schema=import_classify_schema(),
-            max_tokens=6000,
-            temperature=0.1,
+            max_tokens=2500,
             purpose="import_classify",
+            reasoning_effort="none",
         )
         _log_import_llm(
             "IMPORT CLASSIFY ← RESPONSE",

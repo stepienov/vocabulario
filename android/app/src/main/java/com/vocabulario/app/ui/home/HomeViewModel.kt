@@ -650,10 +650,6 @@ class HomeViewModel @Inject constructor(
         )
     }
 
-    fun prepareVoiceSearch() {
-        clearSearch()
-    }
-
     fun setSearchByCategory(enabled: Boolean) {
         if (_state.value.searchByCategory == enabled) return
         lookupCoordinator.clear()
@@ -865,6 +861,10 @@ class HomeViewModel @Inject constructor(
     fun confirmImportCancel() = importController.confirmCancel()
 
     fun confirmImportCommit() = importController.confirmCommit()
+
+    fun toggleImportReadyItem(itemId: String) = importController.toggleReadyItem(itemId)
+
+    fun refreshImportDailyQuota() = importController.refreshDailyQuota()
 
     fun dismissImportResult(openList: Boolean = false) =
         importController.dismissResult(openList)

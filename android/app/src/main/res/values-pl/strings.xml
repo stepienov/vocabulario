@@ -334,6 +334,14 @@
     <string name="import_start_title">Import fiszek</string>
     <string name="import_pick_list">Lista docelowa</string>
     <string name="import_action_start">Importuj</string>
+    <string name="add_tab_search">Szukaj</string>
+    <string name="add_tab_import">Import</string>
+    <string name="import_analyzing">Trwa analiza słów</string>
+    <string name="import_abandon">Porzuć</string>
+    <string name="import_confirm">Zatwierdź</string>
+    <string name="import_too_many_lines">Jednorazowo możesz podać najwyżej 25 pozycji.</string>
+    <string name="import_daily_used">Zaimportowałeś dziś 25 słów, poczekaj z kolejnym importem do jutra</string>
+    <string name="import_daily_remaining">Możesz zaimportować jeszcze %1$d z 25</string>
     <string name="import_limit_exceeded">Na razie możesz zaimportować maksymalnie 50 kart Vocabulario.</string>
     <string name="import_status_analyzing">Analizuję %1$s…</string>
     <string name="import_status_importing">Import słówek z pliku %1$s</string>
@@ -397,7 +405,7 @@
 
     <string name="section_usages">zwroty</string>
 
-    <string name="home_search_hint">Szukaj słowa…</string>
+    <string name="home_search_hint">Wpisz słowo</string>
     <string name="search_by_category">Szukaj skojarzeń</string>
 
     <string name="home_due_now">Gotowe do powtórki teraz</string>
@@ -812,18 +820,6 @@
     <string name="cd_card_history">Historia karty</string>
     <string name="cd_view_card">Zobacz pełną kartę</string>
     <string name="cd_list_word_actions">Akcje słowa</string>
-    <string name="cd_voice_search">Wyszukiwanie głosowe</string>
-    <string name="voice_listening">Słucham…</string>
-    <string name="voice_listening_hint">Mów teraz</string>
-    <string name="voice_tap_to_start">Naciśnij Start, aby mówić</string>
-    <string name="voice_start">Start</string>
-    <string name="voice_stop">Stop</string>
-    <string name="voice_permission_denied">Brak zgody na mikrofon.</string>
-    <string name="voice_unavailable">Rozpoznawanie mowy niedostępne na tym urządzeniu.</string>
-    <string name="voice_searching">Szukam…</string>
-    <string name="voice_either_lang_hint">Mów w dowolnym z tych języków</string>
-    <string name="voice_no_match">Nie zrozumiałem — spróbuj jeszcze raz.</string>
-    <string name="voice_network_required">Wprowadzanie głosowe wymaga połączenia z internetem.</string>
     <string name="settings_notifications">Powiadomienia</string>
     <string name="settings_notifications_summary">Przypomnienia o nauce i status kart</string>
     <string name="settings_notif_study">Przypomnienia o nauce</string>

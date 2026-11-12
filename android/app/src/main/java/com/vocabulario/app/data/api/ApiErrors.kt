@@ -60,6 +60,8 @@ private val CODE_TO_RES: Map<String, Int> = mapOf(
     "list_not_editable" to R.string.err_list_not_editable,
     "list_not_deletable" to R.string.err_list_not_deletable,
     "import_empty" to R.string.err_import_empty,
+    "import_too_many" to R.string.import_too_many_lines,
+    "import_daily_limit" to R.string.import_daily_used,
     "correction_daily_limit" to R.string.correction_daily_limit,
     "pending_inbox_not_deletable" to R.string.err_pending_inbox_not_deletable,
     "pending_inbox_clear_incomplete" to R.string.err_pending_inbox_clear,

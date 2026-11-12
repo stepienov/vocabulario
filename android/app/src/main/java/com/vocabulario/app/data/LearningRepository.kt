@@ -15,6 +15,7 @@ import com.vocabulario.app.data.api.DistractorsRequest
 import com.vocabulario.app.data.api.DistractorsResponse
 import com.vocabulario.app.data.api.DeviceRegisterRequest
 import com.vocabulario.app.data.api.ImportIngestRequest
+import com.vocabulario.app.data.api.ImportJobCommitRequest
 import com.vocabulario.app.data.api.ImportJobCreateRequest
 import com.vocabulario.app.data.api.ImportJobProgressResponse
 import com.vocabulario.app.data.api.ImportValidateRequest
@@ -318,8 +319,11 @@ class LearningRepository @Inject constructor(
     suspend fun getImportJob(jobId: String, includeItems: Boolean = true): ImportJobProgressResponse =
         api.getImportJob(jobId, includeItems)
 
-    suspend fun commitImportJob(jobId: String): ImportJobProgressResponse =
-        api.commitImportJob(jobId)
+    suspend fun commitImportJob(
+        jobId: String,
+        itemIds: List<String>? = null,
+    ): ImportJobProgressResponse =
+        api.commitImportJob(jobId, ImportJobCommitRequest(item_ids = itemIds))
 
     suspend fun cancelImportJob(jobId: String): ImportJobProgressResponse =
         api.cancelImportJob(jobId)

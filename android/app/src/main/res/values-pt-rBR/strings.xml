@@ -252,8 +252,8 @@
 
     <string name="list_rename">Renomear</string>
 
-    <string name="list_flashcards">Flashcards</string>
-    <string name="list_flashcards_next">Seguinte</string>
+            <string name="list_flashcards">Flashcards</string>
+<string name="list_flashcards_next">Seguinte</string>
     <string name="list_flashcards_add">Adicionar a Aprendendo</string>
     <string name="list_flashcards_reviewed">Revisadas: %1$d</string>
     <string name="list_flashcards_added">Adicionadas a Aprendendo: %1$d</string>
@@ -717,14 +717,6 @@
     <string name="correction_field_pos">Classe gramatical</string>
     <string name="correction_field_gloss">Tradução principal</string>
     <string name="correction_field_extra_glosses">Traduções extras (uma por linha)</string>
-    <string name="cd_voice_search">Busca por voz</string>
-    <string name="voice_listening">Ouvindo…</string>
-    <string name="voice_listening_hint">Fale agora</string>
-    <string name="voice_tap_to_start">Toque em Iniciar para falar</string>
-<string name="voice_start">Start</string>
-    <string name="voice_stop">Stop</string>
-        <string name="voice_permission_denied">Permissão do microfone negada.</string>
-    <string name="voice_unavailable">Reconhecimento de voz indisponível neste dispositivo.</string>
     <string name="settings_notifications">Notificações</string>
     <string name="settings_notifications_summary">Lembretes de estudo e status dos cartões</string>
     <string name="settings_notif_study">Lembretes de estudo</string>
@@ -806,11 +798,6 @@
     <string name="cd_card_history">Histórico do cartão</string>
     <string name="cd_view_card">Ver cartão completo</string>
     <string name="cd_list_word_actions">Ações da palavra</string>
-    <string name="voice_searching">Buscando…</string>
-    <string name="voice_either_lang_hint">Fale em qualquer um dos dois idiomas</string>
-    <string name="voice_no_match">Não entendido — tente de novo.</string>
-    <string name="voice_network_required">A entrada de voz precisa de conexão com a internet.</string>
-
     <string name="pos_noun">substantivo</string>
     <string name="pos_verb">verbo</string>
     <string name="pos_adj">adjetivo</string>
@@ -841,6 +828,17 @@
     <string name="practice_almost">Quase!</string>
     <string name="practice_typed_valid_synonym">Você digitou um sinônimo correto</string>
     <string name="practice_synonym_paren">(sinônimo)</string>
+
+    <string name="add_tab_search">Pesquisar</string>
+    <string name="add_tab_import">Importar</string>
+    <string name="import_analyzing">Analisando palavras</string>
+    <string name="import_abandon">Descartar</string>
+    <string name="import_confirm">Confirmar</string>
+    <string name="import_too_many_lines">Você pode enviar no máximo 25 itens de uma vez.</string>
+    <string name="import_daily_used">O limite diário de 25 cartões está esgotado.</string>
+    <string name="import_daily_remaining">Hoje você pode importar mais %1$d de 25 cartões.</string>
+    <string name="lookup_reading_learning">%1$s</string>
+    <string name="lookup_reading_native">%1$s: %2$s</string>
 
 </resources>
 

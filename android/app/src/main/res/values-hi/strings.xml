@@ -717,14 +717,6 @@
     <string name="correction_field_pos">शब्द भेद</string>
     <string name="correction_field_gloss">मुख्य अनुवाद</string>
     <string name="correction_field_extra_glosses">अतिरिक्त अनुवाद (एक पंक्ति में एक)</string>
-    <string name="cd_voice_search">आवाज़ से खोज</string>
-    <string name="voice_listening">सुन रहा हूँ…</string>
-    <string name="voice_listening_hint">अब बोलें</string>
-    <string name="voice_tap_to_start">बोलने के लिए प्रारंभ टैप करें</string>
-<string name="voice_start">Start</string>
-    <string name="voice_stop">Stop</string>
-        <string name="voice_permission_denied">माइक्रोफ़ोन अनुमति अस्वीकृत।</string>
-    <string name="voice_unavailable">इस डिवाइस पर वाक् पहचान उपलब्ध नहीं।</string>
     <string name="settings_notifications">सूचनाएँ</string>
     <string name="settings_notifications_summary">अध्ययन अनुस्मारक और कार्ड स्थिति</string>
     <string name="settings_notif_study">अध्ययन अनुस्मारक</string>
@@ -806,11 +798,6 @@
     <string name="cd_card_history">कार्ड इतिहास</string>
     <string name="cd_view_card">पूरा कार्ड देखें</string>
     <string name="cd_list_word_actions">शब्द क्रियाएँ</string>
-    <string name="voice_searching">खोज रहा हूँ…</string>
-    <string name="voice_either_lang_hint">किसी भी भाषा में बोलें</string>
-    <string name="voice_no_match">समझ नहीं आया — फिर कोशिश करें।</string>
-    <string name="voice_network_required">आवाज़ इनपुट के लिए इंटरनेट चाहिए।</string>
-
     <string name="pos_noun">संज्ञा</string>
     <string name="pos_verb">क्रिया</string>
     <string name="pos_adj">विशेषण</string>
@@ -841,6 +828,17 @@
     <string name="practice_almost">लगभग सही!</string>
     <string name="practice_typed_valid_synonym">आपने सही पर्याय लिखा</string>
     <string name="practice_synonym_paren">(पर्याय)</string>
+
+    <string name="add_tab_search">खोजें</string>
+    <string name="add_tab_import">आयात</string>
+    <string name="import_analyzing">शब्दों का विश्लेषण</string>
+    <string name="import_abandon">खारिज करें</string>
+    <string name="import_confirm">पुष्टि करें</string>
+    <string name="import_too_many_lines">आप एक बार में अधिकतम 25 आइटम भेज सकते हैं।</string>
+    <string name="import_daily_used">25 कार्डों की दैनिक सीमा समाप्त हो गई है।</string>
+    <string name="import_daily_remaining">आज आप 25 में से %1$d और कार्ड आयात कर सकते हैं।</string>
+    <string name="lookup_reading_learning">%1$s</string>
+    <string name="lookup_reading_native">%1$s: %2$s</string>
 
 </resources>
 

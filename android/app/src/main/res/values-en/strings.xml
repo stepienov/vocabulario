@@ -334,6 +334,14 @@
     <string name="import_start_title">Import flashcards</string>
     <string name="import_pick_list">Target list</string>
     <string name="import_action_start">Import</string>
+    <string name="add_tab_search">Search</string>
+    <string name="add_tab_import">Import</string>
+    <string name="import_analyzing">Analyzing words</string>
+    <string name="import_abandon">Discard</string>
+    <string name="import_confirm">Confirm</string>
+    <string name="import_too_many_lines">You can submit at most 25 items at once.</string>
+    <string name="import_daily_used">You imported 25 words today — wait until tomorrow for the next import</string>
+    <string name="import_daily_remaining">You can still import %1$d of 25</string>
     <string name="import_limit_exceeded">For now you can import at most 50 Vocabulario cards.</string>
     <string name="import_status_analyzing">Analyzing %1$s…</string>
     <string name="import_status_importing">Importing words from %1$s</string>
@@ -397,7 +405,7 @@
 
     <string name="section_usages">phrases</string>
 
-    <string name="home_search_hint">Search a word…</string>
+    <string name="home_search_hint">Type a word</string>
     <string name="search_by_category">Search associations</string>
 
     <string name="home_due_now">Ready to review now</string>
@@ -812,18 +820,6 @@
     <string name="cd_card_history">Card history</string>
     <string name="cd_view_card">View full card</string>
     <string name="cd_list_word_actions">Word actions</string>
-    <string name="cd_voice_search">Voice search</string>
-    <string name="voice_listening">Listening…</string>
-    <string name="voice_listening_hint">Speak now</string>
-    <string name="voice_tap_to_start">Tap Start to speak</string>
-    <string name="voice_start">Start</string>
-    <string name="voice_stop">Stop</string>
-    <string name="voice_permission_denied">Microphone permission denied.</string>
-    <string name="voice_unavailable">Speech recognition unavailable on this device.</string>
-    <string name="voice_searching">Searching…</string>
-    <string name="voice_either_lang_hint">Speak in either language</string>
-    <string name="voice_no_match">Couldn’t understand — try again.</string>
-    <string name="voice_network_required">Voice input needs an internet connection.</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_summary">Study reminders and card status</string>
     <string name="settings_notif_study">Study reminders</string>

@@ -35,6 +35,7 @@ from app.services.similar_words import fetch_similar_words
 
 logger = logging.getLogger(__name__)
 
+OnMeanings = Callable[[dict], Awaitable[None]]
 OnStudy = Callable[[dict], Awaitable[None]]
 OnRelated = Callable[[dict], Awaitable[None]]
 # Alias dla starych testów / wywołań.
@@ -138,7 +139,34 @@ def side_jobs_need_retry(
     return retry_similar, retry_inflection
 
 
-async def _fetch_study_with_examples(
+def _locked_glosses(meanings: list) -> list[str]:
+    out: list[str] = []
+    for m in meanings:
+        if isinstance(m, dict):
+            g = str(m.get("gloss_l1") or "").strip()
+            if g:
+                out.append(g)
+    return out
+
+
+def _glosses_match_locked(locked: list[str], finished: dict) -> bool:
+    got = _locked_glosses(finished.get("meanings") or [])
+    return got == locked
+
+
+def _force_locked_glosses(locked: list[str], finished: dict) -> dict:
+    data = dict(finished)
+    meanings = [m for m in (data.get("meanings") or []) if isinstance(m, dict)]
+    forced: list[dict] = []
+    for i, gloss in enumerate(locked):
+        base = dict(meanings[i]) if i < len(meanings) else {}
+        base["gloss_l1"] = gloss
+        forced.append(base)
+    data["meanings"] = forced
+    return data
+
+
+async def _fetch_meanings(
     llm: LLMService,
     profile: LanguageProfile,
     lemma: str,
@@ -146,18 +174,28 @@ async def _fetch_study_with_examples(
     *,
     gloss_hint: str | None,
 ) -> dict:
-    """Nauka + przykłady; fallback na osobny generate_examples (Luna)."""
-    study = await llm.enrich_study(profile, lemma, pos, gloss_hint)
+    return await llm.enrich_meanings(profile, lemma, pos, gloss_hint)
+
+
+async def _fetch_study_finish(
+    llm: LLMService,
+    profile: LanguageProfile,
+    lemma: str,
+    pos: str,
+    locked_meanings: list[dict],
+) -> dict:
+    locked = _locked_glosses(locked_meanings)
+    study = await llm.enrich_study_finish(profile, lemma, pos, locked_meanings)
+    if not _glosses_match_locked(locked, study):
+        study = await llm.enrich_study_finish(profile, lemma, pos, locked_meanings)
+    if not _glosses_match_locked(locked, study):
+        study = _force_locked_glosses(locked, study)
+
     meanings = [m for m in (study.get("meanings") or []) if isinstance(m, dict)]
     if _core_examples_valid(meanings):
         return study
 
-    study = await llm.enrich_study(profile, lemma, pos, gloss_hint)
-    meanings = [m for m in (study.get("meanings") or []) if isinstance(m, dict)]
-    if _core_examples_valid(meanings):
-        return study
-
-    glosses = [m["gloss_l1"] for m in meanings if m.get("gloss_l1")]
+    glosses = _locked_glosses(meanings) or locked
     if glosses:
         pos_final = _resolve_pos(study.get("pos")) or _resolve_pos(pos) or "unknown"
         examples_data = await llm.generate_examples(
@@ -169,11 +207,31 @@ async def _fetch_study_with_examples(
             retry=True,
         )
         _merge_examples_into_meanings(study, examples_data)
+        study = _force_locked_glosses(locked or glosses, study)
     return study
 
 
-# Stare testy patchują tę nazwę.
-_fetch_core_with_examples = _fetch_study_with_examples
+# Kompatybilność starych testów: patchowali `_fetch_core_with_examples`.
+async def _fetch_core_with_examples(
+    llm: LLMService,
+    profile: LanguageProfile,
+    lemma: str,
+    pos: str,
+    *,
+    gloss_hint: str | None,
+) -> dict:
+    meanings = await _fetch_meanings(
+        llm, profile, lemma, pos, gloss_hint=gloss_hint
+    )
+    locked = [
+        {"gloss_l1": g}
+        for g in _locked_glosses(meanings.get("meanings") or [])
+    ]
+    if not locked:
+        locked = [{"gloss_l1": gloss_hint or "bedeutung"}]
+    return await _fetch_study_finish(
+        llm, profile, meanings.get("lemma") or lemma, pos, locked
+    )
 
 
 async def fetch_lsp_inflection(
@@ -201,31 +259,100 @@ async def fetch_lsp_inflection(
     return validate_inflection(raw, manifest, pos=pos_final)
 
 
-def assemble_study_card(
+def _resolve_lemma_pos(
     profile: LanguageProfile,
     lemma: str,
     pos: str | None,
-    study: dict,
-) -> dict:
-    """vocabulario.card.v1 — część nauki (bez powiązanych, similar, odmiany)."""
-    manifest = get_manifest(profile.learning_lang)
-    study_lemma = study.get("lemma") or lemma
+    payload: dict,
+) -> tuple[str, str]:
+    payload_lemma = payload.get("lemma") or lemma
     pos_lookup = _resolve_pos(pos) or pos or "unknown"
-    if lemma and study_lemma and not _same_headword(lemma, study_lemma):
+    if lemma and payload_lemma and not _same_headword(lemma, payload_lemma):
         lemma_final = lemma
     else:
         from app.services.pos_normalize import prefer_citation_headword
 
         lemma_final = prefer_citation_headword(
             lemma,
-            study_lemma,
+            payload_lemma,
             pos=pos_lookup,
             learning_lang=profile.learning_lang,
-        ) or study_lemma or lemma
+        ) or payload_lemma or lemma
     if pos_lookup in {"phrase", "construction"}:
         pos_final = pos_lookup
     else:
-        pos_final = _resolve_pos(study.get("pos")) or pos_lookup or "unknown"
+        pos_final = _resolve_pos(payload.get("pos")) or pos_lookup or "unknown"
+    return str(lemma_final), str(pos_final)
+
+
+def assemble_meanings_card(
+    profile: LanguageProfile,
+    lemma: str,
+    pos: str | None,
+    meanings_payload: dict,
+) -> dict:
+    """Sama lista glos — bez zdań; examples_pending + related_pending."""
+    manifest = get_manifest(profile.learning_lang)
+    lemma_final, pos_final = _resolve_lemma_pos(profile, lemma, pos, meanings_payload)
+    raw = [m for m in (meanings_payload.get("meanings") or []) if isinstance(m, dict)]
+    meanings: list[dict] = []
+    for m in raw[:MAX_MEANINGS]:
+        gloss = str(m.get("gloss_l1") or "").strip()
+        if not gloss:
+            continue
+        meanings.append(
+            {
+                "gloss_l1": gloss,
+                "synonyms_l1": [],
+                "examples": [],
+                "usages": [],
+            }
+        )
+    meanings = strip_prepositional_construction_meanings(
+        lemma_final, meanings, profile.learning_lang
+    )
+    ui_hints = {
+        "script": manifest.script,
+        "rtl": manifest.rtl,
+        "inflection_kind": manifest.inflection_kind,
+    }
+    if inflect_pos_key(pos_final, lemma=lemma_final, learning_lang=profile.learning_lang) == "verb":
+        ui_hints["show_conjugation"] = True
+    return repair_strings({
+        "schema_version": CARD_SCHEMA_VERSION,
+        "entry_kind": "lemma",
+        "lsp_version": manifest.lsp_version,
+        "lemma": lemma_final,
+        "language": profile.learning_lang,
+        "pos": pos_final,
+        "ipa": None,
+        "headword_note": None,
+        "ui_hints": ui_hints,
+        "meanings": meanings,
+        "synonyms_l2": [],
+        "antonyms_l2": [],
+        "word_family_l2": [],
+        "associations_l2": [],
+        "similar_words": [],
+        "inflection": None,
+        "conjugation": None,
+        "language_specific": {},
+        "notes": None,
+        "confidence": None,
+        "examples_pending": True,
+        "related_pending": True,
+    })
+
+
+def assemble_study_card(
+    profile: LanguageProfile,
+    lemma: str,
+    pos: str | None,
+    study: dict,
+) -> dict:
+    """vocabulario.card.v1 — pełna nauka (bez powiązanych, similar, odmiany)."""
+    manifest = get_manifest(profile.learning_lang)
+    lemma_final, pos_final = _resolve_lemma_pos(profile, lemma, pos, study)
 
     meanings = [m for m in (study.get("meanings") or []) if isinstance(m, dict)]
     _normalize_usages(meanings)
@@ -265,6 +392,31 @@ def assemble_study_card(
         "confidence": None,
         "related_pending": True,
     })
+
+
+def merge_study_finish_into_card(card: dict, finished: dict) -> dict:
+    """Dokleja IPA/note/examples/usages z finish; zdejmuje examples_pending."""
+    out = dict(card)
+    if finished.get("ipa") is not None:
+        out["ipa"] = finished.get("ipa")
+    if "headword_note" in finished:
+        out["headword_note"] = normalize_headword_note(finished.get("headword_note"))
+    fin_meanings = [m for m in (finished.get("meanings") or []) if isinstance(m, dict)]
+    base_meanings = [m for m in (out.get("meanings") or []) if isinstance(m, dict)]
+    merged: list[dict] = []
+    for i, base in enumerate(base_meanings):
+        row = dict(base)
+        src = fin_meanings[i] if i < len(fin_meanings) else {}
+        if src.get("examples"):
+            row["examples"] = src["examples"]
+        if src.get("usages") is not None:
+            row["usages"] = src["usages"]
+        merged.append(row)
+    if merged:
+        _normalize_usages(merged)
+        out["meanings"] = merged
+    out.pop("examples_pending", None)
+    return repair_strings(out)
 
 
 def assemble_related_part(
@@ -518,25 +670,25 @@ async def run_lemma_enrichment(
     pos: str | None,
     *,
     gloss_hint: str | None = None,
+    on_meanings: OnMeanings | None = None,
     on_study: OnStudy | None = None,
     on_related: OnRelated | None = None,
     on_core: OnCore | None = None,
     require_similar: bool = True,
     llm: LLMService | None = None,
 ) -> dict:
-    """Nauka ∥ powiązane ∥ similar ∥ odmiana; callbacki w kolejności powrotu.
+    """meanings ∥ related ∥ similar ∥ odmiana; study_finish po meanings.
 
-    ``on_study`` (alias ``on_core``) dostaje kartę nauki zaraz po ``learnable``.
-    ``on_related`` dokleja powiązane, gdy wrócą po nauce.
+    ``on_meanings`` — glosy (`examples_pending`), status bez ``learnable``.
+    ``on_study`` (alias ``on_core``) — po finish, treść learnable.
+    ``on_related`` — dokleja powiązane po pierwszym zapisie (meanings lub study).
     """
     llm = llm or LLMService()
     on_study = on_study or on_core
     pos_lookup = _resolve_pos(pos) or pos or "unknown"
 
-    study_task: asyncio.Task = asyncio.create_task(
-        _fetch_core_with_examples(
-            llm, profile, lemma, pos_lookup, gloss_hint=gloss_hint
-        )
+    meanings_task: asyncio.Task = asyncio.create_task(
+        _fetch_meanings(llm, profile, lemma, pos_lookup, gloss_hint=gloss_hint)
     )
     related_task: asyncio.Task | None = asyncio.create_task(
         _fetch_related_part(
@@ -549,11 +701,13 @@ async def run_lemma_enrichment(
     inflection_task: asyncio.Task | None = asyncio.create_task(
         fetch_lsp_inflection(llm, profile, lemma, pos_lookup)
     )
+    finish_task: asyncio.Task | None = None
 
     card: dict | None = None
     related_part: dict | None = None
     related_done = False
     related_failed = False
+    meanings_delivered = False
     study_delivered = False
     lemma_final = lemma
     pos_final = pos_lookup
@@ -562,7 +716,7 @@ async def run_lemma_enrichment(
 
     pending: set[asyncio.Task] = {
         t
-        for t in (study_task, related_task, similar_task, inflection_task)
+        for t in (meanings_task, related_task, similar_task, inflection_task)
         if t is not None
     }
 
@@ -570,30 +724,52 @@ async def run_lemma_enrichment(
         if task is not None:
             pending.discard(task)
 
+    async def _emit_related() -> None:
+        nonlocal card
+        if related_part is None or card is None:
+            return
+        if on_related is not None and meanings_delivered:
+            try:
+                await on_related(dict(related_part))
+            except Exception:
+                logger.exception("on_related callback failed for %r", lemma_final)
+            card.update(related_part)
+            card.pop("related_pending", None)
+        elif not meanings_delivered:
+            return
+        else:
+            card.update(related_part)
+            card.pop("related_pending", None)
+
     while pending:
         done, _ = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
         for task in done:
             pending.discard(task)
-            if task is study_task:
+
+            if task is meanings_task:
                 try:
-                    study = task.result()
+                    meanings_payload = task.result()
                 except Exception:
                     _cancel_if_pending(related_task)
                     _cancel_if_pending(similar_task)
                     _cancel_if_pending(inflection_task)
                     raise
-                card = assemble_study_card(profile, lemma, pos_lookup, study)
+                card = assemble_meanings_card(
+                    profile, lemma, pos_lookup, meanings_payload
+                )
                 lemma_final = card.get("lemma") or lemma
                 pos_final = card.get("pos") or pos_lookup
                 if related_part is not None:
                     card.update(related_part)
                     card.pop("related_pending", None)
-                if on_study is not None:
+                if on_meanings is not None:
                     try:
-                        await on_study(dict(card))
+                        await on_meanings(dict(card))
                     except Exception:
-                        logger.exception("on_study callback failed for %r", lemma_final)
-                study_delivered = True
+                        logger.exception(
+                            "on_meanings callback failed for %r", lemma_final
+                        )
+                meanings_delivered = True
 
                 retry_similar, retry_inflection = side_jobs_need_retry(
                     lemma, pos_lookup, lemma_final, pos_final
@@ -636,6 +812,44 @@ async def run_lemma_enrichment(
                         fetch_lsp_inflection(llm, profile, lemma_final, pos_final)
                     )
                     pending.add(inflection_task)
+
+                locked = [
+                    {"gloss_l1": str(m.get("gloss_l1") or "").strip()}
+                    for m in (card.get("meanings") or [])
+                    if isinstance(m, dict) and str(m.get("gloss_l1") or "").strip()
+                ]
+                if not locked:
+                    locked = [{"gloss_l1": (gloss_hint or "bedeutung").strip()}]
+                finish_task = asyncio.create_task(
+                    _fetch_study_finish(
+                        llm, profile, lemma_final, pos_final, locked
+                    )
+                )
+                pending.add(finish_task)
+                continue
+
+            if finish_task is not None and task is finish_task:
+                try:
+                    finished = task.result()
+                except Exception:
+                    _cancel_if_pending(related_task)
+                    _cancel_if_pending(similar_task)
+                    _cancel_if_pending(inflection_task)
+                    raise
+                card = assemble_study_card(profile, lemma, pos_lookup, finished)
+                lemma_final = card.get("lemma") or lemma_final
+                pos_final = card.get("pos") or pos_final
+                if related_part is not None:
+                    card.update(related_part)
+                    card.pop("related_pending", None)
+                elif related_failed:
+                    card.setdefault("related_pending", True)
+                if on_study is not None:
+                    try:
+                        await on_study(dict(card))
+                    except Exception:
+                        logger.exception("on_study callback failed for %r", lemma_final)
+                study_delivered = True
                 continue
 
             if task is related_task:
@@ -647,17 +861,8 @@ async def run_lemma_enrichment(
                     related_part = None
                     related_failed = True
                     continue
-                if study_delivered and card is not None and related_part is not None:
-                    if on_related is not None:
-                        try:
-                            await on_related(dict(related_part))
-                        except Exception:
-                            logger.exception(
-                                "on_related callback failed for %r", lemma_final
-                            )
-                    else:
-                        card.update(related_part)
-                        card.pop("related_pending", None)
+                if meanings_delivered and related_part is not None:
+                    await _emit_related()
                 continue
 
             if task is similar_task:
@@ -668,8 +873,8 @@ async def run_lemma_enrichment(
                 inflection = await _await_inflection(task)
                 continue
 
-    if card is None:
-        raise RuntimeError("enrich_study did not return a card")
+    if card is None or not study_delivered:
+        raise RuntimeError("enrich_study_finish did not return a card")
 
     if related_part is not None and card.get("related_pending"):
         card.update(related_part)

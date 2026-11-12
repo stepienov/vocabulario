@@ -28,7 +28,8 @@ Z komputera, z którego robione było śledztwo, jedna podróż do tej samej baz
 | 3 | Dociągnięcie pełnej listy propozycji | opis poprawiony 8 listopada, implementacja czeka |
 | 4 | Szukanie skojarzeń | opis poprawiony 8 listopada, implementacja czeka |
 | 5 | Zapis karty po wybraniu propozycji | opis poprawiony 8 listopada, implementacja czeka |
-| 6 | Dociąganie treści karty po zapisie | opis poprawiony 8 listopada, implementacja czeka |
+| 6 | Dociąganie treści karty po zapisie | opis poprawiony 8 listopada; podział study/related wdrożony lokalnie; dalsze rozcięcie znaczeń = punkt 6a |
+| 6a | Wcześniejsze same znaczenia (przed zdaniami) | decyzja i pomiar 12 listopada, task 12 |
 | 7 | Import listy słów | opis poprawiony 8 listopada, implementacja czeka |
 
 Żądanie 1 świadomie nie zmienia szukania bez zapisu, dociągania modelem, kategorii, zapisu karty ani importu.
@@ -993,6 +994,89 @@ Profil polski → hiszpański, nowe hasło `publicar`, tłumaczenie „publikowa
 - Czasownik z oboczną samogłoską (`pensar`, `volver`) ma `headword_note` pod hasłem, jak karty sprzed zmiany.
 - Rzeczowniki w skojarzeniach mają rodzajnik, a liczba skojarzeń po `drop_related_missing_articles` jest 16–18.
 - Wymuszony błąd `enrich_related` (test): karta zostaje `learnable` z `related_pending`, nie trafia do `lexical_entries`, a ponowienie woła tylko `enrich_related`.
+
+---
+
+## 6a. Wcześniejsze znaczenia (rozcięcie nauki)
+
+### Co użytkownik ma zobaczyć
+
+Po dodaniu słowa w ciągu około 1–3 s na karcie i kafelku widać listę tłumaczeń znaczeń. Zdania, zwroty, powiązane, słowa podobne i odmiana mają kółka i uzupełniają się same. Ćwiczenie (fiszka) włącza się dopiero gdy są zdania — jak dziś przy `learnable`. Status `ready` (pełna karta + `lexical_entries`) bez zmian względem punktu 6.
+
+### Co jest wolne dziś (po punkcie 6 / tasku 10)
+
+Jedno `enrich_study` niesie znaczenia **razem** ze zdaniami i zwrotami (typowo 5–10 s). Do tego momentu sekcja znaczeń jest pusta albo ma tylko szkic z lookupu. Related / similar / inflection już lecą osobno.
+
+### Decyzja
+
+Domknięte 12 listopada 2026.
+
+Naukę dzieli się na dwa wywołania terry, `reasoning_effort=none`:
+
+1. `enrich_meanings` — tylko `lemma`, `pos`, lista `gloss_l1`. Limit 800 tokenów odpowiedzi. Po zapisie: glosy na karcie, `examples_pending: true`, status nadal `pending`/`preparing`, `notify_cards_ready`.
+2. `enrich_study_finish` — zdania A2/B2/C2, zwroty, IPA, `headword_note`. Wejście: **sztywna** lista glos z (1). Limit 2200. Po zapisie: `learnable`, bez `examples_pending`.
+
+Równolegle od startu (jak w punkcie 6): `enrich_related`, `similar_words`, `inflection`. Finish startuje dopiero po meanings.
+
+Ćwiczenie: wariant A — dopiero ze zdaniami (`content_is_learnable` bez zmian).  
+Status po glosach: wariant A — bez nowego statusu; flaga `examples_pending`. **Nigdy** `ready` na samych glosach.  
+Adaptive: poza zakresem.
+
+### Polecenia
+
+System meanings, `purpose=enrich_meanings`:
+
+```
+You write ONLY the meaning glosses for one flashcard. JSON only. lemma is the same L2 headword. When this L2 writes a noun with a dictionary article, the lemma includes that article even if the input omitted it. Do not translate the lemma into L1. gloss_l1 is L1. Meanings in frequency order. Include every common everyday meaning. The gloss hint is the first meaning, not a reason to drop another common one. No examples, no usages, no ipa, no headword_note, no synonyms, antonyms, word family, associations, conjugation, or similar words.
+```
+
+User meanings:
+
+```
+L1: {native_name}. L2: {learning_name}. Lemma: {lemma}. POS: {pos}. Gloss hint: {gloss}.
+JSON: {"lemma":"...","pos":"{pos}","meanings":[{"gloss_l1":"..."}]}
+```
+
+System study_finish, `purpose=enrich_study_finish`:
+
+```
+You finish the study part of one flashcard whose meanings (glosses) are FIXED. JSON only. Copy lemma, pos and each gloss_l1 EXACTLY as given — do not add, drop, merge or rewrite glosses. For EACH given meaning add exactly 3 full sentences: A2 short, B2 complex, C2 idiomatic. No repeated l2 sentence across meanings. Each meaning has 2 or 3 short usages (L2 collocation + L1). ipa transcribes the word itself, without the article. headword_note is a short grammar note such as a stem change "(e>ie)" or irregular plural, otherwise null. No synonyms, antonyms, word family, associations, conjugation, or similar words.
+```
+
+User study_finish:
+
+```
+L1: {native_name}. L2: {learning_name}. Lemma: {lemma}. POS: {pos}.
+Fixed meanings (copy gloss_l1 verbatim, same order):
+- {gloss_1}
+- {gloss_2}
+JSON: {"lemma":"...","pos":"{pos}","ipa":"...","headword_note":null,"meanings":[{"gloss_l1":"...","examples":[{"l2":"...","l1":"...","cefr":"A2"},{"l2":"...","l1":"...","cefr":"B2"},{"l2":"...","l1":"...","cefr":"C2"}],"usages":[{"l2":"...","l1":"..."}]}]}
+```
+
+Walidacja finish: liczba znaczeń i każdy `gloss_l1` muszą być identyczne z meanings; inaczej retry finish (nie meanings).
+
+### Pomiar 12 listopada 2026
+
+Gołe API, lokalnie, terra/luna, `reasoning_effort=none`. Trzy pełne karty z bazy: `lleno` (adj), `el atasco` (noun), `la droga` (noun). Wszystkie pięć calli OK; glosy w finish bez driftu.
+
+| Hasło | meanings | study_finish | related | similar | inflection | first paint | learnable≈ | ready wall |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `lleno` | 5,6 s | 5,9 s | 7,0 s | 15,9 s | 5,4 s | 5,6 s | 11,5 s | 18,5 s |
+| `el atasco` | 2,1 s | 8,2 s | 5,8 s | 21,2 s | 4,1 s | 2,1 s | 10,3 s | 21,2 s |
+| `la droga` | 1,5 s | 6,8 s | 4,8 s | 12,3 s | 4,5 s | 1,5 s | 8,3 s | 12,3 s |
+
+Wniosek: zysk jest na **wcześniejszym wyglądzie karty** (first paint), nie na szybszym `ready` (trzyma similar) i niekoniecznie na szybszej fiszce (finish czeka na meanings).
+
+### Instrukcja implementacji
+
+Task: `docs/taski/12-wczesniejsze-znaczenia.md`. Schemat stanów: `docs/wzbogacanie-karty-schemat.md`.
+
+### Jak sprawdzimy
+
+- Po dodaniu nowego hasła: w `llm_usage` pięć purpose: `enrich_meanings`, `enrich_study_finish`, `enrich_related`, `similar_words`, `inflection`; meanings i finish z `reasoning_tokens=0`.
+- `GET /cards/{id}` po ~2–3 s ma listę `gloss_l1` i `examples_pending: true`, status nie `ready`.
+- Po finish: `learnable`, examples obecne, bez `examples_pending`.
+- Telefon: podgląd karty otwarty przy glosach; kółka przy zdaniach i pustych sektorach; fiszka dopiero przy `learnable`.
 
 ---
 

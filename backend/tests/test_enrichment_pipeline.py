@@ -47,6 +47,65 @@ def _core_payload(lemma="hablar", pos="verb"):
     }
 
 
+def _meanings_payload(lemma="hablar", pos="verb", gloss="mówić"):
+    return {
+        "lemma": lemma,
+        "pos": pos,
+        "meanings": [{"gloss_l1": gloss}],
+    }
+
+
+def _patch_meanings_finish(monkeypatch, enrich_mod, *, core_fn=None, meanings_fn=None, finish_fn=None):
+    """Stare testy patchowały `_fetch_core_with_examples` — teraz meanings+finish."""
+
+    async def _default_meanings(llm, profile, lemma, pos, *, gloss_hint=None):
+        if core_fn is not None:
+            core = await core_fn(llm, profile, lemma, pos, gloss_hint=gloss_hint)
+            return {
+                "lemma": core.get("lemma") or lemma,
+                "pos": core.get("pos") or pos,
+                "meanings": [
+                    {"gloss_l1": m.get("gloss_l1")}
+                    for m in (core.get("meanings") or [])
+                    if isinstance(m, dict)
+                ],
+            }
+        return _meanings_payload(lemma=lemma, pos=pos)
+
+    async def _default_finish(llm, profile, lemma, pos, locked_meanings):
+        if core_fn is not None:
+            core = await core_fn(llm, profile, lemma, pos, gloss_hint=None)
+        else:
+            core = _core_payload(lemma=lemma, pos=pos)
+        locked = [
+            str(m.get("gloss_l1") or "").strip()
+            for m in locked_meanings
+            if isinstance(m, dict) and str(m.get("gloss_l1") or "").strip()
+        ] or ["mówić"]
+        src = [m for m in (core.get("meanings") or []) if isinstance(m, dict)]
+        meanings = []
+        for i, gloss in enumerate(locked):
+            base = dict(src[min(i, len(src) - 1)]) if src else {
+                "gloss_l1": gloss,
+                "examples": [
+                    {"l2": "a", "l1": "b", "cefr": "A2"},
+                    {"l2": "c", "l1": "d", "cefr": "B2"},
+                    {"l2": "e", "l1": "f", "cefr": "C2"},
+                ],
+                "usages": [],
+            }
+            base["gloss_l1"] = gloss
+            meanings.append(base)
+        out = dict(core)
+        out["lemma"] = lemma
+        out["pos"] = pos
+        out["meanings"] = meanings
+        return out
+
+    monkeypatch.setattr(enrich_mod, "_fetch_meanings", meanings_fn or _default_meanings)
+    monkeypatch.setattr(enrich_mod, "_fetch_study_finish", finish_fn or _default_finish)
+
+
 def _similar(n: int = 12) -> list[dict]:
     return [{"lemma": f"w{i}", "pos": "verb", "gloss_l1": f"g{i}"} for i in range(n)]
 
@@ -302,7 +361,7 @@ def test_run_lemma_enrichment_fetches_similar_for_construction(monkeypatch):
     async def fake_infl(llm, profile, lemma, pos):
         return {}
 
-    monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    _patch_meanings_finish(monkeypatch, enrich_mod, core_fn=fake_core)
     monkeypatch.setattr(enrich_mod, "_fetch_related_part", _fake_related)
     monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
     monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
@@ -366,7 +425,7 @@ def test_core_callback_runs_before_slow_similar(monkeypatch):
         order.append("infl_done")
         return {"verbs": {"tenses": {"present": {}}}}
 
-    monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    _patch_meanings_finish(monkeypatch, enrich_mod, core_fn=fake_core)
     monkeypatch.setattr(enrich_mod, "_fetch_related_part", _fake_related)
     monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
     monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
@@ -408,7 +467,7 @@ def test_pos_mismatch_refetches_similar(monkeypatch):
     async def fake_infl(llm, profile, lemma, pos):
         return {"verbs": {"tenses": {"present": {}}}}
 
-    monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    _patch_meanings_finish(monkeypatch, enrich_mod, core_fn=fake_core)
     monkeypatch.setattr(enrich_mod, "_fetch_related_part", _fake_related)
     monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
     monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
@@ -506,7 +565,7 @@ def test_run_lemma_marks_empty_phrase_not_applicable(monkeypatch):
     async def fake_fill(llm, core, lang):
         return None
 
-    monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    _patch_meanings_finish(monkeypatch, enrich_mod, core_fn=fake_core)
     monkeypatch.setattr(enrich_mod, "_fetch_related_part", _fake_related)
     monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
     monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
@@ -565,7 +624,7 @@ def test_related_before_study_merges_without_pending(monkeypatch):
     async def fake_infl(llm, profile, lemma, pos):
         return {"verbs": {"tenses": {"present": {}}}}
 
-    monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    _patch_meanings_finish(monkeypatch, enrich_mod, core_fn=fake_core)
     monkeypatch.setattr(enrich_mod, "_fetch_related_part", fake_related)
     monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
     monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)
@@ -600,7 +659,7 @@ def test_related_failure_keeps_pending(monkeypatch):
     async def fake_infl(llm, profile, lemma, pos):
         return {"verbs": {"tenses": {"present": {}}}}
 
-    monkeypatch.setattr(enrich_mod, "_fetch_core_with_examples", fake_core)
+    _patch_meanings_finish(monkeypatch, enrich_mod, core_fn=fake_core)
     monkeypatch.setattr(enrich_mod, "_fetch_related_part", fake_related)
     monkeypatch.setattr(enrich_mod, "fetch_similar_words", fake_similar)
     monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", fake_infl)

@@ -493,6 +493,37 @@ def lookup_output_form_rules_text(native: str, learning: str) -> str:
     )
 
 
+ENRICH_MEANINGS_SYSTEM = (
+    "You write ONLY the meaning glosses for one flashcard. JSON only. lemma is the "
+    "same L2 headword. When this L2 writes a noun with a dictionary article, the "
+    "lemma includes that article even if the input omitted it. Do not translate the "
+    "lemma into L1. gloss_l1 is L1. Meanings in frequency order. Include every common "
+    "everyday meaning. The gloss hint is the first meaning, not a reason to drop "
+    "another common one. No examples, no usages, no ipa, no headword_note, no "
+    "synonyms, antonyms, word family, associations, conjugation, or similar words."
+)
+
+ENRICH_MEANINGS_USER = """L1: {native_name}. L2: {learning_name}. Lemma: {lemma}. POS: {pos}. Gloss hint: {gloss}.
+JSON: {{"lemma":"...","pos":"{pos}","meanings":[{{"gloss_l1":"..."}}]}}"""
+
+ENRICH_STUDY_FINISH_SYSTEM = (
+    "You finish the study part of one flashcard whose meanings (glosses) are FIXED. "
+    "JSON only. Copy lemma, pos and each gloss_l1 EXACTLY as given — do not add, "
+    "drop, merge or rewrite glosses. For EACH given meaning add exactly 3 full "
+    "sentences: A2 short, B2 complex, C2 idiomatic. No repeated l2 sentence across "
+    "meanings. Each meaning has 2 or 3 short usages (L2 collocation + L1). ipa "
+    "transcribes the word itself, without the article. headword_note is a short "
+    "grammar note such as a stem change \"(e>ie)\" or irregular plural, otherwise "
+    "null. No synonyms, antonyms, word family, associations, conjugation, or "
+    "similar words."
+)
+
+ENRICH_STUDY_FINISH_USER = """L1: {native_name}. L2: {learning_name}. Lemma: {lemma}. POS: {pos}.
+Fixed meanings (copy gloss_l1 verbatim, same order):
+{glosses_block}
+JSON: {{"lemma":"{lemma}","pos":"{pos}","ipa":"...","headword_note":null,"meanings":[{{"gloss_l1":"...","examples":[{{"l2":"...","l1":"...","cefr":"A2"}},{{"l2":"...","l1":"...","cefr":"B2"}},{{"l2":"...","l1":"...","cefr":"C2"}}],"usages":[{{"l2":"...","l1":"..."}}]}}]}}"""
+
+# Legacy single-call study (tests / adaptive path helpers). Pipeline lemma uses meanings+finish.
 ENRICH_STUDY_SYSTEM = (
     "You write the study part of one flashcard. JSON only. lemma is the same L2 "
     "headword. When this L2 writes a noun with a dictionary article, the lemma "

@@ -1120,8 +1120,13 @@ async def delete_card(
         # Idempotent: already deleted → nothing to do (offline retry safe).
         return
     # Soft-delete = tombstone propagated via /sync/pull deleted_card_ids.
+    import_profile_id = card.profile_id if card.import_job_id is not None else None
     card.deleted_at = datetime.now(UTC)
     await db.commit()
+    if import_profile_id is not None:
+        from app.services.import_jobs import spawn_next_import_card
+
+        spawn_next_import_card(import_profile_id)
 
 
 @router.post("/cards/{card_id}/move", response_model=CardResponse)

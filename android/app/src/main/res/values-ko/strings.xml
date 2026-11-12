@@ -787,22 +787,6 @@
 
     <string name="correction_field_extra_glosses">추가 의미 (한 줄에 하나씩)</string>
 
-    <string name="cd_voice_search">음성 검색</string>
-
-    <string name="voice_listening">듣는 중…</string>
-
-    <string name="voice_listening_hint">지금 말하세요</string>
-
-    <string name="voice_tap_to_start">시작하려면 탭하세요</string>
-
-    <string name="voice_start">시작</string>
-
-    <string name="voice_stop">중지</string>
-
-    <string name="voice_permission_denied">마이크 권한이 거부되었습니다.</string>
-
-    <string name="voice_unavailable">이 기기에서 음성 인식이 사용할 수 없습니다.</string>
-
     <string name="settings_notifications">알림</string>
 
     <string name="settings_notifications_summary">학습 알림 및 카드 상태</string>
@@ -902,11 +886,6 @@
     <string name="cd_card_history">카드 기록</string>
     <string name="cd_view_card">전체 카드 보기</string>
     <string name="cd_list_word_actions">단어 작업</string>
-    <string name="voice_searching">검색 중…</string>
-    <string name="voice_either_lang_hint">두 언어 중 아무거나 말하세요</string>
-    <string name="voice_no_match">알아듣지 못했습니다. 다시 시도하세요.</string>
-    <string name="voice_network_required">음성 입력에는 인터넷 연결이 필요합니다.</string>
-
     <string name="pos_noun">명사</string>
     <string name="pos_verb">동사</string>
     <string name="pos_adj">형용사</string>
@@ -937,5 +916,16 @@
     <string name="practice_almost">거의 맞아요!</string>
     <string name="practice_typed_valid_synonym">올바른 동의어를 입력했어요</string>
     <string name="practice_synonym_paren">(동의어)</string>
+
+    <string name="add_tab_search">검색</string>
+    <string name="add_tab_import">가져오기</string>
+    <string name="import_analyzing">단어 분석 중</string>
+    <string name="import_abandon">버리기</string>
+    <string name="import_confirm">확인</string>
+    <string name="import_too_many_lines">한 번에 최대 25개만 제출할 수 있습니다.</string>
+    <string name="import_daily_used">하루 25장 한도가 모두 소진되었습니다.</string>
+    <string name="import_daily_remaining">오늘 25장 중 %1$d장을 더 가져올 수 있습니다.</string>
+    <string name="lookup_reading_learning">%1$s</string>
+    <string name="lookup_reading_native">%1$s: %2$s</string>
 
 </resources>
