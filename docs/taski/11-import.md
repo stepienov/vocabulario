@@ -102,12 +102,12 @@ async def import_queue_head(db, profile_id) -> UUID | None
 async def spawn_next_import_card(profile_id) -> None   # spawn_enrich(head), gdy head nie jest w _claimed
 ```
 
-Bramka w `_run_claimed_enrich`, po `_hydrate_before_queue` (task 09), przed semaforem:
+Bramka w `_run_claimed_enrich`, przed `_hydrate_before_queue` i semaforem:
 
 - karta bez `import_job_id`: bez zmian,
 - karta importu, która nie jest głową kolejki swojego profilu: zadanie kończy się bez zmian w bazie.
 
-Hydracja jest przed bramką, więc karta ze słowem z `lexical_entries` dostaje treść od razu po dojściu do głowy, bez modelu, a kolejka idzie dalej.
+Hydracja jest po bramce, ale przed semaforem, więc karta ze słowem z `lexical_entries` dostaje treść po dojściu do głowy, bez modelu, a kolejka idzie dalej.
 
 Bramka jest w zadaniu, nie w miejscu wywołania, bo `get_card` (karta `pending`), `resume_pending_enrichment` i watchdog (`pending` starsze niż 45 s) wołają `spawn_enrich` same. Stan kolejki jest w bazie, więc przeżywa restart.
 

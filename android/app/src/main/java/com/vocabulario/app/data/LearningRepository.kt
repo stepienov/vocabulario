@@ -219,7 +219,11 @@ class LearningRepository @Inject constructor(
         )
     }
 
-    suspend fun lookupExpand(text: String, more: Boolean = false): LookupResponse {
+    suspend fun lookupExpand(
+        text: String,
+        more: Boolean = false,
+        operationId: String? = null,
+    ): LookupResponse {
         val profileId = activeProfileId()
         return api.lookupExpand(
             LookupRequest(
@@ -227,6 +231,7 @@ class LearningRepository @Inject constructor(
                 profile_id = profileId,
                 local_membership = true,
                 more = more,
+                operation_id = operationId,
             ),
         )
     }

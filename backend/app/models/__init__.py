@@ -166,6 +166,24 @@ class LookupQueryCache(Base):
     )
 
 
+class LookupMoreOperation(Base):
+    __tablename__ = "lookup_more_operations"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("language_profiles.id", ondelete="CASCADE"), primary_key=True
+    )
+    operation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    lang_pair: Mapped[str] = mapped_column(String(16), nullable=False)
+    input_norm: Mapped[str] = mapped_column(String(200), nullable=False)
+    candidates: Mapped[list] = mapped_column(JSONB, nullable=False)
+    added: Mapped[int] = mapped_column(Integer, nullable=False)
+    suggestions_exhausted: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class LearningCard(Base):
     __tablename__ = "learning_cards"
     # Uniqueness only among live cards — soft-deleted rows are tombstones for sync.

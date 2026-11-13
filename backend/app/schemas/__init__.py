@@ -186,6 +186,7 @@ class LookupRequest(BaseModel):
     profile_id: UUID
     local_membership: bool = False
     more: bool = False
+    operation_id: UUID | None = None
     round: int | None = Field(default=None, ge=1)
 
 

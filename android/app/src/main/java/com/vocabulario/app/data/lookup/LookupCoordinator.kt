@@ -8,17 +8,23 @@ import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.sync.BackgroundJobScheduler
 import com.vocabulario.app.i18n.UiStrings
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.IOException
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -51,35 +57,63 @@ class LookupCoordinator @Inject constructor(
     private val backgroundJobs: BackgroundJobScheduler,
 ) {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private data class PersistenceWrite(
+        val query: String?,
+        val operationId: String? = null,
+        val completed: CompletableDeferred<Unit> = CompletableDeferred(),
+    )
+    private val writes = Channel<PersistenceWrite>(Channel.UNLIMITED)
+
+    private fun persist(query: String?, operationId: String? = null): CompletableDeferred<Unit> {
+        val write = PersistenceWrite(query, operationId)
+        check(writes.trySend(write).isSuccess)
+        return write.completed
+    }
+
     private val session = LookupSession(
         lookupCached = { repository.lookupCached(it) },
-        lookupExpand = { text, more -> repository.lookupExpand(text, more) },
+        lookupExpand = { text, more, operationId -> repository.lookupExpand(text, more, operationId) },
         mapSearchError = { it.userMessage(strings, R.string.err_search) },
         expandFailedNotice = strings.get(R.string.err_lookup_expand),
         longerAnalysisNotice = { strings.get(R.string.lookup_longer_analysis, it) },
         nothingFoundNotice = { strings.get(R.string.lookup_nothing_found, it) },
         parent = appScope,
         singleRequest = true,
-        onActiveQuery = { query, more ->
-            appScope.launch {
-                if (query.isNullOrBlank()) {
-                    // Nie kasuj równoległego zapisu kategorii (osobny IO scope).
-                    persistence.clearIfByCategory(byCategory = false)
-                } else {
-                    persistence.saveQuery(query, byCategory = false, more = more)
-                }
-            }
-        },
+        onActiveQuery = { query, _ -> persist(query) },
+        persistMore = { query, operationId -> persist(query, operationId).await() },
     )
 
     val state: StateFlow<LookupSessionState> get() = session.state
 
     init {
         appScope.launch {
-            val stored = persistence.loadQuery() ?: return@launch
-            if (persistence.loadByCategory()) return@launch
-            if (stored.isNotBlank() && state.value.query.isBlank()) {
-                session.start(stored)
+            for (write in writes) {
+                try {
+                    if (write.query.isNullOrBlank()) {
+                        persistence.clearIfByCategory(byCategory = false)
+                    } else {
+                        persistence.saveQuery(
+                            write.query, more = write.operationId != null,
+                            operationId = write.operationId,
+                        )
+                    }
+                    write.completed.complete(Unit)
+                } catch (e: CancellationException) {
+                    write.completed.cancel(e)
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.e("LookupCoordinator", "Could not persist lookup", e)
+                    write.completed.completeExceptionally(e)
+                }
+            }
+        }
+        appScope.launch {
+            val stored = persistence.loadActive() ?: return@launch
+            if (stored.byCategory || state.value.query.isNotBlank()) return@launch
+            if (stored.more && stored.operationId != null) {
+                session.resumeMore(stored.query, stored.operationId)
+            } else {
+                session.start(stored.query)
             }
         }
     }
@@ -87,7 +121,6 @@ class LookupCoordinator @Inject constructor(
     fun start(query: String) {
         session.start(query)
         appScope.launch {
-            persistence.saveQuery(query.trim())
             backgroundJobs.cancelLookup()
         }
     }
@@ -99,8 +132,8 @@ class LookupCoordinator @Inject constructor(
         backgroundJobs.cancelLookup()
     }
 
-    fun acceptServerResult(query: String, response: LookupResponse) =
-        session.acceptServerResult(query, response)
+    fun acceptServerResult(query: String, response: LookupResponse, operationId: String? = null) =
+        session.acceptServerResult(query, response, operationId)
 
     /**
      * Po powrocie do apki: nie czekaj na zamrożony expand HTTP.
@@ -117,25 +150,29 @@ class LookupCoordinator @Inject constructor(
             return
         }
         appScope.launch {
-            if (persistence.loadByCategory()) return@launch
-            val stored = persistence.loadQuery() ?: return@launch
+            val stored = persistence.loadActive() ?: return@launch
+            if (stored.byCategory) return@launch
             val now = session.state.value
             if (now.expanding || now.loadingMore) {
                 now.query.takeIf { it.isNotBlank() }?.let { session.refreshFromCache() }
                 return@launch
             }
-            if (now.candidates.isNotEmpty() && now.error == null) {
-                persistence.saveQuery(null)
+            if (stored.more && stored.operationId != null) {
+                session.resumeMore(stored.query, stored.operationId)
                 return@launch
             }
-            start(stored)
+            if (now.candidates.isNotEmpty() && now.error == null) {
+                persist(null)
+                return@launch
+            }
+            start(stored.query)
         }
     }
 }
 
 internal class LookupSession(
     private val lookupCached: suspend (String) -> LookupResponse,
-    private val lookupExpand: suspend (String, Boolean) -> LookupResponse,
+    private val lookupExpand: suspend (String, Boolean, String?) -> LookupResponse,
     private val mapSearchError: (Throwable) -> String,
     private val expandFailedNotice: String,
     parent: CoroutineScope,
@@ -146,17 +183,22 @@ internal class LookupSession(
     private val cachedPollDelayMs: Long = 2_000L,
     private val cachedPollAttempts: Int = 90,
     private val onActiveQuery: (String?, Boolean) -> Unit = { _, _ -> },
+    private val persistMore: suspend (String, String) -> Unit = { _, _ -> },
 ) {
     private val scope = CoroutineScope(parent.coroutineContext + SupervisorJob())
     private val _state = MutableStateFlow(LookupSessionState())
     val state: StateFlow<LookupSessionState> = _state.asStateFlow()
     private var job: Job? = null
+    private var moreOperationId: String? = null
+    private var morePersistence: Deferred<Unit>? = null
 
     fun start(query: String) {
         val text = query.trim()
         if (text.isBlank()) return
         val gen = _state.value.generation + 1
         job?.cancel()
+        moreOperationId = null
+        morePersistence = null
         onActiveQuery(text, false)
         _state.value = LookupSessionState(
             generation = gen,
@@ -183,6 +225,8 @@ internal class LookupSession(
     fun clear() {
         job?.cancel()
         job = null
+        moreOperationId = null
+        morePersistence = null
         onActiveQuery(null, false)
         _state.value = LookupSessionState(generation = _state.value.generation + 1)
     }
@@ -190,20 +234,43 @@ internal class LookupSession(
     fun showMore() {
         val current = _state.value
         val text = current.query
-        if (text.isBlank() || current.candidates.isEmpty()) return
+        if (text.isBlank() || current.candidates.isEmpty() || current.loadingMore) return
+        startMore(text, moreOperationId ?: UUID.randomUUID().toString(), restore = false)
+    }
+
+    fun resumeMore(query: String, operationId: String) {
+        if (_state.value.loadingMore && moreOperationId == operationId) return
+        startMore(query, operationId, restore = true)
+    }
+
+    private fun startMore(text: String, operationId: String, restore: Boolean) {
+        val current = _state.value
         val gen = current.generation
         job?.cancel()
-        onActiveQuery(text, true)
-        _state.value = current.copy(loadingMore = true, notice = null)
+        moreOperationId = operationId
+        val saved = if (restore) {
+            CompletableDeferred(Unit)
+        } else {
+            scope.async(start = CoroutineStart.UNDISPATCHED) { persistMore(text, operationId) }
+        }
+        morePersistence = saved
+        _state.value = if (restore && current.query != text) {
+            LookupSessionState(generation = gen + 1, query = text, loadingMore = true)
+        } else {
+            current.copy(query = text, loadingMore = true, notice = null)
+        }
+        val activeGen = _state.value.generation
         job = scope.launch {
             try {
-                val response = withIoRetry { lookupExpand(text, true) }
-                if (!stillCurrent(gen)) return@launch
-                publish(gen) {
+                saved.await()
+                val response = withIoRetry { lookupExpand(text, true, operationId) }
+                if (!stillCurrent(activeGen)) return@launch
+                publish(activeGen) {
                     if (response.added == 0) {
                         it.copy(
                             loadingMore = false,
                             suggestionsExhausted = true,
+                            candidates = mergeShownCandidates(it.candidates, response.candidates),
                             notice = null,
                         )
                     } else {
@@ -215,12 +282,13 @@ internal class LookupSession(
                         )
                     }
                 }
-                finishActive(gen)
+                moreOperationId = null
+                morePersistence = null
+                finishActive(activeGen)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                publish(gen) { it.copy(loadingMore = false, notice = expandFailedNotice) }
-                finishActive(gen)
+                publish(activeGen) { it.copy(loadingMore = false, notice = expandFailedNotice) }
             }
         }
     }
@@ -230,27 +298,45 @@ internal class LookupSession(
         val snapshot = _state.value
         val text = snapshot.query
         if (text.isBlank()) return
+        val operationId = moreOperationId
+        val saved = morePersistence
         val gen = snapshot.generation
         scope.launch {
             val cached = try {
-                lookupCached(text)
+                if (snapshot.loadingMore && operationId != null) {
+                    saved?.await()
+                    if (moreOperationId != operationId || !_state.value.loadingMore) return@launch
+                    lookupExpand(text, true, operationId)
+                } else {
+                    lookupCached(text)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
                 return@launch
             }
-            if (applyCachedOutcome(cached, gen) && snapshot.expanding) {
+            if (snapshot.loadingMore &&
+                (moreOperationId != operationId || !_state.value.loadingMore)
+            ) return@launch
+            if (!snapshot.loadingMore && _state.value.loadingMore) return@launch
+            if (applyCachedOutcome(cached, gen) && (snapshot.expanding || snapshot.loadingMore)) {
+                moreOperationId = null
+                morePersistence = null
                 job?.cancel()
                 job = null
             }
         }
     }
 
-    fun acceptServerResult(query: String, response: LookupResponse) {
+    fun acceptServerResult(query: String, response: LookupResponse, operationId: String? = null) {
         val text = query.trim()
         if (text.isBlank()) return
         val current = _state.value
         if (current.query.isNotBlank() && current.query != text) return
+        if (current.loadingMore && moreOperationId != operationId) return
+        if (operationId != null && current.query == text &&
+            current.candidates.isNotEmpty() && moreOperationId != operationId
+        ) return
         val gen = if (current.query == text && current.generation > 0) {
             current.generation
         } else {
@@ -263,6 +349,8 @@ internal class LookupSession(
             next
         }
         if (applyCachedOutcome(response, gen)) {
+            moreOperationId = null
+            morePersistence = null
             job?.cancel()
             job = null
         }
@@ -286,7 +374,7 @@ internal class LookupSession(
         coroutineScope {
             val expandJob = launch {
                 try {
-                    val expanded = withIoRetry { lookupExpand(text, false) }
+                    val expanded = withIoRetry { lookupExpand(text, false, null) }
                     if (!stillCurrent(gen)) return@launch
                     publish(gen) {
                         it.copy(
@@ -377,12 +465,16 @@ internal class LookupSession(
         return if (cached.candidates.isNotEmpty()) {
             publish(gen) {
                 it.copy(
-                    candidates = cached.candidates,
+                    candidates = if (it.loadingMore) {
+                        mergeShownCandidates(it.candidates, cached.candidates)
+                    } else {
+                        cached.candidates
+                    },
                     expanding = !cached.ai_complete,
                     // Worker / cache mogą domknąć „Show more” zanim foreground job skończy HTTP.
                     loadingMore = if (cached.ai_complete) false else it.loadingMore,
                     suggestionsExhausted = if (cached.ai_complete) {
-                        cached.suggestions_exhausted
+                        cached.suggestions_exhausted || (it.loadingMore && cached.added == 0)
                     } else {
                         it.suggestionsExhausted
                     },
@@ -461,7 +553,7 @@ internal class LookupSession(
             publish(gen) { it.copy(expanding = true, notice = longer, error = null) }
         }
         try {
-            val expanded = withIoRetry { lookupExpand(text, false) }
+            val expanded = withIoRetry { lookupExpand(text, false, null) }
             if (!stillCurrent(gen)) return
             val found = expanded.candidates.ifEmpty { emptyList() }
             publish(gen) {

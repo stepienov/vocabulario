@@ -195,6 +195,7 @@ Telefon z serwerem po taskach 04–06, konto `nowy4@test.com`:
 - Nowe hasło z jednym słowem z punktu 2: brak automatycznego `lookup/expand`. Hasło, przy którym luna oddaje pustkę: jedno `lookup/expand` bez `lookup/cached` w trakcie.
 - Tap „Pokaż więcej propozycji”: jedno `lookup/expand` z `more=true`. Przy `added=0` napis „Nie ma więcej propozycji.”
 - Minimalizacja w trakcie `lookup/expand`: worker woła tylko `lookup/expand`. Minimalizacja po wyniku: worker nie startuje. Powrót do aplikacji z widocznym, skończonym wynikiem: zero żądań szukania.
+- „Pokaż więcej” zapisuje identyfikator operacji przed żądaniem. Ponowienia i worker używają tego samego identyfikatora; serwer przechowuje wynik razem z cache i nie uruchamia modelu ponownie po zakończeniu operacji. Nowy tap dostaje nowy identyfikator. Łączenie równoczesnych żądań nadal wymaga jednej repliki z taska 01. Backend z obsługą `operation_id` musi zostać wdrożony przed nową wersją Androida.
 - Tap dodania przy każdym słowie bez ikony na koncie z 492 kartami nie daje 409 (pięć różnych haseł, w tym z rodzajnikiem i z nawiasem).
 - Język interfejsu bez własnego pliku (na przykład szwedzki w ustawieniach systemu) pokazuje angielski napis, bez `Resources.NotFoundException`.
 

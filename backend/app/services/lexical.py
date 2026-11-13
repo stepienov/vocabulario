@@ -12,7 +12,9 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.deps import lang_pair_key, normalize_text
 from app.core.lemma_keys import canonical_lemma
-from app.models import LanguageProfile, LearningCard, LexicalEntry, LookupQueryCache, User
+from app.models import (
+    LanguageProfile, LearningCard, LexicalEntry, LookupMoreOperation, LookupQueryCache, User,
+)
 from app.services.llm import LLMService
 from app.services.llm_usage import bind_llm_usage_context
 from app.services.enrichment import enrich_card_content
@@ -796,7 +798,8 @@ class LexicalService:
         )
 
     async def lookup_expand(
-        self, user_id: UUID, profile_id: UUID, text: str, *, more: bool = False
+        self, user_id: UUID, profile_id: UUID, text: str, *, more: bool = False,
+        operation_id: UUID | None = None,
     ) -> LookupOutcome:
         """Docelowy model. more=True dopisuje nawet gdy lista jest już zamknięta."""
         profile = await self.get_profile(user_id, profile_id)
@@ -805,6 +808,17 @@ class LexicalService:
         key = self._query_cache_key(text)
         if not text:
             return LookupOutcome([], "db", False, added=0, lang_pair=pair)
+        if more and operation_id is not None:
+            previous = await self.db.get(
+                LookupMoreOperation, (user_id, profile_id, operation_id)
+            )
+            if previous is not None:
+                if previous.input_norm != key or previous.lang_pair != pair:
+                    raise ValueError("Lookup operation belongs to a different query")
+                return LookupOutcome(
+                    list(previous.candidates), "db", True, added=previous.added,
+                    lang_pair=pair, suggestions_exhausted=previous.suggestions_exhausted,
+                )
         row = await self._fetch_query_cache(pair, key)
         if not more and row is not None and row.ai_complete:
             stored = list(row.candidates or [])
@@ -828,6 +842,12 @@ class LexicalService:
         # Replay „Show more” po more_exhausted nie powinien odpalać kolejnego LLM.
         if more and row is not None and row.more_exhausted:
             stored = list(row.candidates or [])
+            if operation_id is not None:
+                self.db.add(LookupMoreOperation(
+                    user_id=user_id, profile_id=profile_id, operation_id=operation_id,
+                    lang_pair=pair, input_norm=key, candidates=stored, added=0,
+                    suggestions_exhausted=True,
+                ))
             await self.db.execute(
                 update(LookupQueryCache)
                 .where(LookupQueryCache.id == row.id)
@@ -899,6 +919,12 @@ class LexicalService:
         row.ai_complete = True
         row.hit_count = (row.hit_count or 0) + 1
         row.updated_at = datetime.now(UTC)
+        if more and operation_id is not None:
+            self.db.add(LookupMoreOperation(
+                user_id=user_id, profile_id=profile_id, operation_id=operation_id,
+                lang_pair=pair, input_norm=key, candidates=merged, added=added,
+                suggestions_exhausted=bool(row.more_exhausted),
+            ))
         await self.db.flush()
         return LookupOutcome(
             merged,

@@ -118,6 +118,7 @@ data class LookupRequest(
     val profile_id: String,
     val local_membership: Boolean = false,
     val more: Boolean = false,
+    val operation_id: String? = null,
     val round: Int? = null,
 )
 

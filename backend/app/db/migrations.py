@@ -22,6 +22,8 @@ _DEADLOCK_RETRIES = 8
 _STATEMENTS = (
     "ALTER TABLE lookup_query_cache ADD COLUMN IF NOT EXISTS "
     "more_exhausted BOOLEAN NOT NULL DEFAULT false",
+    "ALTER TABLE lookup_more_operations ADD COLUMN IF NOT EXISTS "
+    "lang_pair VARCHAR(16) NOT NULL DEFAULT ''",
     "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS "
     "enrichment_status VARCHAR(16) NOT NULL DEFAULT 'ready'",
     "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS "

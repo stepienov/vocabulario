@@ -218,7 +218,8 @@ async def lookup_expand(
 
     try:
         outcome = await await_lookup_expand(
-            user_id, body.profile_id, body.text, more=body.more
+            user_id, body.profile_id, body.text, more=body.more,
+            operation_id=body.operation_id if body.more else None,
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

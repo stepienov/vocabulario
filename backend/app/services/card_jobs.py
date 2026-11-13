@@ -803,6 +803,8 @@ async def _import_queue_allows(card_id: UUID) -> tuple[bool, UUID | None, bool]:
         ).scalar_one_or_none()
         if card is None or card.import_job_id is None:
             return True, (card.profile_id if card else None), False
+        if card.enrichment_status != STATUS_PENDING:
+            return True, card.profile_id, True
         head = await import_queue_head(db, card.profile_id)
         if head is None or head == card_id:
             return True, card.profile_id, True
@@ -817,15 +819,14 @@ async def _run_claimed_enrich(
     passed_import_gate = False
     import_profile_id: UUID | None = None
     try:
-        if await _hydrate_before_queue(card_id, source_card_id):
-            _allowed, profile_id, is_import = await _import_queue_allows(card_id)
-            if is_import and profile_id is not None:
-                from app.services.import_jobs import spawn_next_import_card
-
-                spawn_next_import_card(profile_id)
-            return
         allowed, import_profile_id, is_import = await _import_queue_allows(card_id)
         if is_import and not allowed:
+            return
+        if await _hydrate_before_queue(card_id, source_card_id):
+            if is_import and import_profile_id is not None:
+                from app.services.import_jobs import spawn_next_import_card
+
+                spawn_next_import_card(import_profile_id)
             return
         if is_import:
             passed_import_gate = True

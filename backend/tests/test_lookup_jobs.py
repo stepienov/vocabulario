@@ -12,7 +12,7 @@ def test_waiter_cancel_does_not_stop_expand(monkeypatch):
     finished = asyncio.Event()
     outcome = LookupOutcome(candidates=[{"lemma": "casa"}], source="ai", ai_complete=True)
 
-    async def fake_run(user_id, profile_id, text, more=False):
+    async def fake_run(user_id, profile_id, text, more=False, operation_id=None):
         started.set()
         await asyncio.sleep(0.05)
         finished.set()
@@ -47,7 +47,7 @@ def test_ensure_expand_task_reuses_inflight(monkeypatch):
     calls = {"n": 0}
     gate = asyncio.Event()
 
-    async def fake_run(user_id, profile_id, text, more=False):
+    async def fake_run(user_id, profile_id, text, more=False, operation_id=None):
         calls["n"] += 1
         await gate.wait()
         return LookupOutcome([], "db", True)
@@ -72,7 +72,7 @@ def test_ensure_expand_task_reuses_inflight(monkeypatch):
 def test_more_uses_its_own_inflight_task(monkeypatch):
     gate = asyncio.Event()
 
-    async def fake_run(user_id, profile_id, text, more=False):
+    async def fake_run(user_id, profile_id, text, more=False, operation_id=None):
         await gate.wait()
         return LookupOutcome([], "db", True)
 
@@ -90,6 +90,35 @@ def test_more_uses_its_own_inflight_task(monkeypatch):
         gate.set()
         await plain
         await extra
+
+    asyncio.run(_run())
+
+
+def test_more_retries_share_only_the_same_operation(monkeypatch):
+    gate = asyncio.Event()
+
+    async def fake_run(user_id, profile_id, text, more=False, operation_id=None):
+        await gate.wait()
+        return LookupOutcome([], "db", True)
+
+    monkeypatch.setattr(lookup_jobs, "_run_expand", fake_run)
+    lookup_jobs._inflight.clear()
+
+    async def _run():
+        user_id, profile_id, operation_id = uuid4(), uuid4(), uuid4()
+        first = lookup_jobs.ensure_expand_task(
+            user_id, profile_id, "pies", more=True, operation_id=operation_id
+        )
+        retry = lookup_jobs.ensure_expand_task(
+            user_id, profile_id, "PIES", more=True, operation_id=operation_id
+        )
+        next_click = lookup_jobs.ensure_expand_task(
+            user_id, profile_id, "pies", more=True, operation_id=uuid4()
+        )
+        assert retry is first
+        assert next_click is not first
+        gate.set()
+        await asyncio.gather(first, next_click)
 
     asyncio.run(_run())
 
@@ -140,6 +169,38 @@ from app.services.lexical import LexicalService
 from app.services.llm import LLMService
 from app.services.lookup_candidates import normalize_lookup_query
 from tests.pg_factories import auth_headers, create_card, create_profile, create_user
+
+
+@pytest.mark.asyncio
+async def test_saved_more_operation_returns_without_calling_model(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    user_id, profile_id, operation_id = uuid4(), uuid4(), uuid4()
+    candidates = [{"lemma": "el pie", "pos": "noun", "gloss": "stopa"}]
+    db = AsyncMock()
+    db.get.return_value = SimpleNamespace(
+        lang_pair="pl>es",
+        input_norm=normalize_lookup_query("pies"),
+        candidates=candidates,
+        added=1,
+        suggestions_exhausted=False,
+    )
+    service = LexicalService(db)
+    monkeypatch.setattr(
+        service, "get_profile",
+        AsyncMock(return_value=SimpleNamespace(app_lang="pl", learning_lang="es")),
+    )
+    model = AsyncMock()
+    monkeypatch.setattr(service.llm, "lookup_expand", model)
+
+    result = await service.lookup_expand(
+        user_id, profile_id, "pies", more=True, operation_id=operation_id
+    )
+
+    assert result.candidates == candidates
+    assert result.added == 1
+    model.assert_not_awaited()
 
 
 async def _ready(pg, *, complete: bool, candidates: list[dict]):
@@ -199,6 +260,85 @@ async def test_complete_row_skips_the_model_until_more(pg, monkeypatch):
     lemmas = {item["lemma"] for item in stored.candidates}
     assert lemmas == {"el perro", "el pie"}
     assert stored.ai_complete is True
+
+
+@pytest.mark.pg
+async def test_completed_more_operation_replays_without_another_model_call(pg, monkeypatch):
+    calls = 0
+
+    async def fake(self, text, native, learning, already=None):
+        nonlocal calls
+        calls += 1
+        return [
+            {"lemma": "el pie" if calls == 1 else "la pata", "pos": "noun", "gloss": "stopa"}
+        ]
+
+    monkeypatch.setattr(LLMService, "lookup_expand", fake)
+    user_id, profile_id, _ = await _ready(
+        pg, complete=True,
+        candidates=[{"lemma": "el perro", "pos": "noun", "gloss": "pies"}],
+    )
+    operation_id = uuid4()
+    async with pg() as session:
+        first = await LexicalService(session).lookup_expand(
+            user_id, profile_id, "pies", more=True, operation_id=operation_id
+        )
+        await session.commit()
+    async with pg() as session:
+        await LexicalService(session).lookup_expand(
+            user_id, profile_id, "pies", more=True, operation_id=uuid4()
+        )
+        await session.commit()
+    async with pg() as session:
+        replay = await LexicalService(session).lookup_expand(
+            user_id, profile_id, "pies", more=True, operation_id=operation_id
+        )
+    assert calls == 2
+    assert replay.candidates == first.candidates
+    assert replay.added == first.added == 1
+
+
+@pytest.mark.pg
+async def test_more_http_retry_reuses_completed_operation(pg, pg_client, monkeypatch):
+    from app.core.security import create_access_token
+
+    calls = 0
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def fake(self, text, native, learning, already=None):
+        nonlocal calls
+        calls += 1
+        started.set()
+        await release.wait()
+        return [{"lemma": "el pie", "pos": "noun", "gloss": "stopa"}]
+
+    monkeypatch.setattr(LLMService, "lookup_expand", fake)
+    user_id, profile_id, _ = await _ready(
+        pg, complete=True,
+        candidates=[{"lemma": "el perro", "pos": "noun", "gloss": "pies"}],
+    )
+    headers = {"Authorization": f"Bearer {create_access_token(user_id)}"}
+    payload = {
+        "text": "pies", "profile_id": str(profile_id), "local_membership": True,
+        "more": True, "operation_id": str(uuid4()),
+    }
+    first = asyncio.create_task(
+        pg_client.post("/api/v1/lookup/expand", headers=headers, json=payload)
+    )
+    await asyncio.wait_for(started.wait(), timeout=5)
+    retry = asyncio.create_task(
+        pg_client.post("/api/v1/lookup/expand", headers=headers, json=payload)
+    )
+    await asyncio.sleep(0)
+    release.set()
+    first_response, retry_response = await asyncio.gather(first, retry)
+    replay = await pg_client.post("/api/v1/lookup/expand", headers=headers, json=payload)
+
+    assert first_response.status_code == retry_response.status_code == replay.status_code == 200
+    assert calls == 1
+    assert first_response.json()["added"] == retry_response.json()["added"] == replay.json()["added"] == 1
+    assert first_response.json()["candidates"] == replay.json()["candidates"]
 
 
 @pytest.mark.pg
