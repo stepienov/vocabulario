@@ -335,7 +335,7 @@
     <string name="import_pick_list">Lista docelowa</string>
     <string name="import_action_start">Importuj</string>
     <string name="add_tab_search">Szukaj</string>
-    <string name="add_tab_import">Import</string>
+    <string name="add_tab_import">Importuj</string>
     <string name="import_analyzing">Trwa analiza słów</string>
     <string name="import_abandon">Porzuć</string>
     <string name="import_confirm">Zatwierdź</string>

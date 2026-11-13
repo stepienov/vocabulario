@@ -830,7 +830,7 @@
     <string name="practice_synonym_paren">(Synonym)</string>
 
     <string name="add_tab_search">Suche</string>
-        <string name="add_tab_import">Import</string>
+    <string name="add_tab_import">Importieren</string>
 <string name="import_analyzing">Wörter werden analysiert</string>
     <string name="import_abandon">Verwerfen</string>
     <string name="import_confirm">Bestätigen</string>

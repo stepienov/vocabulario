@@ -46,8 +46,6 @@ ALLOW_EN_COPY = {
     "sort_lemma_asc",
     "sort_lemma_desc",
     "card_history_diff_ipa",
-    "voice_start",
-    "voice_stop",
     "settings_mode_choice",
     "card_history_actor_system",
     "action_filter_active",
@@ -67,6 +65,13 @@ ALLOW_EN_COPY = {
     "card_history_diff_lemma",
     "pos_interj",
     "pos_construction",
+    # Format-only labels; identical across locales by design.
+    "lookup_reading_learning",
+    "lookup_reading_native",
+    # French spelling matches English for these terms.
+    "settings_associations",
+    "section_associations",
+    "correction_section_associations",
 }
 
 

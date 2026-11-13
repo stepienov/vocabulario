@@ -252,7 +252,7 @@
 
     <string name="list_rename">Renomear</string>
 
-            <string name="list_flashcards">Flashcards</string>
+    <string name="list_flashcards">Cartões</string>
 <string name="list_flashcards_next">Seguinte</string>
     <string name="list_flashcards_add">Adicionar a Aprendendo</string>
     <string name="list_flashcards_reviewed">Revisadas: %1$d</string>
