@@ -600,6 +600,7 @@ async def srs_queue(
                 content=card.content,
                 status=state.status,
                 direction=direction,
+                enrichment_status=card.enrichment_status,
                 card_activity_status=card.card_activity_status,
                 has_content_changes=bool(card.has_content_changes),
             )
@@ -652,6 +653,7 @@ async def srs_queue(
                 content=card.content,
                 status=state.status,
                 direction=direction,
+                enrichment_status=card.enrichment_status,
                 card_activity_status=card.card_activity_status,
                 has_content_changes=bool(card.has_content_changes),
             )

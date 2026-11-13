@@ -925,6 +925,7 @@
     <string name="import_too_many_lines">一度に送信できるのは最大 25 件です。</string>
     <string name="import_daily_used">1日25枚の上限に達しました。</string>
     <string name="import_daily_remaining">今日はあと %1$d / 25 枚インポートできます。</string>
+    <string name="import_quota_exceeded">今日の残りインポート枠を超えています。一部の選択を外して再試行してください。</string>
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 

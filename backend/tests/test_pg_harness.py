@@ -1,25 +1,23 @@
 import asyncio
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
 
+from app.db.base import Base
+from app.db import session as db_session
 from app.models import LearningCard, LookupQueryCache, SrsState
 from tests.pg_factories import auth_headers, create_card, create_profile, create_user
 
 pytestmark = pytest.mark.pg
 
-_inserted_card_id = None
-
 
 async def test_inserted_card_is_visible_in_the_same_test(pg):
-    global _inserted_card_id
     async with pg() as session:
         user = await create_user(session)
         profile = await create_profile(session, user, "pl", "es")
         card = await create_card(session, profile, "prado", "noun")
         await session.commit()
-        _inserted_card_id = card.id
         found = await session.get(LearningCard, card.id)
         state = (
             await session.execute(select(SrsState).where(SrsState.card_id == card.id))
@@ -31,9 +29,21 @@ async def test_inserted_card_is_visible_in_the_same_test(pg):
 
 
 async def test_truncate_removes_the_card_before_the_next_test(pg):
-    assert _inserted_card_id is not None
+    """Samodzielny: wstawia wiersz, robi TRUNCATE jak fixture, sprawdza pustkę."""
     async with pg() as session:
-        found = await session.get(LearningCard, _inserted_card_id)
+        user = await create_user(session)
+        profile = await create_profile(session, user, "pl", "es")
+        card = await create_card(session, profile, "prado-trunc", "noun")
+        await session.commit()
+        card_id = card.id
+        assert await session.get(LearningCard, card_id) is not None
+
+    names = ", ".join(f'"{table.name}"' for table in Base.metadata.sorted_tables)
+    async with db_session.engine.begin() as conn:
+        await conn.execute(text(f"TRUNCATE {names} RESTART IDENTITY CASCADE"))
+
+    async with pg() as session:
+        found = await session.get(LearningCard, card_id)
         count = await session.scalar(select(func.count()).select_from(LearningCard))
     assert found is None
     assert count == 0

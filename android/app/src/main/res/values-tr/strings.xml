@@ -918,6 +918,7 @@
     <string name="import_too_many_lines">Bir seferde en fazla 25 öğe gönderebilirsiniz.</string>
     <string name="import_daily_used">25 kartlık günlük limit doldu.</string>
     <string name="import_daily_remaining">Bugün 25 karttan %1$d tanesini daha içe aktarabilirsiniz.</string>
+    <string name="import_quota_exceeded">Bugünkü kalan içe aktarma kotası için çok fazla kelime — bazılarını kaldırıp yeniden deneyin.</string>
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 

@@ -60,7 +60,16 @@ class LookupCoordinator @Inject constructor(
         nothingFoundNotice = { strings.get(R.string.lookup_nothing_found, it) },
         parent = appScope,
         singleRequest = true,
-        onActiveQuery = { query, more -> appScope.launch { persistence.saveQuery(query, more = more) } },
+        onActiveQuery = { query, more ->
+            appScope.launch {
+                if (query.isNullOrBlank()) {
+                    // Nie kasuj równoległego zapisu kategorii (osobny IO scope).
+                    persistence.clearIfByCategory(byCategory = false)
+                } else {
+                    persistence.saveQuery(query, byCategory = false, more = more)
+                }
+            }
+        },
     )
 
     val state: StateFlow<LookupSessionState> get() = session.state

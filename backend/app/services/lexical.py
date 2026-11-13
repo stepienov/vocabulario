@@ -825,6 +825,26 @@ class LexicalService:
                 lang_pair=pair,
                 suggestions_exhausted=bool(row.more_exhausted),
             )
+        # Replay „Show more” po more_exhausted nie powinien odpalać kolejnego LLM.
+        if more and row is not None and row.more_exhausted:
+            stored = list(row.candidates or [])
+            await self.db.execute(
+                update(LookupQueryCache)
+                .where(LookupQueryCache.id == row.id)
+                .values(
+                    hit_count=LookupQueryCache.hit_count + 1,
+                    updated_at=func.now(),
+                )
+            )
+            await self.db.commit()
+            return LookupOutcome(
+                stored,
+                "db",
+                True,
+                added=0,
+                lang_pair=pair,
+                suggestions_exhausted=True,
+            )
 
         already = self._clean_lookup_rows(
             list(row.candidates or []) if row is not None else [],

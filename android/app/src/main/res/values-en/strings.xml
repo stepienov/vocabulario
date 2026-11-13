@@ -342,6 +342,7 @@
     <string name="import_too_many_lines">You can submit at most 25 items at once.</string>
     <string name="import_daily_used">You imported 25 words today — wait until tomorrow for the next import</string>
     <string name="import_daily_remaining">You can still import %1$d of 25</string>
+    <string name="import_quota_exceeded">Too many words for today’s remaining import quota — deselect some and try again.</string>
     <string name="import_limit_exceeded">For now you can import at most 50 Vocabulario cards.</string>
     <string name="import_status_analyzing">Analyzing %1$s…</string>
     <string name="import_status_importing">Importing words from %1$s</string>

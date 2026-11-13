@@ -42,4 +42,15 @@ class LookupQueryPersistence @Inject constructor(
             }
         }
     }
+
+    /** Czyści zapis tylko gdy aktualny wpis należy do tej ścieżki (normal / category). */
+    suspend fun clearIfByCategory(byCategory: Boolean) {
+        context.lookupQueryDataStore.edit { prefs ->
+            val currentIsCategory = prefs[byCategoryKey] == true
+            if (currentIsCategory != byCategory) return@edit
+            prefs.remove(queryKey)
+            prefs.remove(byCategoryKey)
+            prefs.remove(moreKey)
+        }
+    }
 }

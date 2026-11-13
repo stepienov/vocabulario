@@ -837,6 +837,7 @@
     <string name="import_too_many_lines">一次最多提交 25 项。</string>
     <string name="import_daily_used">今日 25 张卡片限额已用完。</string>
     <string name="import_daily_remaining">今天还可以导入 25 张中的 %1$d 张。</string>
+    <string name="import_quota_exceeded">超出今日剩余导入额度 — 请取消部分选择后重试。</string>
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 

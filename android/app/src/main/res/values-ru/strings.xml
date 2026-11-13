@@ -837,6 +837,7 @@
     <string name="import_too_many_lines">Можно отправить не больше 25 позиций за раз.</string>
     <string name="import_daily_used">Дневной лимит 25 карточек исчерпан.</string>
     <string name="import_daily_remaining">Сегодня можно импортировать ещё %1$d из 25.</string>
+    <string name="import_quota_exceeded">Слишком много слов для оставшейся квоты импорта на сегодня — снимите часть выбора и попробуйте снова.</string>
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 

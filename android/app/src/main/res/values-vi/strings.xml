@@ -916,6 +916,7 @@
     <string name="import_too_many_lines">Bạn chỉ có thể gửi tối đa 25 mục một lần.</string>
     <string name="import_daily_used">Đã hết hạn mức 25 thẻ mỗi ngày.</string>
     <string name="import_daily_remaining">Hôm nay bạn còn có thể nhập %1$d trên 25 thẻ.</string>
+    <string name="import_quota_exceeded">Quá nhiều từ so với hạn mức nhập còn lại hôm nay — bỏ chọn một phần và thử lại.</string>
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 

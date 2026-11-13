@@ -837,6 +837,7 @@
     <string name="import_too_many_lines">आप एक बार में अधिकतम 25 आइटम भेज सकते हैं।</string>
     <string name="import_daily_used">25 कार्डों की दैनिक सीमा समाप्त हो गई है।</string>
     <string name="import_daily_remaining">आज आप 25 में से %1$d और कार्ड आयात कर सकते हैं।</string>
+    <string name="import_quota_exceeded">आज की शेष आयात सीमा से अधिक शब्द — कुछ अनचेक करके फिर कोशिश करें।</string>
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 

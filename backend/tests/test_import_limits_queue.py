@@ -61,4 +61,6 @@ async def test_analyze_import_classify_params(monkeypatch):
 def test_import_errors_carry_codes():
     assert str(ImportTooManyError(26)) == "import_too_many"
     assert str(ImportDailyLimitError(25)) == "import_daily_limit"
+    assert str(ImportDailyLimitError(20, remaining=5)) == "import_quota_exceeded"
+    assert ImportDailyLimitError(20, remaining=5).remaining == 5
     assert ImportTooManyError(26).count == 26

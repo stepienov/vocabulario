@@ -323,9 +323,16 @@ class ImportTooManyError(Exception):
 
 
 class ImportDailyLimitError(Exception):
-    def __init__(self, used: int):
-        super().__init__("import_daily_limit")
+    """Dzienny limit wyczerpany albo wybór przekracza pozostałą pulę."""
+
+    def __init__(self, used: int, *, remaining: int | None = None):
         self.used = used
+        self.remaining = (
+            max(0, DAILY_IMPORT_LIMIT - used) if remaining is None else max(0, remaining)
+        )
+        # Pełny dzień vs „zaznaczono za dużo przy jeszcze wolnych slotach”.
+        code = "import_daily_limit" if self.remaining <= 0 else "import_quota_exceeded"
+        super().__init__(code)
 
 
 def _position_count(*, kind: str, notes: list[list[str]], raw_text: str | None) -> int:
@@ -522,8 +529,9 @@ async def request_commit(db: AsyncSession, job: ImportJob, item_ids: list[UUID] 
     if not ready:
         raise ValueError("import_job_nothing_to_commit")
     used = await daily_import_used(db, job.profile_id)
-    if len(ready) > DAILY_IMPORT_LIMIT - used:
-        raise ImportDailyLimitError(used)
+    remaining = DAILY_IMPORT_LIMIT - used
+    if len(ready) > remaining:
+        raise ImportDailyLimitError(used, remaining=remaining)
     for i in items:
         if i.verdict == "ready" and i not in ready:
             i.verdict = "failed"

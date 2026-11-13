@@ -91,7 +91,7 @@ class CardSectionWaitingTest {
                 stillPolling = true,
             ),
         )
-        assertTrue(
+        assertFalse(
             CardSectionWaiting.inflection(
                 hasInflection = false,
                 status = EnrichmentStatus.LEARNABLE,
@@ -125,11 +125,19 @@ class CardSectionWaitingTest {
 
     @Test
     fun relatedSpinnerWithoutPollingWhenRelatedPending() {
-        assertTrue(
+        assertFalse(
             CardSectionWaiting.related(
                 isEmpty = true,
                 status = EnrichmentStatus.LEARNABLE,
                 stillPolling = false,
+                relatedPending = true,
+            ),
+        )
+        assertTrue(
+            CardSectionWaiting.related(
+                isEmpty = true,
+                status = EnrichmentStatus.LEARNABLE,
+                stillPolling = true,
                 relatedPending = true,
             ),
         )

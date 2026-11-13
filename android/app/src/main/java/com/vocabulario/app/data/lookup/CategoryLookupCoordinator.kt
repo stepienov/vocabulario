@@ -50,7 +50,7 @@ class CategoryLookupCoordinator @Inject constructor(
 
     fun clear() {
         session.clear()
-        appScope.launch { persistence.saveQuery(null, byCategory = false) }
+        appScope.launch { persistence.clearIfByCategory(byCategory = true) }
     }
 
     fun retryPending() = session.retryPending()

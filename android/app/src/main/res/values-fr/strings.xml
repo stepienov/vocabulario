@@ -836,6 +836,7 @@
     <string name="import_too_many_lines">Vous pouvez soumettre au maximum 25 éléments à la fois.</string>
     <string name="import_daily_used">La limite quotidienne de 25 cartes est atteinte.</string>
     <string name="import_daily_remaining">Vous pouvez encore importer %1$d cartes sur 25 aujourd’hui.</string>
+    <string name="import_quota_exceeded">Trop de mots pour le quota d’import restant aujourd’hui — désélectionnez-en et réessayez.</string>
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 

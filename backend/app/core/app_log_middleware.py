@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import time
+import traceback as tb_mod
 from uuid import UUID, uuid4
 
 from jose import JWTError
@@ -114,9 +115,14 @@ class AppLogMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         except Exception as exc:
             duration_ms = int((time.perf_counter() - started) * 1000)
-            # Domyślny argument wiąże exc teraz — po wyjściu z except Python czyści nazwę.
+            # Wiążemy exc + traceback teraz — po wyjściu z except Python czyści nazwę,
+            # a format_exc() w tle daje NoneType: None.
+            captured = exc
+            captured_tb = "".join(
+                tb_mod.format_exception(type(exc), exc, exc.__traceback__)
+            )
             spawn_background(
-                lambda exc=exc: log_event(
+                lambda: log_event(
                     level="error",
                     category=category_for_path(path),
                     event="http_unhandled",
@@ -125,7 +131,8 @@ class AppLogMiddleware(BaseHTTPMiddleware):
                     http_path=path,
                     duration_ms=duration_ms,
                     message=f"{method} {path} crashed",
-                    exc=exc,
+                    exc=captured,
+                    traceback=captured_tb,
                 ),
                 name="app_log_http",
             )

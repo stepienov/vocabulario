@@ -359,6 +359,7 @@ data class SrsQueueItem(
     val content: kotlinx.serialization.json.JsonObject,
     val status: String,
     val direction: String? = null,
+    val enrichment_status: String? = null,
     val card_activity_status: String? = null,
     val has_content_changes: Boolean = false,
 )

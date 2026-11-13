@@ -582,6 +582,7 @@ class SrsQueueItem(BaseModel):
     content: dict
     status: str
     direction: str | None = None
+    enrichment_status: str | None = None
     card_activity_status: str | None = None
     has_content_changes: bool = False
 

@@ -342,6 +342,7 @@
     <string name="import_too_many_lines">Jednorazowo możesz podać najwyżej 25 pozycji.</string>
     <string name="import_daily_used">Zaimportowałeś dziś 25 słów, poczekaj z kolejnym importem do jutra</string>
     <string name="import_daily_remaining">Możesz zaimportować jeszcze %1$d z 25</string>
+    <string name="import_quota_exceeded">Za dużo słów względem pozostałego limitu importu — odznacz część i spróbuj ponownie.</string>
     <string name="import_limit_exceeded">Na razie możesz zaimportować maksymalnie 50 kart Vocabulario.</string>
     <string name="import_status_analyzing">Analizuję %1$s…</string>
     <string name="import_status_importing">Import słówek z pliku %1$s</string>

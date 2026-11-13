@@ -837,6 +837,7 @@
     <string name="import_too_many_lines">Você pode enviar no máximo 25 itens de uma vez.</string>
     <string name="import_daily_used">O limite diário de 25 cartões está esgotado.</string>
     <string name="import_daily_remaining">Hoje você pode importar mais %1$d de 25 cartões.</string>
+    <string name="import_quota_exceeded">Palavras demais para a cota restante de importação de hoje — desmarque algumas e tente de novo.</string>
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 

@@ -196,7 +196,7 @@ class PracticeViewModel @Inject constructor(
                     newQueue.map {
                         EnrichmentPoller.Watch(
                             id = it.card_id,
-                            status = it.status,
+                            status = it.enrichment_status,
                             activity = it.card_activity_status,
                         )
                     },
@@ -224,7 +224,7 @@ class PracticeViewModel @Inject constructor(
             listOf(
                 EnrichmentPoller.Watch(
                     id = item.card_id,
-                    status = item.status,
+                    status = item.enrichment_status,
                     activity = item.card_activity_status,
                 ),
             ),
@@ -238,11 +238,25 @@ class PracticeViewModel @Inject constructor(
                 if (current.card_id != updated.id) return@collect
                 val merged = current.copy(
                     content = updated.content,
-                    status = updated.enrichment_status ?: current.status,
+                    enrichment_status = updated.enrichment_status ?: current.enrichment_status,
                     // null = idle po zakończeniu korekty — nie trzymaj starego activity.
                     card_activity_status = updated.card_activity_status,
                     has_content_changes = updated.has_content_changes,
                 )
+                if (
+                    updated.enrichment_status != null ||
+                    updated.card_activity_status != current.card_activity_status
+                ) {
+                    enrichmentPoller.watch(
+                        listOf(
+                            EnrichmentPoller.Watch(
+                                id = updated.id,
+                                status = updated.enrichment_status,
+                                activity = updated.card_activity_status,
+                            ),
+                        ),
+                    )
+                }
                 _state.value = _state.value.copy(
                     queue = _state.value.queue.toMutableList().also { it[idx] = merged },
                 )

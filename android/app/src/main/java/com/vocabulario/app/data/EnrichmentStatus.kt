@@ -77,16 +77,16 @@ object CardSectionWaiting {
         if (relatedPending == false) return false
         val s = status?.trim()?.lowercase().orEmpty()
         if (relatedPending == true) {
-            return stillPolling || EnrichmentStatus.needsPoll(s)
+            // Po wyczerpaniu odpytywania nie trzymaj wiecznego kółka.
+            return stillPolling
         }
         if (!stillPolling) return false
         return s == EnrichmentStatus.PENDING || s == EnrichmentStatus.PREPARING
     }
 
     /**
-     * Odmiana: nagłówek z kółkiem, gdy jeszcze jej nie ma, a karta nie jest gotowa
-     * i spodziewamy się odmiany (czasownik / show_conjugation). Nie zależy wyłącznie
-     * od stillPolling — inaczej przy learnable znika cały sektor „Odmiana”.
+     * Odmiana: nagłówek z kółkiem tylko gdy jeszcze odpytujemy.
+     * Po limicie polla sekcja bez conjugacji znika (pusto bez warunku → ukryte).
      */
     fun inflection(
         hasInflection: Boolean,
@@ -103,9 +103,7 @@ object CardSectionWaiting {
             return false
         }
         if (!EnrichmentStatus.needsPoll(s)) return false
-        return stillPolling || s == EnrichmentStatus.LEARNABLE ||
-            s == EnrichmentStatus.PENDING ||
-            s == EnrichmentStatus.PREPARING
+        return stillPolling
     }
 }
 

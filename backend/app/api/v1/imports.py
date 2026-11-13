@@ -195,6 +195,13 @@ async def create_import_job(
             f"At most 25 items per import ({exc.count})",
         ) from exc
     except ImportDailyLimitError as exc:
+        code = str(exc)
+        if code == "import_quota_exceeded":
+            raise api_error(
+                400,
+                code,
+                f"Only {exc.remaining} import slots left today",
+            ) from exc
         raise api_error(
             400,
             "import_daily_limit",
@@ -245,6 +252,13 @@ async def create_import_job_file(
             f"At most 25 items per import ({exc.count})",
         ) from exc
     except ImportDailyLimitError as exc:
+        code = str(exc)
+        if code == "import_quota_exceeded":
+            raise api_error(
+                400,
+                code,
+                f"Only {exc.remaining} import slots left today",
+            ) from exc
         raise api_error(
             400,
             "import_daily_limit",
@@ -377,6 +391,13 @@ async def commit_import_job(
     try:
         job = await request_commit(db, job, (body.item_ids if body else None))
     except ImportDailyLimitError as exc:
+        code = str(exc)
+        if code == "import_quota_exceeded":
+            raise api_error(
+                400,
+                code,
+                f"Only {exc.remaining} import slots left today",
+            ) from exc
         raise api_error(
             400,
             "import_daily_limit",
