@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
 import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.EnrichmentPoller
-import com.vocabulario.app.data.EnrichmentStatus
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.ChoiceOption
 import com.vocabulario.app.data.api.SrsQueueItem
@@ -197,7 +196,7 @@ class PracticeViewModel @Inject constructor(
                     newQueue.map {
                         EnrichmentPoller.Watch(
                             id = it.card_id,
-                            status = EnrichmentStatus.LEARNABLE,
+                            status = it.status,
                             activity = it.card_activity_status,
                         )
                     },
@@ -225,7 +224,7 @@ class PracticeViewModel @Inject constructor(
             listOf(
                 EnrichmentPoller.Watch(
                     id = item.card_id,
-                    status = EnrichmentStatus.LEARNABLE,
+                    status = item.status,
                     activity = item.card_activity_status,
                 ),
             ),
@@ -239,7 +238,9 @@ class PracticeViewModel @Inject constructor(
                 if (current.card_id != updated.id) return@collect
                 val merged = current.copy(
                     content = updated.content,
-                    card_activity_status = updated.card_activity_status ?: current.card_activity_status,
+                    status = updated.enrichment_status ?: current.status,
+                    // null = idle po zakończeniu korekty — nie trzymaj starego activity.
+                    card_activity_status = updated.card_activity_status,
                     has_content_changes = updated.has_content_changes,
                 )
                 _state.value = _state.value.copy(

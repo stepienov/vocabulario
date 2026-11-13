@@ -28,8 +28,20 @@ class LookupPollWorker @AssistedInject constructor(
         if (!repository.hasSyncableSession()) return Result.success()
         val query = persistence.loadQuery() ?: return Result.success()
         if (persistence.loadByCategory()) return Result.success()
+        val more = persistence.loadMore()
+        // Foreground mógł już domknąć „Show more” i wyczyścić flagę — nie odpalać
+        // kolejnego płatnego expand (more omija cache ai_complete).
+        if (more) {
+            val state = lookupCoordinator.state.value
+            val sameQuery = state.query.equals(query, ignoreCase = true)
+            if (!state.loadingMore && sameQuery && state.candidates.isNotEmpty()) {
+                return Result.success()
+            }
+            if (persistence.loadQuery() == null) return Result.success()
+        }
         return try {
-            val expanded = repository.lookupExpand(query, more = persistence.loadMore())
+            if (persistence.loadQuery() == null) return Result.success()
+            val expanded = repository.lookupExpand(query, more = more && persistence.loadMore())
             lookupCoordinator.acceptServerResult(query, expanded)
             Result.success()
         } catch (e: CancellationException) {

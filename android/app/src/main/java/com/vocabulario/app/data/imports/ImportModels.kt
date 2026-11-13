@@ -120,8 +120,13 @@ fun ImportJobProgressResponse.toState(
     }
     val nextItems = if (includeItems && items.isNotEmpty()) items else previous.items
     val readyIds = nextItems.filter { it.verdict == "ready" }.map { it.id }.toSet()
+    val enteringReview =
+        previous.status != ImportStatus.Review && parsed == ImportStatus.Review
     val nextSelected = when {
-        previous.status != ImportStatus.Review && parsed == ImportStatus.Review -> readyIds
+        // Pierwsze wejście w Review — zaznacz wszystkie ready.
+        enteringReview -> readyIds
+        // W Review nie narzucaj ponownie zaznaczenia (także pustego po odznaczeniu wszystkiego).
+        parsed == ImportStatus.Review -> previous.selectedItemIds.intersect(readyIds)
         previous.selectedItemIds.isEmpty() && readyIds.isNotEmpty() -> readyIds
         else -> previous.selectedItemIds.intersect(readyIds).ifEmpty { readyIds }
     }

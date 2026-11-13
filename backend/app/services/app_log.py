@@ -165,7 +165,10 @@ async def log_event(
     if exc is not None:
         error_type = error_type or type(exc).__name__
         error_message = error_message or str(exc)
-        traceback = traceback or tb_mod.format_exc()
+        # format_exc() poza blokiem except daje puste / "NoneType: None".
+        traceback = traceback or "".join(
+            tb_mod.format_exception(type(exc), exc, exc.__traceback__)
+        )
         if status == "ok":
             status = "error"
         if level == "info":

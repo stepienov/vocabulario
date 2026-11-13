@@ -114,8 +114,9 @@ class AppLogMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         except Exception as exc:
             duration_ms = int((time.perf_counter() - started) * 1000)
+            # Domyślny argument wiąże exc teraz — po wyjściu z except Python czyści nazwę.
             spawn_background(
-                lambda: log_event(
+                lambda exc=exc: log_event(
                     level="error",
                     category=category_for_path(path),
                     event="http_unhandled",

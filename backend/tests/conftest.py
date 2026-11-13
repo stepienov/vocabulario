@@ -96,7 +96,6 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 async def _prepare_engine():
     global _schema_ready
-    from sqlalchemy.ext.asyncio import async_sessionmaker
 
     from app import models  # noqa: F401
     from app.core.config import get_settings
@@ -105,9 +104,11 @@ async def _prepare_engine():
     from app.db.migrations import apply_schema
 
     engine = create_async_engine(get_settings().database_url, echo=False)
-    factory = async_sessionmaker(engine, expire_on_commit=False)
+    # Rebind istniejącej fabryki — moduły typu card_jobs trzymają import
+    # `from app.db.session import async_session_factory` z czasu załadowania.
     db_session.engine = engine
-    db_session.async_session_factory = factory
+    db_session.async_session_factory.configure(bind=engine)
+    factory = db_session.async_session_factory
     if not _schema_ready:
         await apply_schema(engine, Base.metadata)
         _schema_ready = True

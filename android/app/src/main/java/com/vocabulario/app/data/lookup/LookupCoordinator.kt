@@ -370,7 +370,15 @@ internal class LookupSession(
                 it.copy(
                     candidates = cached.candidates,
                     expanding = !cached.ai_complete,
+                    // Worker / cache mogą domknąć „Show more” zanim foreground job skończy HTTP.
+                    loadingMore = if (cached.ai_complete) false else it.loadingMore,
+                    suggestionsExhausted = if (cached.ai_complete) {
+                        cached.suggestions_exhausted
+                    } else {
+                        it.suggestionsExhausted
+                    },
                     error = null,
+                    notice = null,
                 )
             }
             if (cached.ai_complete) {
@@ -380,7 +388,14 @@ internal class LookupSession(
                 false
             }
         } else if (cached.ai_complete) {
-            publish(gen) { it.copy(expanding = false, error = null) }
+            publish(gen) {
+                it.copy(
+                    expanding = false,
+                    loadingMore = false,
+                    suggestionsExhausted = cached.suggestions_exhausted || it.suggestionsExhausted,
+                    error = null,
+                )
+            }
             finishActive(gen)
             true
         } else {

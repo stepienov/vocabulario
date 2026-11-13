@@ -186,7 +186,7 @@ class LookupRequest(BaseModel):
     profile_id: UUID
     local_membership: bool = False
     more: bool = False
-    round: int | None = None
+    round: int | None = Field(default=None, ge=1)
 
 
 class LookupCandidate(BaseModel):
