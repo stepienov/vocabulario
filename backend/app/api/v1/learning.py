@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, normalize_text
+from app.core.deps import get_current_user, get_current_user_id, lang_pair_key, normalize_text
 from app.core.http_errors import api_error
 from app.db.session import get_db
 from app.models import CardCorrection, CardHistoryEvent, LanguageProfile, LearningCard, LexicalEntry, ReviewLog, SrsState, User, UserSettings, WordList
@@ -59,7 +59,7 @@ from app.services.card_jobs import (
     STATUS_PREPARING,
     STUDYABLE_STATUSES,
     build_pending_content,
-    hydrate_from_lexical_cache,
+    _claimed,
     request_manual_enrichment_retry,
     spawn_enrich,
 )
@@ -69,16 +69,21 @@ from app.services.import_classify import resolve_import_vocabulario_entries
 from app.services.import_package import ImportPackageError, load_raw_import, load_text_import
 from app.services.import_urls import ImportUrlError, detect_import_url, fetch_words_from_url
 from app.services.lexical import LexicalService, LookupOutcome
-from app.services.lookup_events import find_lookup_event_for_card, record_lookup_event
+from app.services.app_log import request_id_var
+from app.services.lookup_events import (
+    find_lookup_event_for_card,
+    record_lookup_event,
+    record_lookup_event_background,
+)
 from app.services.lookup_candidates import has_confident_match
 from app.services.similar_words import ensure_similar_words
 from app.services.srs import apply_review
-from app.services.word_families import attach_card_to_word_family, backfill_card_word_family
+from app.services.word_families import backfill_card_word_family
 from app.services.word_lists import (
     RESERVED_LIST_NAMES,
     ensure_pending_inbox_list,
     ensure_system_list,
-    find_card_anywhere,
+    find_card_key_anywhere,
     list_word_lists,
 )
 from app.services.word_persistence import words_persistence_enabled
@@ -153,43 +158,76 @@ async def lookup(
     return _lookup_http(outcome, body.text)
 
 
+def _schedule_cached_history(user_id: UUID, body: LookupRequest, outcome: LookupOutcome) -> None:
+    record_lookup_event_background(
+        user_id=user_id,
+        profile_id=body.profile_id,
+        lang_pair=outcome.lang_pair,
+        query=body.text,
+        source=outcome.source or "cached",
+        candidates=outcome.candidates,
+        ai_complete=outcome.ai_complete,
+        cache_row_id=outcome.cache_row_id,
+        request_id=request_id_var.get(),
+    )
+
+
 @router.post("/lookup/cached", response_model=LookupResponse)
 async def lookup_cached(
     body: LookupRequest,
-    user: User = Depends(get_current_user),
+    user_id: UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     service = LexicalService(db)
+    if body.local_membership:
+        try:
+            fast = await service.lookup_cached_fast(user_id, body.profile_id, body.text)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        if fast is not None:
+            _schedule_cached_history(user_id, body, fast)
+            return _lookup_http(fast, body.text)
+    user = (
+        await db.execute(select(User).where(User.id == user_id))
+    ).scalar_one_or_none()
+    if user is None:
+        raise api_error(401, "user_not_found", "User not found")
     try:
-        outcome = await service.lookup_cached(user, body.profile_id, body.text)
+        outcome = await service.lookup_cached(
+            user,
+            body.profile_id,
+            body.text,
+            annotate=not body.local_membership,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    await record_lookup_event(
-        db,
-        user_id=user.id,
-        profile_id=body.profile_id,
-        query=body.text,
-        source=outcome.source or "cached",
-        candidate_count=len(outcome.candidates),
-        candidates=outcome.candidates,
-        ai_complete=outcome.ai_complete,
-    )
-    await db.commit()
+    if outcome.persist:
+        await db.commit()
+    _schedule_cached_history(user_id, body, outcome)
     return _lookup_http(outcome, body.text)
 
 
 @router.post("/lookup/expand", response_model=LookupResponse)
 async def lookup_expand(
     body: LookupRequest,
-    user: User = Depends(get_current_user),
+    user_id: UUID = Depends(get_current_user_id),
 ):
     """Expand jest odpięty od HTTP — zabicie apki nie kasuje LLM ani cache."""
+    from app.db import session as db_session
     from app.services.lookup_jobs import await_lookup_expand
 
     try:
-        outcome = await await_lookup_expand(user.id, body.profile_id, body.text)
+        outcome = await await_lookup_expand(
+            user_id, body.profile_id, body.text, more=body.more,
+            operation_id=body.operation_id if body.more else None,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if not body.local_membership:
+        async with db_session.async_session_factory() as db:
+            outcome = await LexicalService(db).annotate_outcome(
+                user_id, body.profile_id, outcome
+            )
     return _lookup_http(outcome, body.text)
 
 
@@ -222,15 +260,39 @@ async def lookup_category_cached(
 async def lookup_category_expand(
     body: LookupRequest,
     user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
+    from app.services.lexical import AssocRoundNotReady
     from app.services.lookup_category_jobs import await_lookup_category_expand
 
+    effective = body.round or 1
     try:
         outcome = await await_lookup_category_expand(
-            user.id, body.profile_id, body.text
+            user.id, body.profile_id, body.text, effective
         )
+    except AssocRoundNotReady as exc:
+        raise api_error(409, "assoc_round_not_ready", "Previous association round is not ready") from exc
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if body.round is None:
+        service = LexicalService(db)
+        profile = await service.get_profile(user.id, body.profile_id)
+        pair = lang_pair_key(profile.app_lang, profile.learning_lang)
+        from app.services.lookup_candidates import letters_of_query
+
+        word = await service._fetch_query_cache(
+            pair, service._assoc_key(letters_of_query(body.text))
+        )
+        head = list(word.candidates or [])[:1] if word is not None else []
+        outcome = LookupOutcome(
+            head + list(outcome.candidates),
+            outcome.source,
+            outcome.ai_complete,
+            added=outcome.added,
+            cache_row_id=outcome.cache_row_id,
+            lang_pair=outcome.lang_pair,
+            headword_meaning=outcome.headword_meaning,
+        )
     return _lookup_http(outcome, body.text)
 
 
@@ -246,6 +308,8 @@ def _lookup_http(outcome: LookupOutcome, text: str) -> LookupResponse:
             list_id=UUID(c["list_id"]) if c.get("list_id") else None,
             list_name=c.get("list_name"),
             enrichment_status=c.get("enrichment_status"),
+            reading=c.get("reading"),
+            typed_as=c.get("typed_as"),
         )
         for c in outcome.candidates
     ]
@@ -254,6 +318,9 @@ def _lookup_http(outcome: LookupOutcome, text: str) -> LookupResponse:
         source=outcome.source,
         confident=has_confident_match(outcome.candidates, text),
         ai_complete=outcome.ai_complete,
+        added=outcome.added,
+        suggestions_exhausted=outcome.suggestions_exhausted,
+        headword_meaning=outcome.headword_meaning,
     )
 
 
@@ -388,8 +455,8 @@ async def create_card(
             persisted=False,
         )
 
-    existing = await find_card_anywhere(db, user.id, profile.id, body.lemma, body.pos)
-    if existing is not None:
+    existing_id = await find_card_key_anywhere(db, user.id, profile.id, body.lemma, body.pos)
+    if existing_id is not None:
         raise api_error(409, "word_already_on_list", "This word is already on the list")
 
     card = LearningCard(
@@ -422,9 +489,7 @@ async def create_card(
     if matched is not None:
         card.lookup_event_id = matched.id
     db.add(SrsState(card_id=card.id, scope="main", status="new"))
-    await hydrate_from_lexical_cache(db, card, profile)
     source = await _owned_source_card(db, user.id, profile.id, body.source_card_id)
-    await attach_card_to_word_family(db, profile, card, source_card=source)
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -433,7 +498,7 @@ async def create_card(
     await db.refresh(card)
 
     if card.enrichment_status == STATUS_PENDING:
-        spawn_enrich(card.id)
+        spawn_enrich(card.id, source_card_id=source.id if source else None)
     return card
 
 
@@ -536,6 +601,7 @@ async def srs_queue(
                 content=card.content,
                 status=state.status,
                 direction=direction,
+                enrichment_status=card.enrichment_status,
                 card_activity_status=card.card_activity_status,
                 has_content_changes=bool(card.has_content_changes),
             )
@@ -588,6 +654,7 @@ async def srs_queue(
                 content=card.content,
                 status=state.status,
                 direction=direction,
+                enrichment_status=card.enrichment_status,
                 card_activity_status=card.card_activity_status,
                 has_content_changes=bool(card.has_content_changes),
             )
@@ -1056,8 +1123,13 @@ async def delete_card(
         # Idempotent: already deleted → nothing to do (offline retry safe).
         return
     # Soft-delete = tombstone propagated via /sync/pull deleted_card_ids.
+    import_profile_id = card.profile_id if card.import_job_id is not None else None
     card.deleted_at = datetime.now(UTC)
     await db.commit()
+    if import_profile_id is not None:
+        from app.services.import_jobs import spawn_next_import_card
+
+        spawn_next_import_card(import_profile_id)
 
 
 @router.post("/cards/{card_id}/move", response_model=CardResponse)
@@ -1129,6 +1201,7 @@ def _card_response(card: LearningCard, srs: SrsState | None = None) -> CardRespo
         content_review_status=card.content_review_status,
         card_activity_status=card.card_activity_status,
         has_content_changes=bool(card.has_content_changes),
+        enrichment_active=card.id in _claimed,
     )
 
 
@@ -1224,8 +1297,8 @@ async def add_word_to_list(
             if resolved.get("lexical_entry_id") and lexical_entry_id is None:
                 lexical_entry_id = UUID(resolved["lexical_entry_id"])
 
-    existing = await find_card_anywhere(db, user.id, profile.id, lemma, pos)
-    if existing is not None:
+    existing_id = await find_card_key_anywhere(db, user.id, profile.id, lemma, pos)
+    if existing_id is not None:
         raise api_error(409, "word_already_on_list", "This word is already on the list")
 
     if wl.is_system:
@@ -1274,9 +1347,7 @@ async def add_word_to_list(
         db.add(card)
         await db.flush()
 
-    await hydrate_from_lexical_cache(db, card, profile)
     source = await _owned_source_card(db, user.id, profile.id, body.source_card_id)
-    await attach_card_to_word_family(db, profile, card, source_card=source)
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -1284,7 +1355,7 @@ async def add_word_to_list(
         raise api_error(409, "word_already_on_list", "This word is already on the list") from exc
     await db.refresh(card)
     if card.enrichment_status == STATUS_PENDING:
-        spawn_enrich(card.id)
+        spawn_enrich(card.id, source_card_id=source.id if source else None)
     return card
 
 

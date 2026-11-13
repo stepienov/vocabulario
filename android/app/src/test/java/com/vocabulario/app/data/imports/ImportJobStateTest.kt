@@ -1,6 +1,7 @@
 package com.vocabulario.app.data.imports
 
 import com.vocabulario.app.data.api.ImportJobItemResponse
+import com.vocabulario.app.data.api.ImportJobProgressResponse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -72,6 +73,43 @@ class ImportJobStateTest {
         assertEquals(ImportStatus.Analyzing, parseImportStatus("analyzing"))
         assertEquals(ImportStatus.Review, parseImportStatus("review"))
         assertEquals(ImportStatus.Cancelled, parseImportStatus("cancelled"))
+    }
+
+    @Test
+    fun toState_preserves_empty_selection_while_in_review() {
+        val ready = listOf(
+            item(0, "ready", "casa", "casa"),
+            item(1, "ready", "perro", "perro"),
+        )
+        val inReview = ImportJobProgressResponse(
+            status = "review",
+            job_id = "job-1",
+            items = ready,
+            ready_count = 2,
+        ).toState(
+            previous = ImportJobState(
+                status = ImportStatus.Review,
+                jobId = "job-1",
+                selectedItemIds = emptySet(),
+                items = ready,
+            ),
+        )
+        assertTrue(inReview.selectedItemIds.isEmpty())
+
+        val entering = ImportJobProgressResponse(
+            status = "review",
+            job_id = "job-1",
+            items = ready,
+            ready_count = 2,
+        ).toState(
+            previous = ImportJobState(
+                status = ImportStatus.Analyzing,
+                jobId = "job-1",
+                selectedItemIds = emptySet(),
+                items = ready,
+            ),
+        )
+        assertEquals(ready.map { it.id }.toSet(), entering.selectedItemIds)
     }
 
     @Test

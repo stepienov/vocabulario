@@ -68,7 +68,7 @@ fun ImportStatusPanel(
 ) {
     val scheme = MaterialTheme.colorScheme
     val source = localizedImportSource(state.sourceName).orEmpty()
-    val counted = state.stage in setOf("dedup", "write")
+    val writing = state.status == ImportStatus.Committing || state.stage == "write"
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -79,7 +79,11 @@ fun ImportStatusPanel(
     ) {
         CircularProgressIndicator(color = scheme.primary, strokeWidth = 3.dp)
         Text(
-            text = importStageTitle(state.stage, state.status),
+            text = if (writing) {
+                stringResource(R.string.import_stage_write)
+            } else {
+                stringResource(R.string.import_analyzing)
+            },
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = scheme.onSurface,
@@ -87,41 +91,7 @@ fun ImportStatusPanel(
         if (source.isNotBlank()) {
             Text(source, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
         }
-        if (counted && state.total > 0) {
-            LinearProgressIndicator(
-                progress = { (state.processed.toFloat() / state.total).coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text(
-                stringResource(R.string.import_progress_count, state.processed, state.total),
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
-            )
-        } else {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        }
-        state.currentLabel?.takeIf { it.isNotBlank() }?.let { label ->
-            Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-        }
-        if (state.status == ImportStatus.Committing && state.currentAttempt > 1) {
-            Text(
-                stringResource(R.string.import_progress_attempt, state.currentAttempt),
-                style = MaterialTheme.typography.bodySmall,
-                color = scheme.onSurfaceVariant,
-            )
-        }
-        if (state.readyCount + state.duplicateCount + state.failedCount > 0) {
-            Text(
-                stringResource(
-                    R.string.import_progress_tally,
-                    state.readyCount,
-                    state.duplicateCount,
-                    state.failedCount,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = scheme.onSurfaceVariant,
-            )
-        }
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         Button(
             onClick = onAbort,
             modifier = Modifier
@@ -134,7 +104,7 @@ fun ImportStatusPanel(
                 contentColor = scheme.onError,
             ),
         ) {
-            Text(stringResource(R.string.action_abort), fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.import_abandon), fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -188,52 +158,69 @@ fun ImportReviewAccordion(
     onAbort: () -> Unit,
     onCommit: () -> Unit,
     onCopyErrors: () -> Unit,
+    onToggleReady: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val clipboard = LocalClipboardManager.current
     val scheme = MaterialTheme.colorScheme
     Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(0.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         state.notice?.let {
-            Text(it, color = scheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+            Text(it, color = scheme.onSurfaceVariant)
         }
-        AccordionSection(
-            title = stringResource(R.string.import_section_ready, state.readyCount),
-            expanded = state.expandedSection == "ready",
-            tag = TestTags.IMPORT_ACCORDION_READY,
-            items = state.readyItems,
-            emptyLabel = if (state.readyCount > 0 && state.readyItems.isEmpty()) {
-                stringResource(R.string.import_review_loading)
-            } else {
-                null
-            },
-            onClick = { onExpand("ready") },
-        )
-        AccordionSection(
-            title = stringResource(R.string.import_section_duplicates, state.duplicateCount),
-            expanded = state.expandedSection == "duplicate",
-            tag = TestTags.IMPORT_ACCORDION_DUP,
-            items = state.duplicateItems,
-            onClick = { onExpand("duplicate") },
-        )
-        AccordionSection(
-            title = stringResource(R.string.import_section_failed, state.failedCount),
-            expanded = state.expandedSection == "failed",
-            tag = TestTags.IMPORT_ACCORDION_FAIL,
-            items = state.failedItems,
-            onClick = { onExpand("failed") },
-            onCopy = if (state.failedCount > 0) {
-                {
-                    clipboard.setText(AnnotatedString(state.errorClipboard))
-                    onCopyErrors()
-                }
-            } else {
-                null
-            },
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        if (state.failedItems.isNotEmpty()) {
+            Text(
+                stringResource(R.string.import_section_failed, state.failedCount),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            state.failedItems.forEach { item ->
+                ImportJobItemRow(item)
+            }
+        }
+        if (state.duplicateItems.isNotEmpty()) {
+            Text(
+                stringResource(R.string.import_section_duplicates, state.duplicateCount),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            state.duplicateItems.forEach { item ->
+                ImportJobItemRow(item)
+            }
+        }
+        if (state.readyItems.isNotEmpty()) {
+            Text(
+                stringResource(R.string.import_section_ready, state.readyCount),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            state.readyItems.forEach { item ->
+                ReadyImportItemRow(
+                    item = item,
+                    checked = item.id in state.selectedItemIds,
+                    onToggle = { onToggleReady(item.id) },
+                )
+            }
+        } else if (state.readyCount > 0) {
+            Text(
+                stringResource(R.string.import_review_loading),
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant,
+            )
+        }
+        if (state.failedCount > 0) {
+            TextButton(onClick = {
+                clipboard.setText(AnnotatedString(state.errorClipboard))
+                onCopyErrors()
+            }) {
+                Text(stringResource(R.string.import_copy_errors))
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -246,18 +233,58 @@ fun ImportReviewAccordion(
                     .testTag(TestTags.BTN_IMPORT_CANCEL),
                 shape = AppButtonShape,
             ) {
-                Text(stringResource(R.string.action_cancel))
+                Text(stringResource(R.string.import_abandon))
             }
             Button(
                 onClick = onCommit,
-                enabled = state.readyCount > 0,
+                enabled = state.canConfirmSelected,
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp)
                     .testTag(TestTags.BTN_IMPORT_CONFIRM),
                 shape = AppButtonShape,
             ) {
-                Text(stringResource(R.string.import_action_start) + " ${state.readyCount}")
+                Text(stringResource(R.string.import_confirm) + " ${state.selectedReadyCount}")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReadyImportItemRow(
+    item: ImportJobItemResponse,
+    checked: Boolean,
+    onToggle: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val word = item.lemma?.takeIf { it.isNotBlank() }
+        ?: item.input_label.takeIf { it.isNotBlank() }
+        ?: stringResource(R.string.import_item_untitled)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        androidx.compose.material3.Checkbox(
+            checked = checked,
+            onCheckedChange = { onToggle() },
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                word,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = LocalVocabExtraColors.current.importLemma,
+            )
+            item.gloss?.takeIf { it.isNotBlank() }?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -354,11 +381,12 @@ private fun ImportJobItemRow(item: ImportJobItemResponse) {
     }
     val detail = when (item.verdict) {
         "failed" -> reasonLabel(item.reason_code)
-        "duplicate" -> if (item.reason_code == "in_file_duplicate") {
-            null
-        } else {
-            reasonLabel(item.reason_code)
-        }
+        "duplicate" -> item.list_name?.takeIf { it.isNotBlank() }
+            ?: if (item.reason_code == "in_file_duplicate") {
+                null
+            } else {
+                reasonLabel(item.reason_code)
+            }
         else -> item.gloss?.takeIf { it.isNotBlank() }
     }
     Column(modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp)) {

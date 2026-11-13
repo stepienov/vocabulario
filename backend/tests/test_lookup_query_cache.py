@@ -15,14 +15,15 @@ def test_normalize_lookup_query_folds_diacritics_and_punct():
     assert normalize_lookup_query("Łódź") == normalize_lookup_query("lodz")
 
 
-def test_append_never_overwrites_existing_gloss():
+def test_append_keeps_a_different_translation_of_the_same_word():
     existing = [{"lemma": "el libro", "pos": "noun", "gloss": "książka"}]
     incoming = [{"lemma": "el libro", "pos": "noun", "gloss": "pozycja (inna glosa)"}]
     merged, added = append_lookup_candidates(existing, incoming, learning_lang="es")
-    assert added == 0
-    assert len(merged) == 1
-    assert merged[0]["gloss"] == "książka"
-    assert merged[0]["lemma"] == "el libro"
+    assert added == 1
+    assert {(c["lemma"], c["gloss"]) for c in merged} == {
+        ("el libro", "książka"),
+        ("el libro", "pozycja (inna glosa)"),
+    }
 
 
 def test_append_adds_new_lemma_pos_and_keeps_old():
@@ -33,21 +34,26 @@ def test_append_adds_new_lemma_pos_and_keeps_old():
         {"lemma": "player", "pos": "noun", "gloss": "gracz"},
     ]
     merged, added = append_lookup_candidates(existing, incoming, learning_lang="en")
-    assert added == 2
+    assert added == 3
     assert merged[0]["lemma"] == "play"
     assert merged[0]["pos"] == "verb"
     assert merged[0]["gloss"] == "grać"
+    assert ("play", "verb", "występować") in {
+        (c["lemma"], c["pos"], c["gloss"]) for c in merged
+    }
     pos = {(c["lemma"], c["pos"]) for c in merged}
     assert ("play", "noun") in pos
     assert ("player", "noun") in pos
 
 
-def test_append_dedupes_article_variant_without_replacing():
+def test_append_drops_the_bare_noun_when_the_same_translation_has_an_article():
     existing = [{"lemma": "libro", "pos": "noun", "gloss": "książka"}]
     incoming = [{"lemma": "el libro", "pos": "noun", "gloss": "książka"}]
     merged, added = append_lookup_candidates(existing, incoming, learning_lang="es")
     assert added == 0
-    assert merged[0]["lemma"] == "libro"
+    assert len(merged) == 1
+    assert merged[0]["lemma"] == "el libro"
+    assert merged[0]["gloss"] == "książka"
 
 
 def test_append_empty_incoming_is_zero_added():
@@ -69,17 +75,17 @@ def test_rank_union_puts_closest_first():
     assert {c["lemma"] for c in ranked} == {"el libro", "la tripa"}
 
 
-def test_draft_prompt_stays_short_and_includes_query():
-    from app.ai.prompts.v1 import LOOKUP_DRAFT_PROMPT_V1, LOOKUP_EXPAND_PROMPT_V1
+def test_draft_prompt_names_the_query():
+    from app.ai.prompts.v1 import LOOKUP_DRAFT_PROMPT_V1, LOOKUP_SYSTEM_V1
 
+    assert "Bilingual dictionary lookup" in LOOKUP_SYSTEM_V1
     draft = LOOKUP_DRAFT_PROMPT_V1.format(
+        pair_guidance="pair",
         native_name="Polish",
         learning_name="Spanish",
-        text="ksiazka",
-        pair_guidance="pair",
+        text="zamek",
     )
-    assert "ksiazka" in draft
-    assert len(draft) < len(LOOKUP_EXPAND_PROMPT_V1)
+    assert 'User query: "zamek"' in draft
 
 
 def test_expand_prompt_lists_existing_candidates():
@@ -98,7 +104,7 @@ def test_expand_prompt_lists_existing_candidates():
         lookup_output_form_rules=lookup_output_form_rules_text("pl", "es"),
         already_block=already,
     )
-    assert "User query string: \"ksiazka\"" in prompt
+    assert 'User query string: "ksiazka"' in prompt
     assert "el libro" in prompt
     assert "do NOT repeat" in prompt
     assert LLMService._already_block([]) == (

@@ -51,13 +51,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.automirrored.outlined.Article
@@ -80,6 +78,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -157,7 +157,6 @@ import com.vocabulario.app.ui.card.CardHistorySheet
 import com.vocabulario.app.ui.card.CorrectionActivityColor
 import com.vocabulario.app.ui.card.cardActivityStatusLabel
 import com.vocabulario.app.ui.card.CardActivitySpinner
-import com.vocabulario.app.ui.home.voice.VoiceSearchSheet
 import com.vocabulario.app.ui.practice.ListFlashcardSummary
 
 private val ScreenPad = 20.dp
@@ -177,6 +176,7 @@ fun HomeScreen(
     val state by viewModel.state.collectAsState()
     val importState by viewModel.importState.collectAsState()
     val isOnline by viewModel.connectivity.collectAsState()
+    val enrichmentPollingIds by viewModel.enrichmentPollingIds.collectAsState()
     val scheme = MaterialTheme.colorScheme
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -228,8 +228,8 @@ fun HomeScreen(
                     onQueryChange = viewModel::onQueryChange,
                     onClearSearch = viewModel::clearSearch,
                     onSearch = viewModel::search,
+                    onShowMore = viewModel::showMoreSuggestions,
                     onToggleSearchByCategory = viewModel::setSearchByCategory,
-                    onPrepareVoiceSearch = viewModel::prepareVoiceSearch,
                     onAdd = viewModel::openAddSheet,
                     onOpenWord = viewModel::openWordOnList,
                     onStartImport = viewModel::startImportWithOptionalNewList,
@@ -237,6 +237,8 @@ fun HomeScreen(
                     onAbortImport = viewModel::requestImportCancel,
                     onConfirmImport = viewModel::confirmImportCommit,
                     onExpandImportSection = viewModel::expandImportSection,
+                    onToggleImportReady = viewModel::toggleImportReadyItem,
+                    onRefreshImportQuota = viewModel::refreshImportDailyQuota,
                     onCopyImportErrors = viewModel::onImportErrorsCopied,
                     onDismissImport = { viewModel.dismissImportResult(false) },
                     onShowImportList = { viewModel.dismissImportResult(true) },
@@ -288,6 +290,7 @@ fun HomeScreen(
             onAddRelated = viewModel::openAddRelated,
             learningLemmas = state.learningLemmas,
             relatedMembership = state.relatedMembership,
+            stillPolling = card.id in enrichmentPollingIds,
             addSheet = { HomeAddToListSheet(state = state, viewModel = viewModel) },
         )
     }
@@ -901,8 +904,8 @@ private fun AddTab(
     onQueryChange: (String) -> Unit,
     onClearSearch: () -> Unit,
     onSearch: () -> Unit,
+    onShowMore: () -> Unit,
     onToggleSearchByCategory: (Boolean) -> Unit,
-    onPrepareVoiceSearch: () -> Unit,
     onAdd: (LookupCandidate) -> Unit,
     onOpenWord: (LookupCandidate) -> Unit,
     onStartImport: (ByteArray?, String?, String?, String?, String?) -> Unit,
@@ -910,23 +913,28 @@ private fun AddTab(
     onAbortImport: () -> Unit,
     onConfirmImport: () -> Unit,
     onExpandImportSection: (String?) -> Unit,
+    onToggleImportReady: (String) -> Unit,
+    onRefreshImportQuota: () -> Unit,
     onCopyImportErrors: () -> Unit,
     onDismissImport: () -> Unit,
     onShowImportList: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val context = LocalContext.current
+    var addSubTab by remember { mutableStateOf(0) } // 0 = search, 1 = import
     var showStartDialog by remember { mutableStateOf(false) }
     var pasteDraft by remember { mutableStateOf("") }
     var pendingFileBytes by remember { mutableStateOf<ByteArray?>(null) }
     var pendingFileName by remember { mutableStateOf<String?>(null) }
     var pickingFile by remember { mutableStateOf(false) }
-    var showVoiceSheet by remember { mutableStateOf(false) }
-    val speechAvailable = remember { android.speech.SpeechRecognizer.isRecognitionAvailable(context) }
     val nativeLang = state.activeProfile?.appLang ?: "pl"
     val learningLang = state.activeProfile?.learning_lang ?: "es"
     val importBusy = importState.blocksUi
     val showImportOutcome = importState.showOutcome
+    val showImportPane = addSubTab == 1 || importBusy || showImportOutcome
+    LaunchedEffect(showImportPane) {
+        if (showImportPane) onRefreshImportQuota()
+    }
 
     val fileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -983,48 +991,83 @@ private fun AddTab(
             .padding(horizontal = ScreenPad),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
+        TabRow(selectedTabIndex = if (showImportPane) 1 else 0) {
+            Tab(
+                selected = !showImportPane,
+                onClick = { addSubTab = 0 },
+                text = { Text(stringResource(R.string.add_tab_search)) },
+            )
+            Tab(
+                selected = showImportPane,
+                onClick = { addSubTab = 1 },
+                text = { Text(stringResource(R.string.add_tab_import)) },
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
 
-        if (importBusy) {
-            when {
-                importState.busy ->
-                    ImportStatusPanel(state = importState, onAbort = onAbortImport)
-                else ->
-                    ImportReviewAccordion(
+        if (showImportPane) {
+            if (importBusy) {
+                when {
+                    importState.busy ->
+                        ImportStatusPanel(state = importState, onAbort = onAbortImport)
+                    else ->
+                        ImportReviewAccordion(
+                            state = importState,
+                            onExpand = onExpandImportSection,
+                            onAbort = onAbortImport,
+                            onCommit = onConfirmImport,
+                            onCopyErrors = onCopyImportErrors,
+                            onToggleReady = onToggleImportReady,
+                        )
+                }
+            } else {
+                if (showImportOutcome) {
+                    ImportOutcomePanel(
                         state = importState,
-                        onExpand = onExpandImportSection,
-                        onAbort = onAbortImport,
-                        onCommit = onConfirmImport,
+                        onOk = onDismissImport,
+                        onShowList = onShowImportList,
                         onCopyErrors = onCopyImportErrors,
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+                if (isOnline) {
+                    val dailyFull = importState.dailyRemaining <= 0
+                    Text(
+                        if (dailyFull) {
+                            stringResource(R.string.import_daily_used)
+                        } else {
+                            stringResource(
+                                R.string.import_daily_remaining,
+                                importState.dailyRemaining,
+                            )
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = scheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp),
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            pendingFileBytes = null
+                            pendingFileName = null
+                            pasteDraft = ""
+                            showStartDialog = true
+                        },
+                        enabled = !dailyFull,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .testTag(TestTags.BTN_IMPORT),
+                        shape = AppButtonShape,
+                    ) {
+                        Text(stringResource(R.string.import_action_start), maxLines = 1)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
             }
         } else {
-            if (showImportOutcome) {
-                ImportOutcomePanel(
-                    state = importState,
-                    onOk = onDismissImport,
-                    onShowList = onShowImportList,
-                    onCopyErrors = onCopyImportErrors,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            if (isOnline) {
-                OutlinedButton(
-                    onClick = {
-                        pendingFileBytes = null
-                        pendingFileName = null
-                        pasteDraft = ""
-                        showStartDialog = true
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag(TestTags.BTN_IMPORT),
-                    shape = AppButtonShape,
-                ) {
-                    Text(stringResource(R.string.import_action_start), maxLines = 1)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
             if (!isOnline) {
                 Surface(
                     shape = AppButtonShape,
@@ -1066,11 +1109,10 @@ private fun AddTab(
                 placeholder = stringResource(
                     if (isOnline) R.string.home_search_hint else R.string.offline_search_hint,
                 ),
-                modifier = Modifier.testTag(TestTags.SEARCH_INPUT),
+                modifier = Modifier
+                    .testTag(TestTags.SEARCH_INPUT)
+                    .heightIn(min = 58.dp),
                 singleLine = true,
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = scheme.onSurfaceVariant)
-                },
                 trailingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (state.query.isNotEmpty() || state.candidates.isNotEmpty()) {
@@ -1085,24 +1127,9 @@ private fun AddTab(
                                 )
                             }
                         }
-                        if (isOnline && speechAvailable) {
-                            IconButton(
-                                onClick = {
-                                    onPrepareVoiceSearch()
-                                    showVoiceSheet = true
-                                },
-                                modifier = Modifier.testTag(TestTags.BTN_VOICE_SEARCH),
-                            ) {
-                                Icon(
-                                    Icons.Default.Mic,
-                                    contentDescription = stringResource(R.string.cd_voice_search),
-                                    tint = scheme.primary,
-                                )
-                            }
-                        }
                         IconButton(onClick = onSearch, modifier = Modifier.testTag(TestTags.SEARCH_SUBMIT)) {
                             Icon(
-                                Icons.AutoMirrored.Filled.ArrowForward,
+                                Icons.Default.Search,
                                 contentDescription = stringResource(R.string.cd_search),
                                 tint = scheme.primary,
                             )
@@ -1147,17 +1174,29 @@ private fun AddTab(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        if ((state.searchLoading || (state.expanding && state.candidates.isEmpty())) && !importBusy) {
-            CircularProgressIndicator(
+        if ((state.searchLoading || ((state.expanding || state.loadingMore) && state.candidates.isEmpty())) && !importBusy) {
+            Column(
                 modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
+                    .fillMaxWidth()
                     .padding(24.dp),
-                color = scheme.primary,
-                strokeWidth = 3.dp,
-            )
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                CircularProgressIndicator(
+                    color = scheme.primary,
+                    strokeWidth = 3.dp,
+                )
+                state.notice?.let { notice ->
+                    Text(
+                        notice,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = scheme.primary,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
         }
         state.error?.let { Text(it, color = scheme.error) }
-        state.notice?.let { Text(it, color = scheme.onSurfaceVariant) }
 
         if (!importBusy) {
             val showReadingChip = lookupShowsReadingChips(
@@ -1168,6 +1207,26 @@ private fun AddTab(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(bottom = 12.dp),
             ) {
+                val idleNotice = state.notice
+                if (
+                    state.candidates.isEmpty() &&
+                    idleNotice != null &&
+                    !state.searchLoading &&
+                    !state.expanding &&
+                    !state.loadingMore
+                ) {
+                    item {
+                        Text(
+                            idleNotice,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.primary,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
                 items(state.candidates) { candidate ->
                     CandidateRow(
                         candidate = candidate,
@@ -1178,7 +1237,7 @@ private fun AddTab(
                         onOpenWord = onOpenWord,
                     )
                 }
-                if (state.expanding && state.candidates.isNotEmpty()) {
+                if ((state.expanding || state.loadingMore) && state.candidates.isNotEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -1194,18 +1253,66 @@ private fun AddTab(
                         }
                     }
                 }
-                if (state.candidates.isEmpty() && !state.searchLoading && !state.expanding && state.query.isBlank()) {
+                if (state.searchByCategory && state.assocSearching) {
                     item {
-                        if (isOnline) {
+                        Text(
+                            stringResource(R.string.lookup_assoc_searching),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.primary,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+                if (state.searchByCategory && state.candidates.isNotEmpty() && !state.expanding) {
+                    item {
+                        if (state.assocNoMore) {
                             Text(
-                                stringResource(R.string.import_empty_hint),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = scheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
+                                stringResource(R.string.lookup_assoc_no_more),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 56.dp),
+                                    .padding(vertical = 12.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = scheme.primary,
+                                textAlign = TextAlign.Center,
                             )
+                        } else if (state.assocCanMore) {
+                            TextButton(
+                                onClick = onShowMore,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.lookup_assoc_more))
+                            }
+                        }
+                    }
+                }
+                if (
+                    !state.searchByCategory &&
+                    state.candidates.isNotEmpty() &&
+                    !state.expanding &&
+                    !state.loadingMore &&
+                    !state.searchLoading
+                ) {
+                    item {
+                        if (state.suggestionsExhausted) {
+                            Text(
+                                stringResource(R.string.lookup_no_more_suggestions),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = scheme.primary,
+                                textAlign = TextAlign.Center,
+                            )
+                        } else {
+                            TextButton(
+                                onClick = onShowMore,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.lookup_more_suggestions))
+                            }
                         }
                     }
                 }
@@ -1244,21 +1351,6 @@ private fun AddTab(
             listDisplayName = { listDisplayName(it) },
         )
     }
-
-    VoiceSearchSheet(
-        visible = showVoiceSheet,
-        nativeLang = nativeLang,
-        learningLang = learningLang,
-        candidates = state.candidates,
-        loading = state.searchLoading || state.expanding,
-        searchError = state.error,
-        onDismiss = { showVoiceSheet = false },
-        onResult = { text ->
-            onQueryChange(text)
-            onSearch()
-        },
-        onAdd = onAdd,
-    )
 }
 
 @Composable
@@ -1308,13 +1400,20 @@ private fun CandidateRow(
                     )
                 }
             }
-            if (candidate.isCreating) {
+            if (candidate.isCreating && !candidate.membershipUnknown) {
                 Spacer(modifier = Modifier.height(8.dp))
                 CreatingCardHint()
             }
         },
         trailing = {
             when {
+                candidate.membershipUnknown -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        strokeWidth = 3.dp,
+                        color = scheme.primary,
+                    )
+                }
                 candidate.isCreating -> {
                     CircularProgressIndicator(
                         modifier = Modifier.size(28.dp),
@@ -2253,7 +2352,8 @@ private fun ListWordTile(
     val prepProblem = card.enrichment_status == "prep_problem"
     val lookupQueued = card.enrichment_status == "awaiting_network" && isOnline && !flushInProgress
     val awaitingNetwork = card.enrichment_status == "awaiting_network" && !isOnline
-    val pending = card.enrichment_status == "pending" || card.enrichment_status == "preparing" || flushInProgress
+    val pending =
+        card.enrichment_status == "pending" || card.enrichment_status == "preparing" || flushInProgress
     val activityProcessing = !card.card_activity_status.isNullOrBlank()
     val failed = card.enrichment_status == "failed"
     val posKey = normalizePosKey(card.pos)
@@ -2277,6 +2377,7 @@ private fun ListWordTile(
         else -> null
     }
     val meanings = remember(card.id, card.content) { cardMeaningGlosses(card.content) }
+    val creatingWithoutGloss = pending && meanings.isEmpty()
     val muted = awaitingNetwork || lookupQueued || activityProcessing || needsReview || prepProblem
     val tileColor = when {
         selected -> scheme.primary.copy(alpha = 0.12f)
@@ -2327,7 +2428,7 @@ private fun ListWordTile(
                         maxLines = 1,
                         softWrap = false,
                     )
-                    if (!pending && posLabelText != null) {
+                    if (!creatingWithoutGloss && posLabelText != null) {
                         ListPosChip(label = posLabelText)
                     }
                 }
@@ -2378,11 +2479,19 @@ private fun ListWordTile(
                         Spacer(modifier = Modifier.width(8.dp))
                         CardActivitySpinner(color = CorrectionActivityColor)
                     }
-                    pending -> {
+                    creatingWithoutGloss -> {
                         Spacer(modifier = Modifier.width(8.dp))
                         CircularProgressIndicator(
                             modifier = Modifier.size(22.dp),
                             strokeWidth = 2.5.dp,
+                            color = scheme.primary,
+                        )
+                    }
+                    pending && meanings.isNotEmpty() -> {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
                             color = scheme.primary,
                         )
                     }
@@ -2422,7 +2531,8 @@ private fun ListWordTile(
                 exit = shrinkVertically() + fadeOut(),
             ) {
                 Column(modifier = Modifier.padding(top = 4.dp)) {
-                    val compactActions = awaitingNetwork || lookupQueued || pending || activityProcessing
+                    val compactActions =
+                        awaitingNetwork || lookupQueued || creatingWithoutGloss || activityProcessing
                     if (compactActions) {
                         Spacer(modifier = Modifier.height(8.dp))
                         HorizontalDivider(color = scheme.outline.copy(alpha = 0.5f))
@@ -2495,14 +2605,16 @@ private fun ListWordTile(
                                             contentColor = scheme.onPrimaryContainer,
                                         )
                                     }
-                                    ListTileIconButton(
-                                        onClick = onFixCard,
-                                        icon = Icons.Outlined.Edit,
-                                        contentDescription = stringResource(R.string.correction_fix_card),
-                                        containerColor = scheme.tertiaryContainer,
-                                        contentColor = scheme.onTertiaryContainer,
-                                        modifier = Modifier.testTag(TestTags.BTN_FIX_CARD),
-                                    )
+                                    if (com.vocabulario.app.ui.card.CARD_CORRECTION_ENABLED) {
+                                        ListTileIconButton(
+                                            onClick = onFixCard,
+                                            icon = Icons.Outlined.Edit,
+                                            contentDescription = stringResource(R.string.correction_fix_card),
+                                            containerColor = scheme.tertiaryContainer,
+                                            contentColor = scheme.onTertiaryContainer,
+                                            modifier = Modifier.testTag(TestTags.BTN_FIX_CARD),
+                                        )
+                                    }
                                     if (card.has_content_changes) {
                                         ListTileIconButton(
                                             onClick = onHistory,

@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.Icon
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vocabulario.app.R
+import com.vocabulario.app.data.CardSectionWaiting
 import com.vocabulario.app.data.LanguagePacks
 import com.vocabulario.app.data.RelatedMembershipIndex
 import com.vocabulario.app.data.formatLemmaWithArticle
@@ -56,6 +58,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 
 const val WORD_FAMILY_PAGE_SIZE = 4
@@ -104,6 +107,8 @@ fun CardDetailContent(
     userCefr: String = "A2",
     enrichmentStatus: String = "ready",
     enrichmentError: String? = null,
+    /** True tylko gdy karta jest jeszcze w odpytywaniu procesu. */
+    stillPolling: Boolean = false,
     profile: LanguageProfileResponse? = null,
     onAddRelated: ((RelatedWord) -> Unit)? = null,
     learningLemmas: Set<String> = emptySet(),
@@ -127,24 +132,56 @@ fun CardDetailContent(
         !m["gloss_l1"].asJsonString().isNullOrBlank() ||
             !(m["examples"].asJsonArray()?.isEmpty() ?: true)
     }
+    val relatedPending = content["related_pending"].let { raw ->
+        when (raw) {
+            is JsonPrimitive -> raw.booleanOrNull
+            else -> null
+        }
+    }
+    val examplesPending = content["examples_pending"].let { raw ->
+        when (raw) {
+            is JsonPrimitive -> raw.booleanOrNull
+            else -> null
+        }
+    }
     val synonymsL2 = parseRelatedWords(content["synonyms_l2"].asJsonArray())
     val antonymsL2 = parseRelatedWords(content["antonyms_l2"].asJsonArray())
     val wordFamilyL2 = parseRelatedWords(content["word_family_l2"].asJsonArray())
     val associationsL2 = parseRelatedWords(content["associations_l2"].asJsonArray())
+    val waitMeanings = CardSectionWaiting.meanings(hasMeaningContent, enrichmentStatus, stillPolling)
+    val waitExamplesFor: (Boolean) -> Boolean = { hasExamples ->
+        CardSectionWaiting.examples(
+            hasExamples = hasExamples,
+            status = enrichmentStatus,
+            stillPolling = stillPolling,
+            examplesPending = examplesPending,
+        )
+    }
+    val waitRelated = { empty: Boolean ->
+        CardSectionWaiting.related(empty, enrichmentStatus, stillPolling, relatedPending)
+    }
     val conjugation = conjugationFromContent(content)
     val tenseMap = conjugation?.get("tenses").asJsonObject()
     val nonFinite = conjugation?.get("non_finite").asJsonObject()
     val periphrases = conjugation?.get("periphrases").asJsonArray()
     val uiMeta = conjugation?.get("ui_meta").asJsonObject()
     val uiHints = content["ui_hints"].asJsonObject() ?: uiMeta
-    val showConjHint = if (fullDetail) {
-        conjugation != null
-    } else when (val raw = uiHints?.get("show_conjugation")) {
-        null -> conjugation != null
+    val showConjugationHint = when (val raw = uiHints?.get("show_conjugation")) {
+        null -> {
+            val p = pos?.trim()?.lowercase().orEmpty()
+            p == "verb" || p == "construction"
+        }
         is JsonPrimitive -> raw.contentOrNull?.equals("false", ignoreCase = true) != true &&
             raw.toString() != "false"
         else -> true
     }
+    val showConjHint = conjugation != null && (fullDetail || showConjugationHint)
+    val waitInflection = CardSectionWaiting.inflection(
+        hasInflection = conjugation != null,
+        status = enrichmentStatus,
+        stillPolling = stillPolling,
+        expectInflection = showConjugationHint,
+    )
     val profileTenses = userTenses.orEmpty()
     val catalogKeys = LanguagePacks.tenseCatalog(lang).map { it.key }
     val visibleFinite = resolveVisibleTenseKeys(
@@ -167,36 +204,15 @@ fun CardDetailContent(
         },
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        when (enrichmentStatus) {
-            "pending", "preparing" -> {
-                AppCard {
-                    Text(
-                        stringResource(R.string.card_preparing),
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-            "failed" -> {
-                AppCard {
-                    Text(
-                        stringResource(R.string.creating_card_failed),
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-            "ready", "learnable" -> if (!hasMeaningContent) {
-                AppCard {
-                    Text(
-                        stringResource(R.string.card_preparing),
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
+        if (enrichmentStatus == "failed") {
+            AppCard {
+                Text(
+                    enrichmentError?.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.creating_card_failed),
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         }
         if (!pattern.isNullOrBlank() || (!entryKind.isNullOrBlank() && entryKind != "lemma")) {
@@ -265,83 +281,110 @@ fun CardDetailContent(
             SpeakIconButton(onClick = { tts.speak(lemma, "lemma") })
         }
 
-        if ((!compact || fullDetail) && synonymsL2.isNotEmpty() && !fullDetail) {
-            RelatedWordsSection(
-                title = stringResource(R.string.section_synonyms_short),
-                words = synonymsL2,
-                onAdd = onAddRelated,
-                learningLemmas = learningLemmas,
-                relatedMembership = relatedMembership,
-            )
-        }
-
-        meanings.forEach { meaningEl ->
-            val meaning = meaningEl.asJsonObject() ?: return@forEach
-            if (fullDetail) {
-                MeaningFullDetailCard(
-                    meaning = meaning,
-                    userCefr = userCefr,
-                    tts = tts,
+        if ((!compact || fullDetail) && (synonymsL2.isNotEmpty() || waitRelated(synonymsL2.isEmpty())) && !fullDetail) {
+            if (synonymsL2.isNotEmpty()) {
+                RelatedWordsSection(
+                    title = stringResource(R.string.section_synonyms_short),
+                    words = synonymsL2,
+                    onAdd = onAddRelated,
+                    learningLemmas = learningLemmas,
+                    relatedMembership = relatedMembership,
                 )
             } else {
-                MeaningCompactCard(
-                    meaning = meaning,
-                    compact = compact,
-                    userCefr = userCefr,
-                    tts = tts,
-                )
+                SectionLoadingCard(title = stringResource(R.string.section_synonyms_short))
             }
         }
 
-        if ((!compact || fullDetail) && synonymsL2.isNotEmpty() && fullDetail) {
-            RelatedWordsSection(
-                title = stringResource(R.string.section_synonyms_short),
-                words = synonymsL2,
-                onAdd = onAddRelated,
-                learningLemmas = learningLemmas,
-                relatedMembership = relatedMembership,
-            )
+        when {
+            hasMeaningContent -> meanings.forEach { meaningEl ->
+                val meaning = meaningEl.asJsonObject() ?: return@forEach
+                val hasExamples = !(meaning["examples"].asJsonArray()?.isEmpty() ?: true)
+                val waitExamples = waitExamplesFor(hasExamples)
+                if (fullDetail) {
+                    MeaningFullDetailCard(
+                        meaning = meaning,
+                        userCefr = userCefr,
+                        tts = tts,
+                        waitExamples = waitExamples,
+                    )
+                } else {
+                    MeaningCompactCard(
+                        meaning = meaning,
+                        compact = compact,
+                        userCefr = userCefr,
+                        tts = tts,
+                        waitExamples = waitExamples,
+                    )
+                }
+            }
+            waitMeanings -> SectionLoadingCard(title = stringResource(R.string.card_preparing))
         }
 
-        if ((!compact || fullDetail) && antonymsL2.isNotEmpty()) {
-            RelatedWordsSection(
-                title = stringResource(R.string.section_antonyms_short),
-                words = antonymsL2,
-                onAdd = onAddRelated,
-                learningLemmas = learningLemmas,
-                relatedMembership = relatedMembership,
-            )
+        if ((!compact || fullDetail) && (synonymsL2.isNotEmpty() || waitRelated(synonymsL2.isEmpty())) && fullDetail) {
+            if (synonymsL2.isNotEmpty()) {
+                RelatedWordsSection(
+                    title = stringResource(R.string.section_synonyms_short),
+                    words = synonymsL2,
+                    onAdd = onAddRelated,
+                    learningLemmas = learningLemmas,
+                    relatedMembership = relatedMembership,
+                )
+            } else {
+                SectionLoadingCard(title = stringResource(R.string.section_synonyms_short))
+            }
         }
 
-        if ((!compact || fullDetail) && wordFamilyL2.isNotEmpty()) {
-            RelatedWordsSection(
-                title = stringResource(R.string.section_word_family),
-                words = wordFamilyL2,
-                onAdd = onAddRelated,
-                learningLemmas = learningLemmas,
-                relatedMembership = relatedMembership,
-                pageSize = WORD_FAMILY_PAGE_SIZE,
-                joinWordFamily = true,
-            )
+        if ((!compact || fullDetail) && (antonymsL2.isNotEmpty() || waitRelated(antonymsL2.isEmpty()))) {
+            if (antonymsL2.isNotEmpty()) {
+                RelatedWordsSection(
+                    title = stringResource(R.string.section_antonyms_short),
+                    words = antonymsL2,
+                    onAdd = onAddRelated,
+                    learningLemmas = learningLemmas,
+                    relatedMembership = relatedMembership,
+                )
+            } else {
+                SectionLoadingCard(title = stringResource(R.string.section_antonyms_short))
+            }
         }
 
-        if ((!compact || fullDetail) && associationsL2.isNotEmpty()) {
-            RelatedWordsSection(
-                title = stringResource(R.string.section_associations),
-                words = associationsL2,
-                onAdd = onAddRelated,
-                learningLemmas = learningLemmas,
-                relatedMembership = relatedMembership,
-                pageSize = WORD_FAMILY_PAGE_SIZE,
-            )
+        if ((!compact || fullDetail) && (wordFamilyL2.isNotEmpty() || waitRelated(wordFamilyL2.isEmpty()))) {
+            if (wordFamilyL2.isNotEmpty()) {
+                RelatedWordsSection(
+                    title = stringResource(R.string.section_word_family),
+                    words = wordFamilyL2,
+                    onAdd = onAddRelated,
+                    learningLemmas = learningLemmas,
+                    relatedMembership = relatedMembership,
+                    pageSize = WORD_FAMILY_PAGE_SIZE,
+                    joinWordFamily = true,
+                )
+            } else {
+                SectionLoadingCard(title = stringResource(R.string.section_word_family))
+            }
+        }
+
+        if ((!compact || fullDetail) && (associationsL2.isNotEmpty() || waitRelated(associationsL2.isEmpty()))) {
+            if (associationsL2.isNotEmpty()) {
+                RelatedWordsSection(
+                    title = stringResource(R.string.section_associations),
+                    words = associationsL2,
+                    onAdd = onAddRelated,
+                    learningLemmas = learningLemmas,
+                    relatedMembership = relatedMembership,
+                    pageSize = WORD_FAMILY_PAGE_SIZE,
+                )
+            } else {
+                SectionLoadingCard(title = stringResource(R.string.section_associations))
+            }
         }
 
         if ((!compact || fullDetail) && !periphrases.isNullOrEmpty()) {
             PeriphrasesSection(periphrases = periphrases, tts = tts)
         }
 
-        if (showConjHint) {
-            ConjugationTenseAccordions(
+        when {
+            showConjHint -> ConjugationTenseAccordions(
                 finiteKeys = visibleFinite,
                 nonFiniteKeys = visibleNonFinite,
                 tenseMap = tenseMap,
@@ -351,9 +394,33 @@ fun CardDetailContent(
                 profile = profile,
                 resetKey = lemma,
             )
+            waitInflection && (!compact || fullDetail) ->
+                SectionLoadingCard(title = stringResource(R.string.section_conjugation))
         }
         if (fullDetail) {
             Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun SectionLoadingCard(title: String) {
+    AppCard {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
         }
     }
 }
@@ -414,6 +481,7 @@ private fun MeaningFullDetailCard(
     meaning: JsonObject,
     userCefr: String,
     tts: L2TtsSpeaker,
+    waitExamples: Boolean = false,
 ) {
     val gloss = meaning["gloss_l1"].asJsonString().orEmpty()
     val extraGlosses = meaning["synonyms_l1"].asJsonArray()?.mapNotNull { it.asJsonString() }.orEmpty()
@@ -475,6 +543,13 @@ private fun MeaningFullDetailCard(
                         onSpeak = { tts.speak(exampleL2, "example-$index") },
                     )
                 }
+            } else if (waitExamples) {
+                CardSubsectionDivider()
+                CardSubsectionTitle(stringResource(R.string.correction_section_examples))
+                Spacer(Modifier.height(8.dp))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.5.dp)
+                }
             }
         }
     }
@@ -486,6 +561,7 @@ private fun MeaningCompactCard(
     compact: Boolean,
     userCefr: String,
     tts: L2TtsSpeaker,
+    waitExamples: Boolean = false,
 ) {
     AppCard {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -585,6 +661,12 @@ private fun MeaningCompactCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                }
+            }
+            if (waitExamples && visibleExamples.isEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp)
                 }
             }
         }
@@ -745,7 +827,7 @@ private fun RelatedWordsSection(
                 }
             }
             if (pageSize > 0 && visibleCount < words.size) {
-                TextButton(onClick = { visibleCount = minOf(visibleCount + pageSize, words.size) }) {
+                TextButton(onClick = { visibleCount = words.size }) {
                     Text(stringResource(R.string.action_show_more))
                 }
             }

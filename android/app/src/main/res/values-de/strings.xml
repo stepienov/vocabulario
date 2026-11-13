@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -268,7 +268,7 @@
 
     <string name="list_move_to">In Liste verschieben</string>
 
-            <string name="list_name_hint">Name</string>
+                    <string name="list_name_hint">Name</string>
 <string name="list_name_full_hint">Listenname</string>
 
     <string name="list_pick">Liste wählen</string>
@@ -385,7 +385,7 @@
     <string name="section_usages">Wendungen</string>
 
     <string name="home_search_hint">Wort suchen…</string>
-    <string name="search_by_category">Wörter für diese Kategorie suchen</string>
+    <string name="search_by_category">Assoziationen suchen</string>
 
     <string name="home_due_now">Jetzt fällig</string>
 
@@ -562,6 +562,13 @@
     <string name="err_search">Suche fehlgeschlagen</string>
 
     <string name="err_lookup_expand">Keine weiteren Vorschläge gefunden. Wir zeigen, was vorhanden ist.</string>
+    <string name="lookup_more_suggestions">Weitere Vorschläge anzeigen</string>
+    <string name="lookup_no_more_suggestions">Keine weiteren Treffer gefunden.</string>
+    <string name="lookup_longer_analysis">Dein Wort „%1$s“ braucht eine genauere Prüfung</string>
+    <string name="lookup_nothing_found">Kein Treffer für „%1$s“.</string>
+    <string name="lookup_assoc_searching">suche Assoziationen</string>
+    <string name="lookup_assoc_more">weitere Assoziationen suchen</string>
+    <string name="lookup_assoc_no_more">keine weiteren Assoziationen</string>
     <string name="err_import_empty">Keine Wörter zum Importieren</string>
 
     <string name="err_import">Import fehlgeschlagen</string>
@@ -680,7 +687,7 @@
     <string name="cd_clear_search">Suche löschen</string>
     <string name="correction_fix_card">Korrektur melden</string>
 <string name="correction_report_title">Karte prüfen und korrigieren</string>
-            <string name="correction_section_lemma">Lemma</string>
+                    <string name="correction_section_lemma">Lemma</string>
 <string name="correction_section_pos">Wortart</string>
     <string name="correction_section_gloss">Hauptübersetzung</string>
     <string name="correction_section_meanings">Bedeutungen</string>
@@ -706,18 +713,10 @@
     <string name="correction_escalated">An die Verwaltung gemeldet</string>
         <string name="correction_history_button">Änderungsverlauf</string>
     <string name="correction_self_edit_title">Karte bearbeiten</string>
-        <string name="correction_field_lemma">Lemma</string>
+                <string name="correction_field_lemma">Lemma</string>
 <string name="correction_field_pos">Wortart</string>
     <string name="correction_field_gloss">Hauptübersetzung</string>
     <string name="correction_field_extra_glosses">Weitere Übersetzungen (eine pro Zeile)</string>
-    <string name="cd_voice_search">Sprachsuche</string>
-    <string name="voice_listening">Zuhören…</string>
-    <string name="voice_listening_hint">Jetzt sprechen</string>
-    <string name="voice_tap_to_start">Tippe auf Start, um zu sprechen</string>
-<string name="voice_start">Start</string>
-    <string name="voice_stop">Stop</string>
-        <string name="voice_permission_denied">Mikrofonberechtigung verweigert.</string>
-    <string name="voice_unavailable">Spracherkennung auf diesem Gerät nicht verfügbar.</string>
     <string name="settings_notifications">Benachrichtigungen</string>
     <string name="settings_notifications_summary">Lern-Erinnerungen und Kartenstatus</string>
     <string name="settings_notif_study">Lern-Erinnerungen</string>
@@ -799,11 +798,6 @@
     <string name="cd_card_history">Kartenverlauf</string>
     <string name="cd_view_card">Vollständige Karte anzeigen</string>
     <string name="cd_list_word_actions">Wortaktionen</string>
-    <string name="voice_searching">Suche…</string>
-    <string name="voice_either_lang_hint">Sprich in einer der beiden Sprachen</string>
-    <string name="voice_no_match">Nicht verstanden — bitte erneut versuchen.</string>
-    <string name="voice_network_required">Spracheingabe braucht eine Internetverbindung.</string>
-
     <string name="pos_noun">Nomen</string>
     <string name="pos_verb">Verb</string>
     <string name="pos_adj">Adjektiv</string>
@@ -834,6 +828,18 @@
     <string name="practice_almost">Fast!</string>
     <string name="practice_typed_valid_synonym">Du hast ein korrektes Synonym eingegeben</string>
     <string name="practice_synonym_paren">(Synonym)</string>
+
+    <string name="add_tab_search">Suche</string>
+    <string name="add_tab_import">Importieren</string>
+<string name="import_analyzing">Wörter werden analysiert</string>
+    <string name="import_abandon">Verwerfen</string>
+    <string name="import_confirm">Bestätigen</string>
+    <string name="import_too_many_lines">Du kannst höchstens 25 Einträge auf einmal senden.</string>
+    <string name="import_daily_used">Das Tageslimit von 25 Karten ist aufgebraucht.</string>
+    <string name="import_daily_remaining">Du kannst heute noch %1$d von 25 Karten importieren.</string>
+    <string name="import_quota_exceeded">Zu viele Wörter für das heutige Restkontingent — einige abwählen und erneut versuchen.</string>
+    <string name="lookup_reading_learning">%1$s</string>
+    <string name="lookup_reading_native">%1$s: %2$s</string>
 
 </resources>
 

@@ -1,0 +1,42 @@
+start 2026-11-08T19:53:51.162872+00:00 profile 891f6e8c-fc1d-49b6-bcb0-4b6bbd1e9353
+FAIL droga calls=1 source=ai exhausted=False
+     la droga/noun/narkotyk | el camino/noun/droga
+     -> brak:drogi
+ok   drogas calls=1 source=ai exhausted=False
+     la droga/noun/narkotyk | el camino/noun/droga
+FAIL drogie calls=1 source=ai exhausted=False
+     el camino/noun/droga | caro/adj/drogi
+     -> za-daleko:droga
+FAIL drogie3 calls=0 source=db exhausted=False
+     el camino/noun/droga | caro/adj/drogi
+     -> za-daleko:droga
+FAIL drog calls=1 source=ai exhausted=False
+     la droga/noun/narkotyk | el camino/noun/droga
+     -> brak:drogi
+ok   somos calls=1 source=ai exhausted=False
+     ser/verb/być
+ok   para calls=1 source=ai exhausted=False
+     para/prep/dla | el par/noun/para | la pata/noun/łapa | la parra/noun/winorośl | la pasa/noun/rodzynek | pasar/verb/przechodzić
+FAIL cara calls=1 source=ai exhausted=False
+     la cara/noun/twarz | caro/adj/drogi
+     -> brak:kara
+FAIL casa calls=1 source=ai exhausted=False
+     la casa/noun/dom | la caza/noun/polowanie
+     -> brak:kasa
+ok   wdoa calls=1 source=ai exhausted=False
+     el agua/noun/woda
+ok   idę calls=1 source=ai exhausted=False
+     ir/verb/iść
+ok   trasa calls=1 source=ai exhausted=False
+     el trazado/noun/trasa | la tasa/noun/stawka; opłata | la traza/noun/ślad; zarys; plan | tras/prep/za; po
+--- trasa cache ---
+1 pierwsze calls=0 n=2 el trazado/noun/trasa | trazar/verb/trasować
+2 powtorzenie calls=0 te-same=True
+3.1 wiecej calls=1 added=5 exhausted=False el trazado/noun/trasa | trazar/verb/trasować | la ruta/noun/trasa | el itinerario/noun/trasa | el recorrido/noun/trasa | el trayecto/noun/trasa | el circuito/noun/trasa
+3.2 wiecej calls=1 added=3 exhausted=False el trazado/noun/trasa | trazar/verb/trasować | la ruta/noun/trasa | el itinerario/noun/trasa | el recorrido/noun/trasa | el trayecto/noun/trasa | el circuito/noun/trasa | la vía/noun/trasa | el camino/noun/trasa | la carretera/noun/trasa
+3.3 wiecej calls=1 added=3 exhausted=False el trazado/noun/trasa | trazar/verb/trasować | la ruta/noun/trasa | el itinerario/noun/trasa | el recorrido/noun/trasa | el trayecto/noun/trasa | el circuito/noun/trasa | la vía/noun/trasa | el camino/noun/trasa | la carretera/noun/trasa | la línea/noun/trasa | el rumbo/noun/trasa | el curso/noun/trasa
+3.4 wiecej calls=1 added=1 exhausted=False el trazado/noun/trasa | trazar/verb/trasować | la ruta/noun/trasa | el itinerario/noun/trasa | el recorrido/noun/trasa | el trayecto/noun/trasa | el circuito/noun/trasa | la vía/noun/trasa | el camino/noun/trasa | la carretera/noun/trasa | la línea/noun/trasa | el rumbo/noun/trasa | el curso/noun/trasa | la trayectoria/noun/trasa
+     -> jedno-haslo-na-klikniecie
+3.5 wiecej calls=1 added=0 exhausted=True el trazado/noun/trasa | trazar/verb/trasować | la ruta/noun/trasa | el itinerario/noun/trasa | el recorrido/noun/trasa | el trayecto/noun/trasa | el circuito/noun/trasa | la vía/noun/trasa | el camino/noun/trasa | la carretera/noun/trasa | la línea/noun/trasa | el rumbo/noun/trasa | el curso/noun/trasa | la trayectoria/noun/trasa
+4 po-dociaganiu calls=0 n=14 exhausted=True
+7 zapis-pl>ru-dla-droga count=0

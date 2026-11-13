@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
 import com.vocabulario.app.data.BlockingBusy
+import com.vocabulario.app.data.EnrichmentPoller
 import com.vocabulario.app.data.EnrichmentStatus
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.CardResponse
@@ -20,11 +21,9 @@ import com.vocabulario.app.ui.card.RelatedWord
 import com.vocabulario.app.ui.home.listNameConflictMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -51,11 +50,14 @@ data class LearningUiState(
 class LearningViewModel @Inject constructor(
     private val repository: LearningRepository,
     private val strings: UiStrings,
+    private val enrichmentPoller: EnrichmentPoller,
     private val blockingBusy: BlockingBusy,
 ) : ViewModel() {
     private val _state = MutableStateFlow(LearningUiState())
     val state: StateFlow<LearningUiState> = _state.asStateFlow()
-    private var pollJob: Job? = null
+    val enrichmentPollingIds: StateFlow<Set<String>> = enrichmentPoller.pollingIds
+    private var selectedCardJob: Job? = null
+    private var cardsObserverJob: Job? = null
 
     fun load() {
         viewModelScope.launch {
@@ -78,8 +80,14 @@ class LearningViewModel @Inject constructor(
                             _state.value.learningLemmas,
                         relatedMembership = runCatching { repository.relatedMembershipIndex() }
                             .getOrDefault(RelatedMembershipIndex.Empty),
+                        addTarget = _state.value.addTarget,
+                        lists = _state.value.lists,
+                        pickListOpen = _state.value.pickListOpen,
+                        showCreateListPrompt = _state.value.showCreateListPrompt,
+                        createListName = _state.value.createListName,
                     )
-                    startPollingIfNeeded(cards)
+                    enrichmentPoller.watchCards(cards)
+                    observeProfileCards()
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
@@ -92,9 +100,20 @@ class LearningViewModel @Inject constructor(
 
     fun selectCard(card: CardResponse) {
         _state.value = _state.value.copy(selectedCard = card)
+        enrichmentPoller.watchCard(card)
+        selectedCardJob?.cancel()
+        selectedCardJob = viewModelScope.launch {
+            repository.observeCard(card.id).collect { updated ->
+                if (updated == null) return@collect
+                if (_state.value.selectedCard?.id != card.id) return@collect
+                _state.value = _state.value.copy(selectedCard = updated)
+            }
+        }
     }
 
     fun clearSelection() {
+        selectedCardJob?.cancel()
+        selectedCardJob = null
         _state.value = _state.value.copy(selectedCard = null)
     }
 
@@ -174,6 +193,7 @@ class LearningViewModel @Inject constructor(
             }
                 .onSuccess { created ->
                     markLemmaAdded(created.lemma_l2.ifBlank { word.lemma })
+                    enrichmentPoller.watchCard(created)
                     _state.value = _state.value.copy(
                         message = strings.get(R.string.msg_added_learning, word.lemma),
                     )
@@ -257,20 +277,18 @@ class LearningViewModel @Inject constructor(
         }
     }
 
-    private fun startPollingIfNeeded(cards: List<CardResponse>) {
-        pollJob?.cancel()
-        val pollIds = cards.mapNotNull { card ->
-            card.id.takeIf { EnrichmentStatus.needsPoll(card.enrichment_status) }
-        }
-        if (pollIds.isEmpty()) return
-        repository.requestBackgroundSync()
-        pollJob = viewModelScope.launch {
-            var iterations = 0
-            var ids = pollIds
-            while (isActive) {
-                if (ids.isEmpty()) break
-                runCatching { repository.refreshCardsFromServer(ids) }
-                val refreshed = runCatching { repository.listCards() }.getOrNull() ?: continue
+    private fun observeProfileCards() {
+        cardsObserverJob?.cancel()
+        cardsObserverJob = viewModelScope.launch {
+            val profileId = runCatching { repository.activeProfileId() }.getOrNull() ?: return@launch
+            repository.cardsChanges(profileId).collect {
+                val refreshed = runCatching { repository.listCards() }.getOrNull() ?: return@collect
+                enrichmentPoller.watchCards(
+                    refreshed.filter {
+                        EnrichmentStatus.needsPoll(it.enrichment_status) ||
+                            !it.card_activity_status.isNullOrBlank()
+                    },
+                )
                 val current = _state.value
                 _state.value = current.copy(
                     cards = refreshed,
@@ -278,12 +296,6 @@ class LearningViewModel @Inject constructor(
                     learningLemmas = refreshed.flatMap { lemmaKeys(it.lemma_l2) }.toSet() +
                         current.learningLemmas,
                 )
-                ids = refreshed.mapNotNull { card ->
-                    card.id.takeIf { EnrichmentStatus.needsPoll(card.enrichment_status) }
-                }
-                if (ids.isEmpty()) break
-                if (++iterations > 20) break
-                delay(3_000)
             }
         }
     }

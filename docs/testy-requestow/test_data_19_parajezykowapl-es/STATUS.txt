@@ -1,0 +1,199 @@
+STATUS IMPLEMENTACJI I TESTOW
+data: 2026-11-08
+para w toku: polski-hiszpanski (pl-es)
+produkcja w tej sesji: bez commit, bez push, bez deploy
+branch lokalny: wip/optymalizacja-requestow-2026-11-08
+
+
+================================================================
+A. TASKI OPTYMALIZACJI (docs/taski)
+================================================================
+
+00  Testy na lokalnym Postgresie
+    status: ZROBIONE
+    gdzie: backend/tests, fixture pg
+
+01  Jedna replika API przy bazie (Railway)
+    status: NIEUSTALONE W TEJ SESJI
+    gdzie: konfiguracja Railway, nie kod
+
+02  Zapisy pomocnicze w tle
+    status: ZROBIONE (kod lokalny)
+    gdzie: backend (spawn_background, schedule_llm_meter)
+
+03  Petla learnable
+    status: ZROBIONE (kod lokalny)
+    gdzie: backend + Android
+
+04  Szybka odpowiedz z gotowego zapisu (cache)
+    status: ZROBIONE (kod lokalny)
+    gdzie: backend lookup_cached_fast, lookup_query_cache
+
+05  Pierwsze slowo bez Wikislownika
+    status: ZROBIONE (kod lokalny)
+    gdzie: backend lookup_draft / lookup_cached
+
+06  Pelne dociagniecie i "wiecej"
+    status: ZROBIONE (kod lokalny)
+    gdzie: backend lookup_expand, more_exhausted
+
+07  Telefon: jedno pytanie i zestawienie z Room
+    status: ZROBIONE (kod lokalny)
+    gdzie: Android LookupCoordinator, HomeViewModel
+
+08  Skojarzenia
+    status: DO ZROBIENIA
+    uwaga: w tej sesji zakazane
+
+09  Lekki zapis karty
+    status: DO ZROBIENIA
+
+10  Nauka i powiazane osobno
+    status: DO ZROBIENIA
+
+11  Import
+    status: DO ZROBIENIA
+
+
+WDROZENIE
+---------
+backend Railway: NIE w tej sesji
+APK Android:     NIE w tej sesji
+main / PR:       NIE w tej sesji
+
+
+================================================================
+B. JAKOSC SZUKANIA — KONTRAKT I TESTY REQUESTOW
+================================================================
+
+kontrakt:
+  docs/testy-requestow/README.md
+  status: ZROBIONE (opis reguł i 10 par)
+
+tryb pracy:
+  jedna para naraz
+  zielona para -> nastepna para
+  zmiana promptu/requestu -> powtorzenie od pary 1
+  zapis: docs/testy-requestow/test_data_19_parajezykowapl-es/tryb.md
+  status: ZAPISANE
+
+
+----------------------------------------------------------------
+PARA 1: polski + hiszpanski
+folder: docs/testy-requestow/test_data_19_parajezykowapl-es/
+rundy:  7 (iteracja-1.txt ... iteracja-7.txt)
+raport: raport.md
+----------------------------------------------------------------
+
+Profil testowany:
+  interfejs: polski
+  jezyk nauki: hiszpanski
+  status kierunku odwrotnego (nauka polskiego): NIE ODPALONY
+
+Wynik zestawu pary 1 po rundzie 7 + fix somos: PRZECHODZI (pierwsza strona pl->es)
+  uwagi: iteracja-7 miała FAIL tylko na somos (filtr ucinal ser);
+  po poprawce cited_verb (word=somos, lemma=ser) live: ser/być wraca.
+  dociagniecie trasy w rundzie 7: 3+5+4+0, bez pojedynczego hasla.
+
+
+Hasla — status po rundzie 7 (+ fix somos)
+--------------------------
+droga     OK      droga + narkotyk + caro/drogi (bez falszywego drogo)
+drogas    OK      droga + narkotyk
+drogie    OK      tylko drogi
+drogie3   OK      0 pytan, ten sam zapis co drogie
+drog      OK      droga + narkotyk + caro
+somos     OK      ser/być (po fixie filtra conjugacji)
+para      OK      para + dla
+cara      OK      twarz + drogi + kara (castigo/pena)
+casa      OK      dom + kasa (la caja)
+wdoa      OK      woda
+ide       OK      ir / isc
+trasa     OK      pierwsze + dociagniecie (kilka hasel na klik, zamkniecie, cache, izolacja)
+
+
+Co bylo zepsute i czemu (diagnostyka)
+-------------------------------------
+1) sanitize: lemma=droga gloss=drogi -> przepisanie -a→-o na "drogo" (falszywy przymiotnik)
+2) prompt: przyklady droga tylko camino+narkotyk; model nie dawal caro; dla cara/casa
+   oddawal polskie slowo jako lemma (la kara / casa+kasa) zamiast castigo/caja
+3) drop_rows_past_one_change: cited_verb wymagał word==lemma, wiec somos→ser ginął
+   przy sasiedzie el somo
+
+
+Co zostaje
+----------
+[ ] kierunek: interfejs hiszpanski, nauka polski (rodzajnik = blad)
+[ ] po zmianie promptu: pelna runda od zera juz zrobiona jako 7; powtorzyc przy kolejnej zmianie
+[ ] pary 2-10
+
+
+----------------------------------------------------------------
+PARY 2-10
+----------------------------------------------------------------
+02 polski-angielski          DO ZROBIENIA
+03 polski-niemiecki          DO ZROBIENIA
+04 niemiecki-angielski       DO ZROBIENIA
+05 francuski-angielski       DO ZROBIENIA
+06 wloski-angielski          DO ZROBIENIA
+07 pt-br - pt-pt             DO ZROBIENIA
+08 polski-rosyjski           DO ZROBIENIA
+09 polski-chinski            DO ZROBIENIA
+10 hiszpanski-angielski      DO ZROBIENIA
+
+
+================================================================
+C. PLIKI
+================================================================
+
+optymalizacja:
+  docs/optymalizacja-requestow.md
+  docs/lookup-zasady.md
+  docs/taski/README.md
+  docs/taski/00-testy-na-postgresie.md
+  docs/taski/01-region-api-i-bazy.md
+  docs/taski/02-zapisy-pomocnicze-w-tle.md
+  docs/taski/03-petla-learnable.md
+  docs/taski/04-szybka-odpowiedz-z-cache.md
+  docs/taski/05-pierwsze-slowo-bez-slownika.md
+  docs/taski/06-pelne-dociagniecie-i-wiecej.md
+  docs/taski/07-telefon-szukanie-i-zestawienie.md
+  docs/taski/08-skojarzenia.md
+  docs/taski/09-lekki-zapis-karty.md
+  docs/taski/10-nauka-i-powiazane.md
+  docs/taski/11-import.md
+
+kod lookup:
+  backend/app/ai/prompts/v1.py
+  backend/app/services/lexical.py
+  backend/app/services/lookup_candidates.py
+  backend/app/services/llm.py
+
+testy requestow:
+  docs/testy-requestow/README.md
+  docs/testy-requestow/test_data_19_parajezykowapl-es/STATUS.txt
+  docs/testy-requestow/test_data_19_parajezykowapl-es/tryb.md
+  docs/testy-requestow/test_data_19_parajezykowapl-es/raport.md
+  docs/testy-requestow/test_data_19_parajezykowapl-es/iteracja-1.txt
+  docs/testy-requestow/test_data_19_parajezykowapl-es/iteracja-2.txt
+  docs/testy-requestow/test_data_19_parajezykowapl-es/iteracja-3.txt
+  docs/testy-requestow/test_data_19_parajezykowapl-es/iteracja-4.txt
+  docs/testy-requestow/test_data_19_parajezykowapl-es/iteracja-5.txt
+  docs/testy-requestow/test_data_19_parajezykowapl-es/iteracja-6.txt
+  docs/testy-requestow/test_data_19_parajezykowapl-es/iteracja-7.txt
+  docs/testy-requestow/test_data_19_parajezykowapl-es/run_para.py
+
+
+================================================================
+D. SKROT
+================================================================
+
+taski 00, 02-07:  ZROBIONE lokalnie
+task 01:          NIEUSTALONE
+taski 08-11:      DO ZROBIENIA
+deploy:           NIE
+
+testy jakosci:
+  kontrakt:       ZROBIONE
+  para 1 pl-es:   PRZECHODZI (strona pl->es; odwrotna nieodpalona)
+  pary 2-10:      DO ZROBIENIA

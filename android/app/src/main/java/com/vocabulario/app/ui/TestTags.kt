@@ -144,9 +144,6 @@ object TestTags {
     const val SHEET_CARD_HISTORY = "sheet_card_history"
     const val BTN_PRACTICE_REPORT = "btn_practice_report"
 
-    const val BTN_VOICE_SEARCH = "btn_voice_search"
-    const val SHEET_VOICE_SEARCH = "sheet_voice_search"
-
     const val BTN_REVIEW_WORD = "btn_review_word"
     const val BTN_RETRY_ENRICHMENT = "btn_retry_enrichment"
     const val SHEET_REVIEW_WORD = "sheet_review_word"

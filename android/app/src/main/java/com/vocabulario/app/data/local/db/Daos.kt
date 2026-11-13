@@ -21,8 +21,16 @@ interface CachedCardDao {
     @Query("SELECT * FROM cached_cards WHERE profileId = :profileId")
     fun observeForProfile(profileId: String): Flow<List<CachedCardEntity>>
 
+    @Query(
+        "SELECT id, lemmaL2, pos, deckId, enrichmentStatus FROM cached_cards WHERE profileId = :profileId",
+    )
+    fun observeMembershipRows(profileId: String): Flow<List<com.vocabulario.app.data.CardMembershipRow>>
+
     @Query("SELECT * FROM cached_cards WHERE id = :id LIMIT 1")
     suspend fun byId(id: String): CachedCardEntity?
+
+    @Query("SELECT * FROM cached_cards WHERE id = :id LIMIT 1")
+    fun observeById(id: String): Flow<CachedCardEntity?>
 
     @Query(
         """
@@ -233,6 +241,9 @@ interface SyncMetaDao {
 
     @Query("SELECT * FROM sync_meta WHERE profileId = :profileId LIMIT 1")
     suspend fun get(profileId: String): SyncMetaEntity?
+
+    @Query("SELECT lastPulledAt FROM sync_meta WHERE profileId = :profileId LIMIT 1")
+    fun observeLastPulledAt(profileId: String): Flow<String?>
 }
 
 @Dao

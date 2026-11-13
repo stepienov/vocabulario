@@ -78,7 +78,13 @@ class ImportController @Inject constructor(
             .onSuccess { progress ->
                 persistence.saveJobId(progress.job_id)
                 _state.value = progress.toState(
-                    ImportJobState(targetListName = listName, sourceName = filename, mode = mode),
+                    ImportJobState(
+                        targetListName = listName,
+                        sourceName = filename,
+                        mode = mode,
+                        dailyUsed = progress.daily_used,
+                        dailyLimit = progress.daily_limit,
+                    ),
                 )
                 backgroundJobs.enqueueImport(replace = true)
                 startPoll()
@@ -127,6 +133,8 @@ class ImportController @Inject constructor(
                         targetListName = listName,
                         sourceName = "paste",
                         mode = mode,
+                        dailyUsed = progress.daily_used,
+                        dailyLimit = progress.daily_limit,
                     ),
                 )
                 backgroundJobs.enqueueImport(replace = true)
@@ -162,14 +170,27 @@ class ImportController @Inject constructor(
         }
     }
 
+    fun toggleReadyItem(itemId: String) {
+        val cur = _state.value
+        if (cur.status != ImportStatus.Review) return
+        if (cur.readyItems.none { it.id == itemId }) return
+        val next = if (itemId in cur.selectedItemIds) {
+            cur.selectedItemIds - itemId
+        } else {
+            cur.selectedItemIds + itemId
+        }
+        _state.value = cur.copy(selectedItemIds = next)
+    }
+
     fun confirmCommit() {
         val cur = _state.value
         if (cur.status != ImportStatus.Review) return
         val jobId = cur.jobId ?: return
-        if (cur.readyCount <= 0) return
+        if (!cur.canConfirmSelected) return
         if (blockingBusy.busy.value) return
+        val itemIds = cur.selectedItemIds.toList()
         blockingBusy.launchIn(scope) {
-            runCatching { repository.commitImportJob(jobId) }
+            runCatching { repository.commitImportJob(jobId, itemIds) }
                 .onSuccess {
                     val next = it.toState(cur)
                     if (next.status == ImportStatus.Done) {
@@ -188,8 +209,10 @@ class ImportController @Inject constructor(
 
     fun dismissResult(openList: Boolean = false) {
         val listId = _state.value.targetListId
+        val dailyUsed = _state.value.dailyUsed
+        val dailyLimit = _state.value.dailyLimit
         scope.launch { persistence.saveJobId(null) }
-        _state.value = ImportJobState()
+        _state.value = ImportJobState(dailyUsed = dailyUsed, dailyLimit = dailyLimit)
         stopPoll()
         backgroundJobs.cancelImport()
         if (openList && !listId.isNullOrBlank()) {
@@ -270,13 +293,36 @@ class ImportController @Inject constructor(
     }
 
     private suspend fun restoreActive() {
-        val active = runCatching { repository.getActiveImportJob() }.getOrNull()
-        if (active != null) {
-            persistence.saveJobId(active.job_id)
-            val detail = runCatching { repository.getImportJob(active.job_id, includeItems = true) }
-                .getOrDefault(active)
-            _state.value = detail.toState()
-            startPoll()
+        val active = runCatching { repository.getActiveImportJob() }.getOrNull() ?: return
+        _state.value = _state.value.copy(
+            dailyUsed = active.daily_used,
+            dailyLimit = active.daily_limit,
+        )
+        val jobId = active.job_id
+        if (jobId.isNullOrBlank() || active.status.equals("idle", ignoreCase = true)) {
+            return
+        }
+        persistence.saveJobId(jobId)
+        val detail = runCatching { repository.getImportJob(jobId, includeItems = true) }
+            .getOrDefault(active)
+        _state.value = detail.toState(_state.value)
+        startPoll()
+    }
+
+    /** Odświeża licznik dnia bez aktywnego zadania (zakładka Import). */
+    fun refreshDailyQuota() {
+        scope.launch {
+            val active = runCatching { repository.getActiveImportJob() }.getOrNull() ?: return@launch
+            _state.value = _state.value.copy(
+                dailyUsed = active.daily_used,
+                dailyLimit = active.daily_limit,
+            )
+            if (!active.job_id.isNullOrBlank() &&
+                !active.status.equals("idle", ignoreCase = true) &&
+                !_state.value.blocksUi
+            ) {
+                restoreActive()
+            }
         }
     }
 
@@ -316,6 +362,13 @@ class ImportController @Inject constructor(
 
     private suspend fun applyProgress(progress: ImportJobProgressResponse) {
         val id = progress.job_id
+        if (id.isNullOrBlank()) {
+            _state.value = _state.value.copy(
+                dailyUsed = progress.daily_used,
+                dailyLimit = progress.daily_limit,
+            )
+            return
+        }
         val include = progress.status == "review" ||
             progress.status == "done" ||
             progress.status == "failed" ||

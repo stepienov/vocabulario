@@ -1,0 +1,44 @@
+start 2026-11-08T19:38:11.498533+00:00 profile 891f6e8c-fc1d-49b6-bcb0-4b6bbd1e9353
+FAIL droga calls=0 source=db exhausted=False
+     la droga/noun/narkotyk
+     -> brak:droga
+     -> brak:drogi
+ok   drogas calls=0 source=ai exhausted=False
+     la droga/noun/narkotyk | el camino/noun/droga
+ok   drogie calls=1 source=ai exhausted=False
+     caro/adj/drogi
+FAIL drogie3 calls=2 source=ai exhausted=False
+     (pusto)
+     -> brak:drogi
+FAIL drog calls=0 source=ai exhausted=False
+     el camino/noun/droga
+     -> brak:narkotyk
+     -> brak:drogi
+FAIL somos calls=0 source=ai exhausted=False
+     ser/verb/być
+     -> brak:ser
+ok   para calls=0 source=ai exhausted=False
+     para/prep/dla | el par/noun/para
+FAIL cara calls=0 source=ai exhausted=False
+     caro/adj/drogi
+     -> brak:twarz
+     -> brak:kara
+FAIL casa calls=0 source=ai exhausted=False
+     la casa/noun/dom
+     -> brak:kasa
+ok   wdoa calls=0 source=ai exhausted=False
+     el agua/noun/woda
+ok   idę calls=0 source=ai exhausted=False
+     ir/verb/iść
+ok   trasa calls=0 source=ai exhausted=False
+     la ruta/noun/trasa | el camino/noun/droga
+--- trasa cache ---
+1 pierwsze calls=0 n=1 la ruta/noun/trasa
+2 powtorzenie calls=0 te-same=True
+3.1 wiecej calls=0 added=2 exhausted=False la ruta/noun/trasa | el recorrido/noun/trasa | el trayecto/noun/trasa
+3.2 wiecej calls=0 added=1 exhausted=False la ruta/noun/trasa | el recorrido/noun/trasa | el trayecto/noun/trasa | la vía/noun/trasa
+3.3 wiecej calls=0 added=1 exhausted=False la ruta/noun/trasa | el recorrido/noun/trasa | el trayecto/noun/trasa | la vía/noun/trasa | el itinerario/noun/trasa
+3.4 wiecej calls=0 added=1 exhausted=False la ruta/noun/trasa | el recorrido/noun/trasa | el trayecto/noun/trasa | la vía/noun/trasa | el itinerario/noun/trasa | la pista/noun/trasa
+3.5 wiecej calls=0 added=0 exhausted=True la ruta/noun/trasa | el recorrido/noun/trasa | el trayecto/noun/trasa | la vía/noun/trasa | el itinerario/noun/trasa | la pista/noun/trasa
+4 po-dociaganiu calls=0 n=6 exhausted=True
+7 zapis-pl>ru-dla-droga count=0

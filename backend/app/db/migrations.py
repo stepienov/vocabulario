@@ -20,10 +20,16 @@ _SCHEMA_LOCK_KEY = 872314559
 _DEADLOCK_RETRIES = 8
 
 _STATEMENTS = (
+    "ALTER TABLE lookup_query_cache ADD COLUMN IF NOT EXISTS "
+    "more_exhausted BOOLEAN NOT NULL DEFAULT false",
+    "ALTER TABLE lookup_more_operations ADD COLUMN IF NOT EXISTS "
+    "lang_pair VARCHAR(16) NOT NULL DEFAULT ''",
     "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS "
     "enrichment_status VARCHAR(16) NOT NULL DEFAULT 'ready'",
     "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS "
     "enrichment_error VARCHAR(500)",
+    "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS "
+    "enrichment_side_retries INTEGER NOT NULL DEFAULT 0",
     "CREATE INDEX IF NOT EXISTS ix_learning_cards_enrichment_status "
     "ON learning_cards (enrichment_status)",
     "ALTER TABLE learning_cards DROP COLUMN IF EXISTS is_favorite",

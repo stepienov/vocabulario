@@ -6,13 +6,15 @@ import logging
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import lang_pair_key, normalize_text
 from app.core.lemma_keys import canonical_lemma
-from app.models import LanguageProfile, LookupEvent
+from app.db import session as db_session
+from app.models import LanguageProfile, LookupEvent, LookupQueryCache
 from app.services.app_log import request_id_var
+from app.services.background import spawn_background
 from app.services.pos_normalize import normalize_pos_bucket
 
 logger = logging.getLogger(__name__)
@@ -100,6 +102,56 @@ async def find_lookup_event_for_card(
         if lookup_event_matches_lemma(event, lemma, pos):
             return event
     return None
+
+
+def record_lookup_event_background(
+    *,
+    user_id: UUID,
+    profile_id: UUID,
+    lang_pair: str | None,
+    query: str,
+    source: str,
+    candidates: list | None,
+    ai_complete: bool,
+    cache_row_id: UUID | None,
+    request_id: UUID | None,
+) -> None:
+    """Historia i licznik trafień poza odpowiedzią HTTP."""
+
+    async def _write() -> None:
+        try:
+            async with db_session.async_session_factory() as db:
+                if cache_row_id is not None:
+                    await db.execute(
+                        update(LookupQueryCache)
+                        .where(LookupQueryCache.id == cache_row_id)
+                        .values(
+                            hit_count=LookupQueryCache.hit_count + 1,
+                            updated_at=func.now(),
+                        )
+                    )
+                raw = (query or "").strip()[:200]
+                db.add(
+                    LookupEvent(
+                        id=uuid4(),
+                        user_id=user_id,
+                        profile_id=profile_id,
+                        query=raw,
+                        query_norm=normalize_text(raw)[:200] or raw,
+                        lang_pair=lang_pair,
+                        source=(source or "lookup")[:16],
+                        candidate_count=len(candidates or []),
+                        http_status=200,
+                        request_id=request_id,
+                        candidates=slim_lookup_candidates(candidates),
+                        ai_complete=bool(ai_complete),
+                    )
+                )
+                await db.commit()
+        except Exception:
+            logger.exception("lookup_event background failed user=%s query=%r", user_id, query)
+
+    spawn_background(_write, name="lookup_event")
 
 
 async def record_lookup_event(

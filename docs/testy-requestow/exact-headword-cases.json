@@ -1,0 +1,30 @@
+{
+  "contract": "Exact character-for-character standalone dictionary words only. No normalization, correction, inflection recovery, neighbors, meanings or translations.",
+  "positive_homographs": [
+    {"language_1": "polski", "language_2": "hiszpański", "query": "ser", "expected_languages": ["polski", "hiszpański"]},
+    {"language_1": "polski", "language_2": "hiszpański", "query": "droga", "expected_languages": ["polski", "hiszpański"]},
+    {"language_1": "polski", "language_2": "hiszpański", "query": "para", "expected_languages": ["polski", "hiszpański"]},
+    {"language_1": "polski", "language_2": "niemiecki", "query": "los", "expected_languages": ["polski", "niemiecki"]},
+    {"language_1": "francuski", "language_2": "angielski", "query": "chat", "expected_languages": ["francuski", "angielski"]},
+    {"language_1": "francuski", "language_2": "angielski", "query": "coin", "expected_languages": ["francuski", "angielski"]},
+    {"language_1": "włoski", "language_2": "angielski", "query": "sale", "expected_languages": ["włoski", "angielski"]},
+    {"language_1": "włoski", "language_2": "angielski", "query": "fine", "expected_languages": ["włoski", "angielski"]},
+    {"language_1": "hiszpański", "language_2": "angielski", "query": "red", "expected_languages": ["hiszpański", "angielski"]},
+    {"language_1": "hiszpański", "language_2": "angielski", "query": "pie", "expected_languages": ["hiszpański", "angielski"]},
+    {"language_1": "hiszpański", "language_2": "angielski", "query": "pan", "expected_languages": ["hiszpański", "angielski"]},
+    {"language_1": "niemiecki", "language_2": "angielski", "query": "fast", "expected_languages": ["niemiecki", "angielski"]},
+    {"language_1": "angielski", "language_2": "turecki", "query": "can", "expected_languages": ["angielski", "turecki"]}
+  ],
+  "negative_exact_strings": [
+    {"language_1": "polski", "language_2": "hiszpański", "query": "serr"},
+    {"language_1": "polski", "language_2": "hiszpański", "query": "ser3"},
+    {"language_1": "polski", "language_2": "hiszpański", "query": "ser."},
+    {"language_1": "polski", "language_2": "hiszpański", "query": "ser1"},
+    {"language_1": "polski", "language_2": "hiszpański", "query": "sre"},
+    {"language_1": "francuski", "language_2": "angielski", "query": "chat."},
+    {"language_1": "włoski", "language_2": "angielski", "query": "sale1"},
+    {"language_1": "hiszpański", "language_2": "angielski", "query": "rde"},
+    {"language_1": "niemiecki", "language_2": "angielski", "query": "fast3"},
+    {"language_1": "angielski", "language_2": "turecki", "query": "cna"}
+  ]
+}

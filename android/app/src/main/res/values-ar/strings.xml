@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -385,7 +385,7 @@
     <string name="section_usages">عبارات</string>
 
     <string name="home_search_hint">ابحث عن كلمة…</string>
-    <string name="search_by_category">ابحث عن كلمات لهذه الفئة</string>
+    <string name="search_by_category">ابحث عن كلمات مرتبطة</string>
 
     <string name="home_due_now">جاهز للمراجعة الآن</string>
 
@@ -562,6 +562,13 @@
     <string name="err_search">فشل البحث</string>
 
     <string name="err_lookup_expand">تعذر العثور على المزيد من الاقتراحات. نعرض ما لدينا.</string>
+    <string name="lookup_more_suggestions">عرض المزيد من الاقتراحات</string>
+    <string name="lookup_no_more_suggestions">لم يُعثر على المزيد من المطابقات.</string>
+    <string name="lookup_longer_analysis">كلمتك «%1$s» تحتاج إلى تحليل أطول</string>
+    <string name="lookup_nothing_found">لم يُعثر على مطابقة لـ «%1$s».</string>
+    <string name="lookup_assoc_searching">أبحث عن كلمات مرتبطة</string>
+    <string name="lookup_assoc_more">ابحث عن المزيد</string>
+    <string name="lookup_assoc_no_more">لا مزيد من الكلمات</string>
     <string name="err_import_empty">لا كلمات للاستيراد</string>
 
     <string name="err_import">فشل الاستيراد</string>
@@ -710,14 +717,6 @@
     <string name="correction_field_pos">قسم الكلام</string>
     <string name="correction_field_gloss">الترجمة الرئيسية</string>
     <string name="correction_field_extra_glosses">ترجمات إضافية (واحدة في كل سطر)</string>
-    <string name="cd_voice_search">بحث صوتي</string>
-    <string name="voice_listening">جارٍ الاستماع…</string>
-    <string name="voice_listening_hint">تحدّث الآن</string>
-    <string name="voice_tap_to_start">اضغط بدء للتحدث</string>
-<string name="voice_start">Start</string>
-    <string name="voice_stop">Stop</string>
-        <string name="voice_permission_denied">رُفض إذن الميكروفون.</string>
-    <string name="voice_unavailable">التعرّف على الكلام غير متاح على هذا الجهاز.</string>
     <string name="settings_notifications">الإشعارات</string>
     <string name="settings_notifications_summary">تذكيرات الدراسة وحالة البطاقات</string>
     <string name="settings_notif_study">تذكيرات الدراسة</string>
@@ -799,11 +798,6 @@
     <string name="cd_card_history">سجل البطاقة</string>
     <string name="cd_view_card">عرض البطاقة كاملة</string>
     <string name="cd_list_word_actions">إجراءات الكلمة</string>
-    <string name="voice_searching">جارٍ البحث…</string>
-    <string name="voice_either_lang_hint">تحدّث بأي من اللغتين</string>
-    <string name="voice_no_match">لم يُفهم — حاول مرة أخرى.</string>
-    <string name="voice_network_required">الإدخال الصوتي يحتاج اتصالاً بالإنترنت.</string>
-
     <string name="pos_noun">اسم</string>
     <string name="pos_verb">فعل</string>
     <string name="pos_adj">صفة</string>
@@ -834,6 +828,18 @@
     <string name="practice_almost">تقريباً!</string>
     <string name="practice_typed_valid_synonym">أدخلت مرادفاً صحيحاً</string>
     <string name="practice_synonym_paren">(مرادف)</string>
+
+    <string name="add_tab_search">بحث</string>
+    <string name="add_tab_import">استيراد</string>
+    <string name="import_analyzing">جارٍ تحليل الكلمات</string>
+    <string name="import_abandon">تجاهل</string>
+    <string name="import_confirm">تأكيد</string>
+    <string name="import_too_many_lines">يمكنك إرسال 25 عنصرًا كحد أقصى دفعة واحدة.</string>
+    <string name="import_daily_used">تم استنفاد الحد اليومي البالغ 25 بطاقة.</string>
+    <string name="import_daily_remaining">يمكنك اليوم استيراد %1$d من أصل 25 بطاقة.</string>
+    <string name="import_quota_exceeded">عدد الكلمات يتجاوز حصة الاستيراد المتبقية اليوم — ألغِ تحديد بعضها وحاول مجددًا.</string>
+    <string name="lookup_reading_learning">%1$s</string>
+    <string name="lookup_reading_native">%1$s: %2$s</string>
 
 </resources>
 

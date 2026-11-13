@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -417,7 +417,7 @@
     <string name="section_usages">フレーズ</string>
 
     <string name="home_search_hint">単語を検索…</string>
-    <string name="search_by_category">このカテゴリの単語を検索</string>
+    <string name="search_by_category">関連語を検索</string>
 
     <string name="home_due_now">今すぐレビューの準備ができました</string>
 
@@ -594,6 +594,13 @@
     <string name="err_search">検索に失敗しました</string>
 
     <string name="err_lookup_expand">これ以上の候補は見つかりませんでした。現在の結果を表示します。</string>
+    <string name="lookup_more_suggestions">ほかの候補を表示</string>
+    <string name="lookup_no_more_suggestions">これ以上の一致は見つかりませんでした。</string>
+    <string name="lookup_longer_analysis">「%1$s」はより詳しい分析が必要です</string>
+    <string name="lookup_nothing_found">「%1$s」の一致は見つかりませんでした。</string>
+    <string name="lookup_assoc_searching">関連語を検索しています</string>
+    <string name="lookup_assoc_more">さらに関連語を検索</string>
+    <string name="lookup_assoc_no_more">これ以上の関連語はありません</string>
     <string name="err_import_empty">インポートする単語がありません</string>
 
     <string name="err_import">インポートに失敗しました</string>
@@ -780,22 +787,6 @@
 
     <string name="correction_field_extra_glosses">追加の意味（1行ごと）</string>
 
-    <string name="cd_voice_search">音声検索</string>
-
-    <string name="voice_listening">リスニング中…</string>
-
-    <string name="voice_listening_hint">今話してください</string>
-
-    <string name="voice_tap_to_start">話すにはスタートをタップ</string>
-
-    <string name="voice_start">スタート</string>
-
-    <string name="voice_stop">ストップ</string>
-
-    <string name="voice_permission_denied">マイクの権限が拒否されました。</string>
-
-    <string name="voice_unavailable">このデバイスでは音声認識が利用できません。</string>
-
     <string name="settings_notifications">通知</string>
 
     <string name="settings_notifications_summary">学習リマインダーとカードの状態</string>
@@ -895,11 +886,6 @@
     <string name="cd_card_history">カード履歴</string>
     <string name="cd_view_card">カード全体を見る</string>
     <string name="cd_list_word_actions">語の操作</string>
-    <string name="voice_searching">検索中…</string>
-    <string name="voice_either_lang_hint">どちらの言語でも話せます</string>
-    <string name="voice_no_match">聞き取れませんでした。もう一度どうぞ。</string>
-    <string name="voice_network_required">音声入力にはインターネット接続が必要です。</string>
-
     <string name="pos_noun">名詞</string>
     <string name="pos_verb">動詞</string>
     <string name="pos_adj">形容詞</string>
@@ -930,5 +916,17 @@
     <string name="practice_almost">おしい！</string>
     <string name="practice_typed_valid_synonym">正しい類義語を入力しました</string>
     <string name="practice_synonym_paren">(類義語)</string>
+
+    <string name="add_tab_search">検索</string>
+    <string name="add_tab_import">インポート</string>
+    <string name="import_analyzing">単語を分析中</string>
+    <string name="import_abandon">破棄</string>
+    <string name="import_confirm">確定</string>
+    <string name="import_too_many_lines">一度に送信できるのは最大 25 件です。</string>
+    <string name="import_daily_used">1日25枚の上限に達しました。</string>
+    <string name="import_daily_remaining">今日はあと %1$d / 25 枚インポートできます。</string>
+    <string name="import_quota_exceeded">今日の残りインポート枠を超えています。一部の選択を外して再試行してください。</string>
+    <string name="lookup_reading_learning">%1$s</string>
+    <string name="lookup_reading_native">%1$s: %2$s</string>
 
 </resources>

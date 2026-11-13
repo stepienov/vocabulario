@@ -113,7 +113,14 @@ data class LanguageProfileUpdate(
 )
 
 @Serializable
-data class LookupRequest(val text: String, val profile_id: String)
+data class LookupRequest(
+    val text: String,
+    val profile_id: String,
+    val local_membership: Boolean = false,
+    val more: Boolean = false,
+    val operation_id: String? = null,
+    val round: Int? = null,
+)
 
 @Serializable
 data class LookupCandidate(
@@ -129,6 +136,8 @@ data class LookupCandidate(
     val source_card_id: String? = null,
     val reading: String? = null,
     val typed_as: String? = null,
+    @kotlinx.serialization.Transient
+    val membershipUnknown: Boolean = false,
 ) {
     val onList: Boolean get() = !list_name.isNullOrBlank()
     val isCreating: Boolean get() = EnrichmentStatus.isCreating(enrichment_status)
@@ -140,6 +149,9 @@ data class LookupResponse(
     val source: String,
     val confident: Boolean = false,
     val ai_complete: Boolean = false,
+    val added: Int? = null,
+    val suggestions_exhausted: Boolean = false,
+    val headword_meaning: String = "",
 )
 
 @Serializable
@@ -203,12 +215,13 @@ data class ImportJobItemResponse(
     val existing_card_id: String? = null,
     val created_card_id: String? = null,
     val attempt: Int = 0,
+    val list_name: String? = null,
 )
 
 @Serializable
 data class ImportJobProgressResponse(
-    val job_id: String,
-    val status: String,
+    val job_id: String? = null,
+    val status: String = "idle",
     val phase: String = "analyze",
     val stage: String = "queued",
     val source_name: String = "",
@@ -228,6 +241,8 @@ data class ImportJobProgressResponse(
     val error_code: String? = null,
     val error_message: String? = null,
     val heartbeat_at: String? = null,
+    val daily_used: Int = 0,
+    val daily_limit: Int = 25,
     val items: List<ImportJobItemResponse> = emptyList(),
 )
 
@@ -327,6 +342,7 @@ data class CardResponse(
     val persisted: Boolean = true,
     val enrichment_status: String = "ready",
     val enrichment_error: String? = null,
+    val enrichment_active: Boolean? = null,
     val srs_status: String? = null,
     val srs_interval_days: Double? = null,
     val srs_next_review_at: String? = null,
@@ -344,6 +360,7 @@ data class SrsQueueItem(
     val content: kotlinx.serialization.json.JsonObject,
     val status: String,
     val direction: String? = null,
+    val enrichment_status: String? = null,
     val card_activity_status: String? = null,
     val has_content_changes: Boolean = false,
 )

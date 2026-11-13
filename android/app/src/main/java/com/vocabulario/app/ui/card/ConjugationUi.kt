@@ -126,12 +126,15 @@ internal fun normalizePersonKey(raw: String): String =
         .trim()
 
 @Composable
-internal fun SectionLabel(title: String) {
+internal fun SectionLabel(title: String, centered: Boolean = false) {
     Text(
         title,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp),
+        textAlign = if (centered) TextAlign.Center else TextAlign.Start,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
     )
 }
 
@@ -204,7 +207,7 @@ internal fun ConjugationTenseAccordions(
             (finiteKeys + nonFiniteKeys).forEach { put(it, expandedDefault) }
         }
     }
-    SectionLabel(stringResource(R.string.section_conjugation))
+    SectionLabel(stringResource(R.string.section_conjugation), centered = true)
     nonFiniteKeys.forEach { key ->
         val form = nonFinite?.get(key).asJsonString().orEmpty()
         if (form.isNotBlank()) {

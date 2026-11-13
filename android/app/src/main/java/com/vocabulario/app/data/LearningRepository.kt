@@ -15,6 +15,7 @@ import com.vocabulario.app.data.api.DistractorsRequest
 import com.vocabulario.app.data.api.DistractorsResponse
 import com.vocabulario.app.data.api.DeviceRegisterRequest
 import com.vocabulario.app.data.api.ImportIngestRequest
+import com.vocabulario.app.data.api.ImportJobCommitRequest
 import com.vocabulario.app.data.api.ImportJobCreateRequest
 import com.vocabulario.app.data.api.ImportJobProgressResponse
 import com.vocabulario.app.data.api.ImportValidateRequest
@@ -213,22 +214,49 @@ class LearningRepository @Inject constructor(
 
     suspend fun lookupCached(text: String): LookupResponse {
         val profileId = activeProfileId()
-        return api.lookupCached(LookupRequest(text = text, profile_id = profileId))
+        return api.lookupCached(
+            LookupRequest(text = text, profile_id = profileId, local_membership = true),
+        )
     }
 
-    suspend fun lookupExpand(text: String): LookupResponse {
+    suspend fun lookupExpand(
+        text: String,
+        more: Boolean = false,
+        operationId: String? = null,
+    ): LookupResponse {
         val profileId = activeProfileId()
-        return api.lookupExpand(LookupRequest(text = text, profile_id = profileId))
+        return api.lookupExpand(
+            LookupRequest(
+                text = text,
+                profile_id = profileId,
+                local_membership = true,
+                more = more,
+                operation_id = operationId,
+            ),
+        )
     }
+
+    fun observeMembershipRows(profileId: String) = offlineStore.observeMembershipRows(profileId)
+
+    fun observeLastPulledAt(profileId: String) = offlineStore.observeLastPulledAt(profileId)
 
     suspend fun lookupCategoryCached(text: String): LookupResponse {
         val profileId = activeProfileId()
-        return api.lookupCategoryCached(LookupRequest(text = text, profile_id = profileId))
+        return api.lookupCategoryCached(
+            LookupRequest(text = text, profile_id = profileId, local_membership = true),
+        )
     }
 
-    suspend fun lookupCategoryExpand(text: String): LookupResponse {
+    suspend fun lookupCategoryExpand(text: String, round: Int): LookupResponse {
         val profileId = activeProfileId()
-        return api.lookupCategoryExpand(LookupRequest(text = text, profile_id = profileId))
+        try {
+            return api.lookupCategoryExpand(
+                LookupRequest(text = text, profile_id = profileId, round = round),
+            )
+        } catch (error: retrofit2.HttpException) {
+            if (error.code() == 409) throw com.vocabulario.app.data.lookup.AssocRoundNotReady()
+            throw error
+        }
     }
 
     suspend fun validateImport(words: List<String>): ImportValidateResponse {
@@ -296,8 +324,11 @@ class LearningRepository @Inject constructor(
     suspend fun getImportJob(jobId: String, includeItems: Boolean = true): ImportJobProgressResponse =
         api.getImportJob(jobId, includeItems)
 
-    suspend fun commitImportJob(jobId: String): ImportJobProgressResponse =
-        api.commitImportJob(jobId)
+    suspend fun commitImportJob(
+        jobId: String,
+        itemIds: List<String>? = null,
+    ): ImportJobProgressResponse =
+        api.commitImportJob(jobId, ImportJobCommitRequest(item_ids = itemIds))
 
     suspend fun cancelImportJob(jobId: String): ImportJobProgressResponse =
         api.cancelImportJob(jobId)
@@ -941,6 +972,10 @@ class LearningRepository @Inject constructor(
     /** Ustawienia jako strumień — odzwierciedla zmiany lokalne i te dociągnięte z sync. */
     fun observeSettings(): Flow<UserSettingsResponse?> =
         offlineStore.observeSettings().distinctUntilChanged()
+
+    /** Otwarta karta z Room — treść sekcji podmienia się przy zapisie polla bez osobnego refresh. */
+    fun observeCard(cardId: String): Flow<CardResponse?> =
+        offlineStore.observeCardById(cardId).distinctUntilChanged()
 
     private suspend fun flushPendingUndos() {
         for (item in offlineStore.pendingUndos()) {

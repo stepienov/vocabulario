@@ -10,10 +10,11 @@ import asyncio
 import hashlib
 import logging
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError, PendingRollbackError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -32,9 +33,7 @@ from app.models import (
 )
 from app.services.card_jobs import (
     STATUS_PENDING,
-    STATUS_READY,
     build_pending_content,
-    hydrate_from_lexical_cache,
     spawn_enrich,
 )
 from app.lsp.constants import SUPPORTED_L2_LANGS
@@ -53,12 +52,12 @@ from app.services.import_package import (
 )
 from app.services.import_urls import ImportUrlError, detect_import_url, fetch_words_from_url
 from app.services.llm import LLMService
-from app.services.word_lists import find_card_anywhere
+from app.services.word_lists import select_live_card_for_lemma
 
 logger = logging.getLogger(__name__)
 
-COMMIT_MAX_ATTEMPTS = 3
-COMMIT_BACKOFF_S = (0.5, 1.0, 2.0)
+MAX_IMPORT_ITEMS = 25
+DAILY_IMPORT_LIMIT = 25
 HEARTBEAT_STALE_S = 90
 WATCHDOG_INTERVAL_S = 30
 
@@ -251,6 +250,13 @@ async def _insert_job(
     if existing is not None:
         raise ActiveImportJobError(existing.id)
 
+    positions = _position_count(kind=kind, notes=notes, raw_text=raw_text)
+    if positions > MAX_IMPORT_ITEMS:
+        raise ImportTooManyError(positions)
+    used = await daily_import_used(db, profile.id)
+    if used >= DAILY_IMPORT_LIMIT:
+        raise ImportDailyLimitError(used)
+
     digest = hashlib.sha256(input_bytes).hexdigest()
     meta_text = raw_text if raw_text is not None and len(raw_text) <= 600_000 else None
     job = ImportJob(
@@ -263,7 +269,7 @@ async def _insert_job(
         source_kind=source_kind,
         source_name=source_name[:255],
         mode=mode,
-        total=len(notes),
+        total=len(notes) if notes else positions,
         input_sha256=digest,
         input_meta={
             "kind": kind,
@@ -308,6 +314,127 @@ class ActiveImportJobError(Exception):
     def __init__(self, job_id: UUID):
         super().__init__("import_job_active")
         self.job_id = job_id
+
+
+class ImportTooManyError(Exception):
+    def __init__(self, count: int):
+        super().__init__("import_too_many")
+        self.count = count
+
+
+class ImportDailyLimitError(Exception):
+    """Dzienny limit wyczerpany albo wybór przekracza pozostałą pulę."""
+
+    def __init__(self, used: int, *, remaining: int | None = None):
+        self.used = used
+        self.remaining = (
+            max(0, DAILY_IMPORT_LIMIT - used) if remaining is None else max(0, remaining)
+        )
+        # Pełny dzień vs „zaznaczono za dużo przy jeszcze wolnych slotach”.
+        code = "import_daily_limit" if self.remaining <= 0 else "import_quota_exceeded"
+        super().__init__(code)
+
+
+def _position_count(*, kind: str, notes: list[list[str]], raw_text: str | None) -> int:
+    if kind == "raw_text":
+        return sum(1 for line in (raw_text or "").splitlines() if line.strip())
+    return len(notes)
+
+
+async def daily_import_used(db: AsyncSession, profile_id: UUID) -> int:
+    """Karty importu od północy UTC; usunięte liczą się, anulowane zadania nie."""
+    day_start = func.timezone(
+        "UTC",
+        func.date_trunc("day", func.timezone("UTC", func.now())),
+    )
+    result = await db.execute(
+        select(func.count())
+        .select_from(LearningCard)
+        .join(ImportJob, ImportJob.id == LearningCard.import_job_id)
+        .where(
+            ImportJob.profile_id == profile_id,
+            ImportJob.status != "cancelled",
+            LearningCard.created_at >= day_start,
+        )
+    )
+    return int(result.scalar_one() or 0)
+
+
+async def _load_live_card_rows(
+    db: AsyncSession, user_id: UUID, profile_id: UUID
+) -> list[Any]:
+    result = await db.execute(
+        select(
+            LearningCard.id,
+            LearningCard.lemma_l2,
+            LearningCard.pos,
+            LearningCard.deck_id,
+        ).where(
+            LearningCard.user_id == user_id,
+            LearningCard.profile_id == profile_id,
+            LearningCard.deleted_at.is_(None),
+        )
+    )
+    return list(result.all())
+
+
+async def _list_names_by_deck(
+    db: AsyncSession, user_id: UUID, profile_id: UUID
+) -> dict[UUID | None, str]:
+    rows = (
+        await db.execute(
+            select(WordList.id, WordList.name, WordList.is_system).where(
+                WordList.user_id == user_id,
+                WordList.profile_id == profile_id,
+                WordList.deleted_at.is_(None),
+            )
+        )
+    ).all()
+    out: dict[UUID | None, str] = {}
+    system_name = "System"
+    for wid, name, is_system in rows:
+        if is_system:
+            system_name = name
+            out[None] = name
+        out[wid] = name
+    out.setdefault(None, system_name)
+    return out
+
+
+async def import_queue_head(db: AsyncSession, profile_id: UUID) -> UUID | None:
+    """Najstarsza karta importu pending tego profilu (kolejność pozycji)."""
+    result = await db.execute(
+        select(LearningCard.id)
+        .join(ImportJobItem, ImportJobItem.created_card_id == LearningCard.id)
+        .join(ImportJob, ImportJob.id == ImportJobItem.job_id)
+        .where(
+            ImportJob.profile_id == profile_id,
+            LearningCard.profile_id == profile_id,
+            LearningCard.import_job_id.is_not(None),
+            LearningCard.deleted_at.is_(None),
+            LearningCard.enrichment_status == STATUS_PENDING,
+        )
+        .order_by(ImportJob.created_at.asc(), ImportJobItem.ordinal.asc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+def spawn_next_import_card(profile_id: UUID) -> None:
+    """Puszcza głowę kolejki importu, o ile nie jest już w `_claimed`."""
+
+    async def _run() -> None:
+        from app.services import card_jobs as card_jobs_mod
+
+        async with async_session_factory() as db:
+            head = await import_queue_head(db, profile_id)
+        if head is None:
+            return
+        if head in card_jobs_mod._claimed:
+            return
+        spawn_enrich(head)
+
+    asyncio.create_task(_run())
 
 
 def spawn_job(job_id: UUID) -> None:
@@ -401,6 +528,10 @@ async def request_commit(db: AsyncSession, job: ImportJob, item_ids: list[UUID] 
         ready = [i for i in ready if i.id in allow]
     if not ready:
         raise ValueError("import_job_nothing_to_commit")
+    used = await daily_import_used(db, job.profile_id)
+    remaining = DAILY_IMPORT_LIMIT - used
+    if len(ready) > remaining:
+        raise ImportDailyLimitError(used, remaining=remaining)
     for i in items:
         if i.verdict == "ready" and i not in ready:
             i.verdict = "failed"
@@ -606,6 +737,24 @@ async def _run_analyze(db: AsyncSession, job: ImportJob) -> None:
                 )
             ).scalars().all()
             job.items = list(items)
+            if len(items) > MAX_IMPORT_ITEMS:
+                await _touch(
+                    db,
+                    job,
+                    status="failed",
+                    error_code="import_too_many",
+                    error_message=f"At most {MAX_IMPORT_ITEMS} items per import",
+                    finished_at=_now(),
+                )
+                await _add_event(
+                    db,
+                    job.id,
+                    "import_too_many",
+                    level="error",
+                    payload={"n": len(items)},
+                )
+                await db.commit()
+                return
     except ImportPackageError as exc:
         await _touch(
             db, job, status="failed", error_code="import_format",
@@ -755,6 +904,9 @@ async def _analyze_vocabulario(
     await _touch(db, job, stage="dedup", processed=0, total=len(items))
     await db.commit()
 
+    live_rows = await _load_live_card_rows(db, job.user_id, job.profile_id)
+    list_names = await _list_names_by_deck(db, job.user_id, job.profile_id)
+
     seen: dict[str, UUID] = {}
     for idx, item in enumerate(items):
         if await _cancelled(db, job):
@@ -772,14 +924,14 @@ async def _analyze_vocabulario(
                 item.reason_code = "in_file_duplicate"
                 item.verdict_phase = "analyze"
             else:
-                existing = await find_card_anywhere(
-                    db, job.user_id, job.profile_id, item.lemma, item.pos
-                )
+                existing = select_live_card_for_lemma(live_rows, item.lemma, item.pos)
                 if existing is not None:
                     item.verdict = "duplicate"
                     item.reason_code = "already_on_list"
                     item.existing_card_id = existing.id
                     item.verdict_phase = "analyze"
+                    deck_id = getattr(existing, "deck_id", None)
+                    item.display = {"list_name": list_names.get(deck_id) or list_names.get(None)}
                 else:
                     item.verdict = "ready"
                     item.verdict_phase = "analyze"
@@ -796,7 +948,6 @@ async def _analyze_vocabulario(
         if idx % 10 == 0:
             await db.commit()
     _finalize_analyze_verdicts(items)
-    await _verify_ready_lemmas(db, job, items, llm, profile.learning_lang)
     await _refresh_counts(job, items)
     await db.commit()
 
@@ -956,6 +1107,10 @@ def _apply_vocab_item(item: ImportJobItem, raw: dict[str, Any], learning_lang: s
 
 
 async def _run_commit(db: AsyncSession, job: ImportJob) -> None:
+    if await _cancelled(db, job):
+        await finalize_cancel(db, job)
+        return
+
     profile = (
         await db.execute(select(LanguageProfile).where(LanguageProfile.id == job.profile_id))
     ).scalar_one_or_none()
@@ -978,169 +1133,121 @@ async def _run_commit(db: AsyncSession, job: ImportJob) -> None:
         )
     ).scalars().all()
     await _touch(db, job, stage="write", processed=0, total=len(items))
-    await db.commit()
 
+    live_rows = await _load_live_card_rows(db, job.user_id, job.profile_id)
+    list_names = await _list_names_by_deck(db, job.user_id, job.profile_id)
     created = 0
-    for idx, item in enumerate(items):
-        if await _cancelled(db, job):
-            await finalize_cancel(db, job)
-            return
-        if item.created_card_id:
-            live = (
-                await db.execute(
-                    select(LearningCard).where(
-                        LearningCard.id == item.created_card_id,
-                        LearningCard.deleted_at.is_(None),
-                    )
-                )
-            ).scalar_one_or_none()
-            if live is not None:
-                created += 1
-                await _touch(db, job, processed=idx + 1, created_count=created)
-                await db.commit()
-                continue
 
-        ok = False
-        for attempt in range(1, COMMIT_MAX_ATTEMPTS + 1):
-            if await _cancelled(db, job):
-                await finalize_cancel(db, job)
-                return
-            item.attempt = attempt
-            await _touch(
-                db, job, stage="write", processed=idx,
-                current_ordinal=item.ordinal,
-                current_label=item.lemma or item.input_label,
-                current_attempt=attempt,
+    for idx, item in enumerate(items):
+        if item.created_card_id:
+            created += 1
+            await _touch(db, job, processed=idx + 1, created_count=created)
+            continue
+
+        item.attempt = 1
+        await _touch(
+            db,
+            job,
+            stage="write",
+            processed=idx,
+            current_ordinal=item.ordinal,
+            current_label=item.lemma or item.input_label,
+            current_attempt=1,
+        )
+        try:
+            async with db.begin_nested():
+                card = await _create_card_for_item(
+                    db, job, profile, wl, item, live_rows=live_rows
+                )
+                await db.flush()
+            item.created_card_id = card.id
+            item.verdict_phase = "commit"
+            item.last_error = None
+            created += 1
+            live_rows.append(
+                SimpleNamespace(
+                    id=card.id,
+                    lemma_l2=card.lemma_l2,
+                    pos=card.pos,
+                    deck_id=card.deck_id,
+                )
             )
-            await db.commit()
-            try:
-                async with db.begin_nested():
-                    card = await _create_card_for_item(db, job, profile, wl, item)
-                    await db.flush()
-                item.created_card_id = card.id
-                item.verdict_phase = "commit"
-                item.last_error = None
-                created += 1
-                ok = True
-                await _add_event(
-                    db, job.id, "item_created", item_id=item.id,
-                    payload={"card_id": str(card.id), "attempt": attempt},
-                )
-                await db.commit()
-                if card.enrichment_status != STATUS_READY:
-                    spawn_enrich(card.id)
-                break
-            except DuplicateImportError as exc:
-                item.verdict = "duplicate"
-                item.reason_code = "already_on_list"
-                item.existing_card_id = exc.card_id
-                item.verdict_phase = "commit"
-                await _add_event(
-                    db, job.id, "item_verdict", item_id=item.id,
-                    payload={"verdict": "duplicate", "phase": "commit"},
-                )
-                await db.commit()
-                ok = True
-                break
-            except (IntegrityError, PendingRollbackError) as exc:
-                await db.rollback()
-                existing = await find_card_anywhere(
-                    db, job.user_id, job.profile_id,
-                    (item.lemma or "").strip(),
-                    item.pos,
-                )
-                job = await _load_job(db, job.id) or job
-                item = (
-                    await db.execute(select(ImportJobItem).where(ImportJobItem.id == item.id))
-                ).scalar_one()
-                profile = (
-                    await db.execute(select(LanguageProfile).where(LanguageProfile.id == job.profile_id))
-                ).scalar_one_or_none() or profile
-                wl = (
-                    await db.execute(select(WordList).where(WordList.id == job.list_id))
-                ).scalar_one_or_none() or wl
-                if existing is not None:
-                    item.verdict = "duplicate"
-                    item.reason_code = "already_on_list"
-                    item.existing_card_id = existing.id
-                    item.verdict_phase = "commit"
-                    await _add_event(
-                        db, job.id, "item_verdict", item_id=item.id,
-                        payload={"verdict": "duplicate", "phase": "commit", "unique": True},
-                    )
-                    await db.commit()
-                    ok = True
-                    break
-                item.last_error = str(exc)[:2000]
-                await _add_event(
-                    db, job.id, "item_retry", level="warn", item_id=item.id,
-                    payload={
-                        "attempt": attempt,
-                        "exception_type": type(exc).__name__,
-                        "exception_message": str(exc)[:500],
-                    },
-                )
-                await db.commit()
-                if attempt < COMMIT_MAX_ATTEMPTS:
-                    await asyncio.sleep(COMMIT_BACKOFF_S[attempt - 1])
-            except Exception as exc:
-                await db.rollback()
-                job = await _load_job(db, job.id) or job
-                item = (
-                    await db.execute(select(ImportJobItem).where(ImportJobItem.id == item.id))
-                ).scalar_one()
-                profile = (
-                    await db.execute(select(LanguageProfile).where(LanguageProfile.id == job.profile_id))
-                ).scalar_one_or_none() or profile
-                wl = (
-                    await db.execute(select(WordList).where(WordList.id == job.list_id))
-                ).scalar_one_or_none() or wl
-                item.last_error = str(exc)[:2000]
-                await _add_event(
-                    db, job.id, "item_retry", level="warn", item_id=item.id,
-                    payload={
-                        "attempt": attempt,
-                        "exception_type": type(exc).__name__,
-                        "exception_message": str(exc)[:500],
-                    },
-                )
-                await db.commit()
-                if attempt < COMMIT_MAX_ATTEMPTS:
-                    await asyncio.sleep(COMMIT_BACKOFF_S[attempt - 1])
-        if not ok:
+            await _add_event(
+                db,
+                job.id,
+                "item_created",
+                item_id=item.id,
+                payload={"card_id": str(card.id)},
+            )
+        except DuplicateImportError as exc:
+            item.verdict = "duplicate"
+            item.reason_code = "already_on_list"
+            item.existing_card_id = exc.card_id
+            item.verdict_phase = "commit"
+            item.display = {
+                "list_name": list_names.get(exc.deck_id) or list_names.get(None)
+            }
+            await _add_event(
+                db,
+                job.id,
+                "item_verdict",
+                item_id=item.id,
+                payload={"verdict": "duplicate", "phase": "commit"},
+            )
+        except (IntegrityError, PendingRollbackError) as exc:
+            item.verdict = "duplicate"
+            item.reason_code = "already_on_list"
+            item.verdict_phase = "commit"
+            item.last_error = str(exc)[:2000]
+            await _add_event(
+                db,
+                job.id,
+                "item_verdict",
+                item_id=item.id,
+                payload={"verdict": "duplicate", "phase": "commit", "unique": True},
+            )
+        except Exception as exc:
             item.verdict = "failed"
             item.reason_code = "write_failed"
-            item.reason_detail = item.last_error
+            item.reason_detail = str(exc)[:2000]
+            item.last_error = str(exc)[:2000]
             item.verdict_phase = "commit"
             await _add_event(
-                db, job.id, "item_verdict", level="error", item_id=item.id,
+                db,
+                job.id,
+                "item_verdict",
+                level="error",
+                item_id=item.id,
                 payload={"verdict": "failed", "reason": "write_failed"},
             )
-            await db.commit()
         await _touch(db, job, processed=idx + 1, created_count=created)
-        await db.commit()
-
-    if await _cancelled(db, job):
-        await finalize_cancel(db, job)
-        return
 
     all_items = (
         await db.execute(select(ImportJobItem).where(ImportJobItem.job_id == job.id))
     ).scalars().all()
     await _refresh_counts(job, list(all_items))
     await _touch(
-        db, job, status="done", stage="write",
-        processed=job.total, created_count=created,
-        finished_at=_now(), current_label=None, current_ordinal=None, current_attempt=0,
+        db,
+        job,
+        status="done",
+        stage="write",
+        processed=job.total,
+        created_count=created,
+        finished_at=_now(),
+        current_label=None,
+        current_ordinal=None,
+        current_attempt=0,
     )
     await _add_event(db, job.id, "commit_finished", payload={"created": created})
     await db.commit()
+    spawn_next_import_card(job.profile_id)
 
 
 class DuplicateImportError(Exception):
-    def __init__(self, card_id: UUID):
+    def __init__(self, card_id: UUID, deck_id: UUID | None = None):
         super().__init__("duplicate")
         self.card_id = card_id
+        self.deck_id = deck_id
 
 
 async def _create_card_for_item(
@@ -1149,14 +1256,18 @@ async def _create_card_for_item(
     profile: LanguageProfile,
     wl: WordList,
     item: ImportJobItem,
+    *,
+    live_rows: list[Any],
 ) -> LearningCard:
     lemma = (item.lemma or "").strip()
     if not lemma:
         raise ValueError("empty lemma")
     pos = item.pos
-    existing = await find_card_anywhere(db, job.user_id, job.profile_id, lemma, pos)
+    existing = select_live_card_for_lemma(live_rows, lemma, pos)
     if existing is not None:
-        raise DuplicateImportError(existing.id)
+        raise DuplicateImportError(
+            existing.id, getattr(existing, "deck_id", None)
+        )
 
     kind = (item.entry_kind or "lemma").strip().lower()
     content = build_pending_content(
@@ -1166,7 +1277,6 @@ async def _create_card_for_item(
         learning_lang=profile.learning_lang,
         entry_kind=kind,
     )
-    status = STATUS_PENDING
 
     card = LearningCard(
         user_id=job.user_id,
@@ -1176,15 +1286,13 @@ async def _create_card_for_item(
         pos=pos,
         gloss_primary=item.gloss,
         content=content,
-        enrichment_status=status,
+        enrichment_status=STATUS_PENDING,
         import_job_id=job.id,
     )
     db.add(card)
     await db.flush()
     if wl.is_system:
         db.add(SrsState(card_id=card.id, scope="main", status="new"))
-    if status == STATUS_PENDING:
-        await hydrate_from_lexical_cache(db, card, profile)
     return card
 
 

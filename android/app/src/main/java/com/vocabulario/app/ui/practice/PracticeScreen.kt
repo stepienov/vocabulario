@@ -98,6 +98,7 @@ fun PracticeScreen(
     viewModel: PracticeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val enrichmentPollingIds by viewModel.enrichmentPollingIds.collectAsState()
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     LaunchedEffect(Unit) { viewModel.loadQueue() }
@@ -390,14 +391,16 @@ fun PracticeScreen(
                                             modifier = Modifier.align(Alignment.TopEnd),
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
-                                            IconButton(
-                                                onClick = viewModel::openCorrection,
-                                                modifier = Modifier.testTag(TestTags.BTN_PRACTICE_REPORT),
-                                            ) {
-                                                Icon(
-                                                    Icons.Outlined.Edit,
-                                                    contentDescription = stringResource(R.string.correction_fix_card),
-                                                )
+                                            if (com.vocabulario.app.ui.card.CARD_CORRECTION_ENABLED) {
+                                                IconButton(
+                                                    onClick = viewModel::openCorrection,
+                                                    modifier = Modifier.testTag(TestTags.BTN_PRACTICE_REPORT),
+                                                ) {
+                                                    Icon(
+                                                        Icons.Outlined.Edit,
+                                                        contentDescription = stringResource(R.string.correction_fix_card),
+                                                    )
+                                                }
                                             }
                                             if (item.has_content_changes) {
                                                 IconButton(
@@ -445,6 +448,12 @@ fun PracticeScreen(
                                             lemmaFallback = item.lemma_l2,
                                             userTenses = state.userTenses,
                                             userCefr = state.userCefr,
+                                            enrichmentStatus = if (item.card_id in enrichmentPollingIds) {
+                                                com.vocabulario.app.data.EnrichmentStatus.LEARNABLE
+                                            } else {
+                                                com.vocabulario.app.data.EnrichmentStatus.READY
+                                            },
+                                            stillPolling = item.card_id in enrichmentPollingIds,
                                             showUsages = state.showUsages,
                                             showExampleSentences = state.showExampleSentences,
                                             showSynonyms = state.showSynonyms,

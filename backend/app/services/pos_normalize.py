@@ -351,6 +351,10 @@ def normalize_pos_bucket(pos: str | None) -> str:
     raw = (pos or "").strip().lower()
     if not raw or raw == "unknown":
         return "unknown"
+    # "adjective/adverb" names two labels; the substring "verb" must not win.
+    first = re.split(r"[/,|;]", raw, maxsplit=1)[0].strip()
+    if first and first != raw:
+        return normalize_pos_bucket(first)
 
     if raw in _POS_ALIASES:
         return _POS_ALIASES[raw]
@@ -482,7 +486,7 @@ def canonicalize_lookup_candidate(
     *,
     learning_lang: str,
 ) -> dict:
-    """Normalize pos + lemma for one lookup candidate."""
+    """Normalize the part of speech. The lemma stays as the model wrote it."""
     lemma = (item.get("lemma") or "").strip()
     gloss = (item.get("gloss") or "").strip()
     raw_pos = item.get("pos")
@@ -490,11 +494,6 @@ def canonicalize_lookup_candidate(
         return item
 
     bucket = normalize_pos_bucket(raw_pos)
-    gender = infer_gender_from_lemma(lemma, learning_lang) or infer_gender_from_pos(raw_pos)
-
-    if bucket == "noun":
-        lemma = ensure_noun_article(lemma, learning_lang=learning_lang, gender=gender)
-
     out = dict(item)
     out["lemma"] = lemma
     out["pos"] = bucket if bucket != "unknown" else None
@@ -523,16 +522,6 @@ def merge_lookup_variants(
             best_lemma = k_lemma
         else:
             best_lemma = k_lemma or n_lemma
-        gender = (
-            infer_gender_from_lemma(best_lemma, learning_lang)
-            or infer_gender_from_lemma(n_lemma, learning_lang)
-            or infer_gender_from_lemma(k_lemma, learning_lang)
-            or infer_gender_from_pos(kept.get("pos"))
-            or infer_gender_from_pos(new.get("pos"))
-        )
-        best_lemma = ensure_noun_article(
-            best_lemma, learning_lang=learning_lang, gender=gender
-        )
     else:
         best_lemma = k_lemma or n_lemma
 
@@ -545,7 +534,17 @@ def merge_lookup_variants(
     return merged
 
 
-def lookup_dedup_key(lemma: str, pos: str | None, *, learning_lang: str) -> tuple[str, str]:
-    """Dedup key: stem + canonical pos bucket (never raw sustantivo masculino)."""
+def _gloss_identity(gloss: str | None) -> str:
+    return re.sub(r"\s+", " ", (gloss or "").strip().casefold())
+
+
+def lookup_dedup_key(
+    lemma: str,
+    pos: str | None,
+    *,
+    learning_lang: str,
+    gloss: str | None = "",
+) -> tuple[str, str, str]:
+    """Same word, part of speech, and translation. The article is not part of the word."""
     bucket = normalize_pos_bucket(pos)
-    return (lemma_stem(lemma, learning_lang), bucket)
+    return (lemma_stem(lemma, learning_lang), bucket, _gloss_identity(gloss))

@@ -42,6 +42,7 @@ fun LearningScreen(
     viewModel: LearningViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val enrichmentPollingIds by viewModel.enrichmentPollingIds.collectAsState()
     val context = LocalContext.current
     LaunchedEffect(Unit) { viewModel.load() }
 
@@ -92,6 +93,7 @@ fun LearningScreen(
                             userCefr = state.userCefr,
                             enrichmentStatus = card.enrichment_status,
                             enrichmentError = card.enrichment_error,
+                            stillPolling = card.id in enrichmentPollingIds,
                             profile = state.activeProfile,
                             onAddRelated = viewModel::openAddRelated,
                             learningLemmas = state.learningLemmas,

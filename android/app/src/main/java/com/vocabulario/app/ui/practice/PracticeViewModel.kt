@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
 import com.vocabulario.app.data.BlockingBusy
+import com.vocabulario.app.data.EnrichmentPoller
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.ChoiceOption
 import com.vocabulario.app.data.api.SrsQueueItem
@@ -117,12 +118,15 @@ class PracticeViewModel @Inject constructor(
     private val repository: LearningRepository,
     private val strings: UiStrings,
     private val networkMonitor: com.vocabulario.app.data.NetworkMonitor,
+    private val enrichmentPoller: EnrichmentPoller,
     private val blockingBusy: BlockingBusy,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PracticeUiState(isOnline = networkMonitor.isCurrentlyOnline()))
     val state: StateFlow<PracticeUiState> = _state.asStateFlow()
+    val enrichmentPollingIds: StateFlow<Set<String>> = enrichmentPoller.pollingIds
     private var activityPollJob: Job? = null
+    private var currentCardJob: Job? = null
 
     private var inputPref: String = "flashcard"
     private val usedDistractorKeys = mutableSetOf<String>()
@@ -188,6 +192,15 @@ class PracticeViewModel @Inject constructor(
                     relatedWordsExpandedDefault = settings.related_words_expanded_default,
                     lastUndo = null,
                 )
+                enrichmentPoller.watch(
+                    newQueue.map {
+                        EnrichmentPoller.Watch(
+                            id = it.card_id,
+                            status = it.enrichment_status,
+                            activity = it.card_activity_status,
+                        )
+                    },
+                )
                 prepareCard()
             }.onFailure {
                 _state.value = _state.value.copy(
@@ -200,6 +213,56 @@ class PracticeViewModel @Inject constructor(
 
     private fun currentItem(): SrsQueueItem? =
         _state.value.queue.getOrNull(_state.value.currentIndex)
+
+    private fun observeCurrentQueueCard() {
+        val item = currentItem() ?: run {
+            currentCardJob?.cancel()
+            currentCardJob = null
+            return
+        }
+        enrichmentPoller.watch(
+            listOf(
+                EnrichmentPoller.Watch(
+                    id = item.card_id,
+                    status = item.enrichment_status,
+                    activity = item.card_activity_status,
+                ),
+            ),
+        )
+        currentCardJob?.cancel()
+        currentCardJob = viewModelScope.launch {
+            repository.observeCard(item.card_id).collect { updated ->
+                if (updated == null) return@collect
+                val idx = _state.value.currentIndex
+                val current = _state.value.queue.getOrNull(idx) ?: return@collect
+                if (current.card_id != updated.id) return@collect
+                val merged = current.copy(
+                    content = updated.content,
+                    enrichment_status = updated.enrichment_status ?: current.enrichment_status,
+                    // null = idle po zakończeniu korekty — nie trzymaj starego activity.
+                    card_activity_status = updated.card_activity_status,
+                    has_content_changes = updated.has_content_changes,
+                )
+                if (
+                    updated.enrichment_status != null ||
+                    updated.card_activity_status != current.card_activity_status
+                ) {
+                    enrichmentPoller.watch(
+                        listOf(
+                            EnrichmentPoller.Watch(
+                                id = updated.id,
+                                status = updated.enrichment_status,
+                                activity = updated.card_activity_status,
+                            ),
+                        ),
+                    )
+                }
+                _state.value = _state.value.copy(
+                    queue = _state.value.queue.toMutableList().also { it[idx] = merged },
+                )
+            }
+        }
+    }
 
     private fun currentDirection(): String =
         currentItem()?.direction ?: "l2_to_l1"
@@ -226,6 +289,7 @@ class PracticeViewModel @Inject constructor(
             typoWarning = false,
             synonymWarning = false,
         )
+        observeCurrentQueueCard()
         if (mode == AnswerMode.CHOICE) prepareChoices()
     }
 
@@ -726,6 +790,7 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun openCorrection() {
+        if (!com.vocabulario.app.ui.card.CARD_CORRECTION_ENABLED) return
         if (!networkMonitor.isCurrentlyOnline()) {
             _state.value = _state.value.copy(error = strings.get(R.string.correction_requires_online))
             return

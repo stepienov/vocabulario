@@ -257,6 +257,331 @@ class LookupSessionTest {
         session.clear()
     }
 
+    @Test
+    fun singleRequestKeepsPartialCandidatesWithoutExpand() = runTest {
+        var expandCalls = 0
+        val session = session(
+            parent = this,
+            singleRequest = true,
+            lookupCached = {
+                LookupResponse(listOf(candidate("el castillo")), source = "ai", ai_complete = false)
+            },
+            lookupExpand = {
+                expandCalls++
+                LookupResponse(emptyList(), source = "ai")
+            },
+        )
+        session.start("zamek")
+        advanceUntilIdle()
+        assertEquals(0, expandCalls)
+        assertEquals(listOf("el castillo"), session.state.value.candidates.map { it.lemma })
+        assertFalse(session.state.value.expanding)
+    }
+
+    @Test
+    fun singleRequestEmptyAnswerExpandsOnce() = runTest {
+        var cachedCalls = 0
+        var expandCalls = 0
+        val session = session(
+            parent = this,
+            singleRequest = true,
+            ioRetryDelayMs = 0,
+            lookupCached = {
+                cachedCalls++
+                LookupResponse(emptyList(), source = "db", ai_complete = false)
+            },
+            lookupExpand = {
+                expandCalls++
+                LookupResponse(listOf(candidate("el castillo")), source = "ai", ai_complete = true)
+            },
+        )
+        session.start("zamek")
+        advanceUntilIdle()
+        assertEquals(1, cachedCalls)
+        assertEquals(1, expandCalls)
+        assertEquals(listOf("el castillo"), session.state.value.candidates.map { it.lemma })
+        assertFalse(session.state.value.expanding)
+    }
+
+    @Test
+    fun cachedHitRestoresExhaustedSuggestions() = runTest {
+        val session = session(
+            parent = this,
+            singleRequest = true,
+            lookupCached = {
+                LookupResponse(
+                    listOf(candidate("mucho")),
+                    source = "db",
+                    ai_complete = true,
+                    suggestions_exhausted = true,
+                )
+            },
+        )
+        session.start("muchN")
+        advanceUntilIdle()
+        assertTrue(session.state.value.suggestionsExhausted)
+        assertNull(session.state.value.notice)
+    }
+
+    @Test
+    fun showMoreWithNothingAddedKeepsTilesAndHidesTheButton() = runTest {
+        val session = session(
+            parent = this,
+            singleRequest = true,
+            lookupCached = {
+                LookupResponse(listOf(candidate("el perro")), source = "db", ai_complete = true)
+            },
+            lookupMore = {
+                LookupResponse(listOf(candidate("el perro")), source = "db", ai_complete = true, added = 0)
+            },
+        )
+        session.start("pies")
+        advanceUntilIdle()
+        session.showMore()
+        advanceUntilIdle()
+        assertEquals(listOf("el perro"), session.state.value.candidates.map { it.lemma })
+        assertTrue(session.state.value.suggestionsExhausted)
+        assertNull(session.state.value.notice)
+        assertFalse(session.state.value.loadingMore)
+    }
+
+    @Test
+    fun singleRequestEmptyExpandShowsNothingFound() = runTest {
+        val session = session(
+            parent = this,
+            singleRequest = true,
+            ioRetryDelayMs = 0,
+            nothingFoundNotice = { "none:$it" },
+            longerAnalysisNotice = { "longer:$it" },
+            lookupCached = {
+                LookupResponse(emptyList(), source = "db", ai_complete = false)
+            },
+            lookupExpand = {
+                LookupResponse(emptyList(), source = "ai", ai_complete = true)
+            },
+        )
+        session.start("terwa")
+        advanceUntilIdle()
+        assertTrue(session.state.value.candidates.isEmpty())
+        assertEquals("none:terwa", session.state.value.notice)
+        assertFalse(session.state.value.expanding)
+    }
+
+    @Test
+    fun showMoreAppendsANewCandidate() = runTest {
+        val session = session(
+            parent = this,
+            singleRequest = true,
+            lookupCached = {
+                LookupResponse(listOf(candidate("el perro")), source = "db", ai_complete = true)
+            },
+            lookupMore = {
+                LookupResponse(
+                    listOf(candidate("el perro"), candidate("el pie")),
+                    source = "ai",
+                    ai_complete = true,
+                    added = 1,
+                )
+            },
+        )
+        session.start("pies")
+        advanceUntilIdle()
+        session.showMore()
+        advanceUntilIdle()
+        assertEquals(listOf("el perro", "el pie"), session.state.value.candidates.map { it.lemma })
+        assertNull(session.state.value.notice)
+    }
+
+    @Test
+    fun showMoreKeepsVisibleOrderAndAppendsEvenWhenServerRanksTheNewRowFirst() = runTest {
+        val session = session(
+            parent = this,
+            singleRequest = true,
+            lookupCached = {
+                LookupResponse(
+                    listOf(candidate("el camino"), candidate("la carretera")),
+                    source = "db",
+                    ai_complete = true,
+                )
+            },
+            lookupMore = {
+                LookupResponse(
+                    listOf(candidate("la vía"), candidate("el camino"), candidate("la carretera")),
+                    source = "ai",
+                    ai_complete = true,
+                    added = 1,
+                )
+            },
+        )
+        session.start("droga")
+        advanceUntilIdle()
+        session.showMore()
+        advanceUntilIdle()
+        assertEquals(
+            listOf("el camino", "la carretera", "la vía"),
+            session.state.value.candidates.map { it.lemma },
+        )
+    }
+
+    @Test
+    fun moreRetriesReusePersistedOperationAndNextClickGetsANewOne() = runTest {
+        val persisted = mutableListOf<String>()
+        val requested = mutableListOf<String>()
+        val session = LookupSession(
+            lookupCached = {
+                LookupResponse(listOf(candidate("el perro")), source = "db", ai_complete = true)
+            },
+            lookupExpand = { _, more, operationId ->
+                assertTrue(more)
+                val id = requireNotNull(operationId)
+                assertEquals(id, persisted.last())
+                requested.add(id)
+                if (requested.size <= 2) throw IOException("connection reset")
+                LookupResponse(
+                    listOf(candidate("el perro"), candidate("el pie")),
+                    source = "ai", ai_complete = true, added = 1,
+                )
+            },
+            mapSearchError = { "search-failed" },
+            expandFailedNotice = "expand-failed",
+            parent = this,
+            singleRequest = true,
+            ioRetryDelayMs = 0,
+            persistMore = { _, id -> persisted.add(id) },
+        )
+        session.start("pies")
+        advanceUntilIdle()
+        session.showMore()
+        advanceUntilIdle()
+        assertEquals("expand-failed", session.state.value.notice)
+        session.showMore()
+        advanceUntilIdle()
+        assertEquals(requested[0], requested[1])
+        assertEquals(requested[0], requested[2])
+        assertEquals(listOf("el perro", "el pie"), session.state.value.candidates.map { it.lemma })
+        session.showMore()
+        advanceUntilIdle()
+        assertTrue(requested[3] != requested[2])
+    }
+
+    @Test
+    fun restoredMoreWithNoNewResultsStillDisplaysCachedCandidates() = runTest {
+        val session = LookupSession(
+            lookupCached = { throw AssertionError("restore must reuse the operation") },
+            lookupExpand = { _, more, operationId ->
+                assertTrue(more)
+                assertEquals("saved-id", operationId)
+                LookupResponse(
+                    listOf(candidate("el perro")), source = "db", ai_complete = true, added = 0,
+                )
+            },
+            mapSearchError = { "search-failed" },
+            expandFailedNotice = "expand-failed",
+            parent = this,
+        )
+        session.resumeMore("pies", "saved-id")
+        advanceUntilIdle()
+        assertEquals(listOf("el perro"), session.state.value.candidates.map { it.lemma })
+        assertTrue(session.state.value.suggestionsExhausted)
+        assertFalse(session.state.value.loadingMore)
+    }
+
+    @Test
+    fun workerResultForOldOperationCannotReplaceCurrentMore() = runTest {
+        val started = CompletableDeferred<String>()
+        val session = LookupSession(
+            lookupCached = {
+                LookupResponse(listOf(candidate("el perro")), source = "db", ai_complete = true)
+            },
+            lookupExpand = { _, _, operationId ->
+                started.complete(requireNotNull(operationId))
+                awaitCancellation()
+            },
+            mapSearchError = { "search-failed" },
+            expandFailedNotice = "expand-failed",
+            parent = this,
+            singleRequest = true,
+        )
+        session.start("pies")
+        advanceUntilIdle()
+        session.showMore()
+        val currentId = started.await()
+        session.acceptServerResult(
+            "pies",
+            LookupResponse(listOf(candidate("la pata")), source = "db", ai_complete = true),
+            "old-id",
+        )
+        assertTrue(session.state.value.loadingMore)
+        assertEquals(listOf("el perro"), session.state.value.candidates.map { it.lemma })
+        session.acceptServerResult(
+            "pies",
+            LookupResponse(
+                listOf(candidate("el pie"), candidate("el perro")),
+                source = "db", ai_complete = true, added = 1,
+            ),
+            currentId,
+        )
+        assertFalse(session.state.value.loadingMore)
+        assertEquals(listOf("el perro", "el pie"), session.state.value.candidates.map { it.lemma })
+        session.clear()
+    }
+
+    @Test
+    fun lateRefreshOfPreviousMoreDoesNotCancelNextMore() = runTest {
+        val firstResponse = CompletableDeferred<LookupResponse>()
+        val lateRefresh = CompletableDeferred<LookupResponse>()
+        val nextResponse = CompletableDeferred<LookupResponse>()
+        var calls = 0
+        val session = LookupSession(
+            lookupCached = {
+                LookupResponse(listOf(candidate("el perro")), source = "db", ai_complete = true)
+            },
+            lookupExpand = { _, _, _ ->
+                when (++calls) {
+                    1 -> firstResponse.await()
+                    2 -> lateRefresh.await()
+                    else -> nextResponse.await()
+                }
+            },
+            mapSearchError = { "search-failed" },
+            expandFailedNotice = "expand-failed",
+            parent = this,
+            singleRequest = true,
+        )
+        session.start("pies")
+        advanceUntilIdle()
+        session.showMore()
+        runCurrent()
+        session.refreshFromCache()
+        runCurrent()
+        firstResponse.complete(
+            LookupResponse(
+                listOf(candidate("el perro"), candidate("el pie")),
+                source = "ai", ai_complete = true, added = 1,
+            )
+        )
+        runCurrent()
+        session.showMore()
+        runCurrent()
+        lateRefresh.complete(
+            LookupResponse(listOf(candidate("el perro")), source = "db", ai_complete = true, added = 0)
+        )
+        runCurrent()
+        assertTrue(session.state.value.loadingMore)
+        assertEquals(listOf("el perro", "el pie"), session.state.value.candidates.map { it.lemma })
+        nextResponse.complete(
+            LookupResponse(
+                listOf(candidate("el perro"), candidate("el pie"), candidate("la pata")),
+                source = "ai", ai_complete = true, added = 1,
+            )
+        )
+        advanceUntilIdle()
+        assertEquals(
+            listOf("el perro", "el pie", "la pata"),
+            session.state.value.candidates.map { it.lemma },
+        )
+    }
+
     private fun session(
         parent: CoroutineScope,
         lookupCached: suspend (String) -> LookupResponse = {
@@ -265,15 +590,22 @@ class LookupSessionTest {
         lookupExpand: suspend (String) -> LookupResponse = {
             LookupResponse(emptyList(), source = "none")
         },
+        lookupMore: suspend (String) -> LookupResponse = lookupExpand,
         ioRetryDelayMs: Long = 1_500L,
         cachedPollDelayMs: Long = 0L,
         cachedPollAttempts: Int = 0,
+        singleRequest: Boolean = false,
+        longerAnalysisNotice: (String) -> String = { "" },
+        nothingFoundNotice: (String) -> String = { "" },
     ) = LookupSession(
         lookupCached = lookupCached,
-        lookupExpand = lookupExpand,
+        lookupExpand = { text, more, _ -> if (more) lookupMore(text) else lookupExpand(text) },
         mapSearchError = { "search-failed" },
         expandFailedNotice = "expand-failed",
         parent = parent,
+        longerAnalysisNotice = longerAnalysisNotice,
+        nothingFoundNotice = nothingFoundNotice,
+        singleRequest = singleRequest,
         ioRetryDelayMs = ioRetryDelayMs,
         cachedPollDelayMs = cachedPollDelayMs,
         cachedPollAttempts = cachedPollAttempts,

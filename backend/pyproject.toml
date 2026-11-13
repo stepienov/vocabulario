@@ -54,4 +54,5 @@ asyncio_default_fixture_loop_scope = "function"
 addopts = "-m 'not visual'"
 markers = [
     "visual: HTML/PNG import galleries (needs Playwright; not run in CI)",
+    "pg: needs local Postgres from TEST_DATABASE_URL (skipped without it)",
 ]

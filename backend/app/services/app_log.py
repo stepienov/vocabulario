@@ -165,7 +165,10 @@ async def log_event(
     if exc is not None:
         error_type = error_type or type(exc).__name__
         error_message = error_message or str(exc)
-        traceback = traceback or tb_mod.format_exc()
+        # format_exc() poza blokiem except daje puste / "NoneType: None".
+        traceback = traceback or "".join(
+            tb_mod.format_exception(type(exc), exc, exc.__traceback__)
+        )
         if status == "ok":
             status = "error"
         if level == "info":
@@ -199,3 +202,9 @@ async def log_event(
             await db.commit()
     except Exception:
         logger.exception("app_log write failed event=%s", event)
+
+
+def log_event_background(**kwargs: Any) -> None:
+    from app.services.background import spawn_background
+
+    spawn_background(lambda: log_event(**kwargs), name="app_log")

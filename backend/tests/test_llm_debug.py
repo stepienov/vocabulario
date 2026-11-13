@@ -118,8 +118,18 @@ def test_record_llm_usage_stores_payload_row():
         def add(self, obj: object) -> None:
             added.append(obj)
 
+        async def flush(self) -> None:
+            return None
+
         async def commit(self) -> None:
             return None
+
+        def begin_nested(self):
+            return self._nested()
+
+        @asynccontextmanager
+        async def _nested(self):
+            yield
 
     session = FakeSession()
 
@@ -153,9 +163,19 @@ def test_record_llm_usage_keeps_metrics_if_payload_fails():
         def add(self, obj: object) -> None:
             added.append(obj)
 
+        async def flush(self) -> None:
+            return None
+
         async def commit(self) -> None:
-            if any(isinstance(obj, LlmCallPayload) for obj in added):
-                raise RuntimeError("payload fk")
+            return None
+
+        def begin_nested(self):
+            return self._nested()
+
+        @asynccontextmanager
+        async def _nested(self):
+            raise RuntimeError("payload fk")
+            yield
 
     session = FakeSession()
 

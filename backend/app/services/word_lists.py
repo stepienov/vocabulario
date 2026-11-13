@@ -163,6 +163,25 @@ def select_live_card_for_lemma(
     return exact or canonical_hit
 
 
+async def find_card_key_anywhere(
+    db: AsyncSession,
+    user_id: UUID,
+    profile_id: UUID,
+    lemma: str,
+    pos: str | None = None,
+) -> UUID | None:
+    """Lekki odczyt duplikatu — tylko id, lemma_l2, pos (bez content)."""
+    result = await db.execute(
+        select(LearningCard.id, LearningCard.lemma_l2, LearningCard.pos).where(
+            LearningCard.user_id == user_id,
+            LearningCard.profile_id == profile_id,
+            LearningCard.deleted_at.is_(None),
+        )
+    )
+    hit = select_live_card_for_lemma(list(result.all()), lemma, pos)
+    return hit.id if hit is not None else None
+
+
 async def find_card_anywhere(
     db: AsyncSession,
     user_id: UUID,
@@ -170,14 +189,10 @@ async def find_card_anywhere(
     lemma: str,
     pos: str | None = None,
 ) -> LearningCard | None:
-    result = await db.execute(
-        select(LearningCard).where(
-            LearningCard.user_id == user_id,
-            LearningCard.profile_id == profile_id,
-            LearningCard.deleted_at.is_(None),
-        )
-    )
-    return select_live_card_for_lemma(list(result.scalars().all()), lemma, pos)
+    card_id = await find_card_key_anywhere(db, user_id, profile_id, lemma, pos)
+    if card_id is None:
+        return None
+    return await db.get(LearningCard, card_id)
 
 
 async def resolve_list_for_card(

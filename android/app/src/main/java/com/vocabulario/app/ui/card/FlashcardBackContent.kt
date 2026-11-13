@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +50,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.res.stringResource
 import com.vocabulario.app.R
+import com.vocabulario.app.data.CardSectionWaiting
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.LanguagePacks
 import com.vocabulario.app.data.RelatedMembershipIndex
@@ -71,6 +73,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import java.util.Locale
 
@@ -80,6 +83,8 @@ fun FlashcardBackContent(
     lemmaFallback: String,
     userTenses: List<String> = emptyList(),
     userCefr: String = "A2",
+    enrichmentStatus: String = "ready",
+    stillPolling: Boolean = false,
     showUsages: Boolean = true,
     showExampleSentences: Boolean = true,
     showSynonyms: Boolean = true,
@@ -104,21 +109,45 @@ fun FlashcardBackContent(
     val entryKind = content["entry_kind"].asJsonString()
     val lang = content["language"].asJsonString() ?: "en"
     val meanings = content["meanings"].asJsonArray() ?: JsonArray(emptyList())
+    val relatedPending = content["related_pending"].let { raw ->
+        when (raw) {
+            is JsonPrimitive -> raw.booleanOrNull
+            else -> null
+        }
+    }
+    val examplesPending = content["examples_pending"].let { raw ->
+        when (raw) {
+            is JsonPrimitive -> raw.booleanOrNull
+            else -> null
+        }
+    }
     val synonymsL2 = parseFlashRelatedWords(content["synonyms_l2"].asJsonArray())
     val antonymsL2 = parseFlashRelatedWords(content["antonyms_l2"].asJsonArray())
     val wordFamilyL2 = parseFlashRelatedWords(content["word_family_l2"].asJsonArray())
     val associationsL2 = parseFlashRelatedWords(content["associations_l2"].asJsonArray())
+    val waitRelated = { empty: Boolean ->
+        CardSectionWaiting.related(empty, enrichmentStatus, stillPolling, relatedPending)
+    }
     val conjugation = conjugationFromContent(content)
     val tenseMap = conjugation?.get("tenses").asJsonObject()
     val nonFinite = conjugation?.get("non_finite").asJsonObject()
     val periphrases = conjugation?.get("periphrases").asJsonArray()
     val uiHints = content["ui_hints"].asJsonObject() ?: conjugationUiMeta(conjugation)
     val showConjHint = when (val raw = uiHints?.get("show_conjugation")) {
-        null -> true
+        null -> {
+            val p = pos?.trim()?.lowercase().orEmpty()
+            p == "verb" || p == "construction" || conjugation != null
+        }
         is JsonPrimitive -> raw.contentOrNull?.equals("false", ignoreCase = true) != true &&
             raw.toString() != "false"
         else -> true
     }
+    val waitInflection = CardSectionWaiting.inflection(
+        hasInflection = conjugation != null,
+        status = enrichmentStatus,
+        stillPolling = stillPolling,
+        expectInflection = showConjugation && showConjHint,
+    )
     val conjugationEnabled = showConjugation && showConjHint && conjugation != null
 
     val tts = rememberL2Tts(lang)
@@ -228,6 +257,13 @@ fun FlashcardBackContent(
             val gloss = meaning["gloss_l1"].asJsonString().orEmpty()
             val syns = meaning["synonyms_l1"].asJsonArray()?.mapNotNull { it.asJsonString() }.orEmpty()
             val example = examplesForUserLevel(meaning["examples"].asJsonArray(), userCefr, maxCount = 1).firstOrNull()
+            val hasExamples = !(meaning["examples"].asJsonArray()?.isEmpty() ?: true)
+            val waitExamples = CardSectionWaiting.examples(
+                hasExamples = hasExamples,
+                status = enrichmentStatus,
+                stillPolling = stillPolling,
+                examplesPending = examplesPending,
+            )
             val usages = meaning["usages"].asJsonArray().orEmpty().mapNotNull { usageEl ->
                 when (usageEl) {
                     is JsonObject -> {
@@ -306,6 +342,11 @@ fun FlashcardBackContent(
                                 )
                             }
                         }
+                    } else if (showExampleSentences && waitExamples) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp)
+                        }
                     }
                     if (hasUsagesLink) {
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
@@ -333,58 +374,76 @@ fun FlashcardBackContent(
             }
         }
 
-        if ((showSynonyms && synonymsL2.isNotEmpty()) || (showAntonyms && antonymsL2.isNotEmpty())) {
+        val showSynBlock = showSynonyms && (synonymsL2.isNotEmpty() || waitRelated(synonymsL2.isEmpty()))
+        val showAntBlock = showAntonyms && (antonymsL2.isNotEmpty() || waitRelated(antonymsL2.isEmpty()))
+        if (showSynBlock || showAntBlock) {
             SectionLabel(stringResource(R.string.section_syn_ant))
-            if (showSynonyms && synonymsL2.isNotEmpty()) {
-                CollapsibleSection(
-                    title = stringResource(R.string.section_synonyms_short),
-                    expanded = synExpanded,
-                    onToggle = { synExpanded = !synExpanded },
-                ) {
-                    RelatedWordsList(synonymsL2, onAddRelated, learningLemmas, relatedMembership)
+            if (showSynBlock) {
+                if (synonymsL2.isNotEmpty()) {
+                    CollapsibleSection(
+                        title = stringResource(R.string.section_synonyms_short),
+                        expanded = synExpanded,
+                        onToggle = { synExpanded = !synExpanded },
+                    ) {
+                        RelatedWordsList(synonymsL2, onAddRelated, learningLemmas, relatedMembership)
+                    }
+                } else {
+                    FlashSectionLoading(stringResource(R.string.section_synonyms_short))
                 }
             }
-            if (showAntonyms && antonymsL2.isNotEmpty()) {
-                CollapsibleSection(
-                    title = stringResource(R.string.section_antonyms_title),
-                    expanded = antExpanded,
-                    onToggle = { antExpanded = !antExpanded },
-                ) {
-                    RelatedWordsList(antonymsL2, onAddRelated, learningLemmas, relatedMembership)
+            if (showAntBlock) {
+                if (antonymsL2.isNotEmpty()) {
+                    CollapsibleSection(
+                        title = stringResource(R.string.section_antonyms_title),
+                        expanded = antExpanded,
+                        onToggle = { antExpanded = !antExpanded },
+                    ) {
+                        RelatedWordsList(antonymsL2, onAddRelated, learningLemmas, relatedMembership)
+                    }
+                } else {
+                    FlashSectionLoading(stringResource(R.string.section_antonyms_title))
                 }
             }
         }
 
-        if (showWordFamily && wordFamilyL2.isNotEmpty()) {
-            CollapsibleSection(
-                title = stringResource(R.string.section_word_family),
-                expanded = familyExpanded,
-                onToggle = { familyExpanded = !familyExpanded },
-            ) {
-                RelatedWordsList(
-                    wordFamilyL2,
-                    onAddRelated,
-                    learningLemmas,
-                    relatedMembership,
-                    pageSize = WORD_FAMILY_PAGE_SIZE,
-                    joinWordFamily = true,
-                )
+        if (showWordFamily && (wordFamilyL2.isNotEmpty() || waitRelated(wordFamilyL2.isEmpty()))) {
+            if (wordFamilyL2.isNotEmpty()) {
+                CollapsibleSection(
+                    title = stringResource(R.string.section_word_family),
+                    expanded = familyExpanded,
+                    onToggle = { familyExpanded = !familyExpanded },
+                ) {
+                    RelatedWordsList(
+                        wordFamilyL2,
+                        onAddRelated,
+                        learningLemmas,
+                        relatedMembership,
+                        pageSize = 0,
+                        joinWordFamily = true,
+                    )
+                }
+            } else {
+                FlashSectionLoading(stringResource(R.string.section_word_family))
             }
         }
 
-        if (showAssociations && associationsL2.isNotEmpty()) {
-            CollapsibleSection(
-                title = stringResource(R.string.section_associations),
-                expanded = associationsExpanded,
-                onToggle = { associationsExpanded = !associationsExpanded },
-            ) {
-                RelatedWordsList(
-                    associationsL2,
-                    onAddRelated,
-                    learningLemmas,
-                    relatedMembership,
-                    pageSize = WORD_FAMILY_PAGE_SIZE,
-                )
+        if (showAssociations && (associationsL2.isNotEmpty() || waitRelated(associationsL2.isEmpty()))) {
+            if (associationsL2.isNotEmpty()) {
+                CollapsibleSection(
+                    title = stringResource(R.string.section_associations),
+                    expanded = associationsExpanded,
+                    onToggle = { associationsExpanded = !associationsExpanded },
+                ) {
+                    RelatedWordsList(
+                        associationsL2,
+                        onAddRelated,
+                        learningLemmas,
+                        relatedMembership,
+                        pageSize = 0,
+                    )
+                }
+            } else {
+                FlashSectionLoading(stringResource(R.string.section_associations))
             }
         }
 
@@ -392,8 +451,8 @@ fun FlashcardBackContent(
             PeriphrasesSection(periphrases = periphrases, tts = tts)
         }
 
-        if (conjugationEnabled) {
-            ConjugationTenseAccordions(
+        when {
+            conjugationEnabled -> ConjugationTenseAccordions(
                 finiteKeys = finiteKeys,
                 nonFiniteKeys = nonFiniteKeys,
                 tenseMap = tenseMap,
@@ -404,6 +463,8 @@ fun FlashcardBackContent(
                 expandedDefault = conjugationExpandedDefault,
                 resetKey = lemma,
             )
+            showConjugation && waitInflection ->
+                FlashSectionLoading(stringResource(R.string.section_conjugation))
         }
     }
 
@@ -468,6 +529,28 @@ fun FlashcardBackContent(
 }
 
 @Composable
+private fun FlashSectionLoading(title: String) {
+    AppCard {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
+        }
+    }
+}
+
+@Composable
 private fun RelatedWordsList(
     words: List<RelatedWord>,
     onAdd: ((RelatedWord) -> Unit)?,
@@ -522,7 +605,7 @@ private fun RelatedWordsList(
             )
         }
         if (pageSize > 0 && visibleCount < words.size) {
-            TextButton(onClick = { visibleCount = minOf(visibleCount + pageSize, words.size) }) {
+            TextButton(onClick = { visibleCount = words.size }) {
                 Text(stringResource(R.string.action_show_more))
             }
         }

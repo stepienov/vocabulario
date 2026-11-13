@@ -5,7 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
 import com.vocabulario.app.data.BlockingBusy
+import com.vocabulario.app.data.CardMembershipRow
+import com.vocabulario.app.data.EnrichmentPoller
 import com.vocabulario.app.data.EnrichmentStatus
+import com.vocabulario.app.data.selectLiveCardForLemma
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.SYSTEM_LIST_NAME
 import com.vocabulario.app.data.RelatedMembershipIndex
@@ -19,11 +22,13 @@ import com.vocabulario.app.data.api.DashboardStatsResponse
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.api.LookupCandidate
 import com.vocabulario.app.data.api.WordListResponse
+import com.vocabulario.app.data.api.isWordAlreadyOnList
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.imports.ImportController
 import com.vocabulario.app.data.lookup.CategoryLookupCoordinator
 import com.vocabulario.app.data.lookup.LookupCoordinator
 import com.vocabulario.app.data.lookup.LookupSessionState
+import com.vocabulario.app.data.lookup.toLookupSession
 import com.vocabulario.app.data.local.LocalDashboard
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.i18n.UiStrings
@@ -37,8 +42,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import java.time.Instant
@@ -55,8 +60,13 @@ data class HomeUiState(
     val searchLoading: Boolean = false,
     /** OpenAI jeszcze uzupełnia listę — mały spinner pod propozycjami. */
     val expanding: Boolean = false,
+    val loadingMore: Boolean = false,
+    val suggestionsExhausted: Boolean = false,
     val candidates: List<LookupCandidate> = emptyList(),
     val searchByCategory: Boolean = false,
+    val assocSearching: Boolean = false,
+    val assocCanMore: Boolean = false,
+    val assocNoMore: Boolean = false,
     val activeProfile: LanguageProfileResponse? = null,
     val error: String? = null,
     val notice: String? = null,
@@ -132,6 +142,7 @@ class HomeViewModel @Inject constructor(
     private val importController: ImportController,
     private val lookupCoordinator: LookupCoordinator,
     private val categoryLookupCoordinator: CategoryLookupCoordinator,
+    private val enrichmentPoller: EnrichmentPoller,
     private val blockingBusy: BlockingBusy,
 ) : ViewModel() {
 
@@ -143,19 +154,27 @@ class HomeViewModel @Inject constructor(
     /** Źródło prawdy o sieci — UI (zakładka „dodaj”) subskrybuje bezpośrednio, bez opóźnienia przez HomeUiState. */
     val connectivity: StateFlow<Boolean> = networkMonitor.isOnline
 
-    private var pollJob: Job? = null
+    /** Karty, które proces aplikacji nadal odpytuje — kółko sekcji tylko przy tych id. */
+    val enrichmentPollingIds: StateFlow<Set<String>> = enrichmentPoller.pollingIds
+
     private var boundProfileId: String? = null
     private var appliedLookupGeneration: Long = -1L
     private var listsObserverJob: Job? = null
     private var cardsObserverJob: Job? = null
     private var roomRefreshJob: Job? = null
+    private var detailCardJob: Job? = null
     /** Odśwież dashboard chwilę po next_review_at, bez tickera. */
     private var nextReviewRefreshJob: Job? = null
     /** Podczas move/delete nie publikuj pośrednich liczników z Room. */
     private var pauseRoomRefresh = false
+    private var membershipRows: List<CardMembershipRow> = emptyList()
+    private var membershipPulledAt: String? = null
+    private val inFlightAdds = mutableSetOf<String>()
+    private var membershipJob: Job? = null
 
     init {
         viewModelScope.launch { refreshAll() }
+        observeCardMembership()
         viewModelScope.launch {
             importController.navigateToList.collect { listId ->
                 openListTab(listId)
@@ -172,7 +191,8 @@ class HomeViewModel @Inject constructor(
         }
         viewModelScope.launch {
             var first = true
-            categoryLookupCoordinator.state.collect { session ->
+            categoryLookupCoordinator.state.collect { assoc ->
+                val session = assoc.toLookupSession()
                 val categoryActive = session.query.isNotEmpty() || session.hasResultsOrProgress
                 if (categoryActive && !_state.value.searchByCategory) {
                     _state.value = _state.value.copy(searchByCategory = true)
@@ -181,6 +201,11 @@ class HomeViewModel @Inject constructor(
                 val openAdd = session.hasResultsOrProgress && (first || session.expanding)
                 first = false
                 applyLookupSession(session, openAddTab = openAdd)
+                _state.value = _state.value.copy(
+                    assocSearching = assoc.word != null && assoc.rounds.isEmpty() && assoc.roundLoading != null,
+                    assocCanMore = assoc.canAskMore,
+                    assocNoMore = assoc.exhausted,
+                )
             }
         }
         viewModelScope.launch {
@@ -319,7 +344,9 @@ class HomeViewModel @Inject constructor(
 
     /** Drop pair-scoped UI state immediately, then reload lists/cards/stats. */
     private fun onLanguagePairChanged(wipeUi: Boolean = true) {
-        pollJob?.cancel()
+        enrichmentPoller.reset()
+        detailCardJob?.cancel()
+        detailCardJob = null
         if (wipeUi) {
             lookupCoordinator.clear()
             categoryLookupCoordinator.clear()
@@ -374,14 +401,14 @@ class HomeViewModel @Inject constructor(
         lookupCoordinator.retryPending()
         categoryLookupCoordinator.retryPending()
         val session = if (_state.value.searchByCategory) {
-            categoryLookupCoordinator.state.value
+            categoryLookupCoordinator.state.value.toLookupSession()
         } else {
             lookupCoordinator.state.value
         }
         if (session.hasResultsOrProgress) {
             applyLookupSession(session, openAddTab = true)
         }
-        startPollingIfNeeded(restart = true)
+        startPollingIfNeeded()
         _state.value.selectedListId?.let { loadListWords(it, background = true) }
         if (_state.value.tab == HomeTab.DASHBOARD) {
             loadStats()
@@ -606,6 +633,8 @@ class HomeViewModel @Inject constructor(
             query = "",
             candidates = emptyList(),
             expanding = false,
+            loadingMore = false,
+            suggestionsExhausted = false,
             searchLoading = false,
             error = null,
             notice = null,
@@ -613,11 +642,12 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onQueryChange(value: String) {
-        _state.value = _state.value.copy(query = value, error = null, notice = null)
-    }
-
-    fun prepareVoiceSearch() {
-        clearSearch()
+        _state.value = _state.value.copy(
+            query = value,
+            error = null,
+            notice = null,
+            suggestionsExhausted = false,
+        )
     }
 
     fun setSearchByCategory(enabled: Boolean) {
@@ -629,6 +659,8 @@ class HomeViewModel @Inject constructor(
             searchByCategory = enabled,
             candidates = emptyList(),
             expanding = false,
+            loadingMore = false,
+            suggestionsExhausted = false,
             searchLoading = false,
             error = null,
             notice = null,
@@ -680,6 +712,8 @@ class HomeViewModel @Inject constructor(
         }
         _state.value = _state.value.copy(
             expanding = true,
+            loadingMore = false,
+            suggestionsExhausted = false,
             searchLoading = false,
             error = null,
             notice = null,
@@ -695,6 +729,42 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun showMoreSuggestions() {
+        if (_state.value.searchByCategory) {
+            categoryLookupCoordinator.more()
+            return
+        }
+        if (_state.value.candidates.isEmpty()) return
+        lookupCoordinator.showMore()
+    }
+
+    private fun observeCardMembership() {
+        viewModelScope.launch {
+            tokenStore.activeProfileId.collect { profileId ->
+                membershipJob?.cancel()
+                membershipRows = emptyList()
+                membershipPulledAt = null
+                if (profileId.isNullOrBlank()) {
+                    reannotateCandidates()
+                    return@collect
+                }
+                membershipJob = viewModelScope.launch {
+                    combine(
+                        repository.observeMembershipRows(profileId),
+                        repository.observeLastPulledAt(profileId),
+                    ) { rows, pulled -> rows to pulled }
+                        .collect { (rows, pulled) ->
+                            membershipRows = rows
+                            membershipPulledAt = pulled
+                            val present = rows.map { inFlightKey(it.lemmaL2, it.pos) }.toSet()
+                            inFlightAdds.removeAll(present)
+                            reannotateCandidates()
+                        }
+                }
+            }
+        }
+    }
+
     private fun applyLookupSession(session: LookupSessionState, openAddTab: Boolean) {
         val current = _state.value
         val newGeneration = session.generation != appliedLookupGeneration
@@ -704,17 +774,27 @@ class HomeViewModel @Inject constructor(
                 _state.value = current.copy(
                     candidates = emptyList(),
                     expanding = false,
+                    loadingMore = false,
+                    suggestionsExhausted = false,
                     error = null,
+                    notice = null,
                 )
             }
             return
         }
         appliedLookupGeneration = session.generation
-        val candidates = if (newGeneration) {
-            session.candidates
-        } else {
-            mergeLookupCandidates(current.candidates, session.candidates)
-        }
+        val candidates = annotateLookupCandidates(
+            candidates = if (newGeneration) {
+                session.candidates
+            } else {
+                mergeLookupCandidates(current.candidates, session.candidates)
+            },
+            rows = membershipRows,
+            lists = current.lists,
+            lastPulledAt = membershipPulledAt,
+            inFlightAdds = inFlightAdds,
+            learningLabel = strings.get(R.string.list_learning),
+        )
         val query = when {
             session.expanding -> session.query
             current.query.isBlank() && session.query.isNotBlank() -> session.query
@@ -725,19 +805,36 @@ class HomeViewModel @Inject constructor(
             query = query,
             candidates = candidates,
             expanding = session.expanding,
+            loadingMore = session.loadingMore,
+            suggestionsExhausted = session.suggestionsExhausted,
             error = if (session.error != null || newGeneration || session.expanding) {
                 session.error
             } else {
                 current.error
             },
-            notice = if (session.notice != null || newGeneration || session.expanding) {
-                session.notice
-            } else {
-                current.notice
+            notice = when {
+                session.candidates.isNotEmpty() && session.notice == null -> null
+                session.notice != null || newGeneration || session.expanding -> session.notice
+                else -> current.notice
             },
             searchLoading = if (session.expanding) false else current.searchLoading,
         )
         if (candidates.isNotEmpty()) startPollingIfNeeded()
+    }
+
+    private fun reannotateCandidates() {
+        val current = _state.value
+        if (current.candidates.isEmpty()) return
+        _state.value = current.copy(
+            candidates = annotateLookupCandidates(
+                candidates = current.candidates,
+                rows = membershipRows,
+                lists = current.lists,
+                lastPulledAt = membershipPulledAt,
+                inFlightAdds = inFlightAdds,
+                learningLabel = strings.get(R.string.list_learning),
+            ),
+        )
     }
 
     fun startImportFromFile(
@@ -764,6 +861,10 @@ class HomeViewModel @Inject constructor(
     fun confirmImportCancel() = importController.confirmCancel()
 
     fun confirmImportCommit() = importController.confirmCommit()
+
+    fun toggleImportReadyItem(itemId: String) = importController.toggleReadyItem(itemId)
+
+    fun refreshImportDailyQuota() = importController.refreshDailyQuota()
 
     fun dismissImportResult(openList: Boolean = false) =
         importController.dismissResult(openList)
@@ -841,6 +942,15 @@ class HomeViewModel @Inject constructor(
 
     fun openCardDetail(card: CardResponse) {
         _state.value = _state.value.copy(detailCard = card)
+        enrichmentPoller.watchCard(card)
+        detailCardJob?.cancel()
+        detailCardJob = viewModelScope.launch {
+            repository.observeCard(card.id).collect { updated ->
+                if (updated == null) return@collect
+                if (_state.value.detailCard?.id != card.id) return@collect
+                _state.value = _state.value.copy(detailCard = updated)
+            }
+        }
         viewModelScope.launch {
             val lemmas = runCatching { repository.learningLemmaSet() }.getOrNull() ?: return@launch
             val membership = runCatching { repository.relatedMembershipIndex() }.getOrNull()
@@ -852,6 +962,8 @@ class HomeViewModel @Inject constructor(
     }
 
     fun dismissCardDetail() {
+        detailCardJob?.cancel()
+        detailCardJob = null
         _state.value = _state.value.copy(detailCard = null)
         if (_state.value.addTarget != null) dismissAddSheet()
     }
@@ -910,6 +1022,11 @@ class HomeViewModel @Inject constructor(
                     startPollingIfNeeded()
                 }.onFailure {
                     revertCreating(candidate)
+                    if (it.isWordAlreadyOnList()) {
+                        viewModelScope.launch {
+                            runCatching { repository.syncNow(fullReplace = false) }
+                        }
+                    }
                     _state.value = _state.value.copy(
                         error = it.userMessage(strings, R.string.err_add),
                     )
@@ -981,6 +1098,11 @@ class HomeViewModel @Inject constructor(
                 startPollingIfNeeded()
             }.onFailure {
                 revertCreating(candidate)
+                if (it.isWordAlreadyOnList()) {
+                    viewModelScope.launch {
+                        runCatching { repository.syncNow(fullReplace = false) }
+                    }
+                }
                 _state.value = _state.value.copy(
                     error = it.userMessage(strings, R.string.err_create_list),
                 )
@@ -1021,6 +1143,11 @@ class HomeViewModel @Inject constructor(
                 startPollingIfNeeded()
             }.onFailure {
                 revertCreating(candidate)
+                if (it.isWordAlreadyOnList()) {
+                    viewModelScope.launch {
+                        runCatching { repository.syncNow(fullReplace = false) }
+                    }
+                }
                 _state.value = _state.value.copy(
                     error = it.userMessage(strings, R.string.err_add_to_list),
                 )
@@ -1082,7 +1209,6 @@ class HomeViewModel @Inject constructor(
         if (list?.is_pending_inbox == true) {
             viewModelScope.launch {
                 blockingBusy.run {
-                    pollJob?.cancel()
                     runCatching { repository.clearPendingInbox(listId) }
                         .onSuccess {
                             val fallback = _state.value.lists.firstOrNull { it.is_system }?.id
@@ -1401,6 +1527,7 @@ class HomeViewModel @Inject constructor(
 
     private fun beginCreating(candidate: LookupCandidate, listName: String, listId: String?) {
         dismissAddSheet()
+        inFlightAdds.add(inFlightKey(candidate.lemma, candidate.pos))
         val addedKeys = if (isLearningListName(listName)) lemmaKeys(candidate.lemma) else emptySet()
         val creating = candidate.copy(
             in_learning = isLearningListName(listName),
@@ -1423,6 +1550,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun revertCreating(candidate: LookupCandidate) {
+        inFlightAdds.remove(inFlightKey(candidate.lemma, candidate.pos))
         _state.value = _state.value.copy(
             learningLemmas = _state.value.learningLemmas - lemmaKeys(candidate.lemma),
             candidates = _state.value.candidates.map {
@@ -1502,66 +1630,47 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * Polling TYLKO obserwuje serwerowy enrichment (pending → learnable → ready).
-     * GET pojedynczych kart, nie całej listy. Flush lookupów nie jest tu wołany.
+     * Zgłasza karty w toku do odpytywania procesu aplikacji.
+     * Zamknięcie ekranu nie anuluje EnrichmentPoller — zapis do Room odświeża listę przez cardsChanges.
      */
-    private fun startPollingIfNeeded(restart: Boolean = false) {
-        val needsPoll = _state.value.candidates.any { EnrichmentStatus.needsPoll(it.enrichment_status) } ||
-            _state.value.listWords.any { EnrichmentStatus.needsPoll(it.enrichment_status) } ||
-            _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
-        if (!needsPoll) {
-            pollJob?.cancel()
-            return
-        }
-        if (!restart && pollJob?.isActive == true) return
-        pollJob?.cancel()
-        pollJob = viewModelScope.launch {
-            while (isActive) {
-                val cardIds = enrichmentPollCardIds()
-                if (cardIds.isEmpty()) {
-                    runCatching { repository.evaluateReadyBatches() }
-                    break
-                }
-                val fetched = runCatching { repository.refreshCardsFromServer(cardIds) }.getOrNull().orEmpty()
-                val listId = _state.value.selectedListId
-                if (listId != null) {
-                    val words = runCatching { repository.listWords(listId) }.getOrNull()
-                    if (words != null) {
-                        _state.value = _state.value.copy(
-                            listWords = mergeIncomingListWords(listId, words),
-                        )
-                    }
-                }
-                if (fetched.isNotEmpty()) {
-                    syncCandidatesFromWords(fetched.distinctBy { it.id })
-                }
-                val stillPolling =
-                    _state.value.candidates.any { EnrichmentStatus.needsPoll(it.enrichment_status) } ||
-                        _state.value.listWords.any { EnrichmentStatus.needsPoll(it.enrichment_status) } ||
-                        _state.value.listWords.any { !it.card_activity_status.isNullOrBlank() }
-                if (!stillPolling) {
-                    runCatching { repository.evaluateReadyBatches() }
-                    break
-                }
-                delay(2_500)
-            }
-        }
-    }
-
-    /** Karty w toku enrichmentu — GET /cards/{id} zamiast całej listy. */
-    private fun enrichmentPollCardIds(): List<String> {
-        val ids = linkedSetOf<String>()
+    private fun startPollingIfNeeded() {
+        val watches = linkedMapOf<String, EnrichmentPoller.Watch>()
         _state.value.listWords.forEach { card ->
-            val watch = EnrichmentStatus.needsPoll(card.enrichment_status) ||
-                !card.card_activity_status.isNullOrBlank()
-            if (watch && !card.id.startsWith("pending-")) ids.add(card.id)
-        }
-        _state.value.candidates.forEach { c ->
-            if (EnrichmentStatus.needsPoll(c.enrichment_status)) {
-                c.learning_card_id?.let { ids.add(it) }
+            if (card.id.startsWith("pending-") || card.id.startsWith("local:")) return@forEach
+            if (!EnrichmentStatus.needsPoll(card.enrichment_status) &&
+                card.card_activity_status.isNullOrBlank()
+            ) {
+                return@forEach
             }
+            watches[card.id] = EnrichmentPoller.Watch(
+                id = card.id,
+                status = card.enrichment_status,
+                activity = card.card_activity_status,
+            )
         }
-        return ids.toList()
+        _state.value.candidates.forEach { candidate ->
+            val id = candidate.learning_card_id ?: return@forEach
+            if (id in watches) return@forEach
+            if (!EnrichmentStatus.needsPoll(candidate.enrichment_status)) return@forEach
+            watches[id] = EnrichmentPoller.Watch(
+                id = id,
+                status = candidate.enrichment_status,
+            )
+        }
+        _state.value.detailCard?.let { card ->
+            if (card.id.startsWith("pending-") || card.id.startsWith("local:")) return@let
+            if (!EnrichmentStatus.needsPoll(card.enrichment_status) &&
+                card.card_activity_status.isNullOrBlank()
+            ) {
+                return@let
+            }
+            watches[card.id] = EnrichmentPoller.Watch(
+                id = card.id,
+                status = card.enrichment_status,
+                activity = card.card_activity_status,
+            )
+        }
+        enrichmentPoller.watch(watches.values)
     }
 
     /** Room-first: zsynchronizuj status kandydatów z kartami w cache (bez sieci). */
@@ -1599,6 +1708,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun openCorrection(cardId: String) {
+        if (!com.vocabulario.app.ui.card.CARD_CORRECTION_ENABLED) return
         if (!networkMonitor.isCurrentlyOnline()) {
             _state.value = _state.value.copy(error = strings.get(R.string.correction_requires_online))
             return
@@ -1857,19 +1967,17 @@ internal fun mergeLookupCandidates(
 ): List<LookupCandidate> {
     if (current.isEmpty()) return incoming
     if (incoming.isEmpty()) return current
-    val used = BooleanArray(current.size)
-    val out = ArrayList<LookupCandidate>(incoming.size + current.size)
-    for (inc in incoming) {
-        val idx = current.indexOfFirst { sameLemmaAndPos(it.lemma, it.pos, inc.lemma, inc.pos) }
-        if (idx >= 0) {
-            used[idx] = true
-            out.add(preferCurrentMembership(current[idx], inc))
-        } else {
-            out.add(inc)
-        }
+    val used = BooleanArray(incoming.size)
+    val out = ArrayList<LookupCandidate>(incoming.size)
+    for (cur in current) {
+        val match = incoming.withIndex().firstOrNull { (i, inc) ->
+            !used[i] && sameLemmaAndPos(cur.lemma, cur.pos, inc.lemma, inc.pos)
+        } ?: continue
+        used[match.index] = true
+        out.add(preferCurrentMembership(cur, match.value))
     }
-    current.forEachIndexed { i, candidate ->
-        if (!used[i]) out.add(candidate)
+    incoming.forEachIndexed { i, inc ->
+        if (!used[i]) out.add(inc)
     }
     return out
 }
@@ -1898,7 +2006,68 @@ internal fun candidateMatchesCard(candidate: LookupCandidate, card: CardResponse
     if (!candidate.learning_card_id.isNullOrBlank() && candidate.learning_card_id == card.id) {
         return true
     }
-    return sameLemmaAndPos(card.lemma_l2, card.pos, candidate.lemma, candidate.pos)
+    val row = CardMembershipRow(
+        id = card.id,
+        lemmaL2 = card.lemma_l2,
+        pos = card.pos,
+        deckId = null,
+        enrichmentStatus = card.enrichment_status,
+    )
+    return selectLiveCardForLemma(listOf(row), candidate.lemma, candidate.pos)?.id == card.id
+}
+
+private fun inFlightKey(lemma: String, pos: String?): String =
+    "${lemma.trim().lowercase()}|${normalizePosKey(pos)}"
+
+internal fun annotateLookupCandidates(
+    candidates: List<LookupCandidate>,
+    rows: List<CardMembershipRow>,
+    lists: List<WordListResponse>,
+    lastPulledAt: String?,
+    inFlightAdds: Set<String>,
+    learningLabel: String,
+): List<LookupCandidate> {
+    val system = lists.firstOrNull { it.is_system }
+    return candidates.map { candidate ->
+        if (inFlightKey(candidate.lemma, candidate.pos) in inFlightAdds) return@map candidate
+        if (lastPulledAt == null) {
+            return@map candidate.copy(
+                membershipUnknown = true,
+                in_learning = false,
+                learning_card_id = null,
+                list_id = null,
+                list_name = null,
+                enrichment_status = null,
+            )
+        }
+        val card = selectLiveCardForLemma(rows, candidate.lemma, candidate.pos)
+        if (card == null) {
+            candidate.copy(
+                membershipUnknown = false,
+                in_learning = false,
+                learning_card_id = null,
+                list_id = null,
+                list_name = null,
+                enrichment_status = null,
+            )
+        } else {
+            val listId = card.deckId?.takeIf { it.isNotBlank() } ?: system?.id
+            val list = lists.firstOrNull { it.id == listId }
+            val listName = when {
+                list?.is_system == true || listId == null || listId == system?.id -> learningLabel
+                list != null -> list.name
+                else -> learningLabel
+            }
+            candidate.copy(
+                membershipUnknown = false,
+                in_learning = true,
+                learning_card_id = card.id,
+                list_id = listId,
+                list_name = listName,
+                enrichment_status = card.enrichmentStatus,
+            )
+        }
+    }
 }
 
 internal fun relatedWordToCandidate(

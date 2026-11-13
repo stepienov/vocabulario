@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <resources>
 
@@ -385,7 +385,7 @@
     <string name="section_usages">短语</string>
 
     <string name="home_search_hint">搜索单词…</string>
-    <string name="search_by_category">搜索该类别的单词</string>
+    <string name="search_by_category">搜索联想</string>
 
     <string name="home_due_now">现在可复习</string>
 
@@ -562,6 +562,13 @@
     <string name="err_search">搜索失败</string>
 
     <string name="err_lookup_expand">找不到更多建议。显示现有内容。</string>
+    <string name="lookup_more_suggestions">显示更多建议</string>
+    <string name="lookup_no_more_suggestions">没有找到更多匹配。</string>
+    <string name="lookup_longer_analysis">“%1$s”需要更长时间的分析</string>
+    <string name="lookup_nothing_found">没有找到“%1$s”的匹配。</string>
+    <string name="lookup_assoc_searching">正在搜索联想</string>
+    <string name="lookup_assoc_more">搜索更多联想</string>
+    <string name="lookup_assoc_no_more">没有更多联想</string>
     <string name="err_import_empty">没有可导入的单词</string>
 
     <string name="err_import">导入失败</string>
@@ -710,14 +717,6 @@
     <string name="correction_field_pos">词性</string>
     <string name="correction_field_gloss">主要释义</string>
     <string name="correction_field_extra_glosses">额外释义（每行一个）</string>
-    <string name="cd_voice_search">语音搜索</string>
-    <string name="voice_listening">正在听…</string>
-    <string name="voice_listening_hint">请开始说</string>
-    <string name="voice_tap_to_start">点按开始以说话</string>
-<string name="voice_start">Start</string>
-    <string name="voice_stop">Stop</string>
-        <string name="voice_permission_denied">麦克风权限被拒绝。</string>
-    <string name="voice_unavailable">此设备不支持语音识别。</string>
     <string name="settings_notifications">通知</string>
     <string name="settings_notifications_summary">学习提醒与卡片状态</string>
     <string name="settings_notif_study">学习提醒</string>
@@ -799,11 +798,6 @@
     <string name="cd_card_history">卡片历史</string>
     <string name="cd_view_card">查看完整卡片</string>
     <string name="cd_list_word_actions">单词操作</string>
-    <string name="voice_searching">正在搜索…</string>
-    <string name="voice_either_lang_hint">可用两种语言中的任意一种说</string>
-    <string name="voice_no_match">无法识别 — 请重试。</string>
-    <string name="voice_network_required">语音输入需要互联网连接。</string>
-
     <string name="pos_noun">名词</string>
     <string name="pos_verb">动词</string>
     <string name="pos_adj">形容词</string>
@@ -834,6 +828,18 @@
     <string name="practice_almost">接近了！</string>
     <string name="practice_typed_valid_synonym">你输入了正确的同义词</string>
     <string name="practice_synonym_paren">(同义词)</string>
+
+    <string name="add_tab_search">搜索</string>
+    <string name="add_tab_import">导入</string>
+    <string name="import_analyzing">正在分析单词</string>
+    <string name="import_abandon">放弃</string>
+    <string name="import_confirm">确认</string>
+    <string name="import_too_many_lines">一次最多提交 25 项。</string>
+    <string name="import_daily_used">今日 25 张卡片限额已用完。</string>
+    <string name="import_daily_remaining">今天还可以导入 25 张中的 %1$d 张。</string>
+    <string name="import_quota_exceeded">超出今日剩余导入额度 — 请取消部分选择后重试。</string>
+    <string name="lookup_reading_learning">%1$s</string>
+    <string name="lookup_reading_native">%1$s: %2$s</string>
 
 </resources>
 

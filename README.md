@@ -77,6 +77,8 @@ PERSIST_WORDS=true
 
 `DATABASE_URL` i `PORT` ustawia Railway. Po deployu sprawdź `https://<twoja-domena>/health`.
 
+Lokalny dostęp agenta do statusu/logów: [docs/railway-cli.md](docs/railway-cli.md) (CLI + `RAILWAY_API_TOKEN` / `RAILWAY_TOKEN` w `.env`).
+
 ## Struktura
 
 ```

@@ -184,6 +184,10 @@ class LanguageProfileUpdate(BaseModel):
 class LookupRequest(BaseModel):
     text: str = Field(min_length=1, max_length=200)
     profile_id: UUID
+    local_membership: bool = False
+    more: bool = False
+    operation_id: UUID | None = None
+    round: int | None = Field(default=None, ge=1)
 
 
 class LookupCandidate(BaseModel):
@@ -209,6 +213,9 @@ class LookupResponse(BaseModel):
     confident: bool = False
     # True gdy ostatnie uzupełnienie OpenAI nie dodało nowych par lemat+POS.
     ai_complete: bool = False
+    added: int | None = None
+    suggestions_exhausted: bool = False
+    headword_meaning: str = ""
 
 
 class ImportValidateRequest(BaseModel):
@@ -267,16 +274,17 @@ class ImportJobItemResponse(BaseModel):
     existing_card_id: UUID | None = None
     created_card_id: UUID | None = None
     attempt: int = 0
+    list_name: str | None = None
 
 
 class ImportJobProgressResponse(BaseModel):
-    job_id: UUID
-    status: str
-    phase: str
-    stage: str
+    job_id: UUID | None = None
+    status: str = "idle"
+    phase: str = "idle"
+    stage: str = "idle"
     source_name: str = ""
     mode: str = "vocabulario"
-    list_id: UUID
+    list_id: UUID | None = None
     list_name: str | None = None
     processed: int = 0
     total: int = 0
@@ -291,6 +299,8 @@ class ImportJobProgressResponse(BaseModel):
     error_code: str | None = None
     error_message: str | None = None
     heartbeat_at: datetime | None = None
+    daily_used: int = 0
+    daily_limit: int = 25
 
 
 class ImportJobDetailResponse(ImportJobProgressResponse):
@@ -489,6 +499,7 @@ class CardResponse(BaseModel):
     persisted: bool = True
     enrichment_status: str = "ready"
     enrichment_error: str | None = None
+    enrichment_active: bool = False
     srs_status: str | None = None
     srs_interval_days: float | None = None
     srs_next_review_at: datetime | None = None
@@ -572,6 +583,7 @@ class SrsQueueItem(BaseModel):
     content: dict
     status: str
     direction: str | None = None
+    enrichment_status: str | None = None
     card_activity_status: str | None = None
     has_content_changes: bool = False
 

@@ -158,11 +158,30 @@ class LookupQueryCache(Base):
     input_norm: Mapped[str] = mapped_column(String(200), nullable=False)
     candidates: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     ai_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+    more_exhausted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     hit_count: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class LookupMoreOperation(Base):
+    __tablename__ = "lookup_more_operations"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("language_profiles.id", ondelete="CASCADE"), primary_key=True
+    )
+    operation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    lang_pair: Mapped[str] = mapped_column(String(16), nullable=False)
+    input_norm: Mapped[str] = mapped_column(String(200), nullable=False)
+    candidates: Mapped[list] = mapped_column(JSONB, nullable=False)
+    added: Mapped[int] = mapped_column(Integer, nullable=False)
+    suggestions_exhausted: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LearningCard(Base):
@@ -196,6 +215,7 @@ class LearningCard(Base):
     enrichment_status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     enrichment_error: Mapped[str | None] = mapped_column(String(500), nullable=True)
     enrichment_retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    enrichment_side_retries: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     enrichment_retry_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

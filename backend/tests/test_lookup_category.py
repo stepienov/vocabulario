@@ -16,13 +16,29 @@ from app.services.lookup_candidates import (
 from app.services.llm import LLMService
 
 
-def test_category_cache_key_is_prefixed():
+def test_assoc_rounds_are_separate_tasks():
+    from uuid import UUID
+
+    from app.services.lookup_category_jobs import _key
+
+    user = UUID("00000000-0000-0000-0000-000000000001")
+    profile = UUID("00000000-0000-0000-0000-000000000002")
+    other = UUID("00000000-0000-0000-0000-000000000003")
+    assert _key(user, profile, "wysyłać", 1) != _key(user, profile, "wysyłać", 2)
+    assert _key(user, profile, "wysyłać", 2) != _key(other, profile, "wysyłać", 2)
+    assert _key(user, profile, "wysyłać", 2) == _key(user, profile, "wysyłać", 2)
+
+
+def test_assoc_key_fits_the_column():
     svc = LexicalService(db=None)  # type: ignore[arg-type]
-    key = svc._category_cache_key("Czerwony!")
-    word = svc._query_cache_key("Czerwony!")
-    assert key.startswith(CATEGORY_QUERY_PREFIX)
-    assert key != word
-    assert key == CATEGORY_QUERY_PREFIX + word
+    text = "ą" * 200
+    word = svc._assoc_key(text)
+    third = svc._assoc_key(text, 3)
+    assert word.startswith("assoc:")
+    assert not word.startswith(CATEGORY_QUERY_PREFIX)
+    assert len(word) <= 200
+    assert len(third) <= 200
+    assert third == word + ":3"
 
 
 def test_category_draft_prompt_includes_query():
