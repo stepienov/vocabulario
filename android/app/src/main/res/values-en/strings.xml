@@ -948,5 +948,19 @@
     <string name="err_auth_unavailable">Sign-in is temporarily unavailable. Try again in a moment.</string>
     <string name="account_password_reset_needed">Your password has to be set again. We’ll email a link to your address.</string>
     <string name="account_password_reset_send">Send reset link</string>
+    <string name="account_change_email">Change email address</string>
+    <string name="account_new_email">New email address</string>
+    <string name="account_change_email_hint">We’ll send a confirmation link to the new address. After you confirm, you’ll be signed out on all devices and sign in with the new address.</string>
+    <string name="account_email_change_pending">Open the link we sent to %1$s to confirm the change. The link is valid for 24 hours.</string>
+    <string name="account_email_change_send">Send link</string>
+    <string name="account_email_change_resend">Resend link</string>
+    <string name="account_email_change_cancel">Cancel change</string>
+    <string name="account_email_change_sent">Link sent to %1$s.</string>
+    <string name="account_email_change_resent">Link sent again.</string>
+    <string name="account_email_change_cancelled">Email change cancelled.</string>
+    <string name="account_email_change_expired">The email change link has expired. Start again.</string>
+    <string name="err_email_unchanged">This is already your email address.</string>
+    <string name="err_email_unavailable">This address can’t be used. Try a different one.</string>
+    <string name="err_recent_auth">Confirm your password again and retry.</string>
 </resources>
 

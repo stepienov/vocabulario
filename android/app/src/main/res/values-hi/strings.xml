@@ -926,5 +926,19 @@
     <string name="err_auth_unavailable">साइन-इन अस्थायी रूप से उपलब्ध नहीं है। थोड़ी देर बाद फिर कोशिश करें।</string>
     <string name="account_password_reset_needed">आपका पासवर्ड दोबारा सेट करना होगा। हम आपके ईमेल पर एक लिंक भेजेंगे।</string>
     <string name="account_password_reset_send">रीसेट लिंक भेजें</string>
+    <string name="account_change_email">ईमेल पता बदलें</string>
+    <string name="account_new_email">नया ईमेल पता</string>
+    <string name="account_change_email_hint">हम नए पते पर पुष्टि का लिंक भेजेंगे। पुष्टि के बाद आप सभी डिवाइस पर साइन आउट हो जाएँगे और नए पते से साइन इन करेंगे।</string>
+    <string name="account_email_change_pending">बदलाव की पुष्टि के लिए %1$s पर भेजा गया लिंक खोलें। लिंक 24 घंटे तक मान्य है।</string>
+    <string name="account_email_change_send">लिंक भेजें</string>
+    <string name="account_email_change_resend">लिंक फिर से भेजें</string>
+    <string name="account_email_change_cancel">बदलाव रद्द करें</string>
+    <string name="account_email_change_sent">लिंक %1$s पर भेजा गया।</string>
+    <string name="account_email_change_resent">लिंक फिर से भेजा गया।</string>
+    <string name="account_email_change_cancelled">ईमेल बदलाव रद्द किया गया।</string>
+    <string name="account_email_change_expired">ईमेल बदलने का लिंक समाप्त हो गया है। फिर से शुरू करें।</string>
+    <string name="err_email_unchanged">यह पहले से आपका ईमेल पता है।</string>
+    <string name="err_email_unavailable">यह पता उपयोग नहीं किया जा सकता। कोई दूसरा आज़माएँ।</string>
+    <string name="err_recent_auth">पासवर्ड की फिर से पुष्टि करें और दोबारा कोशिश करें।</string>
 </resources>
 

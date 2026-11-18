@@ -926,5 +926,19 @@
     <string name="err_auth_unavailable">Die Anmeldung ist vorübergehend nicht verfügbar. Versuche es gleich noch einmal.</string>
     <string name="account_password_reset_needed">Dein Passwort muss neu festgelegt werden. Wir senden dir einen Link per E-Mail.</string>
     <string name="account_password_reset_send">Link zum Zurücksetzen senden</string>
+    <string name="account_change_email">E-Mail-Adresse ändern</string>
+    <string name="account_new_email">Neue E-Mail-Adresse</string>
+    <string name="account_change_email_hint">Wir senden einen Bestätigungslink an die neue Adresse. Nach der Bestätigung wirst du auf allen Geräten abgemeldet und meldest dich mit der neuen Adresse an.</string>
+    <string name="account_email_change_pending">Öffne den Link, den wir an %1$s gesendet haben, um die Änderung zu bestätigen. Der Link ist 24 Stunden gültig.</string>
+    <string name="account_email_change_send">Link senden</string>
+    <string name="account_email_change_resend">Link erneut senden</string>
+    <string name="account_email_change_cancel">Änderung abbrechen</string>
+    <string name="account_email_change_sent">Link an %1$s gesendet.</string>
+    <string name="account_email_change_resent">Link erneut gesendet.</string>
+    <string name="account_email_change_cancelled">E-Mail-Änderung abgebrochen.</string>
+    <string name="account_email_change_expired">Der Link zur E-Mail-Änderung ist abgelaufen. Starte neu.</string>
+    <string name="err_email_unchanged">Das ist bereits deine E-Mail-Adresse.</string>
+    <string name="err_email_unavailable">Diese Adresse kann nicht verwendet werden. Versuche eine andere.</string>
+    <string name="err_recent_auth">Bestätige dein Passwort erneut und versuche es noch einmal.</string>
 </resources>
 

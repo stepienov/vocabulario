@@ -1,5 +1,6 @@
 import logging
 import math
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
@@ -20,6 +21,12 @@ from app.core.security import REFRESH, TokenError, now_utc, read_token
 from app.db.session import get_db
 from app.models import LanguageProfile, User, UserSettings
 from app.schemas import (
+    AddPasswordRequest,
+    EmailChangeConfirm,
+    EmailChangeConfirmed,
+    EmailChangeCurrentResponse,
+    EmailChangeRequest,
+    EmailChangeResponse,
     EmailVerificationConfirm,
     EmailVerificationStatusResponse,
     GoogleAuthRequest,
@@ -33,6 +40,8 @@ from app.schemas import (
     PasswordResetConfirm,
     PasswordResetRequest,
     PasswordResetResponse,
+    RecentAuthPasswordRequest,
+    RecentAuthResponse,
     RefreshRequest,
     RegisterRequest,
     StatusResponse,
@@ -45,6 +54,7 @@ from app.services.account_recovery import (
     RETRY_AFTER_SECONDS,
     CredentialError,
     MailRateLimited,
+    add_password,
     change_password,
     confirm_email_verification,
     confirm_password_reset,
@@ -55,6 +65,17 @@ from app.services.account_recovery import (
     verification_status,
 )
 from app.services.action_tokens import ActionTokenError
+from app.services.email_change import (
+    EmailChangeView,
+    cancel_email_change,
+    confirm_email_change,
+    describe,
+    latest_change,
+    request_email_change,
+    request_known,
+    resend_email_change,
+)
+from app.services.recent_auth import issue_password_proof
 from app.services.auth_limits import (
     MIN,
     LimiterUnavailable,
@@ -437,6 +458,175 @@ async def email_verification_confirm(
         raise await _rollback_error(db, exc) from exc
     await db.commit()
     return StatusResponse(status="email_verified")
+
+
+@router.post("/recent-auth/password", response_model=RecentAuthResponse)
+async def recent_auth_password(
+    body: RecentAuthPasswordRequest,
+    request: Request,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> RecentAuthResponse:
+    ctx = request.state.auth_context
+    await enforce(
+        Rule("auth_recent_session", str(ctx.session_id), 5, 5 * MIN),
+        Rule("auth_recent_ip", client_ip(request), 20, 15 * MIN),
+    )
+    try:
+        token, proof = await issue_password_proof(db, user, ctx, body.action, body.password)
+    except CredentialError as exc:
+        raise await _rollback_error(db, exc) from exc
+    result = RecentAuthResponse(
+        recent_auth_token=token, action=proof.action, expires_at=proof.expires_at
+    )
+    await db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
+@router.post("/password/add", response_model=TokenResponse)
+async def password_add(
+    body: AddPasswordRequest,
+    request: Request,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await enforce(Rule("auth_password_add_user", str(user.id), 5, 60 * MIN))
+    try:
+        issued = await add_password(
+            db, user, request.state.auth_context, body.new_password, body.recent_auth_token
+        )
+    except CredentialError as exc:
+        raise await _rollback_error(db, exc) from exc
+    except SessionAuthError as exc:
+        raise await _session_error(db, exc) from exc
+    await db.commit()
+    wake_mail_worker()
+    return _token_response(issued, response)
+
+
+def _change_response(view: EmailChangeView) -> EmailChangeResponse:
+    change = view.change
+    return EmailChangeResponse(
+        change_id=change.id,
+        mode=change.mode,
+        status=view.status,
+        new_email=change.new_email,
+        expires_at=change.expires_at,
+        resend_available_at=view.resend_available_at,
+        delivery_status=view.delivery_status,
+        delivery_delayed=view.delivery_delayed,
+    )
+
+
+@router.post(
+    "/email-change/request",
+    response_model=EmailChangeResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def email_change_request(
+    body: EmailChangeRequest,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        await ensure_mail_available()
+    except CredentialError as exc:
+        raise api_error(exc.status_code, exc.code) from exc
+    if not await request_known(db, user.id, body.request_id):
+        await enforce(Rule("auth_email_change_user", str(user.id), 3, 60 * MIN))
+    try:
+        change = await request_email_change(
+            db,
+            user.id,
+            request.state.auth_context,
+            new_email=str(body.new_email),
+            proof_token=body.recent_auth_token,
+            request_id=body.request_id,
+        )
+        view = await describe(db, user, change)
+        result = _change_response(view)
+    except CredentialError as exc:
+        raise await _rollback_error(db, exc) from exc
+    except SessionAuthError as exc:
+        raise await _session_error(db, exc) from exc
+    await db.commit()
+    wake_mail_worker()
+    return result
+
+
+@router.get("/email-change", response_model=EmailChangeCurrentResponse)
+async def email_change_current(
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> EmailChangeCurrentResponse:
+    view = await latest_change(db, user)
+    return EmailChangeCurrentResponse(change=None if view is None else _change_response(view))
+
+
+@router.post(
+    "/email-change/{change_id}/resend",
+    response_model=EmailChangeResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def email_change_resend(
+    change_id: UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        await ensure_mail_available()
+        change = await resend_email_change(db, user.id, change_id)
+        result = _change_response(await describe(db, user, change))
+    except CredentialError as exc:
+        raise await _rollback_error(db, exc) from exc
+    except SessionAuthError as exc:
+        raise await _session_error(db, exc) from exc
+    except MailRateLimited as exc:
+        await db.rollback()
+        wait_s = max(1, math.ceil((exc.retry_at - now_utc()).total_seconds()))
+        raise api_error(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "mail_rate_limited",
+            headers={"Retry-After": str(wait_s)},
+        ) from exc
+    await db.commit()
+    wake_mail_worker()
+    return result
+
+
+@router.post("/email-change/{change_id}/cancel", response_model=StatusResponse)
+async def email_change_cancel(
+    change_id: UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> StatusResponse:
+    await enforce(Rule("auth_email_change_cancel_user", str(user.id), 10, 60 * MIN))
+    try:
+        state = await cancel_email_change(db, user.id, change_id)
+    except CredentialError as exc:
+        raise await _rollback_error(db, exc) from exc
+    except SessionAuthError as exc:
+        raise await _session_error(db, exc) from exc
+    await db.commit()
+    return StatusResponse(status=state)
+
+
+@router.post("/email-change/confirm", response_model=EmailChangeConfirmed)
+async def email_change_confirm(
+    body: EmailChangeConfirm, request: Request, db: AsyncSession = Depends(get_db)
+) -> EmailChangeConfirmed:
+    ip = client_ip(request)
+    await enforce(_public(ip), Rule("auth_confirm_ip", ip, 30, 15 * MIN))
+    try:
+        await confirm_email_change(db, body.token)
+    except (ActionTokenError, CredentialError) as exc:
+        raise await _rollback_error(db, exc) from exc
+    await db.commit()
+    wake_mail_worker()
+    return EmailChangeConfirmed()
 
 
 @router.post("/mail-events", status_code=status.HTTP_204_NO_CONTENT)

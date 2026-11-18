@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import now_utc
@@ -22,13 +22,15 @@ from app.models import ACTION_TOKEN_PURPOSES, AccountActionToken, User
 
 VERIFY_EMAIL = "verify_email"
 RESET_PASSWORD = "reset_password"
+CHANGE_EMAIL = "change_email"
 
 TOKEN_TTL: dict[str, timedelta] = {
     VERIFY_EMAIL: timedelta(hours=24),
     RESET_PASSWORD: timedelta(minutes=30),
+    CHANGE_EMAIL: timedelta(hours=24),
 }
-# A password reset link must die once credentials change; e-mail verification must not.
-_CREDENTIAL_BOUND = frozenset({RESET_PASSWORD})
+# A reset or change link must die once credentials change; e-mail verification must not.
+_CREDENTIAL_BOUND = frozenset({RESET_PASSWORD, CHANGE_EMAIL})
 _MAX_TOKEN_CHARS = 128
 
 assert set(TOKEN_TTL) == set(ACTION_TOKEN_PURPOSES)
@@ -58,25 +60,48 @@ def action_token_hash(token: str) -> str:
 
 
 async def issue_action_token(
-    db: AsyncSession, user: User, purpose: str, *, now: datetime | None = None
+    db: AsyncSession,
+    user: User,
+    purpose: str,
+    *,
+    now: datetime | None = None,
+    email_change_id: UUID | None = None,
+    expires_at: datetime | None = None,
 ) -> IssuedActionToken:
     """New link proof for the current address/credentials of an already locked user."""
     if purpose not in TOKEN_TTL:
         raise ValueError(f"unknown action token purpose: {purpose}")
     now = now or now_utc()
+    ends_at = now + TOKEN_TTL[purpose]
     token = secrets.token_urlsafe(32)
     row = AccountActionToken(
         user_id=user.id,
+        email_change_id=email_change_id,
         purpose=purpose,
         token_hash=action_token_hash(token),
         email_revision=user.email_revision,
         credentials_revision=user.credentials_revision,
         created_at=now,
-        expires_at=now + TOKEN_TTL[purpose],
+        expires_at=min(expires_at, ends_at) if expires_at else ends_at,
     )
     db.add(row)
     await db.flush()
     return IssuedActionToken(token=token, row=row)
+
+
+async def invalidate_change_tokens(
+    db: AsyncSession, change_id: UUID, *, now: datetime
+) -> None:
+    """Kill every unused link of one e-mail change; queued mails for them are dropped by the worker."""
+    await db.execute(
+        update(AccountActionToken)
+        .where(
+            AccountActionToken.email_change_id == change_id,
+            AccountActionToken.consumed_at.is_(None),
+            AccountActionToken.invalidated_at.is_(None),
+        )
+        .values(invalidated_at=now)
+    )
 
 
 def _usable_hash(token: str) -> str | None:

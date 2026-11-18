@@ -1,6 +1,6 @@
 # T-001 · Pełne hashowanie haseł i zgodna migracja
 
-**ID:** `E-001/F-004/T-001` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / M.  
+**ID:** `E-001/F-004/T-001` · **Status:** `done` · **Priorytet / rozmiar:** P0 / M.  
 **Feature:** [E-mail i hasła](../README.md). **Źródło:** B-04; potwierdzony F-03 w [analizie](../../../sources/analiza-2026-11-17.md).
 
 ## Cel i zakres

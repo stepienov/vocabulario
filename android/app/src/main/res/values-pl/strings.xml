@@ -948,5 +948,19 @@
     <string name="err_auth_unavailable">Logowanie jest chwilowo niedostępne. Spróbuj za moment.</string>
     <string name="account_password_reset_needed">Hasło trzeba ustawić na nowo. Wyślemy link na Twój adres e-mail.</string>
     <string name="account_password_reset_send">Wyślij link do resetu</string>
+    <string name="account_change_email">Zmień adres e-mail</string>
+    <string name="account_new_email">Nowy adres e-mail</string>
+    <string name="account_change_email_hint">Wyślemy link potwierdzający na nowy adres. Po potwierdzeniu zostaniesz wylogowany na wszystkich urządzeniach i zalogujesz się nowym adresem.</string>
+    <string name="account_email_change_pending">Otwórz link wysłany na %1$s, aby potwierdzić zmianę. Link jest ważny 24 godziny.</string>
+    <string name="account_email_change_send">Wyślij link</string>
+    <string name="account_email_change_resend">Wyślij link ponownie</string>
+    <string name="account_email_change_cancel">Anuluj zmianę</string>
+    <string name="account_email_change_sent">Link wysłany na %1$s.</string>
+    <string name="account_email_change_resent">Link wysłany ponownie.</string>
+    <string name="account_email_change_cancelled">Zmiana adresu e-mail anulowana.</string>
+    <string name="account_email_change_expired">Link do zmiany adresu e-mail wygasł. Zacznij od nowa.</string>
+    <string name="err_email_unchanged">To już jest Twój adres e-mail.</string>
+    <string name="err_email_unavailable">Tego adresu nie można użyć. Wpisz inny.</string>
+    <string name="err_recent_auth">Potwierdź hasło jeszcze raz i spróbuj ponownie.</string>
 </resources>
 

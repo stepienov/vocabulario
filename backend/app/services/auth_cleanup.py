@@ -13,7 +13,13 @@ from sqlalchemy import delete, select, update
 
 from app.core.security import now_utc
 from app.db import session as db_session
-from app.models import AccountActionToken, MailOutbox, MailProviderEvent
+from app.models import (
+    AccountActionToken,
+    AccountEmailChange,
+    MailOutbox,
+    MailProviderEvent,
+    RecentAuthProof,
+)
 from app.services.auth_limits import cleanup_expired
 
 logger = logging.getLogger(__name__)
@@ -67,6 +73,18 @@ async def purge_auth_records(*, now: datetime | None = None, limit: int = BATCH)
         AccountActionToken,
         AccountActionToken.id,
         AccountActionToken.expires_at < week,
+        limit,
+    )
+    counts["email_changes"] = await _delete_ids(
+        AccountEmailChange,
+        AccountEmailChange.id,
+        AccountEmailChange.expires_at < week,
+        limit,
+    )
+    counts["recent_auth"] = await _delete_ids(
+        RecentAuthProof,
+        RecentAuthProof.id,
+        RecentAuthProof.expires_at < now - timedelta(days=1),
         limit,
     )
     return counts

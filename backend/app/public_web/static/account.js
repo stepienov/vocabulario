@@ -16,6 +16,8 @@
     password_too_long: "too_long",
     password_invalid_unicode: "invalid_unicode",
   };
+  const BUTTONS = { reset: "reset_button", change: "change_button", verify: "verify_button" };
+  const DONE = { reset: "reset_done", change: "change_done", verify: "verify_done" };
   const TERMINAL = { 400: "invalid", 409: "used", 410: "expired" };
 
   // The token travels in the fragment so it never reaches server logs; drop it from history.
@@ -41,9 +43,7 @@
 
   function busy(isBusy) {
     submit.disabled = isBusy;
-    submit.textContent = isBusy
-      ? texts.working
-      : texts[page === "reset" ? "reset_button" : "verify_button"];
+    submit.textContent = isBusy ? texts.working : texts[BUTTONS[page]];
     main.setAttribute("aria-busy", String(isBusy));
   }
 
@@ -91,14 +91,18 @@
 
   function handle(status, body) {
     if (status === 200) {
-      finish(page === "reset" ? "reset_done" : "verify_done", "success");
+      finish(DONE[page], "success");
+      return;
+    }
+    const code = body && body.detail && typeof body.detail === "object" ? body.detail.code : null;
+    if (code === "email_unavailable") {
+      finish("change_unavailable", "error");
       return;
     }
     if (TERMINAL[status]) {
       finish(TERMINAL[status], "error");
       return;
     }
-    const code = body && body.detail && typeof body.detail === "object" ? body.detail.code : null;
     if (status === 422 && page === "reset" && PASSWORD_CODES[code]) {
       showFieldError(PASSWORD_CODES[code]);
       return;

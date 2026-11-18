@@ -34,6 +34,10 @@
 
       <button id="submit" type="submit">{{ texts.reset_button }}</button>
     </form>
+    {% elif page == "change" %}
+    <form id="action-form" novalidate hidden>
+      <button id="submit" type="submit">{{ texts.change_button }}</button>
+    </form>
     {% else %}
     <form id="action-form" novalidate hidden>
       <button id="submit" type="submit">{{ texts.verify_button }}</button>

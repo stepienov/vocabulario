@@ -926,5 +926,19 @@
     <string name="err_auth_unavailable">Вход временно недоступен. Повторите попытку чуть позже.</string>
     <string name="account_password_reset_needed">Пароль нужно задать заново. Мы отправим ссылку на вашу почту.</string>
     <string name="account_password_reset_send">Отправить ссылку для сброса</string>
+    <string name="account_change_email">Изменить адрес эл. почты</string>
+    <string name="account_new_email">Новый адрес эл. почты</string>
+    <string name="account_change_email_hint">Мы отправим ссылку для подтверждения на новый адрес. После подтверждения вы выйдете на всех устройствах и войдёте с новым адресом.</string>
+    <string name="account_email_change_pending">Откройте ссылку, отправленную на %1$s, чтобы подтвердить изменение. Ссылка действует 24 часа.</string>
+    <string name="account_email_change_send">Отправить ссылку</string>
+    <string name="account_email_change_resend">Отправить ссылку снова</string>
+    <string name="account_email_change_cancel">Отменить изменение</string>
+    <string name="account_email_change_sent">Ссылка отправлена на %1$s.</string>
+    <string name="account_email_change_resent">Ссылка отправлена снова.</string>
+    <string name="account_email_change_cancelled">Изменение адреса отменено.</string>
+    <string name="account_email_change_expired">Срок действия ссылки для смены адреса истёк. Начните заново.</string>
+    <string name="err_email_unchanged">Это уже ваш адрес эл. почты.</string>
+    <string name="err_email_unavailable">Этот адрес нельзя использовать. Попробуйте другой.</string>
+    <string name="err_recent_auth">Подтвердите пароль ещё раз и повторите попытку.</string>
 </resources>
 

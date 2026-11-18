@@ -18,6 +18,7 @@ from app.core.config import get_settings
 from app.core.passwords import hash_new_password, password_error, verify_current_password
 from app.core.security import now_utc
 from app.models import AccountActionToken, LanguageProfile, MailOutbox, User
+from app.services.account_errors import CredentialError, MailRateLimited
 from app.services.action_tokens import (
     RESET_PASSWORD,
     TOKEN_TTL,
@@ -29,6 +30,7 @@ from app.services.action_tokens import (
 )
 from app.services.auth_limits import LimiterUnavailable, link_budget_open
 from app.services.auth_sessions import (
+    AccessContext,
     IssuedSession,
     SessionAuthError,
     lock_user,
@@ -39,10 +41,12 @@ from app.services.mail_outbox import compose_mail, enqueue_mail
 from app.services.mail_templates import (
     RenderedMail,
     normalize_locale,
+    render_password_added,
     render_password_changed,
     render_reset_password,
     render_verify_email,
 )
+from app.services.recent_auth import consume_recent_auth
 
 PASSWORD_CHANGED = "password_changed"
 RESET_PATH = "/account/reset-password"
@@ -56,21 +60,7 @@ RETRY_AFTER_SECONDS = int(MAIL_COOLDOWN.total_seconds())
 _LOCAL_ORIGIN = "http://localhost:8000"
 
 
-class CredentialError(Exception):
-    """Maps to the API error `code` with `status_code`; nothing was changed."""
-
-    def __init__(self, status_code: int, code: str) -> None:
-        super().__init__(code)
-        self.status_code = status_code
-        self.code = code
-
-
-class MailRateLimited(Exception):
-    """Authenticated mail request over the per-recipient limit; maps to 429."""
-
-    def __init__(self, retry_at: datetime) -> None:
-        super().__init__("mail_rate_limited")
-        self.retry_at = retry_at
+PASSWORD_ADDED = "password_added"
 
 
 async def ensure_mail_available() -> None:
@@ -129,7 +119,7 @@ async def next_mail_allowed_at(
     return max(candidates) if candidates else None
 
 
-async def _queue(
+async def queue_account_mail(
     db: AsyncSession,
     user: User,
     kind: str,
@@ -138,9 +128,10 @@ async def _queue(
     expires_at: datetime,
     now: datetime,
     action_token_id: UUID | None = None,
+    to: str | None = None,
 ) -> None:
     mail = compose_mail(
-        to=user.email,
+        to=to or user.email,
         subject=rendered.subject,
         text=rendered.text,
         html=rendered.html,
@@ -160,7 +151,7 @@ async def _queue(
 
 async def _queue_password_changed(db: AsyncSession, user: User, now: datetime) -> None:
     rendered = render_password_changed(await profile_locale(db, user.id) or "")
-    await _queue(db, user, PASSWORD_CHANGED, rendered, expires_at=now + NOTICE_TTL, now=now)
+    await queue_account_mail(db, user, PASSWORD_CHANGED, rendered, expires_at=now + NOTICE_TTL, now=now)
 
 
 async def request_password_reset(
@@ -192,7 +183,7 @@ async def request_password_reset(
         account_link(RESET_PATH, issued.token, mail_locale),
         minutes=minutes,
     )
-    await _queue(
+    await queue_account_mail(
         db,
         user,
         RESET_PASSWORD,
@@ -265,6 +256,45 @@ async def change_password(
     return issued
 
 
+async def add_password(
+    db: AsyncSession,
+    user: User,
+    ctx: AccessContext,
+    new_password: str,
+    proof_token: str,
+    *,
+    now: datetime | None = None,
+) -> IssuedSession:
+    """First password for a Google-only account; other sessions end, the caller's renews."""
+    _check_new_password(new_password)
+    if user.password_hash:
+        raise CredentialError(409, "password_already_set")
+    new_hash = await hash_new_password(new_password)
+    now = now or now_utc()
+    locked = await lock_user(db, user.id)
+    if locked is None:
+        raise SessionAuthError(401, "session_revoked")
+    if locked.password_hash:
+        raise CredentialError(409, "password_already_set")
+    if not locked.google_id:
+        raise CredentialError(403, "google_not_linked")
+    if locked.email_verified_at is None:
+        raise CredentialError(403, "email_verification_required")
+    await revoke_user_sessions(
+        db, locked.id, "password_added", keep_session_id=ctx.session_id, now=now
+    )
+    await consume_recent_auth(db, locked, ctx, proof_token, "add_password", now=now)
+    issued = await renew_session(db, locked.id, ctx.session_id, now=now)
+    locked.password_hash = new_hash
+    locked.credentials_revision += 1
+    rendered = render_password_added(await profile_locale(db, locked.id) or "")
+    await queue_account_mail(
+        db, locked, PASSWORD_ADDED, rendered, expires_at=now + NOTICE_TTL, now=now
+    )
+    await db.flush()
+    return issued
+
+
 async def queue_verification_mail(
     db: AsyncSession, user: User, locale: str | None, *, now: datetime
 ) -> None:
@@ -277,7 +307,7 @@ async def queue_verification_mail(
         account_link(VERIFY_PATH, issued.token, mail_locale),
         hours=hours,
     )
-    await _queue(
+    await queue_account_mail(
         db,
         user,
         VERIFY_EMAIL,
@@ -331,7 +361,7 @@ class VerificationStatus:
 _FAILED_DELIVERY = frozenset({"failed", "suppressed", "bounced", "complained"})
 
 
-def _delivery(dispatch_state: str, delivery_state: str) -> tuple[str, bool]:
+def delivery_summary(dispatch_state: str, delivery_state: str) -> tuple[str, bool]:
     if dispatch_state in ("queued", "leased"):
         return "queued", False
     if dispatch_state in ("failed", "cancelled"):
@@ -363,7 +393,9 @@ async def verification_status(
             .limit(1)
         )
     ).one_or_none()
-    status, delayed = ("not_requested", False) if latest is None else _delivery(*latest)
+    status, delayed = (
+        ("not_requested", False) if latest is None else delivery_summary(*latest)
+    )
     verified = user.email_verified_at is not None
     resend_at = None if verified else await next_mail_allowed_at(db, user.id, VERIFY_EMAIL, now)
     return VerificationStatus(verified, status, delayed, resend_at)

@@ -28,10 +28,20 @@ KEYS = (
     "rate_limited",
     "error",
     "working",
+    "change_title",
+    "change_intro",
+    "change_button",
+    "change_done",
+    "change_unavailable",
 )
 
 PAGE_TEXTS: dict[str, dict[str, str]] = {
     "en": {
+        "change_title": "Confirm your new email address",
+        "change_intro": "Press the button below to change the email address of your {app} account to the one this link was sent to. You will be signed out on all devices.",
+        "change_button": "Confirm new address",
+        "change_done": "Done! Your email address is changed. Sign in to the app again with the new address.",
+        "change_unavailable": "This address can no longer be used for this account. Start the change again in the app.",
         "verify_title": "Confirm your email address",
         "verify_intro": (
             "Press the button below to confirm that this is the email address of your "
@@ -67,6 +77,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "Please wait…",
     },
     "es": {
+        "change_title": "Confirma tu nueva dirección de correo",
+        "change_intro": "Pulsa el botón para cambiar la dirección de correo de tu cuenta de {app} a la que recibió este enlace. Se cerrará la sesión en todos los dispositivos.",
+        "change_button": "Confirmar nueva dirección",
+        "change_done": "¡Listo! Tu dirección de correo ha cambiado. Inicia sesión de nuevo en la aplicación con la nueva dirección.",
+        "change_unavailable": "Esta dirección ya no se puede usar para esta cuenta. Inicia el cambio de nuevo en la aplicación.",
         "verify_title": "Confirma tu dirección de correo",
         "verify_intro": (
             "Pulsa el botón para confirmar que esta es la dirección de correo de tu cuenta "
@@ -113,6 +128,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "Espera un momento…",
     },
     "pl": {
+        "change_title": "Potwierdź nowy adres e-mail",
+        "change_intro": "Naciśnij przycisk, aby zmienić adres e-mail konta {app} na ten, na który wysłano link. Zostaniesz wylogowany na wszystkich urządzeniach.",
+        "change_button": "Potwierdź nowy adres",
+        "change_done": "Gotowe! Adres e-mail został zmieniony. Zaloguj się w aplikacji ponownie nowym adresem.",
+        "change_unavailable": "Ten adres nie może już być użyty dla tego konta. Rozpocznij zmianę ponownie w aplikacji.",
         "verify_title": "Potwierdź adres e-mail",
         "verify_intro": (
             "Naciśnij przycisk poniżej, aby potwierdzić, że to adres e-mail Twojego konta w {app}."
@@ -152,6 +172,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "Proszę czekać…",
     },
     "de": {
+        "change_title": "Bestätige deine neue E-Mail-Adresse",
+        "change_intro": "Tippe auf die Schaltfläche, um die E-Mail-Adresse deines {app}-Kontos auf die Adresse zu ändern, an die dieser Link gesendet wurde. Du wirst auf allen Geräten abgemeldet.",
+        "change_button": "Neue Adresse bestätigen",
+        "change_done": "Fertig! Deine E-Mail-Adresse wurde geändert. Melde dich in der App mit der neuen Adresse neu an.",
+        "change_unavailable": "Diese Adresse kann für dieses Konto nicht mehr verwendet werden. Starte die Änderung in der App neu.",
         "verify_title": "Bestätige deine E-Mail-Adresse",
         "verify_intro": (
             "Tippe auf die Schaltfläche, um zu bestätigen, dass dies die E-Mail-Adresse deines "
@@ -199,6 +224,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "Bitte warten…",
     },
     "fr": {
+        "change_title": "Confirmez votre nouvelle adresse e-mail",
+        "change_intro": "Appuyez sur le bouton pour remplacer l'adresse e-mail de votre compte {app} par celle à laquelle ce lien a été envoyé. Vous serez déconnecté de tous les appareils.",
+        "change_button": "Confirmer la nouvelle adresse",
+        "change_done": "C'est fait ! Votre adresse e-mail a été modifiée. Reconnectez-vous à l'application avec la nouvelle adresse.",
+        "change_unavailable": "Cette adresse ne peut plus être utilisée pour ce compte. Recommencez le changement dans l'application.",
         "verify_title": "Confirmez votre adresse e-mail",
         "verify_intro": (
             "Appuyez sur le bouton ci-dessous pour confirmer qu'il s'agit bien de l'adresse "
@@ -248,6 +278,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "Veuillez patienter…",
     },
     "it": {
+        "change_title": "Conferma il tuo nuovo indirizzo e-mail",
+        "change_intro": "Premi il pulsante per cambiare l'indirizzo e-mail del tuo account {app} in quello a cui è stato inviato questo link. Verrai disconnesso da tutti i dispositivi.",
+        "change_button": "Conferma il nuovo indirizzo",
+        "change_done": "Fatto! Il tuo indirizzo e-mail è stato modificato. Accedi di nuovo all'app con il nuovo indirizzo.",
+        "change_unavailable": "Questo indirizzo non può più essere usato per questo account. Ripeti la modifica nell'app.",
         "verify_title": "Conferma il tuo indirizzo email",
         "verify_intro": (
             "Premi il pulsante qui sotto per confermare che questo è l'indirizzo email del tuo "
@@ -288,6 +323,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "Attendi…",
     },
     "pt-BR": {
+        "change_title": "Confirme seu novo endereço de e-mail",
+        "change_intro": "Toque no botão para trocar o e-mail da sua conta {app} pelo endereço que recebeu este link. Você será desconectado de todos os dispositivos.",
+        "change_button": "Confirmar novo endereço",
+        "change_done": "Pronto! Seu endereço de e-mail foi alterado. Entre no app de novo com o novo endereço.",
+        "change_unavailable": "Este endereço não pode mais ser usado nesta conta. Inicie a mudança de novo no app.",
         "verify_title": "Confirme seu endereço de e-mail",
         "verify_intro": (
             "Toque no botão abaixo para confirmar que este é o e-mail da sua conta do {app}."
@@ -328,6 +368,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "Aguarde…",
     },
     "pt-PT": {
+        "change_title": "Confirme o seu novo endereço de e-mail",
+        "change_intro": "Toque no botão para trocar o e-mail da sua conta {app} pelo endereço que recebeu esta ligação. Será desligado de todos os dispositivos.",
+        "change_button": "Confirmar novo endereço",
+        "change_done": "Feito! O seu endereço de e-mail foi alterado. Inicie sessão de novo na aplicação com o novo endereço.",
+        "change_unavailable": "Este endereço já não pode ser usado nesta conta. Inicie a alteração de novo na aplicação.",
         "verify_title": "Confirme o seu endereço de e-mail",
         "verify_intro": (
             "Toque no botão abaixo para confirmar que este é o e-mail da sua conta {app}."
@@ -372,6 +417,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "Aguarde…",
     },
     "ru": {
+        "change_title": "Подтвердите новый адрес электронной почты",
+        "change_intro": "Нажмите кнопку, чтобы заменить адрес электронной почты аккаунта {app} на тот, на который пришла эта ссылка. На всех устройствах будет выполнен выход.",
+        "change_button": "Подтвердить новый адрес",
+        "change_done": "Готово! Адрес электронной почты изменён. Войдите в приложение заново с новым адресом.",
+        "change_unavailable": "Этот адрес больше нельзя использовать для этого аккаунта. Начните смену заново в приложении.",
         "verify_title": "Подтвердите адрес электронной почты",
         "verify_intro": (
             "Нажмите кнопку ниже, чтобы подтвердить, что это адрес электронной почты вашего "
@@ -416,6 +466,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "Подождите…",
     },
     "tr": {
+        "change_title": "Yeni e-posta adresini onayla",
+        "change_intro": "{app} hesabının e-posta adresini bu bağlantının gönderildiği adresle değiştirmek için düğmeye bas. Tüm cihazlardaki oturumların kapatılacak.",
+        "change_button": "Yeni adresi onayla",
+        "change_done": "Tamam! E-posta adresin değiştirildi. Uygulamada yeni adresinle yeniden giriş yap.",
+        "change_unavailable": "Bu adres artık bu hesap için kullanılamaz. Değişikliği uygulamada yeniden başlat.",
         "verify_title": "E-posta adresini doğrula",
         "verify_intro": (
             "Bu adresin {app} hesabının e-posta adresi olduğunu doğrulamak için aşağıdaki "
@@ -456,6 +511,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "Lütfen bekle…",
     },
     "vi": {
+        "change_title": "Xác nhận địa chỉ email mới",
+        "change_intro": "Nhấn nút bên dưới để đổi email của tài khoản {app} sang địa chỉ đã nhận liên kết này. Bạn sẽ bị đăng xuất khỏi mọi thiết bị.",
+        "change_button": "Xác nhận địa chỉ mới",
+        "change_done": "Xong! Địa chỉ email của bạn đã được đổi. Hãy đăng nhập lại vào ứng dụng bằng địa chỉ mới.",
+        "change_unavailable": "Địa chỉ này không còn dùng được cho tài khoản này. Hãy bắt đầu đổi lại trong ứng dụng.",
         "verify_title": "Xác nhận địa chỉ email của bạn",
         "verify_intro": (
             "Nhấn nút bên dưới để xác nhận đây là địa chỉ email của tài khoản {app} của bạn."
@@ -497,6 +557,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "Vui lòng đợi…",
     },
     "zh": {
+        "change_title": "确认你的新邮箱地址",
+        "change_intro": "点击下方按钮，将 {app} 账号的邮箱地址更改为收到此链接的地址。所有设备都将退出登录。",
+        "change_button": "确认新地址",
+        "change_done": "完成！你的邮箱地址已更改。请使用新地址重新登录应用。",
+        "change_unavailable": "此地址已无法用于该账号。请在应用中重新发起更改。",
         "verify_title": "确认你的电子邮件地址",
         "verify_intro": "点击下方按钮，确认这是你的 {app} 账户所用的电子邮件地址。",
         "verify_button": "确认地址",
@@ -524,6 +589,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "请稍候…",
     },
     "ja": {
+        "change_title": "新しいメールアドレスの確認",
+        "change_intro": "下のボタンを押すと、{app} アカウントのメールアドレスがこのリンクの送信先に変更されます。すべての端末からログアウトされます。",
+        "change_button": "新しいアドレスを確認",
+        "change_done": "完了しました。メールアドレスが変更されました。新しいアドレスでアプリに再ログインしてください。",
+        "change_unavailable": "このアドレスは、このアカウントではもう使えません。アプリで変更をやり直してください。",
         "verify_title": "メールアドレスの確認",
         "verify_intro": (
             "下のボタンを押して、{app} アカウントのメールアドレスであることを確認してください。"
@@ -566,6 +636,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "お待ちください…",
     },
     "ko": {
+        "change_title": "새 이메일 주소 확인",
+        "change_intro": "아래 버튼을 누르면 {app} 계정의 이메일 주소가 이 링크를 받은 주소로 변경됩니다. 모든 기기에서 로그아웃됩니다.",
+        "change_button": "새 주소 확인",
+        "change_done": "완료되었습니다! 이메일 주소가 변경되었습니다. 새 주소로 앱에 다시 로그인하세요.",
+        "change_unavailable": "이 주소는 더 이상 이 계정에 사용할 수 없습니다. 앱에서 변경을 다시 시작하세요.",
         "verify_title": "이메일 주소 확인",
         "verify_intro": "아래 버튼을 눌러 이 주소가 {app} 계정의 이메일 주소인지 확인해 주세요.",
         "verify_button": "주소 확인",
@@ -601,6 +676,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "잠시 기다려 주세요…",
     },
     "ar": {
+        "change_title": "أكّد عنوان بريدك الإلكتروني الجديد",
+        "change_intro": "اضغط على الزر أدناه لتغيير البريد الإلكتروني لحسابك في {app} إلى العنوان الذي وصله هذا الرابط. سيتم تسجيل خروجك من جميع الأجهزة.",
+        "change_button": "تأكيد العنوان الجديد",
+        "change_done": "تم! تغيّر عنوان بريدك الإلكتروني. سجّل الدخول إلى التطبيق من جديد بالعنوان الجديد.",
+        "change_unavailable": "لم يعد بالإمكان استخدام هذا العنوان لهذا الحساب. ابدأ التغيير من جديد في التطبيق.",
         "verify_title": "أكِّد عنوان بريدك الإلكتروني",
         "verify_intro": (
             "اضغط على الزر أدناه لتأكيد أن هذا هو عنوان البريد الإلكتروني لحسابك في {app}."
@@ -639,6 +719,11 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "يرجى الانتظار…",
     },
     "hi": {
+        "change_title": "अपना नया ईमेल पता पुष्टि करें",
+        "change_intro": "अपने {app} खाते का ईमेल पता उस पते में बदलने के लिए नीचे का बटन दबाएँ जिस पर यह लिंक भेजा गया था। सभी डिवाइस से साइन आउट हो जाएगा।",
+        "change_button": "नया पता पुष्टि करें",
+        "change_done": "हो गया! आपका ईमेल पता बदल दिया गया है। नए पते से ऐप में फिर से साइन इन करें।",
+        "change_unavailable": "यह पता अब इस खाते के लिए इस्तेमाल नहीं किया जा सकता। ऐप में बदलाव फिर से शुरू करें।",
         "verify_title": "अपने ईमेल पते की पुष्टि करें",
         "verify_intro": ("पुष्टि करने के लिए नीचे दिया गया बटन दबाएँ कि यह आपके {app} खाते का ईमेल पता है।"),
         "verify_button": "पते की पुष्टि करें",

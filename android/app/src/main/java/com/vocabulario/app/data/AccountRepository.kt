@@ -1,6 +1,9 @@
 package com.vocabulario.app.data
 
+import com.vocabulario.app.data.api.EmailChangeRequestBody
+import com.vocabulario.app.data.api.EmailChangeResponse
 import com.vocabulario.app.data.api.EmailVerificationStatusResponse
+import com.vocabulario.app.data.api.RecentAuthPasswordRequest
 import com.vocabulario.app.data.api.MailStatusResponse
 import com.vocabulario.app.data.api.PasswordChangeRequest
 import com.vocabulario.app.data.api.PasswordResetRequestBody
@@ -84,6 +87,21 @@ class AccountRepository @Inject constructor(
     /** Zawsze neutralna odpowiedź: nie zdradza, czy konto istnieje. */
     suspend fun requestPasswordReset(email: String): MailStatusResponse =
         api.passwordResetRequest(PasswordResetRequestBody(email.trim(), mailLocale()))
+
+    /** Hasło jako świeży dowód, potem prośba; ten sam `requestId` przy powtórzeniu tych samych danych. */
+    suspend fun requestEmailChange(newEmail: String, password: String, requestId: String): EmailChangeResponse {
+        val proof = api.recentAuthPassword(RecentAuthPasswordRequest(password, "change_email"))
+        return api.emailChangeRequest(EmailChangeRequestBody(newEmail.trim(), proof.recent_auth_token, requestId))
+    }
+
+    suspend fun currentEmailChange(): EmailChangeResponse? =
+        api.emailChangeCurrent().change?.takeIf { it.status == "pending" }
+
+    suspend fun resendEmailChange(id: String): EmailChangeResponse = api.emailChangeResend(id)
+
+    suspend fun cancelEmailChange(id: String) {
+        api.emailChangeCancel(id)
+    }
 
     /** Inne sesje kończą się na serwerze; ta dostaje nową parę tokenów tej samej sesji. */
     suspend fun changePassword(current: String, new: String) {

@@ -83,6 +83,14 @@ private val CODE_TO_RES: Map<String, Int> = mapOf(
     "password_too_short" to R.string.err_new_password_short,
     "password_too_long" to R.string.err_password_too_long,
     "password_invalid_unicode" to R.string.err_password_invalid_chars,
+    "email_unchanged" to R.string.err_email_unchanged,
+    "email_unavailable" to R.string.err_email_unavailable,
+    "recent_auth_required" to R.string.err_recent_auth,
+    "recent_auth_used" to R.string.err_recent_auth,
+    "email_change_expired" to R.string.account_email_change_expired,
+    "email_change_inactive" to R.string.account_email_change_expired,
+    "email_change_not_found" to R.string.account_email_change_expired,
+    "email_change_completed" to R.string.account_email_change_expired,
 )
 
 private val DETAIL_ALIASES: Map<String, String> = mapOf(

@@ -30,6 +30,9 @@ internal fun AccountSectionBody(
     account: AccountUiState,
     onChangePassword: () -> Unit,
     onSendReset: () -> Unit,
+    onChangeEmail: () -> Unit,
+    onResendChange: () -> Unit,
+    onCancelChange: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -78,7 +81,92 @@ internal fun AccountSectionBody(
                 shape = AppButtonShape,
             ) { Text(stringResource(R.string.account_change_password)) }
         }
+        // Konta tylko z Google dostaną zmianę adresu razem z logowaniem Google jako ponownym uwierzytelnieniem.
+        if (account.hasPassword && !account.passwordUpgradeRequired) {
+            val pending = account.pendingChange
+            Spacer(Modifier.height(8.dp))
+            if (pending == null) {
+                OutlinedButton(
+                    onClick = onChangeEmail,
+                    modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_CHANGE_EMAIL),
+                    shape = AppButtonShape,
+                ) { Text(stringResource(R.string.account_change_email)) }
+            } else {
+                Text(
+                    stringResource(R.string.account_email_change_pending, pending.new_email),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = scheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onResendChange,
+                    enabled = !account.changeBusy,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = AppButtonShape,
+                ) { Text(stringResource(R.string.account_email_change_resend)) }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onCancelChange,
+                    enabled = !account.changeBusy,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = AppButtonShape,
+                ) { Text(stringResource(R.string.account_email_change_cancel)) }
+            }
+        }
     }
+}
+
+@Composable
+internal fun ChangeEmailDialog(
+    form: ChangeEmailUiState,
+    onEmailChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AppAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.account_change_email),
+        dismissOnClickOutside = !form.busy,
+        text = {
+            Column {
+                AppGrayField(
+                    value = form.newEmail,
+                    onValueChange = onEmailChange,
+                    placeholder = stringResource(R.string.account_new_email),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                )
+                Spacer(Modifier.height(10.dp))
+                AppGrayField(
+                    value = form.password,
+                    onValueChange = onPasswordChange,
+                    placeholder = stringResource(R.string.account_current_password),
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.account_change_email_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                form.error?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        buttons = {
+            AppDialogButtonRow(
+                secondaryText = stringResource(R.string.action_cancel),
+                onSecondary = onDismiss,
+                secondaryKind = AppDialogAction.Neutral,
+                primaryText = stringResource(R.string.account_email_change_send),
+                onPrimary = onSubmit,
+                primaryEnabled = !form.busy,
+            )
+        },
+    )
 }
 
 @Composable

@@ -1007,4 +1007,18 @@
     <string name="err_auth_unavailable">Giriş geçici olarak kullanılamıyor. Birazdan tekrar deneyin.</string>
     <string name="account_password_reset_needed">Şifrenizin yeniden belirlenmesi gerekiyor. E-posta adresinize bir bağlantı göndereceğiz.</string>
     <string name="account_password_reset_send">Sıfırlama bağlantısı gönder</string>
+    <string name="account_change_email">E-posta adresini değiştir</string>
+    <string name="account_new_email">Yeni e-posta adresi</string>
+    <string name="account_change_email_hint">Yeni adrese bir onay bağlantısı göndereceğiz. Onayladıktan sonra tüm cihazlardaki oturumların kapanır ve yeni adresinle giriş yaparsın.</string>
+    <string name="account_email_change_pending">Değişikliği onaylamak için %1$s adresine gönderdiğimiz bağlantıyı aç. Bağlantı 24 saat geçerlidir.</string>
+    <string name="account_email_change_send">Bağlantı gönder</string>
+    <string name="account_email_change_resend">Bağlantıyı yeniden gönder</string>
+    <string name="account_email_change_cancel">Değişikliği iptal et</string>
+    <string name="account_email_change_sent">Bağlantı %1$s adresine gönderildi.</string>
+    <string name="account_email_change_resent">Bağlantı yeniden gönderildi.</string>
+    <string name="account_email_change_cancelled">E-posta değişikliği iptal edildi.</string>
+    <string name="account_email_change_expired">E-posta değiştirme bağlantısının süresi doldu. Baştan başla.</string>
+    <string name="err_email_unchanged">Bu zaten senin e-posta adresin.</string>
+    <string name="err_email_unavailable">Bu adres kullanılamıyor. Başka bir tane dene.</string>
+    <string name="err_recent_auth">Parolanı yeniden doğrula ve tekrar dene.</string>
 </resources>

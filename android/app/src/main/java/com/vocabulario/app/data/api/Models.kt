@@ -61,6 +61,31 @@ data class EmailVerificationStatusResponse(
 )
 
 @Serializable
+data class RecentAuthPasswordRequest(val password: String, val action: String)
+
+@Serializable
+data class RecentAuthResponse(val recent_auth_token: String, val action: String, val expires_at: String)
+
+@Serializable
+data class EmailChangeRequestBody(val new_email: String, val recent_auth_token: String, val request_id: String)
+
+/** `status`: pending / expired / cancelled / confirmed / replaced; `mode`: change albo correction. */
+@Serializable
+data class EmailChangeResponse(
+    val change_id: String,
+    val mode: String,
+    val status: String,
+    val new_email: String,
+    val expires_at: String,
+    val resend_available_at: String? = null,
+    val delivery_status: String = "queued",
+    val delivery_delayed: Boolean = false,
+)
+
+@Serializable
+data class EmailChangeCurrentResponse(val change: EmailChangeResponse? = null)
+
+@Serializable
 data class UserSettingsResponse(
     val practice_input_pref: String,
     val practice_direction: String,

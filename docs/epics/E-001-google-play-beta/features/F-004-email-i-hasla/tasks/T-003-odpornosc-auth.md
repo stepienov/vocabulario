@@ -1,6 +1,6 @@
 # T-003 · Odporne formularze i API auth
 
-**ID:** `E-001/F-004/T-003` · **Status:** `ready` · **Priorytet / rozmiar:** P0 z UX P1 / M.  
+**ID:** `E-001/F-004/T-003` · **Status:** `done` · **Priorytet / rozmiar:** P0 z UX P1 / M.  
 **Feature:** [E-mail i hasła](../README.md). **Źródło:** B-10; F-10 w [analizie](../../../sources/analiza-2026-11-17.md).
 
 ## Cel i zakres

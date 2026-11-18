@@ -925,5 +925,19 @@
     <string name="err_auth_unavailable">La connexion est temporairement indisponible. Réessayez dans un instant.</string>
     <string name="account_password_reset_needed">Votre mot de passe doit être redéfini. Nous enverrons un lien à votre adresse e-mail.</string>
     <string name="account_password_reset_send">Envoyer le lien de réinitialisation</string>
+    <string name="account_change_email">Changer l’adresse e-mail</string>
+    <string name="account_new_email">Nouvelle adresse e-mail</string>
+    <string name="account_change_email_hint">Nous enverrons un lien de confirmation à la nouvelle adresse. Après confirmation, vous serez déconnecté de tous les appareils et vous vous connecterez avec la nouvelle adresse.</string>
+    <string name="account_email_change_pending">Ouvrez le lien envoyé à %1$s pour confirmer le changement. Le lien est valable 24 heures.</string>
+    <string name="account_email_change_send">Envoyer le lien</string>
+    <string name="account_email_change_resend">Renvoyer le lien</string>
+    <string name="account_email_change_cancel">Annuler le changement</string>
+    <string name="account_email_change_sent">Lien envoyé à %1$s.</string>
+    <string name="account_email_change_resent">Lien renvoyé.</string>
+    <string name="account_email_change_cancelled">Changement d’adresse annulé.</string>
+    <string name="account_email_change_expired">Le lien de changement d’adresse a expiré. Recommencez.</string>
+    <string name="err_email_unchanged">C’est déjà votre adresse e-mail.</string>
+    <string name="err_email_unavailable">Cette adresse ne peut pas être utilisée. Essayez-en une autre.</string>
+    <string name="err_recent_auth">Confirmez à nouveau votre mot de passe et réessayez.</string>
 </resources>
 

@@ -1,6 +1,6 @@
 # T-004 · Zmiana adresu e-mail
 
-**ID:** `E-001/F-004/T-004` · **Status:** `ready` · **Priorytet:** P0 przed pierwszą zewnętrzną betą.  
+**ID:** `E-001/F-004/T-004` · **Status:** `done` · **Priorytet:** P0 przed pierwszą zewnętrzną betą.  
 **Feature:** [E-mail i hasła](../README.md). **Źródło:** [decyzje z 17.11.2026](../../F-001-prowadzenie-bety/tasks/T-001-decyzje-i-zakres.md); rozszerzenie pierwotnego zakresu, nie nowy numer B-*.
 
 ## Uzgodniony rezultat

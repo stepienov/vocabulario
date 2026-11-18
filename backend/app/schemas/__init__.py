@@ -84,6 +84,57 @@ class StatusResponse(BaseModel):
     status: str
 
 
+class RecentAuthPasswordRequest(BaseModel):
+    password: str = Field(max_length=4096)
+    action: str = Field(max_length=32)
+
+
+class RecentAuthResponse(BaseModel):
+    recent_auth_token: str
+    action: str
+    expires_at: datetime
+
+
+class EmailChangeRequest(BaseModel):
+    new_email: EmailStr
+    recent_auth_token: str = Field(min_length=1, max_length=128)
+    request_id: UUID4
+
+    @field_validator("new_email", mode="before")
+    @classmethod
+    def _strip_edges(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+
+class EmailChangeResponse(BaseModel):
+    change_id: UUID
+    mode: str
+    status: str
+    new_email: str
+    expires_at: datetime
+    resend_available_at: datetime | None
+    delivery_status: str
+    delivery_delayed: bool
+
+
+class EmailChangeCurrentResponse(BaseModel):
+    change: EmailChangeResponse | None
+
+
+class EmailChangeConfirm(BaseModel):
+    token: str = Field(min_length=1, max_length=512)
+
+
+class EmailChangeConfirmed(BaseModel):
+    status: str = "email_changed"
+    requires_login: bool = True
+
+
+class AddPasswordRequest(BaseModel):
+    new_password: str = Field(max_length=4096)
+    recent_auth_token: str = Field(min_length=1, max_length=128)
+
+
 class EmailVerificationStatusResponse(BaseModel):
     email_verified: bool
     delivery_status: str

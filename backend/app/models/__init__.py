@@ -481,7 +481,76 @@ class AuthRefreshRetry(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
 
 
-ACTION_TOKEN_PURPOSES = ("verify_email", "reset_password")
+ACTION_TOKEN_PURPOSES = ("verify_email", "reset_password", "change_email")
+RECENT_AUTH_ACTIONS = ("change_email", "add_password", "link_google")
+EMAIL_CHANGE_MODES = ("change", "correction")
+EMAIL_CHANGE_STATES = ("pending", "confirmed", "cancelled", "replaced", "expired")
+
+
+class AccountEmailChange(Base):
+    """One user-started change or correction of the app address (E-001/F-004/T-004)."""
+
+    __tablename__ = "account_email_changes"
+    __table_args__ = (
+        UniqueConstraint("user_id", "request_id", name="uq_account_email_changes_request"),
+        Index(
+            "uq_account_email_changes_pending",
+            "user_id",
+            unique=True,
+            postgresql_where=text("state = 'pending'"),
+        ),
+        CheckConstraint(
+            "mode IN (" + ", ".join(f"'{m}'" for m in EMAIL_CHANGE_MODES) + ")",
+            name="ck_account_email_changes_mode",
+        ),
+        CheckConstraint(
+            "state IN (" + ", ".join(f"'{s}'" for s in EMAIL_CHANGE_STATES) + ")",
+            name="ck_account_email_changes_state",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    request_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    mode: Mapped[str] = mapped_column(String(16), nullable=False)
+    new_email: Mapped[str] = mapped_column(String(320), nullable=False)
+    email_revision: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    credentials_revision: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    state: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class RecentAuthProof(Base):
+    """Short-lived one-use proof that the signed-in person just proved who they are."""
+
+    __tablename__ = "account_recent_auth"
+    __table_args__ = (
+        CheckConstraint(
+            "action IN (" + ", ".join(f"'{a}'" for a in RECENT_AUTH_ACTIONS) + ")",
+            name="ck_account_recent_auth_action",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("auth_sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    session_version: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    action: Mapped[str] = mapped_column(String(24), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    email_revision: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    credentials_revision: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class AccountActionToken(Base):
@@ -494,11 +563,18 @@ class AccountActionToken(Base):
             "purpose IN (" + ", ".join(f"'{p}'" for p in ACTION_TOKEN_PURPOSES) + ")",
             name="ck_account_action_tokens_purpose",
         ),
+        CheckConstraint(
+            "(purpose = 'change_email') = (email_change_id IS NOT NULL)",
+            name="ck_account_action_tokens_email_change",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    email_change_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("account_email_changes.id", ondelete="CASCADE"), nullable=True
     )
     purpose: Mapped[str] = mapped_column(String(32), nullable=False)
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)

@@ -6,6 +6,7 @@ import com.vocabulario.app.R
 import com.vocabulario.app.data.AccountRepository
 import com.vocabulario.app.data.NEW_PASSWORD_MIN_CHARS
 import com.vocabulario.app.data.PASSWORD_MAX_CHARS
+import com.vocabulario.app.data.api.EmailChangeResponse
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 data class AccountUiState(
@@ -25,6 +27,9 @@ data class AccountUiState(
     /** Stary format hasła: zmiana wymaga starego hasła, więc prowadzimy do resetu. */
     val passwordUpgradeRequired: Boolean = false,
     val resetSending: Boolean = false,
+    /** Oczekująca zmiana adresu (bez pollingu: odczyt przy wejściu i po akcjach). */
+    val pendingChange: EmailChangeResponse? = null,
+    val changeBusy: Boolean = false,
     val loading: Boolean = false,
     /** Brak sieci lub błąd `/me`: sekcja pokazuje komunikat zamiast danych. */
     val unavailable: Boolean = false,
@@ -41,6 +46,29 @@ data class ChangePasswordUiState(
 )
 
 internal enum class NewPasswordProblem { CURRENT_EMPTY, TOO_SHORT, TOO_LONG, MISMATCH }
+
+/** Hasło tylko w pamięci; `requestId` zmienia się razem z adresem, więc ponowienie jest idempotentne. */
+data class ChangeEmailUiState(
+    val newEmail: String = "",
+    val password: String = "",
+    val requestId: String = UUID.randomUUID().toString(),
+    val busy: Boolean = false,
+    val error: String? = null,
+)
+
+internal enum class NewEmailProblem { EMPTY, INVALID, UNCHANGED, PASSWORD_EMPTY }
+
+internal fun validateNewEmail(current: String?, new: String, password: String): NewEmailProblem? {
+    val email = new.trim()
+    return when {
+        email.isEmpty() -> NewEmailProblem.EMPTY
+        !email.contains('@') || email.startsWith('@') || email.endsWith('@') || email.any { it.isWhitespace() } ->
+            NewEmailProblem.INVALID
+        current != null && email.equals(current.trim(), ignoreCase = true) -> NewEmailProblem.UNCHANGED
+        password.isEmpty() -> NewEmailProblem.PASSWORD_EMPTY
+        else -> null
+    }
+}
 
 internal fun validateNewPassword(current: String, new: String, repeat: String): NewPasswordProblem? {
     val length = new.codePointCount(0, new.length)
@@ -66,6 +94,9 @@ class AccountSettingsViewModel @Inject constructor(
     private val _changePassword = MutableStateFlow<ChangePasswordUiState?>(null)
     val changePassword: StateFlow<ChangePasswordUiState?> = _changePassword.asStateFlow()
 
+    private val _changeEmail = MutableStateFlow<ChangeEmailUiState?>(null)
+    val changeEmail: StateFlow<ChangeEmailUiState?> = _changeEmail.asStateFlow()
+
     fun load() {
         if (_account.value.loading) return
         viewModelScope.launch {
@@ -82,6 +113,7 @@ class AccountSettingsViewModel @Inject constructor(
                         unavailable = false,
                     )
                 }
+                loadPendingChange()
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -156,6 +188,111 @@ class AccountSettingsViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private suspend fun loadPendingChange() {
+        try {
+            val pending = accountRepository.currentEmailChange()
+            _account.update { it.copy(pendingChange = pending) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Błąd odczytu nie ukrywa już pokazanej zmiany; następne wejście spróbuje ponownie.
+        }
+    }
+
+    fun openChangeEmail() {
+        _account.update { it.copy(info = null) }
+        _changeEmail.value = ChangeEmailUiState()
+    }
+
+    fun closeChangeEmail() {
+        if (_changeEmail.value?.busy == true) return
+        _changeEmail.value = null
+    }
+
+    fun updateChangeEmail(newEmail: String? = null, password: String? = null) {
+        _changeEmail.update { state ->
+            state?.copy(
+                newEmail = newEmail ?: state.newEmail,
+                password = password ?: state.password,
+                requestId = if (newEmail != null && newEmail != state.newEmail) {
+                    UUID.randomUUID().toString()
+                } else {
+                    state.requestId
+                },
+                error = null,
+            )
+        }
+    }
+
+    fun submitChangeEmail() {
+        val form = _changeEmail.value ?: return
+        if (form.busy) return
+        val problem = validateNewEmail(_account.value.email, form.newEmail, form.password)
+        if (problem != null) {
+            _changeEmail.value = form.copy(error = emailProblemMessage(problem))
+            return
+        }
+        viewModelScope.launch {
+            _changeEmail.value = form.copy(busy = true, error = null)
+            try {
+                val created = accountRepository.requestEmailChange(form.newEmail, form.password, form.requestId)
+                _changeEmail.value = null
+                _account.update {
+                    it.copy(
+                        pendingChange = created,
+                        info = strings.get(R.string.account_email_change_sent, created.new_email),
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _changeEmail.update {
+                    it?.copy(busy = false, error = e.userMessage(strings, R.string.err_account_request_failed))
+                }
+            }
+        }
+    }
+
+    fun resendEmailChange() = pendingAction { id ->
+        val updated = accountRepository.resendEmailChange(id)
+        _account.update {
+            it.copy(pendingChange = updated, info = strings.get(R.string.account_email_change_resent))
+        }
+    }
+
+    fun cancelEmailChange() = pendingAction { id ->
+        accountRepository.cancelEmailChange(id)
+        _account.update {
+            it.copy(pendingChange = null, info = strings.get(R.string.account_email_change_cancelled))
+        }
+    }
+
+    private fun pendingAction(block: suspend (String) -> Unit) {
+        val state = _account.value
+        val id = state.pendingChange?.change_id ?: return
+        if (state.changeBusy) return
+        viewModelScope.launch {
+            _account.update { it.copy(changeBusy = true, info = null) }
+            try {
+                block(id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _account.update { it.copy(info = e.userMessage(strings, R.string.err_account_request_failed)) }
+                loadPendingChange()
+            } finally {
+                _account.update { it.copy(changeBusy = false) }
+            }
+        }
+    }
+
+    private fun emailProblemMessage(problem: NewEmailProblem): String = when (problem) {
+        NewEmailProblem.EMPTY -> strings.get(R.string.err_email_required)
+        NewEmailProblem.INVALID -> strings.get(R.string.err_email_invalid)
+        NewEmailProblem.UNCHANGED -> strings.get(R.string.err_email_unchanged)
+        NewEmailProblem.PASSWORD_EMPTY -> strings.get(R.string.err_password_required)
     }
 
     private fun problemMessage(problem: NewPasswordProblem): String = when (problem) {

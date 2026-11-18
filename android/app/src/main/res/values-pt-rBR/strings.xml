@@ -926,5 +926,19 @@
     <string name="err_auth_unavailable">O login está temporariamente indisponível. Tente novamente em instantes.</string>
     <string name="account_password_reset_needed">Sua senha precisa ser definida novamente. Enviaremos um link para o seu e-mail.</string>
     <string name="account_password_reset_send">Enviar link de redefinição</string>
+    <string name="account_change_email">Alterar e-mail</string>
+    <string name="account_new_email">Novo e-mail</string>
+    <string name="account_change_email_hint">Enviaremos um link de confirmação para o novo endereço. Depois de confirmar, você será desconectado de todos os dispositivos e entrará com o novo endereço.</string>
+    <string name="account_email_change_pending">Abra o link enviado para %1$s para confirmar a alteração. O link é válido por 24 horas.</string>
+    <string name="account_email_change_send">Enviar link</string>
+    <string name="account_email_change_resend">Reenviar link</string>
+    <string name="account_email_change_cancel">Cancelar alteração</string>
+    <string name="account_email_change_sent">Link enviado para %1$s.</string>
+    <string name="account_email_change_resent">Link reenviado.</string>
+    <string name="account_email_change_cancelled">Alteração de e-mail cancelada.</string>
+    <string name="account_email_change_expired">O link de alteração de e-mail expirou. Comece de novo.</string>
+    <string name="err_email_unchanged">Este já é o seu e-mail.</string>
+    <string name="err_email_unavailable">Este endereço não pode ser usado. Tente outro.</string>
+    <string name="err_recent_auth">Confirme sua senha novamente e tente de novo.</string>
 </resources>
 

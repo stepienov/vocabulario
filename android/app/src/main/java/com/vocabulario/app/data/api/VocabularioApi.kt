@@ -38,6 +38,21 @@ interface VocabularioApi {
     @GET("auth/email-verification/status")
     suspend fun emailVerificationStatus(): EmailVerificationStatusResponse
 
+    @POST("auth/recent-auth/password")
+    suspend fun recentAuthPassword(@Body body: RecentAuthPasswordRequest): RecentAuthResponse
+
+    @POST("auth/email-change/request")
+    suspend fun emailChangeRequest(@Body body: EmailChangeRequestBody): EmailChangeResponse
+
+    @GET("auth/email-change")
+    suspend fun emailChangeCurrent(): EmailChangeCurrentResponse
+
+    @POST("auth/email-change/{id}/resend")
+    suspend fun emailChangeResend(@Path("id") id: String): EmailChangeResponse
+
+    @POST("auth/email-change/{id}/cancel")
+    suspend fun emailChangeCancel(@Path("id") id: String): MailStatusResponse
+
     @GET("me")
     suspend fun me(): UserResponse
 

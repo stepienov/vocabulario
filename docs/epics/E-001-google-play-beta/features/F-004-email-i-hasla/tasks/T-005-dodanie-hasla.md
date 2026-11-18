@@ -1,6 +1,6 @@
 # T-005 · Dodanie hasła do konta Google-only
 
-**ID:** `E-001/F-004/T-005` · **Status:** `ready` · **Priorytet:** P0 w uzgodnionym zakresie pierwszej bety.  
+**ID:** `E-001/F-004/T-005` · **Status:** `in_progress` · **Priorytet:** P0 w uzgodnionym zakresie pierwszej bety.  
 **Feature i polityka:** [E-mail i hasła](../README.md#zatwierdzona-polityka-konta--17112026). **Źródło:** [decyzje startowe](../../F-001-prowadzenie-bety/tasks/T-001-decyzje-i-zakres.md).
 
 ## Uzgodniony rezultat

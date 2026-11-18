@@ -999,4 +999,18 @@
     <string name="err_auth_unavailable">L’accesso è temporaneamente non disponibile. Riprova tra un momento.</string>
     <string name="account_password_reset_needed">La tua password va reimpostata. Ti invieremo un link via email.</string>
     <string name="account_password_reset_send">Invia il link di reimpostazione</string>
+    <string name="account_change_email">Cambia indirizzo email</string>
+    <string name="account_new_email">Nuovo indirizzo email</string>
+    <string name="account_change_email_hint">Invieremo un link di conferma al nuovo indirizzo. Dopo la conferma verrai disconnesso da tutti i dispositivi e accederai con il nuovo indirizzo.</string>
+    <string name="account_email_change_pending">Apri il link inviato a %1$s per confermare il cambio. Il link è valido per 24 ore.</string>
+    <string name="account_email_change_send">Invia link</string>
+    <string name="account_email_change_resend">Invia di nuovo il link</string>
+    <string name="account_email_change_cancel">Annulla modifica</string>
+    <string name="account_email_change_sent">Link inviato a %1$s.</string>
+    <string name="account_email_change_resent">Link inviato di nuovo.</string>
+    <string name="account_email_change_cancelled">Cambio di email annullato.</string>
+    <string name="account_email_change_expired">Il link per cambiare l’email è scaduto. Ricomincia.</string>
+    <string name="err_email_unchanged">Questo è già il tuo indirizzo email.</string>
+    <string name="err_email_unavailable">Questo indirizzo non può essere usato. Prova con un altro.</string>
+    <string name="err_recent_auth">Conferma di nuovo la password e riprova.</string>
 </resources>

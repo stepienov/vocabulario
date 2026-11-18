@@ -9,7 +9,7 @@ from app.main import create_app
 from app.public_web.texts import KEYS, PAGE_TEXTS
 from app.services.mail_templates import SUPPORTED_LOCALES
 
-PAGES = ("/account/verify-email", "/account/reset-password")
+PAGES = ("/account/verify-email", "/account/reset-password", "/account/change-email")
 
 
 @pytest.fixture

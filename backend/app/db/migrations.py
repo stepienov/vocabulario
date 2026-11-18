@@ -477,6 +477,21 @@ _STATEMENTS = (
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_revision BIGINT NOT NULL DEFAULT 1",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS credentials_revision BIGINT NOT NULL DEFAULT 1",
+    # E-001/F-004/T-004: e-mail change links point at their change; purpose list grows.
+    "ALTER TABLE account_action_tokens ADD COLUMN IF NOT EXISTS email_change_id UUID "
+    "REFERENCES account_email_changes (id) ON DELETE CASCADE",
+    "DO $$ BEGIN "
+    "IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_account_action_tokens_purpose' "
+    "AND pg_get_constraintdef(oid) NOT LIKE '%change_email%') THEN "
+    "ALTER TABLE account_action_tokens DROP CONSTRAINT ck_account_action_tokens_purpose; "
+    "ALTER TABLE account_action_tokens ADD CONSTRAINT ck_account_action_tokens_purpose "
+    "CHECK (purpose IN ('verify_email', 'reset_password', 'change_email')); "
+    "END IF; "
+    "IF NOT EXISTS (SELECT 1 FROM pg_constraint "
+    "WHERE conname = 'ck_account_action_tokens_email_change') THEN "
+    "ALTER TABLE account_action_tokens ADD CONSTRAINT ck_account_action_tokens_email_change "
+    "CHECK ((purpose = 'change_email') = (email_change_id IS NOT NULL)); "
+    "END IF; END $$",
 )
 
 
