@@ -204,6 +204,23 @@ class SessionCoordinatorTest {
     }
 
     @Test
+    fun retryLoadRereadsOnlyInRecovery() = runBlocking {
+        val persistence = FakePersistence(StoredSession.Unreadable(RECOVERY_STORAGE))
+        val coordinator = SessionCoordinator(persistence, FakeTransport(), FakeLegacy())
+        coordinator.ensureLoaded()
+        assertEquals(SessionState.RecoveryRequired(RECOVERY_STORAGE), coordinator.retryLoad())
+
+        persistence.stored = StoredSession.Present(active)
+        assertEquals(SessionState.Active("user-a", "session-1"), coordinator.retryLoad())
+        assertEquals("access-1", coordinator.peekAccessToken())
+
+        // Poza stanem odzyskiwania ponowienie nie przeładowuje pamięci z dysku.
+        persistence.stored = StoredSession.Empty
+        assertEquals(SessionState.Active("user-a", "session-1"), coordinator.retryLoad())
+        assertEquals(0, persistence.writes)
+    }
+
+    @Test
     fun legacyTokensMigrateAndPlaintextIsRemovedOnlyAfterWrite() {
         val failing = FakePersistence().apply { failWrites = true }
         val kept = FakeLegacy("old-access" to "old-refresh")

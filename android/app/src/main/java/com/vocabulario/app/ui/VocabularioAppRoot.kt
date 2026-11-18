@@ -2,9 +2,16 @@ package com.vocabulario.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -14,6 +21,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -21,12 +31,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import android.net.Uri
+import com.vocabulario.app.R
 import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.imports.ImportController
 import com.vocabulario.app.ui.auth.AuthScreen
 import com.vocabulario.app.ui.auth.AuthViewModel
+import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.BusyOverlayHost
+import com.vocabulario.app.ui.components.ButtonLabel
 import com.vocabulario.app.ui.home.HomeScreen
 import com.vocabulario.app.ui.learning.LearningScreen
 import com.vocabulario.app.ui.onboarding.OnboardingScreen
@@ -87,13 +100,18 @@ fun VocabularioAppRoot(
     LaunchedEffect(Unit) { appViewModel.bootstrap() }
 
     if (startRoute == AppStartRoute.LOADING) {
+        val loadingSlow by appViewModel.loadingSlow.collectAsState()
         Box(
             Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background),
             contentAlignment = Alignment.Center,
         ) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            if (loadingSlow) {
+                SlowStartPanel(onRetry = { appViewModel.retryBootstrap() })
+            } else {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
         }
         return
     }
@@ -236,5 +254,33 @@ private fun rememberImportController(): ImportController {
     return remember {
         EntryPointAccessors.fromApplication(context, ImportControllerEntryPoint::class.java)
             .importController()
+    }
+}
+
+@Composable
+private fun SlowStartPanel(onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            stringResource(R.string.loading_slow_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(R.string.loading_slow_message),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(20.dp))
+        Button(onClick = onRetry, shape = AppButtonShape) {
+            ButtonLabel(stringResource(R.string.action_retry))
+        }
     }
 }

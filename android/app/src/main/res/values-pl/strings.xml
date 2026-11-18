@@ -675,6 +675,21 @@
     <string name="legacy_data_discard_confirm">Niewysłane zmiany (%1$d) zostaną utracone bez możliwości odzyskania.</string>
     <string name="legacy_data_discarded">Dane lokalne usunięte. Zaloguj się ponownie.</string>
     <string name="legacy_data_discard_failed">Nie udało się usunąć danych lokalnych. Spróbuj ponownie.</string>
+    <string name="auth_notice_reauth_title">Zaloguj się ponownie</string>
+    <string name="auth_notice_reauth">Sesja wygasła. Zaloguj się na to samo konto, aby kontynuować. Dane na tym urządzeniu zostają zachowane.</string>
+    <string name="auth_notice_recovery_title">Nie udało się przywrócić sesji</string>
+    <string name="auth_notice_recovery">Nie można odczytać zapisanego logowania na tym urządzeniu. Spróbuj ponownie albo zaloguj się na to samo konto. Dane na tym urządzeniu zostają zachowane.</string>
+    <string name="auth_notice_local_data_title">Dane Twojego konta</string>
+    <string name="auth_notice_local_data">Na tym urządzeniu zostały dane nauki z poprzedniej sesji. Zaloguj się na to samo konto, aby je zachować.</string>
+    <string name="auth_notice_unsent">Zmiany jeszcze niewysłane na serwer: %1$d</string>
+    <string name="auth_sign_out_device">Wyloguj na tym urządzeniu</string>
+    <string name="auth_sign_out_device_confirm_title">Usunąć dane z tego urządzenia?</string>
+    <string name="auth_sign_out_device_confirm">Dane nauki zapisane na tym urządzeniu zostaną usunięte. Dane zapisane już na serwerze pozostaną bez zmian.</string>
+    <string name="auth_signed_out_device">Wylogowano. Dane zostały usunięte z tego urządzenia.</string>
+    <string name="auth_sign_out_device_failed">Nie udało się wylogować. Spróbuj ponownie.</string>
+    <string name="auth_recovery_retry_failed">Nadal nie można odczytać zapisanej sesji. Zaloguj się ponownie.</string>
+    <string name="loading_slow_title">Trwa to dłużej niż zwykle</string>
+    <string name="loading_slow_message">Aplikacja wciąż się uruchamia. Sprawdź połączenie lub spróbuj ponownie.</string>
 
 
     <string name="err_register">Błąd rejestracji</string>

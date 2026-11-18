@@ -640,6 +640,21 @@
     <string name="legacy_data_discard_confirm">As alterações não enviadas (%1$d) serão perdidas e não poderão ser recuperadas.</string>
     <string name="legacy_data_discarded">Dados locais removidos. Entre novamente.</string>
     <string name="legacy_data_discard_failed">Não foi possível remover os dados locais. Tente novamente.</string>
+    <string name="auth_notice_reauth_title">Entre novamente</string>
+    <string name="auth_notice_reauth">Sua sessão terminou. Entre com a mesma conta para continuar. Seus dados neste dispositivo são mantidos.</string>
+    <string name="auth_notice_recovery_title">Não foi possível restaurar a sessão</string>
+    <string name="auth_notice_recovery">Não foi possível ler o login salvo neste dispositivo. Tente novamente ou entre com a mesma conta. Seus dados neste dispositivo são mantidos.</string>
+    <string name="auth_notice_local_data_title">Dados da sua conta</string>
+    <string name="auth_notice_local_data">Este dispositivo ainda tem dados de estudo de uma sessão anterior. Entre com a mesma conta para mantê-los.</string>
+    <string name="auth_notice_unsent">Alterações ainda não enviadas ao servidor: %1$d</string>
+    <string name="auth_sign_out_device">Sair neste dispositivo</string>
+    <string name="auth_sign_out_device_confirm_title">Remover os dados deste dispositivo?</string>
+    <string name="auth_sign_out_device_confirm">Os dados de estudo salvos neste dispositivo serão excluídos. Os dados que já estão no servidor não são afetados.</string>
+    <string name="auth_signed_out_device">Você saiu. Dados removidos deste dispositivo.</string>
+    <string name="auth_sign_out_device_failed">Não foi possível sair. Tente novamente.</string>
+    <string name="auth_recovery_retry_failed">Ainda não é possível ler a sessão salva. Entre novamente.</string>
+    <string name="loading_slow_title">Isso está demorando mais que o normal</string>
+    <string name="loading_slow_message">O app ainda está iniciando. Verifique sua conexão ou tente novamente.</string>
 
 
     <string name="err_register">Falha no cadastro</string>

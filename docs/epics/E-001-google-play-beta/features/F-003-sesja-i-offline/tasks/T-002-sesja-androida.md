@@ -38,11 +38,24 @@ Pakiet [`data/session`](../../../../../../android/app/src/main/java/com/vocabula
 - Testy: [`OwnerDecisionsTest`](../../../../../../android/app/src/test/java/com/vocabulario/app/data/session/OwnerDecisionsTest.kt) (10) oraz `requireReauth` w `SessionCoordinatorTest`. Gradle: unit tests 246/246, lint bez uwag do zmian, `assembleDebug` OK.
 
 **Tymczasowo:**
-- Zmiana konta jest celowo niedostępna (§7: dopiero po ochronie zapisów z części d). Przy danych konta A login na B kończy się odmową, a z AUTH nie ma jeszcze wyjścia przez logout (ekrany reauth w kroku 3).
+- Zmiana konta: od kroku 3 możliwa tylko przez jawne „Wyloguj na tym urządzeniu” z usunięciem danych (jak dotychczasowy logout w ustawieniach). Login na B przy danych A nadal kończy się odmową. Wydanie T-002 wymaga ochrony zapisów z części (d).
 - Odwołanie kandydata to jedna próba, nie trwałe zlecenie (krok logout).
-- Logout nadal bez dialogu niewysłanych zmian.
+- Logout z ustawień nadal bez dialogu niewysłanych zmian.
 - Migracji Room nie da się sprawdzić testem JVM (brak Robolectric/urządzenia); SQL odpowiada schematowi encji i wymaga ręcznego sprawdzenia aktualizacji na urządzeniu.
 - Obecna instalacja debug z danymi trafi do kwarantanny: po aktualizacji wymagany login i świadome usunięcie lokalnych danych; zsynchronizowane dane wrócą z serwera.
+
+### Krok 3 · Ekrany reauth/recovery i wolny start (18.11.2026)
+
+- Karta nad formularzem logowania z czystej funkcji `authNotice(state, snapshot)`:
+  - `ReauthRequired` → „Zaloguj się ponownie”, dane zostają;
+  - `RecoveryRequired` → wyjaśnienie, „Spróbuj ponownie” (`SessionCoordinator.retryLoad()` + uzgodnienie właściciela, bez zapisów i kasowania) albo login tego samego konta;
+  - `SignedOut` z danymi znanego właściciela → „Dane Twojego konta”; dane legacy obsługuje nadal dialog kwarantanny;
+  - liczba niewysłanych zmian; w trakcie `logging_out` brak karty.
+- „Wyloguj na tym urządzeniu”: przy danych lokalnych dialog z ostrzeżeniem i liczbą niewysłanych zmian, potem logout z kroku 2 (zamiar w Room → usunięcie sesji → usunięcie danych).
+- Utrata sesji w trakcie pracy (`SignedOut`/`ReauthRequired`/`RecoveryRequired` przy HOME lub ONBOARDING) przenosi na AUTH bez kasowania Room; login tego samego konta wraca do HOME z zachowanymi kolejkami.
+- Start dłuższy niż 10 s: panel „Trwa to dłużej niż zwykle” z ponowieniem zamiast samego spinnera; ponowienie anuluje poprzedni bootstrap. Ścieżki start → AUTH/HOME bez zmian.
+- 15 nowych kluczy w 17 lokalizacjach.
+- Testy: `authNotice`, `sessionLost` w `OwnerDecisionsTest`, `retryLoad` w `SessionCoordinatorTest`. Gradle: unit tests 250/250, lint bez uwag do zmian, `assembleDebug` OK.
 
 ## Cel, decyzje i zależności
 

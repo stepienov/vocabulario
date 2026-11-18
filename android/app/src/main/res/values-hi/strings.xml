@@ -640,6 +640,21 @@
     <string name="legacy_data_discard_confirm">न भेजे गए बदलाव (%1$d) खो जाएँगे और वापस नहीं मिलेंगे।</string>
     <string name="legacy_data_discarded">स्थानीय डेटा हटा दिया गया। फिर से साइन इन करें।</string>
     <string name="legacy_data_discard_failed">स्थानीय डेटा नहीं हटाया जा सका। फिर से कोशिश करें।</string>
+    <string name="auth_notice_reauth_title">फिर से साइन इन करें</string>
+    <string name="auth_notice_reauth">आपका सत्र समाप्त हो गया है। जारी रखने के लिए उसी खाते से साइन इन करें। इस डिवाइस पर आपका डेटा सुरक्षित रहता है।</string>
+    <string name="auth_notice_recovery_title">सत्र बहाल नहीं हो सका</string>
+    <string name="auth_notice_recovery">इस डिवाइस पर सहेजा गया साइन-इन पढ़ा नहीं जा सका। फिर से कोशिश करें या उसी खाते से साइन इन करें। इस डिवाइस पर आपका डेटा सुरक्षित रहता है।</string>
+    <string name="auth_notice_local_data_title">आपके खाते का डेटा</string>
+    <string name="auth_notice_local_data">इस डिवाइस पर पिछले सत्र का अध्ययन डेटा अभी भी मौजूद है। इसे रखने के लिए उसी खाते से साइन इन करें।</string>
+    <string name="auth_notice_unsent">सर्वर पर अभी तक न भेजे गए बदलाव: %1$d</string>
+    <string name="auth_sign_out_device">इस डिवाइस पर साइन आउट करें</string>
+    <string name="auth_sign_out_device_confirm_title">इस डिवाइस से डेटा हटाएँ?</string>
+    <string name="auth_sign_out_device_confirm">इस डिवाइस पर सहेजा गया अध्ययन डेटा हटा दिया जाएगा। सर्वर पर पहले से मौजूद डेटा पर कोई असर नहीं पड़ेगा।</string>
+    <string name="auth_signed_out_device">साइन आउट हो गया। इस डिवाइस से डेटा हटा दिया गया।</string>
+    <string name="auth_sign_out_device_failed">साइन आउट नहीं हो सका। फिर से कोशिश करें।</string>
+    <string name="auth_recovery_retry_failed">सहेजा गया सत्र अभी भी पढ़ा नहीं जा सकता। फिर से साइन इन करें।</string>
+    <string name="loading_slow_title">इसमें सामान्य से अधिक समय लग रहा है</string>
+    <string name="loading_slow_message">ऐप अभी भी शुरू हो रहा है। अपना कनेक्शन जाँचें या फिर से कोशिश करें।</string>
 
 
     <string name="err_register">पंजीकरण विफल</string>

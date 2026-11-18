@@ -10,6 +10,7 @@ import com.vocabulario.app.data.imports.ImportStatePersistence
 import com.vocabulario.app.data.local.OfflineStore
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.session.LoginDecision
+import com.vocabulario.app.data.session.OwnerSnapshot
 import com.vocabulario.app.data.session.REAUTH_REASON_SESSION_MISMATCH
 import com.vocabulario.app.data.session.SessionCoordinator
 import com.vocabulario.app.data.session.SessionInstallException
@@ -111,6 +112,15 @@ class AuthRepository @Inject constructor(
             importStatePersistence.saveJobId(null)
         }
         return discarded
+    }
+
+    suspend fun ownerSnapshot(): OwnerSnapshot = offlineStore.ownerSnapshot()
+
+    /** Ponowienie odczytu nieczytelnej sesji; true, gdy sesja jest znów aktywna i zgodna z danymi. */
+    suspend fun retrySessionRecovery(): Boolean {
+        if (sessionCoordinator.retryLoad() !is SessionState.Active) return false
+        reconcileOwnerOnStart()
+        return sessionCoordinator.state.value is SessionState.Active
     }
 
     /** Uzgodnienie sesji z właścicielem danych po starcie procesu (przed wyborem ekranu). */

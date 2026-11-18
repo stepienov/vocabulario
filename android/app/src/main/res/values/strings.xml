@@ -675,6 +675,21 @@
     <string name="legacy_data_discard_confirm">Unsent changes (%1$d) will be lost and can’t be recovered.</string>
     <string name="legacy_data_discarded">Local data removed. Sign in again.</string>
     <string name="legacy_data_discard_failed">Couldn’t remove local data. Try again.</string>
+    <string name="auth_notice_reauth_title">Sign in again</string>
+    <string name="auth_notice_reauth">Your session has ended. Sign in with the same account to continue. Your data on this device is kept.</string>
+    <string name="auth_notice_recovery_title">Couldn’t restore your session</string>
+    <string name="auth_notice_recovery">The saved sign-in on this device couldn’t be read. Try again or sign in with the same account. Your data on this device is kept.</string>
+    <string name="auth_notice_local_data_title">Data from your account</string>
+    <string name="auth_notice_local_data">This device still has study data from a previous session. Sign in with the same account to keep it.</string>
+    <string name="auth_notice_unsent">Changes not yet sent to the server: %1$d</string>
+    <string name="auth_sign_out_device">Sign out on this device</string>
+    <string name="auth_sign_out_device_confirm_title">Remove data from this device?</string>
+    <string name="auth_sign_out_device_confirm">Study data saved on this device will be deleted. Data already on the server is not affected.</string>
+    <string name="auth_signed_out_device">Signed out. Data removed from this device.</string>
+    <string name="auth_sign_out_device_failed">Couldn’t sign out. Try again.</string>
+    <string name="auth_recovery_retry_failed">The saved session still can’t be read. Sign in again.</string>
+    <string name="loading_slow_title">This is taking longer than usual</string>
+    <string name="loading_slow_message">The app is still starting. Check your connection or try again.</string>
 
 
     <string name="err_register">Registration failed</string>

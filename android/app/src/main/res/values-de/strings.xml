@@ -640,6 +640,21 @@
     <string name="legacy_data_discard_confirm">Nicht gesendete Änderungen (%1$d) gehen verloren und können nicht wiederhergestellt werden.</string>
     <string name="legacy_data_discarded">Lokale Daten entfernt. Melde dich erneut an.</string>
     <string name="legacy_data_discard_failed">Lokale Daten konnten nicht entfernt werden. Versuche es erneut.</string>
+    <string name="auth_notice_reauth_title">Erneut anmelden</string>
+    <string name="auth_notice_reauth">Deine Sitzung ist abgelaufen. Melde dich mit demselben Konto an, um fortzufahren. Deine Daten auf diesem Gerät bleiben erhalten.</string>
+    <string name="auth_notice_recovery_title">Sitzung konnte nicht wiederhergestellt werden</string>
+    <string name="auth_notice_recovery">Die gespeicherte Anmeldung auf diesem Gerät konnte nicht gelesen werden. Versuche es erneut oder melde dich mit demselben Konto an. Deine Daten auf diesem Gerät bleiben erhalten.</string>
+    <string name="auth_notice_local_data_title">Daten deines Kontos</string>
+    <string name="auth_notice_local_data">Auf diesem Gerät befinden sich noch Lerndaten aus einer früheren Sitzung. Melde dich mit demselben Konto an, um sie zu behalten.</string>
+    <string name="auth_notice_unsent">Noch nicht an den Server gesendete Änderungen: %1$d</string>
+    <string name="auth_sign_out_device">Auf diesem Gerät abmelden</string>
+    <string name="auth_sign_out_device_confirm_title">Daten von diesem Gerät entfernen?</string>
+    <string name="auth_sign_out_device_confirm">Die auf diesem Gerät gespeicherten Lerndaten werden gelöscht. Daten, die bereits auf dem Server sind, bleiben unverändert.</string>
+    <string name="auth_signed_out_device">Abgemeldet. Daten wurden von diesem Gerät entfernt.</string>
+    <string name="auth_sign_out_device_failed">Abmelden fehlgeschlagen. Versuche es erneut.</string>
+    <string name="auth_recovery_retry_failed">Die gespeicherte Sitzung kann weiterhin nicht gelesen werden. Melde dich erneut an.</string>
+    <string name="loading_slow_title">Das dauert länger als üblich</string>
+    <string name="loading_slow_message">Die App wird noch gestartet. Prüfe deine Verbindung oder versuche es erneut.</string>
 
 
     <string name="err_register">Registrierung fehlgeschlagen</string>

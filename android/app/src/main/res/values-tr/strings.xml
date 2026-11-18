@@ -672,6 +672,21 @@
     <string name="legacy_data_discard_confirm">Gönderilmemiş değişiklikler (%1$d) kaybolacak ve geri alınamayacak.</string>
     <string name="legacy_data_discarded">Yerel veriler kaldırıldı. Yeniden giriş yapın.</string>
     <string name="legacy_data_discard_failed">Yerel veriler kaldırılamadı. Tekrar deneyin.</string>
+    <string name="auth_notice_reauth_title">Tekrar giriş yapın</string>
+    <string name="auth_notice_reauth">Oturumunuz sona erdi. Devam etmek için aynı hesapla giriş yapın. Bu cihazdaki verileriniz korunur.</string>
+    <string name="auth_notice_recovery_title">Oturum geri yüklenemedi</string>
+    <string name="auth_notice_recovery">Bu cihazda kayıtlı giriş bilgisi okunamadı. Tekrar deneyin veya aynı hesapla giriş yapın. Bu cihazdaki verileriniz korunur.</string>
+    <string name="auth_notice_local_data_title">Hesabınızın verileri</string>
+    <string name="auth_notice_local_data">Bu cihazda önceki bir oturumdan kalan çalışma verileri var. Korumak için aynı hesapla giriş yapın.</string>
+    <string name="auth_notice_unsent">Henüz sunucuya gönderilmemiş değişiklikler: %1$d</string>
+    <string name="auth_sign_out_device">Bu cihazda oturumu kapat</string>
+    <string name="auth_sign_out_device_confirm_title">Veriler bu cihazdan kaldırılsın mı?</string>
+    <string name="auth_sign_out_device_confirm">Bu cihazda kayıtlı çalışma verileri silinecek. Sunucuda zaten bulunan veriler etkilenmez.</string>
+    <string name="auth_signed_out_device">Oturum kapatıldı. Veriler bu cihazdan kaldırıldı.</string>
+    <string name="auth_sign_out_device_failed">Oturum kapatılamadı. Tekrar deneyin.</string>
+    <string name="auth_recovery_retry_failed">Kayıtlı oturum hâlâ okunamıyor. Tekrar giriş yapın.</string>
+    <string name="loading_slow_title">Bu, normalden uzun sürüyor</string>
+    <string name="loading_slow_message">Uygulama hâlâ başlatılıyor. Bağlantınızı kontrol edin veya tekrar deneyin.</string>
 
 
     <string name="err_register">Kayıt başarısız</string>

@@ -640,6 +640,21 @@
     <string name="legacy_data_discard_confirm">Неотправленные изменения (%1$d) будут потеряны без возможности восстановления.</string>
     <string name="legacy_data_discarded">Локальные данные удалены. Войдите снова.</string>
     <string name="legacy_data_discard_failed">Не удалось удалить локальные данные. Попробуйте ещё раз.</string>
+    <string name="auth_notice_reauth_title">Войдите снова</string>
+    <string name="auth_notice_reauth">Ваша сессия завершилась. Войдите в тот же аккаунт, чтобы продолжить. Данные на этом устройстве сохраняются.</string>
+    <string name="auth_notice_recovery_title">Не удалось восстановить сессию</string>
+    <string name="auth_notice_recovery">Не удалось прочитать сохранённый вход на этом устройстве. Попробуйте ещё раз или войдите в тот же аккаунт. Данные на этом устройстве сохраняются.</string>
+    <string name="auth_notice_local_data_title">Данные вашего аккаунта</string>
+    <string name="auth_notice_local_data">На этом устройстве остались учебные данные из предыдущей сессии. Войдите в тот же аккаунт, чтобы сохранить их.</string>
+    <string name="auth_notice_unsent">Изменения, ещё не отправленные на сервер: %1$d</string>
+    <string name="auth_sign_out_device">Выйти на этом устройстве</string>
+    <string name="auth_sign_out_device_confirm_title">Удалить данные с этого устройства?</string>
+    <string name="auth_sign_out_device_confirm">Учебные данные, сохранённые на этом устройстве, будут удалены. Данные, уже сохранённые на сервере, не затрагиваются.</string>
+    <string name="auth_signed_out_device">Вы вышли. Данные удалены с этого устройства.</string>
+    <string name="auth_sign_out_device_failed">Не удалось выйти. Попробуйте ещё раз.</string>
+    <string name="auth_recovery_retry_failed">Сохранённую сессию по-прежнему не удаётся прочитать. Войдите снова.</string>
+    <string name="loading_slow_title">Это занимает больше времени, чем обычно</string>
+    <string name="loading_slow_message">Приложение ещё запускается. Проверьте подключение или попробуйте ещё раз.</string>
 
 
     <string name="err_register">Ошибка регистрации</string>

@@ -640,6 +640,21 @@
     <string name="legacy_data_discard_confirm">ستُفقد التغييرات غير المُرسلة (%1$d) ولا يمكن استعادتها.</string>
     <string name="legacy_data_discarded">تم حذف البيانات المحلية. سجّل الدخول مرة أخرى.</string>
     <string name="legacy_data_discard_failed">تعذّر حذف البيانات المحلية. حاول مرة أخرى.</string>
+    <string name="auth_notice_reauth_title">سجّل الدخول مرة أخرى</string>
+    <string name="auth_notice_reauth">انتهت جلستك. سجّل الدخول بالحساب نفسه للمتابعة. تبقى بياناتك على هذا الجهاز محفوظة.</string>
+    <string name="auth_notice_recovery_title">تعذّرت استعادة الجلسة</string>
+    <string name="auth_notice_recovery">تعذّرت قراءة تسجيل الدخول المحفوظ على هذا الجهاز. حاول مرة أخرى أو سجّل الدخول بالحساب نفسه. تبقى بياناتك على هذا الجهاز محفوظة.</string>
+    <string name="auth_notice_local_data_title">بيانات حسابك</string>
+    <string name="auth_notice_local_data">لا تزال على هذا الجهاز بيانات دراسة من جلسة سابقة. سجّل الدخول بالحساب نفسه للاحتفاظ بها.</string>
+    <string name="auth_notice_unsent">تغييرات لم تُرسل إلى الخادم بعد: %1$d</string>
+    <string name="auth_sign_out_device">تسجيل الخروج على هذا الجهاز</string>
+    <string name="auth_sign_out_device_confirm_title">إزالة البيانات من هذا الجهاز؟</string>
+    <string name="auth_sign_out_device_confirm">سيتم حذف بيانات الدراسة المحفوظة على هذا الجهاز. لن تتأثر البيانات الموجودة على الخادم.</string>
+    <string name="auth_signed_out_device">تم تسجيل الخروج. أُزيلت البيانات من هذا الجهاز.</string>
+    <string name="auth_sign_out_device_failed">تعذّر تسجيل الخروج. حاول مرة أخرى.</string>
+    <string name="auth_recovery_retry_failed">لا تزال قراءة الجلسة المحفوظة غير ممكنة. سجّل الدخول مرة أخرى.</string>
+    <string name="loading_slow_title">يستغرق هذا وقتًا أطول من المعتاد</string>
+    <string name="loading_slow_message">لا يزال التطبيق قيد التشغيل. تحقّق من اتصالك أو حاول مرة أخرى.</string>
 
 
     <string name="err_register">فشل إنشاء الحساب</string>

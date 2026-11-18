@@ -70,3 +70,45 @@ fun decideStartup(snapshot: OwnerSnapshot, state: SessionState): StartupAction {
     if (!snapshot.hasOwnedData) return StartupAction.ClaimEmpty(sessionOwner)
     return StartupAction.RequireReauth(REAUTH_REASON_SESSION_MISMATCH)
 }
+
+enum class AuthNoticeKind {
+    /** Sesja odwołana/wygasła: login tego samego konta zachowuje dane. */
+    REAUTH,
+
+    /** Zapisanej sesji nie da się odczytać: ponowienie albo login tego samego konta. */
+    RECOVERY,
+
+    /** Brak sesji, ale na urządzeniu zostały dane konta (np. przerwane wylogowanie). */
+    LOCAL_DATA,
+}
+
+/** Informacja na ekranie logowania; wyjście „wyloguj na tym urządzeniu” usuwa [hasLocalData]. */
+data class AuthNotice(
+    val kind: AuthNoticeKind,
+    val hasLocalData: Boolean,
+    val unsentCount: Int,
+)
+
+fun authNotice(state: SessionState, snapshot: OwnerSnapshot): AuthNotice? {
+    // Trwające wylogowanie zaraz usunie dane; karta byłaby nieaktualna.
+    if (snapshot.phase == OwnerPhase.LOGGING_OUT) return null
+    val kind = when (state) {
+        is SessionState.ReauthRequired -> AuthNoticeKind.REAUTH
+        is SessionState.RecoveryRequired -> AuthNoticeKind.RECOVERY
+        // Dane bez właściciela obsługuje osobny dialog kwarantanny przy próbie loginu.
+        SessionState.SignedOut ->
+            AuthNoticeKind.LOCAL_DATA.takeIf { snapshot.hasOwnedData && snapshot.ownerUserId != null }
+        else -> null
+    } ?: return null
+    return AuthNotice(
+        kind = kind,
+        hasLocalData = snapshot.hasOwnedData,
+        unsentCount = if (snapshot.hasOwnedData) snapshot.unsentCount else 0,
+    )
+}
+
+/** Utrata sesji w trakcie pracy przenosi z ekranów konta na logowanie, bez kasowania danych. */
+fun sessionLost(state: SessionState): Boolean =
+    state is SessionState.SignedOut ||
+        state is SessionState.ReauthRequired ||
+        state is SessionState.RecoveryRequired

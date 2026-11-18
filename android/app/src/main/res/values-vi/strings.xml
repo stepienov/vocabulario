@@ -671,6 +671,21 @@
     <string name="legacy_data_discard_confirm">Các thay đổi chưa gửi (%1$d) sẽ bị mất và không thể khôi phục.</string>
     <string name="legacy_data_discarded">Đã xóa dữ liệu cục bộ. Vui lòng đăng nhập lại.</string>
     <string name="legacy_data_discard_failed">Không thể xóa dữ liệu cục bộ. Vui lòng thử lại.</string>
+    <string name="auth_notice_reauth_title">Đăng nhập lại</string>
+    <string name="auth_notice_reauth">Phiên của bạn đã kết thúc. Hãy đăng nhập bằng cùng tài khoản để tiếp tục. Dữ liệu trên thiết bị này vẫn được giữ lại.</string>
+    <string name="auth_notice_recovery_title">Không thể khôi phục phiên</string>
+    <string name="auth_notice_recovery">Không thể đọc thông tin đăng nhập đã lưu trên thiết bị này. Vui lòng thử lại hoặc đăng nhập bằng cùng tài khoản. Dữ liệu trên thiết bị này vẫn được giữ lại.</string>
+    <string name="auth_notice_local_data_title">Dữ liệu tài khoản của bạn</string>
+    <string name="auth_notice_local_data">Thiết bị này vẫn còn dữ liệu học từ phiên trước. Hãy đăng nhập bằng cùng tài khoản để giữ lại.</string>
+    <string name="auth_notice_unsent">Thay đổi chưa gửi lên máy chủ: %1$d</string>
+    <string name="auth_sign_out_device">Đăng xuất trên thiết bị này</string>
+    <string name="auth_sign_out_device_confirm_title">Xóa dữ liệu khỏi thiết bị này?</string>
+    <string name="auth_sign_out_device_confirm">Dữ liệu học đã lưu trên thiết bị này sẽ bị xóa. Dữ liệu đã có trên máy chủ không bị ảnh hưởng.</string>
+    <string name="auth_signed_out_device">Đã đăng xuất. Dữ liệu đã được xóa khỏi thiết bị này.</string>
+    <string name="auth_sign_out_device_failed">Không thể đăng xuất. Vui lòng thử lại.</string>
+    <string name="auth_recovery_retry_failed">Vẫn không thể đọc phiên đã lưu. Hãy đăng nhập lại.</string>
+    <string name="loading_slow_title">Việc này mất nhiều thời gian hơn bình thường</string>
+    <string name="loading_slow_message">Ứng dụng vẫn đang khởi động. Hãy kiểm tra kết nối hoặc thử lại.</string>
 
 
     <string name="err_register">Đăng ký không thành công</string>

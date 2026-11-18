@@ -640,6 +640,21 @@
     <string name="legacy_data_discard_confirm">Les modifications non envoyées (%1$d) seront perdues et ne pourront pas être récupérées.</string>
     <string name="legacy_data_discarded">Données locales supprimées. Reconnectez-vous.</string>
     <string name="legacy_data_discard_failed">Impossible de supprimer les données locales. Réessayez.</string>
+    <string name="auth_notice_reauth_title">Reconnectez-vous</string>
+    <string name="auth_notice_reauth">Votre session a expiré. Connectez-vous avec le même compte pour continuer. Vos données sur cet appareil sont conservées.</string>
+    <string name="auth_notice_recovery_title">Impossible de restaurer la session</string>
+    <string name="auth_notice_recovery">La connexion enregistrée sur cet appareil n’a pas pu être lue. Réessayez ou connectez-vous avec le même compte. Vos données sur cet appareil sont conservées.</string>
+    <string name="auth_notice_local_data_title">Données de votre compte</string>
+    <string name="auth_notice_local_data">Cet appareil contient encore des données d’apprentissage d’une session précédente. Connectez-vous avec le même compte pour les conserver.</string>
+    <string name="auth_notice_unsent">Modifications pas encore envoyées au serveur : %1$d</string>
+    <string name="auth_sign_out_device">Se déconnecter sur cet appareil</string>
+    <string name="auth_sign_out_device_confirm_title">Supprimer les données de cet appareil ?</string>
+    <string name="auth_sign_out_device_confirm">Les données d’apprentissage enregistrées sur cet appareil seront supprimées. Les données déjà présentes sur le serveur ne sont pas concernées.</string>
+    <string name="auth_signed_out_device">Déconnecté. Données supprimées de cet appareil.</string>
+    <string name="auth_sign_out_device_failed">Impossible de se déconnecter. Réessayez.</string>
+    <string name="auth_recovery_retry_failed">La session enregistrée est toujours illisible. Reconnectez-vous.</string>
+    <string name="loading_slow_title">Cela prend plus de temps que d’habitude</string>
+    <string name="loading_slow_message">L’application est toujours en cours de démarrage. Vérifiez votre connexion ou réessayez.</string>
 
 
     <string name="err_register">Échec de l’inscription</string>

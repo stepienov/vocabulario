@@ -89,4 +89,51 @@ class OwnerDecisionsTest {
             decideStartup(snapshot(), active(null)),
         )
     }
+
+    @Test
+    fun authNoticeExplainsReauthAndRecoveryWithLocalData() {
+        val owned = snapshot(owner = "A", phase = OwnerPhase.ACTIVE, hasData = true, unsent = 3)
+        assertEquals(
+            AuthNotice(AuthNoticeKind.REAUTH, hasLocalData = true, unsentCount = 3),
+            authNotice(SessionState.ReauthRequired("A", REAUTH_REASON_UNKNOWN), owned),
+        )
+        assertEquals(
+            AuthNotice(AuthNoticeKind.RECOVERY, hasLocalData = false, unsentCount = 0),
+            authNotice(SessionState.RecoveryRequired(RECOVERY_UNREADABLE), snapshot(unsent = 5)),
+        )
+        // Dane bez właściciela przy reauth też są liczone, bo wyjście je usuwa.
+        val legacy = snapshot(phase = OwnerPhase.LEGACY_UNCLAIMED, hasData = true, unsent = 1)
+        assertEquals(
+            AuthNotice(AuthNoticeKind.REAUTH, hasLocalData = true, unsentCount = 1),
+            authNotice(SessionState.ReauthRequired(null, REAUTH_REASON_LEGACY_DATA), legacy),
+        )
+    }
+
+    @Test
+    fun signedOutNoticeOnlyForDataOfKnownOwner() {
+        val owned = snapshot(owner = "A", phase = OwnerPhase.ACTIVE, hasData = true, unsent = 2)
+        assertEquals(
+            AuthNotice(AuthNoticeKind.LOCAL_DATA, hasLocalData = true, unsentCount = 2),
+            authNotice(SessionState.SignedOut, owned),
+        )
+        assertEquals(null, authNotice(SessionState.SignedOut, snapshot()))
+        // Dane legacy obsługuje dialog kwarantanny przy loginie, nie karta.
+        assertEquals(
+            null,
+            authNotice(SessionState.SignedOut, snapshot(phase = OwnerPhase.LEGACY_UNCLAIMED, hasData = true)),
+        )
+        assertEquals(null, authNotice(active("A"), owned))
+        assertEquals(null, authNotice(SessionState.Loading, owned))
+        val loggingOut = snapshot(owner = "A", phase = OwnerPhase.LOGGING_OUT, hasData = true)
+        assertEquals(null, authNotice(SessionState.SignedOut, loggingOut))
+    }
+
+    @Test
+    fun onlyEndedSessionsLeaveAccountScreens() {
+        assertEquals(true, sessionLost(SessionState.SignedOut))
+        assertEquals(true, sessionLost(SessionState.ReauthRequired("A", REAUTH_REASON_UNKNOWN)))
+        assertEquals(true, sessionLost(SessionState.RecoveryRequired(RECOVERY_STORAGE)))
+        assertEquals(false, sessionLost(SessionState.Loading))
+        assertEquals(false, sessionLost(active("A")))
+    }
 }

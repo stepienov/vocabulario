@@ -666,6 +666,21 @@
     <string name="legacy_data_discard_confirm">Le modifiche non inviate (%1$d) andranno perse e non potranno essere recuperate.</string>
     <string name="legacy_data_discarded">Dati locali rimossi. Accedi di nuovo.</string>
     <string name="legacy_data_discard_failed">Impossibile rimuovere i dati locali. Riprova.</string>
+    <string name="auth_notice_reauth_title">Accedi di nuovo</string>
+    <string name="auth_notice_reauth">La tua sessione è scaduta. Accedi con lo stesso account per continuare. I tuoi dati su questo dispositivo vengono conservati.</string>
+    <string name="auth_notice_recovery_title">Impossibile ripristinare la sessione</string>
+    <string name="auth_notice_recovery">Non è stato possibile leggere l’accesso salvato su questo dispositivo. Riprova o accedi con lo stesso account. I tuoi dati su questo dispositivo vengono conservati.</string>
+    <string name="auth_notice_local_data_title">Dati del tuo account</string>
+    <string name="auth_notice_local_data">Su questo dispositivo sono ancora presenti dati di studio di una sessione precedente. Accedi con lo stesso account per conservarli.</string>
+    <string name="auth_notice_unsent">Modifiche non ancora inviate al server: %1$d</string>
+    <string name="auth_sign_out_device">Esci su questo dispositivo</string>
+    <string name="auth_sign_out_device_confirm_title">Rimuovere i dati da questo dispositivo?</string>
+    <string name="auth_sign_out_device_confirm">I dati di studio salvati su questo dispositivo verranno eliminati. I dati già presenti sul server non verranno modificati.</string>
+    <string name="auth_signed_out_device">Disconnesso. Dati rimossi da questo dispositivo.</string>
+    <string name="auth_sign_out_device_failed">Impossibile uscire. Riprova.</string>
+    <string name="auth_recovery_retry_failed">Non è ancora possibile leggere la sessione salvata. Accedi di nuovo.</string>
+    <string name="loading_slow_title">Ci vuole più tempo del solito</string>
+    <string name="loading_slow_message">L’app si sta ancora avviando. Controlla la connessione o riprova.</string>
 
 
     <string name="err_register">Registrazione fallita</string>

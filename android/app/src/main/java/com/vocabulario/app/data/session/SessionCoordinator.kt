@@ -118,6 +118,15 @@ class SessionCoordinator @Inject constructor(
         }
     }
 
+    /** Ponowny odczyt po nieczytelnym magazynie (np. chwilowo niedostępny klucz); niczego nie kasuje. */
+    suspend fun retryLoad(): SessionState = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        synchronized(lock) {
+            if (_state.value is SessionState.RecoveryRequired) loadLocked()
+        }
+        state.value
+    }
+
     private fun loadLocked() {
         val stored = try {
             persistence.read()

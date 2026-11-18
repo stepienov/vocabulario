@@ -672,6 +672,21 @@
     <string name="legacy_data_discard_confirm">未送信の変更（%1$d件）は失われ、復元できません。</string>
     <string name="legacy_data_discarded">ローカルデータを削除しました。もう一度ログインしてください。</string>
     <string name="legacy_data_discard_failed">ローカルデータを削除できませんでした。もう一度お試しください。</string>
+    <string name="auth_notice_reauth_title">再度ログインしてください</string>
+    <string name="auth_notice_reauth">セッションが終了しました。続けるには同じアカウントでログインしてください。この端末のデータは保持されます。</string>
+    <string name="auth_notice_recovery_title">セッションを復元できませんでした</string>
+    <string name="auth_notice_recovery">この端末に保存されたログイン情報を読み取れませんでした。もう一度試すか、同じアカウントでログインしてください。この端末のデータは保持されます。</string>
+    <string name="auth_notice_local_data_title">アカウントのデータ</string>
+    <string name="auth_notice_local_data">この端末には以前のセッションの学習データが残っています。保持するには同じアカウントでログインしてください。</string>
+    <string name="auth_notice_unsent">まだサーバーに送信されていない変更: %1$d</string>
+    <string name="auth_sign_out_device">この端末でログアウト</string>
+    <string name="auth_sign_out_device_confirm_title">この端末からデータを削除しますか？</string>
+    <string name="auth_sign_out_device_confirm">この端末に保存された学習データは削除されます。サーバー上のデータには影響しません。</string>
+    <string name="auth_signed_out_device">ログアウトしました。この端末からデータを削除しました。</string>
+    <string name="auth_sign_out_device_failed">ログアウトできませんでした。もう一度お試しください。</string>
+    <string name="auth_recovery_retry_failed">保存されたセッションをまだ読み取れません。再度ログインしてください。</string>
+    <string name="loading_slow_title">通常より時間がかかっています</string>
+    <string name="loading_slow_message">アプリはまだ起動中です。接続を確認するか、もう一度お試しください。</string>
 
 
     <string name="err_register">登録に失敗しました</string>

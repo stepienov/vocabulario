@@ -640,6 +640,21 @@
     <string name="legacy_data_discard_confirm">Los cambios sin enviar (%1$d) se perderán y no se podrán recuperar.</string>
     <string name="legacy_data_discarded">Datos locales eliminados. Vuelve a iniciar sesión.</string>
     <string name="legacy_data_discard_failed">No se pudieron eliminar los datos locales. Inténtalo de nuevo.</string>
+    <string name="auth_notice_reauth_title">Vuelve a iniciar sesión</string>
+    <string name="auth_notice_reauth">Tu sesión ha finalizado. Inicia sesión con la misma cuenta para continuar. Tus datos en este dispositivo se conservan.</string>
+    <string name="auth_notice_recovery_title">No se pudo restaurar la sesión</string>
+    <string name="auth_notice_recovery">No se pudo leer el inicio de sesión guardado en este dispositivo. Inténtalo de nuevo o inicia sesión con la misma cuenta. Tus datos en este dispositivo se conservan.</string>
+    <string name="auth_notice_local_data_title">Datos de tu cuenta</string>
+    <string name="auth_notice_local_data">Este dispositivo aún tiene datos de estudio de una sesión anterior. Inicia sesión con la misma cuenta para conservarlos.</string>
+    <string name="auth_notice_unsent">Cambios aún no enviados al servidor: %1$d</string>
+    <string name="auth_sign_out_device">Cerrar sesión en este dispositivo</string>
+    <string name="auth_sign_out_device_confirm_title">¿Eliminar los datos de este dispositivo?</string>
+    <string name="auth_sign_out_device_confirm">Se eliminarán los datos de estudio guardados en este dispositivo. Los datos que ya están en el servidor no se verán afectados.</string>
+    <string name="auth_signed_out_device">Sesión cerrada. Datos eliminados de este dispositivo.</string>
+    <string name="auth_sign_out_device_failed">No se pudo cerrar la sesión. Inténtalo de nuevo.</string>
+    <string name="auth_recovery_retry_failed">Todavía no se puede leer la sesión guardada. Vuelve a iniciar sesión.</string>
+    <string name="loading_slow_title">Esto está tardando más de lo habitual</string>
+    <string name="loading_slow_message">La aplicación aún se está iniciando. Comprueba tu conexión o inténtalo de nuevo.</string>
 
 
     <string name="err_register">Error al registrarse</string>

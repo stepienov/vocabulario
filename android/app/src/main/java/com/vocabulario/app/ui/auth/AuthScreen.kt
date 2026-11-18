@@ -36,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -67,6 +68,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vocabulario.app.R
 import com.vocabulario.app.data.ApiBaseUrl
+import com.vocabulario.app.data.session.AuthNotice
+import com.vocabulario.app.data.session.AuthNoticeKind
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppAlertDialog
 import com.vocabulario.app.ui.components.AppButtonShape
@@ -112,7 +115,19 @@ fun AuthScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val debugLoginError by viewModel.debugLoginError.collectAsState()
     val unclaimedData by viewModel.unclaimedData.collectAsState()
+    val notice by viewModel.notice.collectAsState()
+    var confirmSignOut by remember { mutableStateOf(false) }
     var confirmDiscard by remember { mutableStateOf(false) }
+    notice?.takeIf { confirmSignOut }?.let { current ->
+        SignOutOnDeviceDialog(
+            unsentCount = current.unsentCount,
+            onDismiss = { confirmSignOut = false },
+            onConfirm = {
+                confirmSignOut = false
+                viewModel.signOutOnDevice()
+            },
+        )
+    }
     unclaimedData?.let { unsent ->
         UnclaimedDataDialogs(
             unsentCount = unsent,
@@ -227,6 +242,21 @@ fun AuthScreen(
                     )
                 }
                 Spacer(Modifier.height(24.dp))
+
+                notice?.let { current ->
+                    SessionNoticeCard(
+                        notice = current,
+                        onRetry = {
+                            hideKeyboard()
+                            viewModel.retrySessionRecovery(onAuthenticated)
+                        },
+                        onSignOut = {
+                            hideKeyboard()
+                            if (current.hasLocalData) confirmSignOut = true else viewModel.signOutOnDevice()
+                        },
+                    )
+                    Spacer(Modifier.height(20.dp))
+                }
 
                 GoogleSignInButton(
                     onClick = {
@@ -385,6 +415,100 @@ private fun UnclaimedDataDialogs(
                 secondaryKind = AppDialogAction.Neutral,
                 primaryText = stringResource(R.string.legacy_data_discard),
                 onPrimary = onDiscard,
+                primaryKind = AppDialogAction.Destroy,
+            )
+        },
+    )
+}
+
+/** Sesja wymagająca ponownego loginu/odzyskania albo pozostawione dane konta: wyjaśnienie i jawne wyjścia. */
+@Composable
+private fun SessionNoticeCard(
+    notice: AuthNotice,
+    onRetry: () -> Unit,
+    onSignOut: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val (titleRes, messageRes) = when (notice.kind) {
+        AuthNoticeKind.REAUTH -> R.string.auth_notice_reauth_title to R.string.auth_notice_reauth
+        AuthNoticeKind.RECOVERY -> R.string.auth_notice_recovery_title to R.string.auth_notice_recovery
+        AuthNoticeKind.LOCAL_DATA -> R.string.auth_notice_local_data_title to R.string.auth_notice_local_data
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = scheme.surfaceVariant,
+        contentColor = scheme.onSurfaceVariant,
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                stringResource(titleRes),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = scheme.onSurface,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(stringResource(messageRes), style = MaterialTheme.typography.bodyMedium)
+            if (notice.unsentCount > 0) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    stringResource(R.string.auth_notice_unsent, notice.unsentCount),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            if (notice.kind == AuthNoticeKind.RECOVERY) {
+                Button(
+                    onClick = onRetry,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = AppButtonShape,
+                ) {
+                    ButtonLabel(stringResource(R.string.action_retry))
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+            OutlinedButton(
+                onClick = onSignOut,
+                modifier = Modifier.fillMaxWidth(),
+                shape = AppButtonShape,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = scheme.error),
+            ) {
+                ButtonLabel(stringResource(R.string.auth_sign_out_device))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SignOutOnDeviceDialog(
+    unsentCount: Int,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AppAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.auth_sign_out_device_confirm_title),
+        text = {
+            Column {
+                Text(stringResource(R.string.auth_sign_out_device_confirm))
+                if (unsentCount > 0) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.auth_notice_unsent, unsentCount),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+        },
+        warning = true,
+        buttons = {
+            AppDialogButtonRow(
+                secondaryText = stringResource(R.string.action_cancel),
+                onSecondary = onDismiss,
+                secondaryKind = AppDialogAction.Neutral,
+                primaryText = stringResource(R.string.auth_sign_out_device),
+                onPrimary = onConfirm,
                 primaryKind = AppDialogAction.Destroy,
             )
         },
