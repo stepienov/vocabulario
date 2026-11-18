@@ -31,6 +31,16 @@ class User(Base):
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     google_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     role: Mapped[str] = mapped_column(String(32), default="user")
+    # Only proof for the current app address; NULL until a verification or reset link is used.
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    email_revision: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, default=1, server_default=text("1")
+    )
+    credentials_revision: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, default=1, server_default=text("1")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -469,6 +479,86 @@ class AuthRefreshRetry(Base):
     response_ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+
+
+ACTION_TOKEN_PURPOSES = ("verify_email", "reset_password")
+
+
+class AccountActionToken(Base):
+    """One-time e-mail link proof (E-001/F-004/T-002); only the SHA-256 of the token is stored."""
+
+    __tablename__ = "account_action_tokens"
+    __table_args__ = (
+        Index("ix_account_action_tokens_user_purpose", "user_id", "purpose"),
+        CheckConstraint(
+            "purpose IN (" + ", ".join(f"'{p}'" for p in ACTION_TOKEN_PURPOSES) + ")",
+            name="ck_account_action_tokens_purpose",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    purpose: Mapped[str] = mapped_column(String(32), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    email_revision: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    credentials_revision: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+MAIL_DISPATCH_STATES = ("queued", "leased", "accepted", "failed", "cancelled")
+MAIL_DELIVERY_STATES = (
+    "unknown",
+    "delayed",
+    "delivered",
+    "failed",
+    "suppressed",
+    "bounced",
+    "complained",
+)
+
+
+class MailOutbox(Base):
+    """Durable queue of account e-mails; the rendered message is stored only encrypted."""
+
+    __tablename__ = "mail_outbox"
+    __table_args__ = (
+        Index("ix_mail_outbox_due", "dispatch_state", "next_attempt_at"),
+        Index("ix_mail_outbox_user_kind", "user_id", "kind", "created_at"),
+        CheckConstraint(
+            "dispatch_state IN (" + ", ".join(f"'{s}'" for s in MAIL_DISPATCH_STATES) + ")",
+            name="ck_mail_outbox_dispatch_state",
+        ),
+        CheckConstraint(
+            "delivery_state IN (" + ", ".join(f"'{s}'" for s in MAIL_DELIVERY_STATES) + ")",
+            name="ck_mail_outbox_delivery_state",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    action_token_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("account_action_tokens.id", ondelete="SET NULL"), nullable=True
+    )
+    payload_ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    dispatch_state: Mapped[str] = mapped_column(String(16), nullable=False, default="queued")
+    delivery_state: Mapped[str] = mapped_column(String(16), nullable=False, default="unknown")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    provider_message_id: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, unique=True
+    )
+    last_error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class AppliedSyncMove(Base):

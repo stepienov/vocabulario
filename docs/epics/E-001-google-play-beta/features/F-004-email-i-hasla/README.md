@@ -133,7 +133,7 @@ Szczegóły techniczne są zapisane przez wykonawcę po sprawdzeniu kodu. Nowe z
 | ID | Task | Status |
 |---|---|---|
 | E-001/F-004/T-001 | [Pełne hashowanie haseł](./tasks/T-001-haszowanie-hasel.md), B-04 | `in_progress` — etap 1: komponent Argon2/walidacji, niepodłączony |
-| E-001/F-004/T-002 | [Poczta i odzyskiwanie](./tasks/T-002-poczta-i-odzyskiwanie.md), B-05 | `ready` |
+| E-001/F-004/T-002 | [Poczta i odzyskiwanie](./tasks/T-002-poczta-i-odzyskiwanie.md), B-05 | `in_progress` — krok 1: tokeny, outbox, transport |
 | E-001/F-004/T-003 | [Odporność auth](./tasks/T-003-odpornosc-auth.md), B-10 | `ready` |
 | E-001/F-004/T-004 | [Zmiana adresu e-mail](./tasks/T-004-zmiana-emaila.md), decyzja z 17.11.2026 | `ready` |
 | E-001/F-004/T-005 | [Dodanie hasła do Google-only](./tasks/T-005-dodanie-hasla.md), decyzja z 17.11.2026 | `ready` |

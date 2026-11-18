@@ -473,6 +473,10 @@ _STATEMENTS = (
     "ON admin_escalations (status, created_at DESC)",
     "CREATE INDEX IF NOT EXISTS ix_admin_escalations_card_id "
     "ON admin_escalations (card_id)",
+    # E-001/F-004/T-002: existing accounts get no verification proof (NULL), not today's date.
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_revision BIGINT NOT NULL DEFAULT 1",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS credentials_revision BIGINT NOT NULL DEFAULT 1",
 )
 
 

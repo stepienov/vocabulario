@@ -41,19 +41,22 @@ async def lifespan(app: FastAPI):
     from app.services.card_jobs import resume_pending_enrichment
     from app.services.import_jobs import resume_unfinished_jobs, start_heartbeat_watchdog
     from app.services.llm_usage import purge_expired_llm_payloads
+    from app.services.mail_outbox import run_mail_worker
 
     await purge_expired_llm_payloads(force=True)
 
     await resume_unfinished_jobs()
     watchdog = asyncio.create_task(start_heartbeat_watchdog())
     enrich_resume = asyncio.create_task(resume_pending_enrichment())
+    mail_worker = asyncio.create_task(run_mail_worker())
     yield
     from app.services.background import drain_background
 
     await drain_background(5)
+    mail_worker.cancel()
     enrich_resume.cancel()
     watchdog.cancel()
-    await asyncio.gather(enrich_resume, watchdog, return_exceptions=True)
+    await asyncio.gather(mail_worker, enrich_resume, watchdog, return_exceptions=True)
     await engine.dispose()
 
 

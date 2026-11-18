@@ -12,6 +12,7 @@ from app.db import session as db_session
 
 SECRET = "S" * 40
 RETRY_KEY = base64.urlsafe_b64encode(b"r" * 32).decode()
+MAIL_KEY = base64.urlsafe_b64encode(b"m" * 32).decode()
 GOOD_DEPLOYED = {
     "environment": "beta",
     "debug": False,
@@ -22,6 +23,12 @@ GOOD_DEPLOYED = {
     "google_oauth_client_id": "client-id.apps.googleusercontent.com",
     "openai_api_key": "sk-test-value",
     "llm_mock": False,
+    "public_app_origin": "https://vocabulario.example",
+    "mail_transport": "resend",
+    "resend_api_key": "re_test_value",
+    "mail_from": "Vocabulario <auth@mail.vocabulario.example>",
+    "mail_reply_to": "help@vocabulario.example",
+    "mail_outbox_key": MAIL_KEY,
 }
 
 
@@ -63,6 +70,21 @@ def test_unknown_environment_is_an_error():
         ({"llm_mock": True}, "llm_mock"),
         ({"openai_api_key": " "}, "openai_api_key"),
         ({"llm_import_provider": " Anthropic "}, "anthropic_api_key"),
+        ({"public_app_origin": ""}, "public_app_origin"),
+        ({"public_app_origin": "http://vocabulario.example"}, "public_app_origin"),
+        ({"public_app_origin": "https://vocabulario.example/app"}, "public_app_origin"),
+        ({"public_app_origin": "https://u:p@vocabulario.example"}, "public_app_origin"),
+        ({"public_app_origin": "https://vocabulario.example?next=x"}, "public_app_origin"),
+        ({"public_app_origin": "https://localhost"}, "public_app_origin"),
+        ({"mail_transport": "log"}, "mail_transport"),
+        ({"resend_api_key": ""}, "resend_api_key"),
+        ({"mail_from": ""}, "mail_from"),
+        ({"mail_from": "no-address"}, "mail_from"),
+        ({"mail_from": "a@b.c\nBcc: x@y.z"}, "mail_from"),
+        ({"mail_reply_to": "help@localhost"}, "mail_reply_to"),
+        ({"mail_outbox_key": ""}, "mail_outbox_key"),
+        ({"mail_outbox_key": "not-a-fernet-key"}, "mail_outbox_key"),
+        ({"mail_outbox_key": RETRY_KEY}, "mail_outbox_key"),
     ],
 )
 def test_each_invalid_deployed_setting_is_named(overrides, field):

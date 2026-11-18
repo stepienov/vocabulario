@@ -59,6 +59,15 @@ class Settings(BaseSettings):
     # Fernet key for the 5-minute refresh retry results; never the JWT secret.
     auth_refresh_retry_key: str = ""
 
+    # Account e-mail (E-001/F-004/T-002). `log` only prints locally; deployed needs `resend`.
+    public_app_origin: str = ""
+    mail_transport: str = "log"
+    mail_from: str = ""
+    mail_reply_to: str = ""
+    resend_api_key: str = ""
+    # Separate Fernet key for queued mail payloads; never the JWT or refresh retry key.
+    mail_outbox_key: str = ""
+
     openai_api_key: str = ""
     llm_provider: str = "openai"
     llm_lookup_model: str = "gpt-5.6-terra"
@@ -141,6 +150,7 @@ class Settings(BaseSettings):
             self.auth_refresh_retry_key.strip() == secret.strip()
         ):
             errors.append("auth_refresh_retry_key")
+        errors.extend(self._mail_errors())
         if not _is_remote_database(self.database_url):
             errors.append("database_url")
         if not all(_is_public_https_origin(origin) for origin in self.cors_origins):
@@ -160,6 +170,44 @@ class Settings(BaseSettings):
         access = self.access_token_expire_minutes
         refresh_minutes = self.refresh_token_expire_days * 24 * 60
         return 0 < access < refresh_minutes
+
+    def _mail_errors(self) -> list[str]:
+        errors: list[str] = []
+        if not _is_bare_public_origin(self.public_app_origin):
+            errors.append("public_app_origin")
+        if self.mail_transport != "resend":
+            errors.append("mail_transport")
+        elif not self.resend_api_key.strip():
+            errors.append("resend_api_key")
+        if not is_mail_address(self.mail_from):
+            errors.append("mail_from")
+        if not is_mail_address(self.mail_reply_to):
+            errors.append("mail_reply_to")
+        other_keys = {self.jwt_secret.strip(), self.auth_refresh_retry_key.strip()}
+        if (
+            not _is_fernet_key(self.mail_outbox_key)
+            or self.mail_outbox_key.strip() in other_keys
+        ):
+            errors.append("mail_outbox_key")
+        return errors
+
+
+def is_mail_address(value: str) -> bool:
+    """`addr@domain.tld` or `Name <addr@domain.tld>`, without spaces or line breaks in the address."""
+    from email.utils import parseaddr
+
+    raw = (value or "").strip()
+    if not raw or "\n" in raw or "\r" in raw:
+        return False
+    _, address = parseaddr(raw)
+    local, _, domain = address.rpartition("@")
+    return (
+        bool(local)
+        and "." in domain
+        and not domain.startswith(".")
+        and not domain.endswith(".")
+        and " " not in address
+    )
 
 
 def _is_fernet_key(value: str) -> bool:
@@ -187,6 +235,22 @@ def _is_public_https_origin(origin: str) -> bool:
     parts = urlsplit(origin)
     host = (parts.hostname or "").lower()
     return parts.scheme == "https" and bool(host) and host not in _LOCAL_HOSTS
+
+
+def _is_bare_public_origin(origin: str) -> bool:
+    """Link host for e-mails: https://host[:port] only, no userinfo/path/query/fragment."""
+    value = (origin or "").strip()
+    if not _is_public_https_origin(value):
+        return False
+    parts = urlsplit(value)
+    return (
+        "@" not in parts.netloc
+        and parts.path in ("", "/")
+        and not parts.query
+        and not parts.fragment
+        and not value.endswith("#")
+        and not value.endswith("?")
+    )
 
 
 @lru_cache

@@ -1,6 +1,6 @@
 # T-002 · Poczta, weryfikacja i odzyskiwanie hasła
 
-**ID:** `E-001/F-004/T-002` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / L.  
+**ID:** `E-001/F-004/T-002` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / L.  
 **Feature:** [E-mail i hasła](../README.md). **Źródło:** B-05; F-01/F-10 w [analizie](../../../sources/analiza-2026-11-17.md).
 
 ## Cel i zakres
@@ -263,3 +263,16 @@ Osobny smoke przed betą na syntetycznym koncie i rzeczywistych skrzynkach: send
 
 **Poza zakresem tego taska:** zmiana adresu e-mail jest osobnym [E-001/F-004/T-004](./T-004-zmiana-emaila.md), wymaganym w pierwszej becie. Wspólne mechanizmy poczty/tokenów współdzielimy, nie implementujemy dwa razy. Zakres L podzielić przed kodowaniem w razie potrzeby.  
 **Wynik weryfikacji:** przegląd kodu/źródeł dostawców i kompletny projekt z retencją/rollout/journal; brak implementacji, dostarczenia maila i runtime.
+
+## Postęp
+
+**Krok 1 — fundament backendu (zrobiony):**
+
+- Model: `users.email_verified_at` (NULL = brak dowodu; istniejące konta **nie** są automatycznie oznaczane jako zweryfikowane), `email_revision`, `credentials_revision` (domyślnie 1) oraz tabele `account_action_tokens` i `mail_outbox`. Migracja jest addytywna. Sprawdzona dwukrotnie na kopii lokalnej bazy z danymi: rekordy bez zmian.
+- [action_tokens.py](../../../../../../backend/app/services/action_tokens.py): 32 losowe bajty; w bazie zapisywany jest tylko SHA-256. TTL: `verify_email` 24 h (wiązany z `email_revision`), `reset_password` 30 min (wiązany także z `credentials_revision`). Zużycie z blokadą wiersza i kodami 400/409/410.
+- [mail_outbox.py](../../../../../../backend/app/services/mail_outbox.py): treść szyfrowana Fernetem (`MAIL_OUTBOX_KEY`), claim przez `SKIP LOCKED` z dzierżawą 60 s i maksymalnie 6 prób w oknie ważności. Nieaktualny link jest anulowany przed wysyłką. Klucz idempotencji `auth-mail/<id>`. Worker jest uruchamiany w `lifespan`.
+- [mail_transport.py](../../../../../../backend/app/services/mail_transport.py): transport `log` (tylko development/test) i `resend` (`Idempotency-Key`, mapowanie 429/5xx/409/timeout na retry, pozostałe 4xx jako trwały błąd).
+- Konfiguracja: `PUBLIC_APP_ORIGIN`, `MAIL_TRANSPORT`, `MAIL_FROM`, `MAIL_REPLY_TO`, `RESEND_API_KEY`, `MAIL_OUTBOX_KEY`. Poza development/test brak lub błąd tych ustawień daje 503 w `/health/ready`, więc **wdrożenie tej zmiany wymaga domeny, konta Resend i zmiennych na Railway**.
+- Testy: `test_action_tokens.py`, `test_mail_outbox.py` (m.in. dwa workery nie wysyłają tego samego maila), `test_mail_transport.py`, `test_readiness.py`. Zielone na lokalnym PostgreSQL.
+
+**Zostało:** endpointy resetu, zmiany hasła i weryfikacji adresu wraz z odwołaniem sesji (krok 2); szablony maili w 17 locale; strony `/account/...` (krok 3); bramka `email_verification_required` i pola w `/me` (krok 4); Android (krok 5); limity T-003 i webhooki Svix z `mail_provider_events` (krok 6); prawdziwa skrzynka i urządzenie.
