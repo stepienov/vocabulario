@@ -20,6 +20,7 @@ from app.core.readiness import check_ready, mark_schema_ready
 from app.db.base import Base
 from app.db.migrations import apply_schema
 from app.db.session import engine
+from app.public_web.router import mount_public_web
 from app import models  # noqa: F401
 
 logger = logging.getLogger(__name__)
@@ -89,6 +90,7 @@ def create_app() -> FastAPI:
         app.include_router(dev_router, prefix=prefix)
 
     mount_admin(app)
+    mount_public_web(app)
 
     @app.get("/health")
     async def health():

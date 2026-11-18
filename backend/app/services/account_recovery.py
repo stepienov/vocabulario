@@ -37,6 +37,7 @@ from app.services.auth_sessions import (
 from app.services.mail_outbox import compose_mail, enqueue_mail
 from app.services.mail_templates import (
     RenderedMail,
+    normalize_locale,
     render_password_changed,
     render_reset_password,
     render_verify_email,
@@ -77,10 +78,10 @@ def ensure_mail_available() -> None:
         raise CredentialError(503, "mail_temporarily_unavailable")
 
 
-def account_link(path: str, token: str) -> str:
+def account_link(path: str, token: str, locale: str) -> str:
     """Link under the configured public origin; the token stays in the fragment."""
     origin = get_settings().public_app_origin.strip().rstrip("/") or _LOCAL_ORIGIN
-    return f"{origin}{path}#token={token}"
+    return f"{origin}{path}?lang={locale}#token={token}"
 
 
 async def profile_locale(db: AsyncSession, user_id: UUID) -> str | None:
@@ -178,9 +179,10 @@ async def request_password_reset(
         return False
     issued = await issue_action_token(db, user, RESET_PASSWORD, now=now)
     minutes = int(TOKEN_TTL[RESET_PASSWORD].total_seconds() // 60)
+    mail_locale = normalize_locale(locale or await profile_locale(db, user.id))
     rendered = render_reset_password(
-        locale or await profile_locale(db, user.id) or "",
-        account_link(RESET_PATH, issued.token),
+        mail_locale,
+        account_link(RESET_PATH, issued.token, mail_locale),
         minutes=minutes,
     )
     await _queue(
@@ -262,9 +264,10 @@ async def queue_verification_mail(
     """New verification link for the current address of an already locked user."""
     issued = await issue_action_token(db, user, VERIFY_EMAIL, now=now)
     hours = int(TOKEN_TTL[VERIFY_EMAIL].total_seconds() // 3600)
+    mail_locale = normalize_locale(locale or await profile_locale(db, user.id))
     rendered = render_verify_email(
-        locale or await profile_locale(db, user.id) or "",
-        account_link(VERIFY_PATH, issued.token),
+        mail_locale,
+        account_link(VERIFY_PATH, issued.token, mail_locale),
         hours=hours,
     )
     await _queue(

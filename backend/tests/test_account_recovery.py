@@ -17,7 +17,9 @@ pytestmark = pytest.mark.pg
 
 PASSWORD = "correct horse battery"
 NEW_PASSWORD = "a much longer new passphrase"
-_TOKEN = re.compile(r"/account/(?:reset-password|verify-email)#token=([A-Za-z0-9_-]+)")
+_TOKEN = re.compile(
+    r"/account/(?:reset-password|verify-email)\?lang=[A-Za-z-]+#token=([A-Za-z0-9_-]+)"
+)
 
 
 def _code(response) -> str:
@@ -88,6 +90,7 @@ async def test_reset_sets_argon2_revokes_sessions_and_verifies_address(pg, pg_cl
     assert row.user_id == before.id and row.action_token_id is not None
     mail = _decrypt(row)
     assert (mail.locale, mail.to) == ("pl", email)
+    assert "/account/reset-password?lang=pl#token=" in mail.text
     token = _token_from(row)
 
     weak = await _confirm(pg_client, token, "short")
@@ -243,6 +246,7 @@ async def test_registration_queues_verification_and_link_verifies(pg, pg_client)
 
     [row] = await _outbox(pg, "verify_email")
     assert (_decrypt(row).locale, _decrypt(row).to) == ("pt-BR", email)
+    assert "/account/verify-email?lang=pt-BR#token=" in _decrypt(row).text
     status = await _verify_status(pg_client, tokens)
     assert status["email_verified"] is False
     assert (status["delivery_status"], status["delivery_delayed"]) == ("queued", False)

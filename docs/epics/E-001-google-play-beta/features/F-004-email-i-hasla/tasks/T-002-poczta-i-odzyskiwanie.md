@@ -305,4 +305,13 @@ Osobny smoke przed betą na syntetycznym koncie i rzeczywistych skrzynkach: send
   - mapowanie stanów dostarczenia;
   - 503 bez zapisu konta.
 
-**Zostało:** strony `/account/...` (krok 3); bramka `email_verification_required` i pola w `/me` (krok 4); Android (krok 5); limity T-003 i webhooki Svix z `mail_provider_events` (krok 6); prawdziwa skrzynka i urządzenie.
+**Krok 3 — strony WWW linków (zrobiony):**
+
+- Pakiet `backend/app/public_web/`: `GET /account/verify-email` i `GET /account/reset-password` (szablon `account_action.html`, pliki `/account/assets/account.js` i `account.css`). GET tylko wyświetla stronę. Token zużywa dopiero jawny POST z przycisku do istniejących endpointów API. Strona nie tworzy sesji WWW.
+- Token jest tylko we fragmencie `#token=`. JS odczytuje go i od razu usuwa z adresu (`history.replaceState`), więc nie trafia do logów, historii ani nagłówka `Referer`. Po odświeżeniu strona prosi o ponowne otwarcie linku z maila.
+- Nagłówki: `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, `nosniff`, ścisły CSP bez `unsafe-inline` (teksty dla JS jako JSON w `<script type="application/json">`), `noindex`.
+- Język: `?lang=` z linku w mailu (linki mają teraz `?lang=<locale>` tego samego maila), potem `Accept-Language`, na końcu angielski. 16 języków w tej samej formie zwracania się co maile; `ar` ma `dir="rtl"`.
+- Reset: dwa pola `autocomplete="new-password"`, „pokaż hasła”, sprawdzenie długości (punkty kodowe, jak serwer) i zgodności przed wysłaniem; błąd hasła z serwera (422) zostawia token ważny. Stany: gotowe, 400 nieważny, 409 użyty, 410 wygasły, 429, błąd sieci lub timeout 15 s (przycisk znów aktywny), brak tokenu, brak JS (`<noscript>`). Komunikaty w regionie `aria-live` z fokusem.
+- Testy: `test_public_web.py` (nagłówki, brak skryptu inline, wybór języka, RTL, komplet tekstów, pliki statyczne, tylko GET) i asercje `?lang=` w `test_account_recovery.py`. Sprawdzone też w przeglądarce na lokalnym serwerze z `vocabulario_test`: weryfikacja, reset, logowanie nowym hasłem, użyty i nieważny link, błąd sieci, odświeżenie, arabski na ekranie telefonu, brak naruszeń CSP.
+
+**Zostało:** bramka `email_verification_required` (krok 4); Android (krok 5); limity T-003 i webhooki Svix z `mail_provider_events` (krok 6); domena `PUBLIC_APP_ORIGIN` (F-007/T-004), prawdziwa skrzynka i urządzenie.

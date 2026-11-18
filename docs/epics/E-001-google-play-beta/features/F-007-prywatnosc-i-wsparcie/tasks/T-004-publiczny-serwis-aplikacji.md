@@ -94,4 +94,6 @@ Języki PL/EN/ES, kanał pomocy i cel 2 dni roboczych są ustalone. Właściciel
 - [ ] Na komputerze bez aplikacji działa weryfikacja i reset; skaner GET niczego nie zużywa, link nie tworzy sesji WWW, token nie wycieka do logów/analityki.
 - [ ] Na podpisie Play potwierdzono poprawne App Links i działający fallback WWW; publikacja backendu nie udaje aktualizacji Androida.
 
-**Wynik weryfikacji:** propozycja architektury/mapy stron i sprawdzenie publicznego cennika rozszerzenia; brak implementacji/publikacji. Nie sprawdzono dostępności konkretnych nazw, nie zakupiono domeny i nie zmieniano witryny/DNS.
+**Wynik weryfikacji:** propozycja architektury/mapy stron i sprawdzenie publicznego cennika rozszerzenia; brak publikacji. Nie sprawdzono dostępności konkretnych nazw, nie zakupiono domeny i nie zmieniano witryny/DNS.
+
+**Postęp:** strony `/account/verify-email` i `/account/reset-password` są zaimplementowane w backendzie (`backend/app/public_web/`, opis w F-004/T-002, krok 3). Działają pod dowolnym originem backendu. Publicznie zadziałają po wyborze domeny i ustawieniu `PUBLIC_APP_ORIGIN`. Pozostałe strony z tabeli jeszcze nie istnieją.
