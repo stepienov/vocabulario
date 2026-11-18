@@ -106,7 +106,7 @@ Zatwierdzony lokalny logout offline nie oznacza odwołania na serwerze. [T-002](
 | 422 | Niepoprawne pola; brak zmiany sesji |
 | 429 | Limit z F-004/T-003, `Retry-After`; nie kasuj tokenów |
 | 426 `app_update_required` | Minimalna zgodna wersja F-002/T-001; aktualizacja/pomoc, bez wymazania Room |
-| 503 `backup_protection_active` / `ai_budget_exhausted` / `ai_budget_unavailable` | Przejściowa ochrona F-008, nie odwołanie sesji; retry według wskazówek, zachowane kolejki. Brak AI nie blokuje niezależnej nauki |
+| 503 `ai_budget_exhausted` / `ai_budget_unavailable` | Przejściowa ochrona F-008, nie odwołanie sesji; retry według wskazówek, zachowane kolejki. Brak AI nie blokuje niezależnej nauki |
 | 5xx / timeout / błąd sieci | Stan przejściowy; zachowaj dane/tokeny i identyfikator ponowienia, bez pozornego sukcesu |
 
 Awaria PostgreSQL nie jest 401 ani zgodą na pominięcie sprawdzenia sesji; jawny 5xx i standardowy log techniczny bez poświadczeń.
@@ -168,7 +168,7 @@ Zapis zlecenia zawiadomienia i mechanizm jego ponawiania należą do kontraktu p
 
 **Nadrzędna integracja odtwarzania:** [F-008/T-003](../../F-008-jakosc-i-operacje/tasks/T-003-backup-rejestr-i-odtwarzanie.md) dodaje niezależny intent/revisions **przed** finalnym commit resetu/zmiany/dodania hasła, link Google i potwierdzonej zmiany adresu. Obejmuje wszystkie odpowiednie ścieżki F-004/T-002/T-004/T-005 i F-005/T-001, nie sam panel konta. Publikacja poza blokadami; powrót z HTTP ponownie sprawdza dowody/revisions/pending intent, finalne zużycie dowodu i zmiana/sesje/mail/terminalny outbox pozostają atomowe. Jeśli magazyn nie potwierdził intentu, jawny błąd, brak zmiany poświadczenia/sukcesu. Bramka nie wykonuje dodatkowego LLM.
 
-`security_change_pending` blokuje tylko konkurencyjne zmiany bezpieczeństwa tego User; nie jest nowym prawem dostępu. Docelowy PHC hasła może być przechowany wyłącznie w krótkim lokalnym rekordzie intentu do 10 min (ten sam Argon2, bez plaintext), nigdy w S3/logu; replay body sprawdza się bez utrwalania szybkiego SHA hasła. Przy wznowieniu dowody nadal muszą być ważne. `security_applied/aborted` domyka proces według F-008.
+`security_change_pending` blokuje tylko konkurencyjne zmiany bezpieczeństwa tego User; nie jest nowym prawem dostępu. Docelowy PHC hasła może być przechowany wyłącznie w krótkim lokalnym rekordzie intentu do 10 min (ten sam Argon2, bez plaintext), nigdy w dzienniku/logu; replay body sprawdza się bez utrwalania szybkiego SHA hasła. Przy wznowieniu dowody nadal muszą być ważne. `security_applied/aborted` domyka proces według F-008.
 
 Po utracie odpowiedzi zmiany/dodania hasła klient może wymagać reauth nowym hasłem lub podłączonym Google; nie wskrzesza starej pary i nie ponawia w ciemno operacji mutującej. Dane offline zostają. Dokładny komunikat i odtworzenie procesu należą do T-002 Androida i właściwego taska F-004.
 

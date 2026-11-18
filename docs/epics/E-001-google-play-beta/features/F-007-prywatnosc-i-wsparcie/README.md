@@ -16,11 +16,11 @@
 
 ## Stan po zamknięciu decyzji produktu
 
-Zatwierdzono: brak pełnych kopii diagnostycznych, logi techniczne 7 dni, metryki bez treści 30 dni; dzienne/tygodniowe backupy maks. 27 dni; dopuszczenie obecnych/planowanych dostawców poza EOG po wymaganej weryfikacji; dokumenty/pomoc PL/EN/ES; proste oświadczenie pełnoletności i osobną akceptację warunków; cel pierwszej odpowiedzi człowieka do 2 dni roboczych. Nie oznacza to zakupu, gotowej umowy/polityki ani zmiany kodu.
+Zatwierdzono: brak pełnych kopii diagnostycznych, logi techniczne 7 dni, metryki bez treści 30 dni; backupy w Railway do około 30 dni (zmiana 18.11.2026); dopuszczenie obecnych/planowanych dostawców poza EOG po wymaganej weryfikacji; dokumenty/pomoc PL/EN/ES; proste oświadczenie pełnoletności i osobną akceptację warunków; cel pierwszej odpowiedzi człowieka do 2 dni roboczych. Nie oznacza to zakupu, gotowej umowy/polityki ani zmiany kodu.
 
 | Projekt | Zapisane | Co konkretnie pozostaje |
 |---|---|---|
-| T-001 dane | Przepływy/raw logi/retencja, jawny admission/provenance cache, allowlista i wyjątki; również S3/monitoring | Rzeczywiste konto/model/cennik/DPA/region i zatwierdzenie podstaw/wyjątków przed użyciem; klasyfikacja/cleanup historii po osobnym zleceniu |
+| T-001 dane | Przepływy/raw logi/retencja, jawny admission/provenance cache, allowlista i wyjątki; również monitoring | Rzeczywiste konto/model/cennik/DPA/region i zatwierdzenie podstaw/wyjątków przed użyciem; klasyfikacja/cleanup historii po osobnym zleceniu |
 | T-002 pomoc/UI | Raport bez LLM, idempotency/offline/receipt/panel, inwentarz powierzchni, polityka, lokalne alarmy/dostępność | Dispatch/ACK F-003, operator-właściciel/e-mail F-008/T-004; prawdziwy kontakt przed zaproszeniem |
 | T-003 prawo | Zakres dokumentów, wersje/dowód, akceptacja email/Google/stare konta, legal gate bez utraty pracy i prawa do materiałów | Właściwy przegląd Hiszpania/UE, dane do publikacji i licencje/atrybucja; finalne rynki z F-002 |
 | T-004 WWW | Minimalna architektura, publiczne/niezmienne URL, języki, bezpieczne formularze i fallback | Odłożona nazwa/domena, zatwierdzenie hostingu/kosztu i integracji; konfiguracja/realny test przed publikacją |

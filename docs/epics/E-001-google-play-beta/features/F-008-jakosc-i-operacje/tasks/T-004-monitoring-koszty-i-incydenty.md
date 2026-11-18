@@ -22,7 +22,7 @@ Maintenance backendu co 15 min wylicza tanie agregaty z indeksów/stanów, bez w
 | Sygnał | Próg / reakcja projektowa |
 |---|---|
 | Publiczne not-ready | Dwie kolejne nieudane próby 5-min; e-mail DOWN/RECOVERY, brak deklaracji wykrycia w sekundę |
-| Backup | 45 min od startu ostatniego ukończonego snapshotu: pilny alarm; 55 min: ochrona zapisów T-003; 60 min: naruszenie celu, nie opóźnione uruchomienie ochrony |
+| Backup | Railway PITR nieaktywny/błąd archiwizacji lub brak kopii dziennej: pilny alarm, jeśli platforma daje sygnał; inaczej cotygodniowa ręczna kontrola i po każdej zmianie schematu (T-003) |
 | Journal | Nieopublikowany intent >5 min lub uszkodzony digest: pilny alarm, brak ACK/nieodwracalnego następnego kroku |
 | Purge | Brak postępu >1 h, błąd lease/manifestu albo zbliżenie do `purge_due_at` na <24 h: pilny alarm i ręczna ocena |
 | Auth/mail | Wyjście poza limity globalne, terminal failure, niedostarczalność lub najstarszy gotowy mail >10 min: alarm bez payloadu; zasady retry F-004 |
@@ -35,9 +35,9 @@ Deduplikacja `(environment, alert_kind)`, start/zmiana ważności/recovery i prz
 
 Najpierw local/CI, staging tylko na okna testów, istniejący Railway backend+WWW, bez nowego hostingu marketingowego, darmowy monitoring. Infrastruktura dodatkowa możliwie 0, planowane maksimum **50 EUR/miesiąc**, osobno od AI i domeny.
 
-Przed włączeniem kosztów: spis istniejących zasobów/planów i pomiar RAM/CPU/egress/rozmiaru DB, prognoza kosztu staging i retencji, S3 storage/requests/egress/wersje oraz podatek/kurs z buforem. Cel roboczy prognozy ≤40 EUR, pozostawiający 10 EUR na wahania; nie deklarować, że dolar równa się euro lub że abonament i zawarte kredyty liczą się podwójnie.
+Przed włączeniem kosztów: spis istniejących zasobów/planów i pomiar RAM/CPU/egress/rozmiaru DB, prognoza kosztu staging i retencji, bucket PITR Railway (storage/egress) oraz podatek/kurs z buforem. Cel roboczy prognozy ≤40 EUR, pozostawiający 10 EUR na wahania; nie deklarować, że dolar równa się euro lub że abonament i zawarte kredyty liczą się podwójnie.
 
-[Railway](https://docs.railway.com/pricing/plans) publikuje m.in. Hobby 5 USD/Pro 20 USD z zawartym usage oraz opłaty RAM/CPU/volume/egress; to nie oferta zerowego dodatkowego kosztu. [S3](https://aws.amazon.com/s3/pricing/) rozlicza storage/requests/transfer według regionu, bez gwarancji free tier. W kosztorysie podać przyjęte wielkości i datę/kurs, nie wymyśloną kwotę „wszystko za 0”.
+[Railway](https://docs.railway.com/pricing/plans) publikuje m.in. Hobby 5 USD/Pro 20 USD z zawartym usage oraz opłaty RAM/CPU/volume/egress; to nie oferta zerowego dodatkowego kosztu. PITR nie ma osobnej opłaty, ale bucket WAL/kopii i egress są rozliczane. W kosztorysie podać przyjęte wielkości i datę/kurs, nie wymyśloną kwotę „wszystko za 0”.
 
 Przy prognozie >40 EUR alarm, >50 EUR brak kolejnego kosztownego rozszerzenia/nowego środowiska bez decyzji. Nie wyłączać z dnia na dzień DB, backupu, usuwania lub przechowywania danych dla ratowania rachunku. Rozwiązanie pojemnościowe poza limitem wraca do właściciela jako konkretna oferta; nie obniża potajemnie RPO/retencji. Budżet jest kontrolą kosztu, nie magicznym nieprzekraczalnym limitem faktury platformy.
 
@@ -70,7 +70,7 @@ Dla naruszenia danych ocenić z właściwym przeglądem obowiązek zgłoszenia/k
 
 ## Akceptacja
 
-- [ ] Wymuszone not-ready, brak backupu/journalu, awaria Resend i maintenance dają właściwy niezależny e-mail, bez lawiny i danych konta.
+- [ ] Wymuszone not-ready, brak backupu/PITR, awaria Resend i maintenance dają właściwy niezależny e-mail, bez lawiny i danych konta.
 - [ ] Dwie repliki, timeout po płatnym HTTP, brak usage i granica miesiąca nie omijają HARD ani nie zwalniają niepewnego kosztu.
 - [ ] Wyczerpanie/wznowienie nie tworzy kolejnych LLM/jobów/kart; zadanie wraca do swojej fazy, import i gotowość bez regresji E-002.
 - [ ] Limity AI rzeczywiście ustawione przed startem, faktury/usage mają właściciela; test nie uznaje samego alertu za hard cap.

@@ -25,7 +25,7 @@ Warunki korzystania/aviso legal są w [E-001/F-007/T-003](./T-003-warunki-i-info
 - prywatne AppLog/LookupEvent/LlmUsage bez CASCADE i raw LlmCallPayload, także payloady historycznie bez wiarygodnego owner;
 - dane osobowe, które mogły trafić do współdzielonego cache/słownika — SET NULL nie dowodzi anonimizacji;
 - mail i jego webhooki/logi u dostawcy, AI i hosting: dostępne sposoby usunięcia, rzeczywiste okresy i transfery;
-- backupy, niezależny rejestr usunięć/cofnięć, klucz HMAC oraz retencja pseudonimowego markera/receiptu; brak wieczystej blokady ponownej rejestracji;
+- backupy, rejestr usunięć/cofnięć odporny na restore, klucz HMAC oraz retencja pseudonimowego markera/receiptu; brak wieczystej blokady ponownej rejestracji;
 - Google na publicznym formularzu, jedynie transakcyjny status w sessionStorage i brak zgody „na wszelki wypadek”; klasyfikacja faktycznie koniecznych technologii;
 - jasna informacja, że telefonu offline nie da się wymazać natychmiast, odinstalowanie nie jest żądaniem usunięcia, a cofnięcie nie odzyskuje lokalnej pracy wcześniej świadomie odrzuconej.
 
@@ -38,7 +38,7 @@ Właściciel zatwierdza wyjątki i zobowiązania po inwentaryzacji/przeglądzie 
 | Obszar | Decyzja |
 |---|---|
 | Diagnostyka | Nie utrwalamy pełnych promptów, odpowiedzi, notatek ani wyszukiwanych tekstów w diagnostyce; minimalne logi techniczne 7 dni, metryki kosztów bez treści 30 dni |
-| Backupy | Codzienne i tygodniowe; maksymalnie 27 dni od wykonania, bez kopii miesięcznych 89-dniowych. Koszt/konfiguracja wymagają osobnego sprawdzenia w F-008, bez zgody na wydatek teraz |
+| Backupy | Railway PITR (ok. 4 tygodnie) + dzienne (6 dni); do około 30 dni od wykonania, bez tygodniowych i miesięcznych (decyzja 18.11.2026). Bez zewnętrznego magazynu |
 | Dostawcy i transfery | Dopuszczone obecne/planowane usługi także poza EOG, dopiero po wymaganej weryfikacji umów, zabezpieczeń i informacji. To nie jest zatwierdzenie dowolnego dostawcy ani gotowy dowód zgodności |
 | Dokumenty/pomoc | PL, EN i ES, niezależnie od 17 locale interfejsu i języków nauki |
 | Wiek i warunki | Oświadczenie pełnoletności bez daty urodzenia/dokumentów; osobna akceptacja warunków. Prywatność to informacja, nie checkbox zgody na wszystko |
@@ -58,7 +58,7 @@ Poniższe to odczyt kodu i publicznych dokumentów, **nie konfiguracji produkcji
 | Wiadomość transakcyjna, odbiorca, link, status dostarczenia | Planowany Resend, skrzynka odbiorcy, lokalny szyfrowany outbox | Wyłącznie potrzebna wiadomość, limity i krótkie sekrety F-004; osobna retencja dostawcy |
 | Raport treści/pomoc i odpowiedź | Nowy zapis zgłoszenia, panel operatora, monitorowana skrzynka | Świadomy podgląd danych, bez biblioteki i automatycznego LLM; T-002 |
 | WWW, logowanie Google i technologie urządzenia | FastAPI/Jinja2, przeglądarka, Google po świadomym uruchomieniu, hosting | Inwentaryzacja cookies/storage/SDK; brak opcjonalnej analityki/marketingu w tym epiku |
-| Backupy, eksporty techniczne i rejestr odtworzenia | Railway, projektowany AWS S3 Standard UE i kontrolowane kopie operatora | Rejestr kopii/wersji, szyfrowanie i protokół [F-008/T-003](../../F-008-jakosc-i-operacje/tasks/T-003-backup-rejestr-i-odtwarzanie.md); bez uruchomienia AWS przed zgodą/umowami |
+| Backupy, eksporty techniczne i rejestr odtworzenia | Railway (PITR, kopie wolumenu, logi) i jednorazowe kopie operatora do próby restore | Inwentarz kopii/rozwidlonych usług i protokół [F-008/T-003](../../F-008-jakosc-i-operacje/tasks/T-003-backup-rejestr-i-odtwarzanie.md) |
 | Dostępność usługi i alerty | Projektowany UptimeRobot: publiczny status HTTPS, e-mail operatora, bez kont testerów | Minimalny monitoring [F-008/T-004](../../F-008-jakosc-i-operacje/tasks/T-004-monitoring-koszty-i-incydenty.md), bez SDK analityki w Androidzie |
 
 ### Potwierdzone luki
@@ -86,9 +86,9 @@ Pierwsze trzy okresy i backupy pochodzą z decyzji właściciela. Pozostałe war
 | Zgłoszenie treści / pomoc | Propozycja: do rozwiązania sprawy + 30 dni, kontrola otwartych spraw co tydzień; bez automatycznego resetowania terminu przez zadanie systemowe. Konto usuwane ma wcześniejszy termin F-006; wyjątek prawny tylko konkretny i udokumentowany |
 | Akceptacja warunków i wieku | Minimalny dowód przy koncie, nie hash treści biblioteki ani IP/device fingerprint. Znika przy purge; inne przechowywanie tylko po odrębnej udokumentowanej ocenie prawnej |
 | Receipt usuwania | Propozycja: hash/status i potrzebne daty do 30 dni od terminalnego stanu, nie adres/Google sub ani prawo do cofnięcia |
-| Rejestr usunięcia/cofnięcia i marker | 45 dni od terminalnego stanu całego procesu; obejmuje backup do 27 dni i stare dowody do 30 dni. Otwartego/niejednoznacznego procesu nie usuwać dla zwolnienia miejsca; opóźnienie alarmowane i rozstrzygane, nie „przedłużane na zawsze” |
+| Rejestr usunięcia/cofnięcia i marker | 45 dni od terminalnego stanu całego procesu; obejmuje backup do około 30 dni i stare dowody do 30 dni. Otwartego/niejednoznacznego procesu nie usuwać dla zwolnienia miejsca; opóźnienie alarmowane i rozstrzygane, nie „przedłużane na zawsze” |
 | Minimalny rejestr zmian bezpieczeństwa | F-008/T-003: te same 45 dni od terminalnego stanu, HMAC User.id + typ/revisions/ID/czasy, bez hasła/hashu/adresu/sub. Chroni przed odzyskaniem starego hasła/adresu po restore; nie służy analizie zachowań |
-| Backupy oraz ręczne kopie/eksporty bazy | Maksimum 27 dni od wykonania; projekt RPO z F-008/T-003: co 30 min do 24 h, dzienne do 6 dni i tygodniowe do 27 dni, bez miesięcznych 89 dni. Każda kopia/wersja ma owner, lokalizację i deadline, także kopia lokalna oraz odmontowany wolumen |
+| Backupy oraz ręczne kopie/eksporty bazy | Do około 30 dni od wykonania; F-008/T-003: PITR ok. 4 tygodnie, dzienne 6 dni, bez tygodniowych/miesięcznych. Każda kopia/wersja ma owner, lokalizację i deadline, także kopia lokalna oraz odmontowany wolumen |
 
 Dla danych aktywnego systemu **wcześniejszy purge konta z F-006 wygrywa z normalnym TTL**. Minimalny rejestr/receipt i zweryfikowane wyjątki dostawców/backupów mają osobny cel i muszą być jawnie opisane. Powiadomienie przyjęcia usunięcia wysłane do dostawcy w T0 może nadal podlegać jego retencji, mimo completed w T0+14 dni; nie wysyłamy nowego maila po purge.
 
@@ -118,7 +118,7 @@ Migracja addytywna: nowe pola → odczyt respektujący scope → kontrolowana kl
 - Wyłączyć zbieranie przed zaproszeniem testerów. Historyczne raw dane mają osobną kontrolowaną procedurę czyszczenia; samo ustawienie flagi niczego nie usuwa. Nie udostępniać ich panelowi po zmianie polityki.
 - Cleanup co 15 min w backendzie, paczki po 1000 najstarszych rekordów z indeksem terminu, współbieżny claim/SKIP LOCKED, bez skanów N+1. Sekretne auth mają ciaśniejsze paczki F-004. Pojemność musi wystarczyć do dotrzymania maksymalnych okresów; backlog/błąd jest alarmem i jawnym zadaniem operatora, nie sukcesem `0 usunięto`.
 - Retencja nie opiera się wyłącznie na ruchu do endpointu. Test kontrolowanego zegara i restartu potwierdza sprzątanie także przy braku wywołań AI. Prywatna sesja loggera respektuje lifecycle F-006, aby nie odtworzyć skasowanych danych.
-- Jeśli kopie zawierają dane sprzed usunięcia, przechowujemy je izolowane do ich terminu, bez zwykłego przeglądania/reimportu. Restore blokuje ruch do uzgodnienia niezależnego rejestru; także brak dostępu do starych logów/payloadów i nowe `db_epoch`. Ręczne kopie i stare wolumeny nie mogą ominąć limitu.
+- Jeśli kopie zawierają dane sprzed usunięcia, przechowujemy je izolowane do ich terminu, bez zwykłego przeglądania/reimportu. Restore blokuje ruch do uzgodnienia dziennika konta z logami; także brak dostępu do starych logów/payloadów i nowe `db_epoch`. Ręczne kopie i stare wolumeny nie mogą ominąć limitu.
 
 ## Dostawcy, role i wyjątki — do potwierdzenia przed użyciem
 
@@ -130,13 +130,13 @@ Migracja addytywna: nowe pola → odczyt respektujący scope → kontrolowana kl
 | Resend Free — planowany | Treść wiadomości/logi przechowywane w USA 30 dni, backupy 7 dni. Region wysyłki EU nie przenosi storage do UE. Brak API usuwania pojedynczego maila; wcześniejsze usunięcie wysłanego wymaga kontaktu z supportem dostawcy. Nie obiecywać automatycznego skasowania każdego maila w 14 dni |
 | Resend podprocesorzy | Zwykła wysyłka API nie uruchamia funkcji AI edytora/supportu, ale dokumentacja opisuje antyspamowe próbkowanie przez TypeSafe z ZDR. Objąć rzeczywistą listę podprocesorów przeglądem; nie twierdzić, że poczta nie ma żadnych takich odbiorców |
 | Railway | Region serwisu/wolumenu wybieralny; przetwarzanie własne platformy także USA. Logi zależą od planu (np. Hobby 7 dni, Pro 30 dni), nie od TTL naszej tabeli. F-008 ustala faktyczny plan, ograniczenie retencji i koszt bez nowego zewnętrznego log drain |
-| AWS S3 / planowany | Oddzielny magazyn S3 Standard eu-central-1, szyfrowane kopie i minimalny dziennik; administratorzy/umowy/transfery i rzeczywista retencja wersji do potwierdzenia przed użyciem. Szyfrowanie nie usuwa roli odbiorcy ani obowiązku informacji |
+| Railway backup (PITR/kopie wolumenu) | Bucket PITR i kopie wolumenu w tym samym projekcie Railway (decyzja 18.11.2026, bez AWS). Okna retencji ustala platforma: PITR ok. 4 tygodnie, dzienne 6 dni; ślad `account_journal` w logach podlega retencji logów planu |
 | UptimeRobot / planowany | Tylko publiczny endpoint/stan i kontakt operatora, bez danych kont/nauki. Sprawdzić warunki, lokalizację i retencję kontaktu; brak Android SDK i zgody na płatny plan |
 | Google | Logowanie/obsługa dowodu przez Google, odrębne od danych nauki. Ustalić rzeczywistą rolę i zakres claimów; nie nazywać automatycznie każdego produktu Google naszym procesorem |
 | Wikimedia | [Lookup](../../../../../../backend/app/services/dictionary_lookup.py) wysyła zapytanie z backendu; dostawca widzi tekst i połączenie backendu, nie dostaje automatycznie konta użytkownika. Zweryfikować politykę/rolę i licencję pobieranej treści; bez domyślnej obietnicy DPA i własnego TTL dostawcy |
 | Skrzynka pomocy | Wybór przy domenie/kontakcie, osobny od Resend API. Sprawdzić dostawcę, retencję wiadomości/kosza/backupów, dostęp i transfery przed uruchomieniem |
 
-Lista zawiera warianty kodu i planu, nie potwierdzenie konfiguracji produkcji. **Allowlista projektu:** OpenAI Chat Completions na zatwierdzonych w konfiguracji modelach/cenniku, Wikimedia dla obecnego słownika, Google Sign in/Credential Manager, Resend wyłącznie maile transakcyjne, Railway API/WWW/PostgreSQL oraz powyższe S3/monitoring po ich osobnym zatwierdzeniu. Bez Responses/Files/edytora AI poczty/SDK analytics. Anthropic w becie domyślnie wyłączony, dopuszczalny tylko po osobnym potwierdzeniu modelu/retencji/umowy i jawnym włączeniu, bez automatycznego fallbacku.
+Lista zawiera warianty kodu i planu, nie potwierdzenie konfiguracji produkcji. **Allowlista projektu:** OpenAI Chat Completions na zatwierdzonych w konfiguracji modelach/cenniku, Wikimedia dla obecnego słownika, Google Sign in/Credential Manager, Resend wyłącznie maile transakcyjne, Railway API/WWW/PostgreSQL/backup oraz powyższy monitoring po jego osobnym zatwierdzeniu. Bez Responses/Files/edytora AI poczty/SDK analytics. Anthropic w becie domyślnie wyłączony, dopuszczalny tylko po osobnym potwierdzeniu modelu/retencji/umowy i jawnym włączeniu, bez automatycznego fallbacku.
 
 Przed użyciem właściciel z właściwym przeglądem potwierdza faktyczny model/produkt, konto/umowy/region i podstawę prawną; runtime akceptuje tylko jawny model/cennik z F-008/T-004, nie dowolny URL dostawcy. Nie wpisujemy do publicznego taska tajnych wartości kont. Zmiana odbiorcy/celu wymaga aktualizacji informacji i oceny potrzeby nowej zgody, nie tylko podmiany klucza.
 
@@ -146,7 +146,7 @@ Właściciel z odpowiednim przeglądem prawnym zatwierdza podstawy dla konkretny
 
 - Przed przekazaniem tekstu do AI: czytelna informacja, jakie treści i do kogo trafiają, także możliwe transfery/retencja. Nie dodawać e-maila/hasła do promptu. Użytkownik może anulować generację; anulowanie nie odsyła automatycznie danych innemu modelowi.
 - Ustalić dla faktycznych przepływów potrzebę wyróżnionej informacji i zgody według Play/GDPR. Gdy zgoda jest konieczna, osobny nieprezaznaczony wybór przed wysyłką; odmowa nie kasuje konta/pracy i nie blokuje niezależnej nauki już pobranych fiszek. Akceptacja regulaminu nie zastępuje takiej zgody.
-- Publiczna informacja wskazuje administratora/kontakt, cele/podstawy, odbiorców/transfery, okresy/warunki, prawa i drogę skargi; spójna z rzeczywistym 7+7, kopią do 27 dni i wyjątkami procesorów.
+- Publiczna informacja wskazuje administratora/kontakt, cele/podstawy, odbiorców/transfery, okresy/warunki, prawa i drogę skargi; spójna z rzeczywistym 7+7, kopią do około 30 dni i wyjątkami procesorów.
 - Dostęp/sprostowanie/usunięcie/ograniczenie/sprzeciw/przenoszenie według właściwych przesłanek mają obsługę przez monitorowane wsparcie. To nie wymaga nowego eksportu self-service w aplikacji: operator ma bezpieczny, kontrolowany tryb realizacji. Zweryfikować tożsamość bez domyślnego żądania skanu dokumentu.
 - Cel pierwszej odpowiedzi supportu 2 dni robocze nie zmienia terminów ustawowych. Art. 12 GDPR: co do zasady działanie/informacja w miesiąc, wyjątkowe przedłużenie według prawa z powiadomieniem w pierwszym miesiącu; to nie domyślna licencja na opóźnienie purge 7+7.
 - Przygotować macierz Data safety: rzeczywisty typ danych, cel, required/optional, odbiorca, definicja collection/sharing/ephemeral i usuwanie. Kandydaci obejmują e-mail/User ID, historię wyszukiwania/aktywność, własne treści i diagnostykę. Nie zaznaczać mechanicznie „brak zbierania” po wyłączeniu payloadów ani „brak sharing”, bo dostawca ma DPA.
@@ -173,7 +173,7 @@ Dokumentacja dostawcy może się zmienić; przy wyborze konta/modelu i przed pub
 - [ ] Mapa danych, podstaw, dostawców/transferów i retencji ma zatwierdzone wartości; obowiązkowe wymagania mają przypisane taski realizujące zachowanie, nie tylko tekst polityki.
 - [ ] Syntetyczne znaczniki sekretu/tekstu nie trafiają do DB logów, stdout, hostingu, logcat, panelu ani pliku diagnostycznego, również przy błędzie i zagnieżdżonym JSON.
 - [ ] Zegar/restart/brak ruchu sprawdzają logi 7 dni, metryki 30 dni i krótkie auth; wcześniejszy purge usuwa własne dane, nie dane konta B ani publiczny słownik.
-- [ ] Backup maks. 27 dni, brak niezinwentaryzowanego eksportu i skuteczny restore bez wskrzeszenia danych; możliwości/wyjątki procesorów opisane uczciwie.
+- [ ] Backup do około 30 dni, brak niezinwentaryzowanego eksportu i skuteczny restore bez wskrzeszenia danych; możliwości/wyjątki procesorów opisane uczciwie.
 
 **Bramki wykonania:** wdrożony manifest/cache/cleanup według powyższego projektu; owner zatwierdza podstawy/wyjątki i faktyczne konta/produkty/DPA przed ich użyciem. Projekt mechanizmu kopii/retencji wersji i rejestru jest w F-008/T-003, koszty/monitoring w F-008/T-004; nie pozostaje ogólne „F-008 dopiero wymyśli restore”. Wyniki runtime/publikacja są późniejszą akceptacją, nie wykonane teraz.
 

@@ -62,7 +62,7 @@ IP bierze się z peer socket, chyba że peer należy do jawnie zaufanych proxy �
 
 ### 4. Techniczna retencja auth i kolejność prac
 
-Proponowane maksima przechowywania technicznych rekordów, do sprawdzenia z manifestem [F-007/T-001](../../F-007-prywatnosc-i-wsparcie/tasks/T-001-prywatnosc-i-deklaracje.md). F-007 zatwierdził brak raw diagnostyki, logi 7/metryki 30 dni i backupy do 27 dni; poniższe to osobne krótkie rekordy funkcjonalne, nie wyjątek od purge konta:
+Proponowane maksima przechowywania technicznych rekordów, do sprawdzenia z manifestem [F-007/T-001](../../F-007-prywatnosc-i-wsparcie/tasks/T-001-prywatnosc-i-deklaracje.md). F-007 zatwierdził brak raw diagnostyki, logi 7/metryki 30 dni i backupy do około 30 dni; poniższe to osobne krótkie rekordy funkcjonalne, nie wyjątek od purge konta:
 
 | Dane | Proponowana retencja |
 |---|---|

@@ -43,7 +43,7 @@ Progi to cele produktu, nie wymagania Google. Wymogi sklepu sprawdzamy ponownie 
 ## Zależności i kolejność
 
 1. **Pierwszy zalecany krok implementacji: F-008/T-001 — rzeczywisty PostgreSQL w CI i brak zielonych skipów.** Równolegle F-008/T-002 izolacja/konfiguracja i czysty komponent F-004/T-001 hasher/walidacja z testami; bez przełączania auth istniejących użytkowników.
-2. Fundament sesji F-003/T-001 i publisher/revisions F-008/T-003, backend/Android wyniki i własność kolejki F-003/T-003/T-002. Infrastruktura dziennika jest wspólna dla bezpieczeństwa/usuwania, nie osobny duplikat w każdym tasku.
+2. Fundament sesji F-003/T-001 i dziennik konta/revisions F-008/T-003, backend/Android wyniki i własność kolejki F-003/T-003/T-002. Infrastruktura dziennika jest wspólna dla bezpieczeństwa/usuwania, nie osobny duplikat w każdym tasku.
 3. Poczta/odzyskiwanie F-004/T-002, limiter T-003, Google F-005 i operacje T-004/T-005; API + UI + testy pionowo. W tle przegląd dostawców/prawa F-007 może zacząć się przed gotowym kodem.
 4. Konto/usuwanie F-006, profil/kolejki F-003/T-004, raport/warunki/publiczny serwis i minimalizacja F-007; kopie/alerty/budżet F-008/T-003/T-004. Do aktywacji procesu wymagane kompletne zabezpieczenia i testy granic, nie tylko przycisk.
 5. F-002 release/Console i syntetyczna próba starego debug oraz Play→update; prawdziwe ID/domena/umowy/kwoty/kontakty muszą być uzupełnione. Backup/restore, S24/16 KB/App Links/Google i wszystkie A-xx są gate, nie obietnicą z kompilacji.
@@ -63,9 +63,9 @@ Zamknięte także decyzje produktu Android/offline: lokalny logout bez sieci z o
 
 Zamknięte decyzje konta/usuwania: natychmiastowa blokada, 7 dni na odstąpienie, potem do 7 dni na purge (maksymalnie 14 dni), samoobsługowy WWW oraz nowe puste konto po completed. [Projekty F-006 i ich zależności](./features/F-006-zarzadzanie-kontem/README.md) obejmują grace/cofnięcie, pauzę zadań, niewysłaną pracę, manifest i rejestr restore.
 
-Zamknięte decyzje produktu [F-007](./features/F-007-prywatnosc-i-wsparcie/README.md): bez raw diagnostyki, logi 7 dni/metryki 30 dni, kopie maks. 27 dni; obecne/planowane usługi poza EOG po wymaganej weryfikacji, dokumenty/pomoc PL/EN/ES, proste potwierdzenie 18+ i osobne warunki, cel odpowiedzi człowieka do 2 dni roboczych. Cztery projekty obejmują retencję/dostawców, raport bez LLM, akceptację/istniejące konta, lokalne alarmy i WWW.
+Zamknięte decyzje produktu [F-007](./features/F-007-prywatnosc-i-wsparcie/README.md): bez raw diagnostyki, logi 7 dni/metryki 30 dni, kopie do około 30 dni (zmiana 18.11.2026); obecne/planowane usługi poza EOG po wymaganej weryfikacji, dokumenty/pomoc PL/EN/ES, proste potwierdzenie 18+ i osobne warunki, cel odpowiedzi człowieka do 2 dni roboczych. Cztery projekty obejmują retencję/dostawców, raport bez LLM, akceptację/istniejące konta, lokalne alarmy i WWW.
 
-Zamknięte także bloki [F-008](./features/F-008-jakosc-i-operacje/README.md) i [F-002](./features/F-002-wydanie-play/README.md): CI/PG i urządzenia, izolowane środowiska, dodatkowa infrastruktura do 50 EUR/miesiąc, backup co 30 min/RPO 1 h/RTO 24 h od wykrycia, niezależny journal i restore bez cofnięcia haseł/adresów, operator/e-mail, budżet AI WARN/HARD oraz aktualny release/Play/kraje. Nowy applicationId, brak planowego resetu po becie. Kwot AI nie wybrano celowo; konfiguracja obu progów jest obowiązkowa przed uruchomieniem.
+Zamknięte także bloki [F-008](./features/F-008-jakosc-i-operacje/README.md) i [F-002](./features/F-002-wydanie-play/README.md): CI/PG i urządzenia, izolowane środowiska, dodatkowa infrastruktura do 50 EUR/miesiąc, backup wyłącznie w Railway (PITR + dzienne, decyzja 18.11.2026)/RPO 1 h/RTO 24 h od wykrycia, dziennik konta w bazie ze śladem w logach i restore bez cofnięcia haseł/adresów, operator/e-mail, budżet AI WARN/HARD oraz aktualny release/Play/kraje. Nowy applicationId, brak planowego resetu po becie. Kwot AI nie wybrano celowo; konfiguracja obu progów jest obowiązkowa przed uruchomieniem.
 
 ### Co rzeczywiście pozostaje przed uruchomieniem
 

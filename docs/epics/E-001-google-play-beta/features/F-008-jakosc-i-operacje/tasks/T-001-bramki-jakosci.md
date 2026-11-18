@@ -11,14 +11,14 @@ Rozbudować istniejące bramki o realne testy auth/sync/DB i Androida, finalny r
 
 ### Zależności przyjęte z procesu usuwania
 
-[F-006/T-002](../../F-006-zarzadzanie-kontem/tasks/T-002-usuwanie-konta.md) wymaga niezależnego rejestru usunięć/cofnięć; konkretny projekt jest w [T-003](./T-003-backup-rejestr-i-odtwarzanie.md): miejsce/wersje/szyfrowanie, trwałość i zatrzymanie restore przy niejednoznaczności. Odbiór wymaga wykonanej próby, bez samowolnego zakupu usług. Sam rekord z tej samej starej kopii nie spełnia celu.
+[F-006/T-002](../../F-006-zarzadzanie-kontem/tasks/T-002-usuwanie-konta.md) wymaga rejestru usunięć/cofnięć odpornego na restore; projekt jest w [T-003](./T-003-backup-rejestr-i-odtwarzanie.md): dziennik w bazie, ślad zdarzeń w logach poza bazą i blokada niejednoznacznych kont po restore. Odbiór wymaga wykonanej próby, bez samowolnego zakupu usług.
 
 Test restore musi obejmować grace, skuteczne cofnięcie, rozpoczęty purge i completed: bez wskrzeszenia sesji/kont, z nowym db_epoch sync i bez blokowania nowego User.id pod tym samym adresem. Sprawdzić ograniczenia worker lease/restart/alertów oraz właściciela reakcji, aby 7 dni na odstąpienie + do 7 dni purge było wykonywalnym SLA, nie wyłącznie tekstem.
 
 ### Wejście z zatwierdzonego F-007
 
 - Raw diagnostyka wyłączona we wszystkich kanałach, nie tylko LlmCallPayload. Minimalne własne logi 7 dni, metryki bez treści 30 dni; [T-001 prywatności](../../F-007-prywatnosc-i-wsparcie/tasks/T-001-prywatnosc-i-deklaracje.md) oddziela to od danych funkcjonalnych, procesorów i krótkich sekretów.
-- Historia dzienna/tygodniowa do 27 dni, bez miesięcznych 89 dni. T-003 konkretyzuje kopie co 30 min dla RPO i retencję 24 h/6/27 dni; rzeczywisty plan/koszt oraz fizyczne kopie Railway/ręczne/wolumeny trzeba objąć tym samym inwentarzem. Bez zakupu usługi podczas specyfikacji.
+- Railway PITR (ok. 4 tygodnie) + kopie dzienne (6 dni), bez tygodniowych/miesięcznych; retencja do około 30 dni (decyzja 18.11.2026). Ręczne kopie i rozwidlone usługi po restore objęte tym samym inwentarzem. Bez zakupu usługi podczas specyfikacji.
 - Faktyczny plan Railway może trzymać stdout dłużej niż własna tabela: ustalić skuteczne ograniczenie albo jawnie uzgodniony wyjątek, nie obiecywać 7 dni na podstawie SQL. Brak nowego third-party log drain i SDK analityki bez osobnej decyzji.
 - Projekt markerów/rejestru: 45 dni od terminalnego stanu, receipt 30 dni; zweryfikować wobec wszystkich restorable kopii i czasu starych dowodów. Brak możliwości dotrzymania wymaga nowej konkretnej decyzji, nie cichego trzymania bez końca.
 - Wskazać imienną rolę operatora (bez prywatnych danych w publicznym repo), monitorowany kanał oraz miarę pierwszej odpowiedzi **człowieka do 2 dni roboczych**. Incydenty bezpieczeństwa/prywatności mają osobne priorytety/terminy prawne i drogę eskalacji; nie deklarować dyżuru 24/7.
@@ -32,7 +32,7 @@ Decyzje końcowe: dodatkowa infrastruktura możliwie darmowa, projekt do 50 EUR/
 
 1. Zachować `python scripts\ci_check.py` jako wejście, nie zastępować własnym nowym runnerem. W CI dołożyć PostgreSQL service, healthcheck oraz jawne `TEST_DATABASE_URL` wskazujące wyłącznie localhost/`vocabulario_ci_test`; ustawić przed importem app. Nie pobierać go z secretu bety.
 2. Do CI dodać kontrolę, że wymagane testy `pg` zostały zebrane i **nie są skipped**; błędny/brakujący test DB ma przerwać wymagany job. Testy z fixture TRUNCATE nie są wykonywane równolegle na tej samej bazie (`xdist` bez izolacji niedozwolony).
-3. Atrapy na granicy transportu AI/poczty/Google/S3: brak realnego Internetu/kluczy dla testów PR, ale prawdziwe transakcje, constraints, SAVEPOINT i zegar. Osobny ręczny smoke integracji na staging z zatwierdzonymi kluczami i limitem.
+3. Atrapy na granicy transportu AI/poczty/Google: brak realnego Internetu/kluczy dla testów PR, ale prawdziwe transakcje, constraints, SAVEPOINT i zegar. Osobny ręczny smoke integracji na staging z zatwierdzonymi kluczami i limitem.
 4. Android job z JDK 17 i właściwym SDK/Gradle F-002: unit/compile i lint. Najpierw istniejące testy, następnie kilka celowanych przypadków dla zmienionych zachowań; żadnych testów samych stałych albo sukces-shaped mocków.
 5. Signed release/Play/device to ręczny gate, nie pobieranie upload key do workflow z PR/forka. Build bez produkcyjnego sekretu może wykonywać unit/compile; nie może udawać podpisanego AAB.
 6. Backend fresh schema oraz upgrade z syntetycznego poprzedniego schematu; istniejące konta bez dowodu nie dostają weryfikacji/warunków. Nie używać dumpu rzeczywistych użytkowników jako fixture.

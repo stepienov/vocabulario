@@ -39,7 +39,7 @@ Uzgodnić i zapisać decyzje, od których zależy kod: odbiorcy/wiek/track, mome
 | Powrót po usunięciu | Po completed można utworzyć nowe puste konto tym samym adresem/Google, z nowym ID. Nie przywracamy starego postępu/kolejek; podczas grace/purge nie reaktywujemy konta zwykłym loginem | Ochrona owner ID i lifecycle F-003/F-006; inny telefon offline reaguje po otrzymaniu wiarygodnego stanu, nie ma obietnicy natychmiastowego zdalnego wymazania |
 | Powiadomienia | Tylko lokalne przypomnienia, bez serwerowego push | Szczegóły reboot/strefa/uprawnienia i zmiana konta w odpowiednim feature |
 | Diagnostyka | Bez pełnych promptów/odpowiedzi/notatek/zapytań w diagnostyce; minimalne logi techniczne 7 dni, metryki kosztów bez treści 30 dni. Nie dotyczy potrzebnych danych nauki i świadomego zgłoszenia | Wykonawca obejmuje DB/stdout/hosting/logcat/wyjątki, historię/cache i skuteczny cleanup F-007/F-008 |
-| Kopie i dostawcy | Dzienne + tygodniowe backupy, maks. 27 dni od wykonania, bez miesięcznych 89 dni. Obecne/planowane usługi także poza EOG dopuszczone po wymaganej weryfikacji umów/zabezpieczeń/informacji | Rzeczywiste konto/plan, produkty/modele, DPA/transfery/wyjątki, koszt i rejestr restore. Bez obietnicy EU-only, ZDR i zakupu teraz |
+| Kopie i dostawcy | **Zmienione 18.11.2026:** backup wyłącznie w Railway (PITR + kopie dzienne), bez AWS/zewnętrznego magazynu; retencja kopii do około 30 dni, bez tygodniowych i miesięcznych. Obecne/planowane usługi także poza EOG dopuszczone po wymaganej weryfikacji umów/zabezpieczeń/informacji | Rzeczywiste konto/plan, produkty/modele, DPA/transfery/wyjątki, koszt i rejestr restore. Bez obietnicy EU-only, ZDR i zakupu teraz |
 | Dokumenty i pomoc | PL/EN/ES; monitorowana poczta i raport treści wewnątrz aplikacji, bez nowego helpdesk. Cel pierwszej odpowiedzi człowieka do 2 dni roboczych, nie termin naprawy ani dyżur 24/7 | Konkretny kontakt/dostawca skrzynki przy domenie, właściciel obsługi i incydenty F-008; przegląd prawny i zrozumiałość informacji |
 | Zgodność i operacje | Osobny publiczny serwis aplikacji i własna domena. Właściciel chce inną nazwę niż początkowe propozycje i poda ją później; żadna nazwa/końcówka nie jest wybrana. Nie zakładamy gotowych stron prawnych/pomocy. Priorytet najniższych rozsądnych kosztów, uzasadnione dodatkowe usługi dopuszczalne po akceptacji | Konkretna nazwa/rejestrator i hosting serwisu, adres pomocy/koszt, staging oraz odpowiedzialność za akceptację prawną; propozycje cen w F-007/T-004 nie oznaczają zakupu |
 
@@ -67,7 +67,7 @@ Manifest i wyjątki ma F-007, trwały rejestr request/cancel/purge i restore F-0
 
 ### Zamknięty blok decyzji: prywatność i wsparcie
 
-[F-007](../../F-007-prywatnosc-i-wsparcie/README.md) ma projekty czterech tasków. Zatwierdzone: brak raw diagnostyki, logi 7 dni/metryki 30 dni, backupy do 27 dni, transfery poza EOG warunkowo po weryfikacji, PL/EN/ES, oświadczenie 18+ i osobne warunki, pierwsza odpowiedź człowieka do 2 dni roboczych. Czas odpowiedzi doprecyzowano po wyjaśnieniu, bez powtarzania pozostałych pięciu decyzji.
+[F-007](../../F-007-prywatnosc-i-wsparcie/README.md) ma projekty czterech tasków. Zatwierdzone: brak raw diagnostyki, logi 7 dni/metryki 30 dni, backupy do około 30 dni (zmiana z 27 dni 18.11.2026), transfery poza EOG warunkowo po weryfikacji, PL/EN/ES, oświadczenie 18+ i osobne warunki, pierwsza odpowiedź człowieka do 2 dni roboczych. Czas odpowiedzi doprecyzowano po wyjaśnieniu, bez powtarzania pozostałych pięciu decyzji.
 
 Cel 2 dni roboczych zastępuje wcześniejszą rekomendację odpowiedzi w 1 dzień z analizy źródłowej; nie przepisujemy historycznego źródła jako nowej decyzji. Incydenty nadal mają priorytet i osobne terminy prawne.
 
@@ -81,14 +81,14 @@ F-007 rozdziela publiczny/prywatny cache i dane historyczne oraz warunkową allo
 |---|---|
 | Infrastruktura najtaniej, w razie potrzeby dodatkowo do 50 EUR/miesiąc | F-008/T-002/T-004: local/CI, staging na okna, kosztorys z buforem i brak automatycznych zakupów; AI/domena osobno |
 | AI kwotowo dopiero przed startem; ostrzeżenia i kontrolowane dokupienie | F-008/T-004: WARN + nieprzekraczalny admission HARD, wspólne rezerwacje, ręczne doładowanie nie podnosi HARD, brak kwoty blokuje start AI |
-| RPO ≤1 h, RTO ≤24 h od wykrycia | F-008/T-003: kopie co 30 min + dzienne/tygodniowe do 27 dni, niezależny rejestr i obowiązkowa próba restore; bez 24/7 |
+| RPO ≤1 h, RTO ≤24 h od wykrycia | F-008/T-003: Railway PITR + kopie dzienne, retencja do ok. 30 dni, dziennik konta w bazie ze śladem w logach i obowiązkowa próba restore; bez 24/7 |
 | Operatorem właściciel, e-mail, minimalny monitoring; dostępny S24 | F-008/T-001/T-004: urządzenie i macierz emulatorów, niezależne alarmy; realny Android/kontakt do odczytu przy wykonaniu |
 | Internal → closed, publiczna premiera poza E-001 | F-001/T-002 i F-002/T-002: osobne gates, 5–30, warunek 12/14 tylko jeśli rzeczywiście dotyczy konta personal |
 | Docelowo świat, rozszerzanie po kontroli krajów rzeczywistych testerów | F-002/T-002: prywatny rejestr kontroli kraju i decyzja przed dodaniem; nie wybieramy wszystkich krajów bez analizy |
 | Nowy applicationId, dokładny później; nazwa/domena odłożone | F-002/T-001: gate przed pierwszym uploadem, osobna instalacja debug/Play, brak wymyślonego ID/rebrandingu kodu |
 | Zachować konta i postęp bety po premierze | Stabilne User.id, brak planowego resetu; staging/CI tylko syntetyczne. Trzeba uzgodnić pracę starego debug przed odinstalowaniem |
 
-Warianty techniczne AWS S3/age i UptimeRobot są projektem wykonawcy opartym o ich udokumentowane możliwości, **nie** zamówieniem ani zatwierdzonymi umowami. Rzeczywisty plan/koszt/DPA i klucze to kontrolowane kroki wykonawcze.
+**18.11.2026:** właściciel odrzucił AWS/zewnętrzny magazyn; backup tylko w Railway, akceptując ryzyko jednego dostawcy ([F-008/T-003](../../F-008-jakosc-i-operacje/tasks/T-003-backup-rejestr-i-odtwarzanie.md#decyzja-tylko-railway-18112026)). Wariant UptimeRobot jest projektem wykonawcy opartym o ich udokumentowane możliwości, **nie** zamówieniem ani zatwierdzonymi umowami. Rzeczywisty plan/koszt/DPA i klucze to kontrolowane kroki wykonawcze.
 
 ## Uzupełnienia proceduralne, nie nowe pytania
 

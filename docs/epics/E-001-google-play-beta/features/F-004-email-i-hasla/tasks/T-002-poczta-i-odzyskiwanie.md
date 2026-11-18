@@ -172,7 +172,7 @@ TTL dowodu nie jest retencją danych dostawcy. Proponowane kasowanie lokalnych p
 
 ### 7. Limity i odporność
 
-Reset/zmiana hasła stosuje nadrzędną [kolejność commit/journal F-003/T-001](../../F-003-sesja-i-offline/tasks/T-001-sesje-backendu.md#6-atomowość-i-wspólny-kontrakt-operacji-konta) oraz F-008/T-003: niezależny intent/revisions przed finalną zmianą, bez surowych sekretów w S3 i bez sieci pod DB lock. Restore recovery nie wysyła resetu na potencjalnie stary adres. To rozszerzenie wspólnej usługi, nie osobny reset/mail flow.
+Reset/zmiana hasła stosuje nadrzędną [kolejność commit/journal F-003/T-001](../../F-003-sesja-i-offline/tasks/T-001-sesje-backendu.md#6-atomowość-i-wspólny-kontrakt-operacji-konta) oraz F-008/T-003: zdarzenie `account_journal` z revisions w tej samej transakcji co zmiana, bez surowych sekretów w dzienniku i logach. Restore recovery nie wysyła resetu na potencjalnie stary adres. To rozszerzenie wspólnej usługi, nie osobny reset/mail flow.
 
 Proponowane parametry do wspólnego kontraktu T-003, nie trzy osobne mechanizmy w endpointach:
 

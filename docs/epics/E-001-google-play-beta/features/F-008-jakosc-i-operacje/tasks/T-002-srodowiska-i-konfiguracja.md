@@ -25,7 +25,7 @@ Region beta sprawdzić względem istniejącego [kontraktu regionów E-002](../..
 ## Konfiguracja i sekrety
 
 1. Jeden walidowany model settings środowiska. W `beta`/`staging` jawne `environment`, `debug=false`, zaufane publiczne origins/proxy, issuer/audience, bieżące wersje API/dokumentów i właściwy DB. Domyślne `development`, lokalny URL i pusty sekret nie są fallbackiem produkcji.
-2. Sekrety wyłącznie w kontrolowanej konfiguracji usługi/CI i kopii operatora poza Git. Osobne najmniejsze uprawnienia dla runtime, backupu, publishera dziennika i GC/restore; nie jeden klucz administratora. Nie odczytywać ani wypisywać istniejących sekretów na potrzeby dokumentacji.
+2. Sekrety wyłącznie w kontrolowanej konfiguracji usługi/CI i kopii operatora poza Git. Najmniejsze uprawnienia dla runtime i operacji restore; nie jeden klucz administratora. Nie odczytywać ani wypisywać istniejących sekretów na potrzeby dokumentacji.
 3. Validate-on-start: brak obowiązkowego pola daje nazwę błędnego pola i stan not-ready, nigdy wartość sekretu. Dla wdrożenia bety obowiązkowe m.in. komplet auth/mail, `PUBLIC_APP_ORIGIN`, bieżące dokumenty, kontakt i ustawione oba progi AI z T-004. Nazwa/ID/domenu i wartości dostarcza właściciel w krokach wykonawczych, nie w publicznym tasku.
 4. Kosztowna/usługowa integracja ma jawne `enabled` i spójność pól. Wyłączony Anthropic nie inicjalizuje klienta i nie staje się ukrytym fallbackiem; włączony ma przejść allowlistę dostawców/modeli oraz warunki F-007.
 5. Staging początkowo korzysta z atrap/dedykowanych sandboxów. Prawdziwe maile tylko do kontrolowanych skrzynek testowych z allowlisty; rzeczywiste AI tylko w oznaczonym ręcznym smoke teście, z osobnym małym limitem, nigdy w każdym PR.

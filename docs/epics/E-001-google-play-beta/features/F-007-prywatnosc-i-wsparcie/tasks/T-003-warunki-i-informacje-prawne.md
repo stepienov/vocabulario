@@ -66,7 +66,7 @@ Istotna zmiana: publikacja nowej czytelnej wersji i streszczenia zmian, ustalony
 
 ## Treść i prawa do materiałów
 
-Dokumenty opisują rzeczywiste samodzielne konto, weryfikację, metody Google/hasło, prywatne profile/naukę, lokalne przypomnienia, bezpłatną betę bez płatności, niedoskonałość AI i zgłoszenia. Cel odpowiedzi 2 dni robocze, usuwanie 7+7, kopie do 27 dni i zewnętrzni odbiorcy muszą być zgodne z T-001/T-002 i F-006. Bez fikcyjnej gwarancji 100% poprawności, całkowitego braku odpowiedzialności czy trwałej bezpłatności przyszłego produktu.
+Dokumenty opisują rzeczywiste samodzielne konto, weryfikację, metody Google/hasło, prywatne profile/naukę, lokalne przypomnienia, bezpłatną betę bez płatności, niedoskonałość AI i zgłoszenia. Cel odpowiedzi 2 dni robocze, usuwanie 7+7, kopie do około 30 dni i zewnętrzni odbiorcy muszą być zgodne z T-001/T-002 i F-006. Bez fikcyjnej gwarancji 100% poprawności, całkowitego braku odpowiedzialności czy trwałej bezpłatności przyszłego produktu.
 
 Zakończenie bety nie jest zgodą na skasowanie lub sprzedaż postępu: właściciel przygotowuje informowanie i zgodny los danych przed faktyczną decyzją o zamknięciu. Nie dodajemy teraz samoobsługowego eksportu; obowiązujące prawa mają ręczną bezpieczną obsługę T-001.
 
