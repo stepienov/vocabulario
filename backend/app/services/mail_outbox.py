@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from functools import lru_cache
@@ -25,6 +26,7 @@ from app.core.security import now_utc
 from app.db import session as db_session
 from app.models import MailOutbox
 from app.services.action_tokens import action_token_is_current
+from app.services.auth_limits import LimiterUnavailable, reserve_mail_send
 from app.services.mail_transport import MailTransport, OutgoingMail, SendResult, get_transport
 
 logger = logging.getLogger(__name__)
@@ -32,6 +34,7 @@ logger = logging.getLogger(__name__)
 LEASE = timedelta(seconds=60)
 BATCH_SIZE = 5
 IDLE_WAKE_S = 30.0
+PURGE_EVERY_S = 15 * 60.0
 MAX_ATTEMPTS = 6
 # Attempt n (0-based) is due this long after the mail was queued.
 ATTEMPT_OFFSETS_S = (0, 30, 120, 300, 600, 1200)
@@ -113,6 +116,7 @@ async def enqueue_mail(
 @dataclass(frozen=True)
 class _Claim:
     id: UUID
+    kind: str
     attempts: int
     created_at: datetime
     expires_at: datetime
@@ -176,7 +180,7 @@ async def _claim_one(now: datetime) -> tuple[_Claim | None, bool]:
             row.dispatch_state = "leased"
             row.lease_until = now + LEASE
             row.attempts += 1
-            claim = _Claim(row.id, row.attempts, row.created_at, row.expires_at, mail)
+            claim = _Claim(row.id, row.kind, row.attempts, row.created_at, row.expires_at, mail)
         await db.commit()
         return claim, True
 
@@ -222,6 +226,45 @@ async def _finish(claim: _Claim, result: SendResult, now: datetime) -> None:
         await db.commit()
     if values["dispatch_state"] == "failed":
         logger.warning("mail %s failed: %s", claim.id, values["last_error_code"])
+    elif result.outcome == "accepted" and result.provider_message_id:
+        # A webhook may have outrun this write; fold in what it already stored.
+        from app.services.mail_events import apply_events
+
+        await apply_events(result.provider_message_id)
+
+
+async def _wait_for_budget(claim: _Claim, wait_s: int, now: datetime) -> None:
+    """Give the claim back unspent: waiting for budget is not a delivery attempt."""
+    due = now + timedelta(seconds=wait_s)
+    if due >= claim.expires_at:
+        state = "cancelled" if claim.kind in LINK_KINDS else "failed"
+        values = {"dispatch_state": state, "last_error_code": "budget_exhausted"}
+    else:
+        values = {
+            "dispatch_state": "queued",
+            "next_attempt_at": due,
+            "attempts": claim.attempts - 1,
+        }
+    async with db_session.async_session_factory() as db:
+        await db.execute(
+            update(MailOutbox)
+            .where(
+                MailOutbox.id == claim.id,
+                MailOutbox.dispatch_state == "leased",
+                MailOutbox.attempts == claim.attempts,
+            )
+            .values(lease_until=None, **values)
+        )
+        await db.commit()
+    if values["dispatch_state"] != "queued":
+        logger.warning("mail %s dropped: send budget exhausted until expiry", claim.id)
+
+
+async def _budget_wait(claim: _Claim) -> int | None:
+    try:
+        return await reserve_mail_send(link=claim.kind in LINK_KINDS)
+    except LimiterUnavailable:
+        return 60
 
 
 async def deliver_due_mail(
@@ -236,6 +279,10 @@ async def deliver_due_mail(
             break
         handled += 1
         if claim is None:
+            continue
+        wait_s = await _budget_wait(claim)
+        if wait_s is not None:
+            await _wait_for_budget(claim, wait_s, now_utc())
             continue
         try:
             result = await transport.send(claim.mail, f"auth-mail/{claim.id}")
@@ -269,6 +316,7 @@ def wake_mail_worker() -> None:
 
 
 async def run_mail_worker() -> None:
+    last_purge = 0.0
     while True:
         event = _wake_event()
         event.clear()
@@ -279,6 +327,16 @@ async def run_mail_worker() -> None:
         except Exception:
             logger.exception("mail worker pass failed")
             handled = 0
+        if time.monotonic() - last_purge >= PURGE_EVERY_S:
+            last_purge = time.monotonic()
+            try:
+                from app.services.auth_cleanup import purge_auth_records
+
+                await purge_auth_records()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("auth record cleanup failed")
         if handled >= BATCH_SIZE:
             continue
         try:

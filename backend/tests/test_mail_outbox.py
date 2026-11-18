@@ -215,6 +215,22 @@ async def test_retry_that_would_land_after_expiry_fails_now(pg, outbox_key, monk
     assert row.dispatch_state == "failed" and row.last_error_code == "expired_before_retry"
 
 
+async def test_exhausted_budget_returns_mail_unspent_or_drops_it_at_expiry(pg, outbox_key):
+    from app.services.auth_limits import MAIL_BUDGET_ALL
+    from tests.test_auth_limits import _fill
+
+    keep_id, _, _ = await _queue_reset_mail(pg, ttl=timedelta(days=3))
+    drop_id, _, _ = await _queue_reset_mail(pg, ttl=timedelta(seconds=30))
+    await _fill(MAIL_BUDGET_ALL[0], now_utc())
+    transport = FakeTransport()
+    await deliver_due_mail(transport=transport)
+    assert transport.sent == []
+    kept, dropped = await _row(pg, keep_id), await _row(pg, drop_id)
+    assert kept.dispatch_state == "queued" and kept.attempts == 0
+    assert kept.next_attempt_at > now_utc() + timedelta(hours=1)
+    assert dropped.dispatch_state == "cancelled" and dropped.last_error_code == "budget_exhausted"
+
+
 async def test_used_link_is_cancelled_before_sending(pg, outbox_key):
     mail_id, user_id, token = await _queue_reset_mail(pg)
     async with pg() as session:

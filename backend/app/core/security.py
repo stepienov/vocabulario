@@ -5,11 +5,8 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import get_settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 JWT_ISSUER = "vocabulario-api"
 JWT_AUDIENCE = "vocabulario-android"
@@ -158,14 +155,6 @@ def read_token(token: str, expected_type: str, *, now: datetime | None = None) -
     if expires_at <= current:
         raise TokenError("expired")
     return claims
-
-
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
-
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
 
 
 def token_subject(token: str) -> UUID | None:

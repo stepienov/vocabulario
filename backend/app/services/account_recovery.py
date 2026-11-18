@@ -27,6 +27,7 @@ from app.services.action_tokens import (
     find_token_owner,
     issue_action_token,
 )
+from app.services.auth_limits import LimiterUnavailable, link_budget_open
 from app.services.auth_sessions import (
     IssuedSession,
     SessionAuthError,
@@ -72,9 +73,15 @@ class MailRateLimited(Exception):
         self.retry_at = retry_at
 
 
-def ensure_mail_available() -> None:
-    """Refuse new mail requests up front while deployed mail settings are unusable."""
+async def ensure_mail_available() -> None:
+    """Refuse new mail requests up front while mail settings or the send budget are unusable."""
     if not get_settings().mail_ready():
+        raise CredentialError(503, "mail_temporarily_unavailable")
+    try:
+        budget_open = await link_budget_open()
+    except LimiterUnavailable:
+        raise CredentialError(503, "auth_temporarily_unavailable") from None
+    if not budget_open:
         raise CredentialError(503, "mail_temporarily_unavailable")
 
 

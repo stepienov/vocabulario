@@ -23,14 +23,15 @@ class TokenResponse(BaseModel):
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
+    # Password policy codes (422) come from the service; the schema only caps the body size.
+    password: str = Field(max_length=4096)
     # UI language for the verification mail; the account has no profile yet.
     locale: str | None = Field(default=None, max_length=16)
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(max_length=4096)
 
 
 class GoogleAuthRequest(BaseModel):
@@ -98,6 +99,8 @@ class UserResponse(BaseModel):
     # True when the server gate blocks study/sync until this address is confirmed.
     email_verification_required: bool = False
     login_methods: list[str]
+    # Legacy password hash: only a reset can set a new password.
+    password_upgrade_required: bool = False
 
 
 class UserSettingsResponse(BaseModel):

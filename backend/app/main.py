@@ -2,7 +2,8 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -72,6 +73,15 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+        # The default body echoes the submitted input, which on auth routes holds passwords and tokens.
+        detail = [
+            {"type": e.get("type"), "loc": e.get("loc"), "msg": e.get("msg")}
+            for e in exc.errors()
+        ]
+        return JSONResponse(status_code=422, content={"detail": detail})
 
     prefix = "/api/v1"
     app.include_router(auth_router, prefix=prefix)

@@ -67,6 +67,13 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     # Separate Fernet key for queued mail payloads; never the JWT or refresh retry key.
     mail_outbox_key: str = ""
+    # HMAC key for rate-limit subjects (>= 32 chars, separate from every other secret).
+    auth_rate_limit_key: str = ""
+    # Proxies in front of the API; the client IP is the Nth entry from the right of
+    # X-Forwarded-For. 0 means no trusted proxy and the socket peer is used.
+    trusted_proxy_hops: int = 0
+    # Svix signing secret (`whsec_...`) of the Resend webhook; without it the endpoint answers 503.
+    resend_webhook_secret: str = ""
     # Learning API refuses accounts without a proven address. Switch on only after the
     # Android release with the verification screens is out (T-002, release order of F-003).
     email_verification_gate: bool = False
@@ -154,6 +161,14 @@ class Settings(BaseSettings):
         ):
             errors.append("auth_refresh_retry_key")
         errors.extend(self._mail_errors())
+        if len(self.auth_rate_limit_key.strip()) < 32 or self.auth_rate_limit_key.strip() in {
+            secret.strip(),
+            self.auth_refresh_retry_key.strip(),
+            self.mail_outbox_key.strip(),
+        }:
+            errors.append("auth_rate_limit_key")
+        if self.trusted_proxy_hops < 1:
+            errors.append("trusted_proxy_hops")
         if not _is_remote_database(self.database_url):
             errors.append("database_url")
         if not all(_is_public_https_origin(origin) for origin in self.cors_origins):

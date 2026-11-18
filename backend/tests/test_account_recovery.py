@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import select
 
+from app.api.v1 import auth as auth_routes
 from app.core.security import now_utc
 from app.models import AccountActionToken, MailOutbox, User
 from app.services import account_recovery as svc
@@ -82,7 +83,7 @@ async def test_reset_sets_argon2_revokes_sessions_and_verifies_address(pg, pg_cl
     first = await _register(pg_client, email)
     second = (await _login(pg_client, email, PASSWORD)).json()
     before = await _user(pg, email)
-    assert before.password_hash.startswith("$2")
+    assert before.password_hash.startswith("$argon2id$")
     assert before.email_verified_at is None
 
     await _request_reset(pg_client, email.upper(), locale="pl")
@@ -114,10 +115,41 @@ async def test_reset_sets_argon2_revokes_sessions_and_verifies_address(pg, pg_cl
     assert notice.action_token_id is None and _decrypt(notice).to == email
 
     old = await _login(pg_client, email, PASSWORD)
-    assert (old.status_code, _code(old)) == (401, "wrong_password")
+    assert (old.status_code, _code(old)) == (401, "invalid_credentials")
     assert (await _login(pg_client, email, NEW_PASSWORD)).status_code == 200
     reused = await _confirm(pg_client, token, NEW_PASSWORD + "!")
     assert (reused.status_code, _code(reused)) == (409, "action_token_used")
+
+
+async def test_register_enforces_password_policy(pg, pg_client):
+    short = await pg_client.post(
+        "/api/v1/auth/register", json={"email": f"s-{uuid4()}@test.com", "password": "a" * 14}
+    )
+    assert (short.status_code, _code(short)) == (422, "password_too_short")
+    long = await pg_client.post(
+        "/api/v1/auth/register", json={"email": f"l-{uuid4()}@test.com", "password": "a" * 129}
+    )
+    assert (long.status_code, _code(long)) == (422, "password_too_long")
+
+
+async def test_legacy_bcrypt_account_is_directed_to_reset(pg, pg_client):
+    from passlib.hash import bcrypt
+
+    email = f"legacy-{uuid4()}@test.com"
+    async with pg() as db:
+        user = await create_user(db, email=email)
+        user.password_hash = bcrypt.using(rounds=4).hash(PASSWORD)
+        headers = await auth_headers(db, user)
+        await db.commit()
+    refused = await _login(pg_client, email, PASSWORD)
+    assert (refused.status_code, _code(refused)) == (401, "invalid_credentials")
+    me = await pg_client.get("/api/v1/me", headers=headers)
+    assert me.json()["password_upgrade_required"] is True
+
+    await _request_reset(pg_client, email)
+    [row] = await _outbox(pg, "reset_password")
+    assert (await _confirm(pg_client, _token_from(row))).status_code == 200
+    assert (await _login(pg_client, email, NEW_PASSWORD)).status_code == 200
 
 
 async def test_reset_request_is_neutral_and_rate_limited(pg, pg_client, monkeypatch):
@@ -133,6 +165,7 @@ async def test_reset_request_is_neutral_and_rate_limited(pg, pg_client, monkeypa
     start = now_utc()
     for offset_s, expected in ((0, 1), (30, 1), (61, 2), (122, 3), (183, 3), (3601, 4)):
         monkeypatch.setattr(svc, "now_utc", lambda o=offset_s: start + timedelta(seconds=o))
+        monkeypatch.setattr(auth_routes, "now_utc", lambda o=offset_s: start + timedelta(seconds=o))
         await _request_reset(pg_client, email)
         assert len(await _outbox(pg, "reset_password")) == expected, offset_s
 

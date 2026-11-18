@@ -17,7 +17,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -559,6 +559,31 @@ class MailOutbox(Base):
     last_error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AuthRateBucket(Base):
+    """Sliding-window reservations for one limit rule and one HMAC'd subject."""
+
+    __tablename__ = "auth_rate_buckets"
+
+    scope: Mapped[str] = mapped_column(String(48), primary_key=True)
+    subject_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    hits: Mapped[list[datetime]] = mapped_column(
+        ARRAY(DateTime(timezone=True)), nullable=False, default=list
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+
+
+class MailProviderEvent(Base):
+    """Deduplicated provider delivery event; no body, recipient or link is kept."""
+
+    __tablename__ = "mail_provider_events"
+
+    svix_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    provider_message_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    event_type: Mapped[str] = mapped_column(String(48), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class AppliedSyncMove(Base):

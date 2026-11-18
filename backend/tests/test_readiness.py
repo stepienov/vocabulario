@@ -29,6 +29,8 @@ GOOD_DEPLOYED = {
     "mail_from": "Vocabulario <auth@mail.vocabulario.example>",
     "mail_reply_to": "help@vocabulario.example",
     "mail_outbox_key": MAIL_KEY,
+    "auth_rate_limit_key": "L" * 40,
+    "trusted_proxy_hops": 1,
 }
 
 
@@ -85,6 +87,9 @@ def test_unknown_environment_is_an_error():
         ({"mail_outbox_key": ""}, "mail_outbox_key"),
         ({"mail_outbox_key": "not-a-fernet-key"}, "mail_outbox_key"),
         ({"mail_outbox_key": RETRY_KEY}, "mail_outbox_key"),
+        ({"auth_rate_limit_key": ""}, "auth_rate_limit_key"),
+        ({"auth_rate_limit_key": SECRET}, "auth_rate_limit_key"),
+        ({"trusted_proxy_hops": 0}, "trusted_proxy_hops"),
     ],
 )
 def test_each_invalid_deployed_setting_is_named(overrides, field):

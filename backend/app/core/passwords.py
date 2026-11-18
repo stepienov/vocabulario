@@ -2,8 +2,7 @@
 
 Characters are Unicode scalar values (Python code points without lone surrogates).
 Passwords are hashed exactly as accepted: no trimming, normalization or truncation.
-`verify_password` never accepts legacy bcrypt; only the transitional
-`verify_current_password` still does until the bcrypt cutoff.
+`verify_password` never accepts legacy bcrypt; the runtime has no bcrypt verifier.
 """
 
 import asyncio
@@ -161,21 +160,12 @@ async def dummy_verify(password: str) -> None:
         await _run(_dummy_verify_sync, password)
 
 
-def _legacy_verify_sync(password: str, stored_hash: str) -> bool:
-    from app.core.security import verify_password as bcrypt_verify
-
-    return bcrypt_verify(password, stored_hash)
-
-
 async def verify_current_password(password: str, stored_hash: str) -> bool:
     """Proof of the current password for login and password change.
 
-    Transitional until the bcrypt cutoff release (T-001): Argon2 hashes written by reset
-    or change are verified here, while recognized bcrypt still uses the old verifier so
-    existing accounts keep working. Both run in the shared hashing pool.
+    Only Argon2 can match. A recognized legacy bcrypt hash costs the same work as a
+    mismatch and never succeeds: the owner has to set a new password through reset.
     """
     if password_error(password, new=False) is not None:
         return False
-    if is_legacy_bcrypt(stored_hash):
-        return await _run(_legacy_verify_sync, password, stored_hash)
-    return await _run(_verify_sync, stored_hash, password) is VerifyResult.MATCH
+    return await verify_password(password, stored_hash) is VerifyResult.MATCH
