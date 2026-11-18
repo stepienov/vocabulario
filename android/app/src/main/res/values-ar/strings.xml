@@ -655,6 +655,10 @@
     <string name="auth_recovery_retry_failed">لا تزال قراءة الجلسة المحفوظة غير ممكنة. سجّل الدخول مرة أخرى.</string>
     <string name="loading_slow_title">يستغرق هذا وقتًا أطول من المعتاد</string>
     <string name="loading_slow_message">لا يزال التطبيق قيد التشغيل. تحقّق من اتصالك أو حاول مرة أخرى.</string>
+    <string name="auth_revocation_pending">تم تسجيل الخروج على هذا الجهاز. سيؤكد الخادم تسجيل الخروج عند اتصالك بالإنترنت.</string>
+    <string name="auth_revocation_unconfirmed">جلسات بدون تأكيد من الخادم: %1$d. لم تعد مستخدمة على هذا الجهاز وستنتهي تلقائيًا خلال 30 يومًا.</string>
+    <string name="auth_revocation_confirmed">تم تسجيل الخروج على الخادم أيضًا.</string>
+    <string name="auth_revocation_queue_full">هناك عدد كبير جدًا من عمليات تسجيل الخروج بانتظار الخادم. اتصل بالإنترنت وانتظر قليلًا ثم حاول مرة أخرى.</string>
 
 
     <string name="err_register">فشل إنشاء الحساب</string>

@@ -12,6 +12,8 @@ import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.session.AuthNotice
+import com.vocabulario.app.data.session.RevocationQueueFullException
+import com.vocabulario.app.data.session.RevocationSummary
 import com.vocabulario.app.data.session.SessionCoordinator
 import com.vocabulario.app.data.session.SessionState
 import com.vocabulario.app.data.session.authNotice
@@ -49,6 +51,47 @@ class AuthViewModel @Inject constructor(
 
     private val noticeRefresh = MutableStateFlow(0)
 
+    /** Neutralny komunikat (nie błąd), np. potwierdzone wylogowanie na serwerze. */
+    private val _infoMessage = MutableStateFlow<String?>(null)
+    val infoMessage: StateFlow<String?> = _infoMessage.asStateFlow()
+
+    /** Odwołania sesji na serwerze: oczekujące i zakończone bez potwierdzenia. */
+    val revocations: StateFlow<RevocationSummary> = authRepository.revocationSummary
+
+    /** Ustawiane po logout tego ekranu, żeby potwierdzenie dotyczyło właśnie tego wylogowania. */
+    private var awaitingServerSignOut = false
+
+    init {
+        viewModelScope.launch {
+            var previous = revocations.value
+            revocations.collect { current ->
+                if (awaitingServerSignOut && previous.pending > 0 && current.pending == 0) {
+                    awaitingServerSignOut = false
+                    if (current.unconfirmed <= previous.unconfirmed) {
+                        _infoMessage.value = strings.get(R.string.auth_revocation_confirmed)
+                    }
+                }
+                previous = current
+            }
+        }
+    }
+
+    fun dismissUnconfirmedRevocations() {
+        viewModelScope.launch { authRepository.dismissUnconfirmedRevocations() }
+    }
+
+    /** Flaga przed wywołaniem, bo worker może potwierdzić odwołanie, zanim logout wróci. */
+    private suspend fun logoutAndTrack() {
+        _infoMessage.value = null
+        awaitingServerSignOut = true
+        try {
+            if (!authRepository.logout()) awaitingServerSignOut = false
+        } catch (e: Throwable) {
+            awaitingServerSignOut = false
+            throw e
+        }
+    }
+
     /** Stan sesji i danych na urządzeniu widoczny nad formularzem logowania. */
     val notice: StateFlow<AuthNotice?> = combine(sessionCoordinator.state, noticeRefresh) { state, _ ->
         loadNotice(state)
@@ -65,6 +108,7 @@ class AuthViewModel @Inject constructor(
     fun clearError() {
         _errorMessage.value = null
         _debugLoginError.value = null
+        _infoMessage.value = null
     }
 
     fun dismissUnclaimedData() {
@@ -95,7 +139,7 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             blockingBusy.run {
                 val signedOut = try {
-                    authRepository.logout()
+                    logoutAndTrack()
                     true
                 } catch (e: CancellationException) {
                     throw e
@@ -147,6 +191,7 @@ class AuthViewModel @Inject constructor(
             null
         }
         is OtherAccountDataException -> strings.get(R.string.err_login_other_account)
+        is RevocationQueueFullException -> strings.get(R.string.auth_revocation_queue_full)
         else -> error.userMessage(strings, defaultRes)
     }
 
@@ -225,7 +270,7 @@ class AuthViewModel @Inject constructor(
             blockingBusy.run {
                 // Nieudany trwały zapis wylogowania nie może udawać sukcesu.
                 val loggedOut = try {
-                    authRepository.logout()
+                    logoutAndTrack()
                     true
                 } catch (e: CancellationException) {
                     throw e

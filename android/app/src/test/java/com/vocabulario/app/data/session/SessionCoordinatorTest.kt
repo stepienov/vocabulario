@@ -268,6 +268,31 @@ class SessionCoordinatorTest {
     }
 
     @Test
+    fun signOutHandsOverRevocationMaterialBeforeClearing() = runBlocking {
+        val pending = PendingRefresh("id-1", "refresh-1")
+        val persistence = FakePersistence(StoredSession.Present(active.copy(pendingRefresh = pending)))
+        val coordinator = SessionCoordinator(persistence, FakeTransport(), FakeLegacy())
+
+        assertTrue(runCatching { coordinator.signOutLocally { throw IOException("queue full") } }.isFailure)
+        assertEquals("access-1", coordinator.peekAccessToken())
+        assertTrue(persistence.stored is StoredSession.Present)
+
+        var handed: RevocationMaterial? = null
+        coordinator.signOutLocally { material ->
+            assertTrue("material before credentials disappear", persistence.stored is StoredSession.Present)
+            handed = material
+        }
+        assertEquals(RevocationMaterial("user-a", "session-1", "refresh-1", pending), handed)
+        assertEquals(SessionState.SignedOut, coordinator.state.value)
+
+        persistence.stored = StoredSession.Present(active.copy(accessToken = null, refreshToken = null, status = SessionStatus.REAUTH_REQUIRED))
+        val reauth = SessionCoordinator(persistence, FakeTransport(), FakeLegacy())
+        var called = false
+        reauth.signOutLocally { called = true }
+        assertFalse("reauth session has nothing to revoke", called)
+    }
+
+    @Test
     fun requireReauthDropsTokensButKeepsOwner() = runBlocking {
         val persistence = FakePersistence(StoredSession.Present(active))
         val coordinator = SessionCoordinator(persistence, FakeTransport(), FakeLegacy())

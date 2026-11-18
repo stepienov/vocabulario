@@ -655,6 +655,10 @@
     <string name="auth_recovery_retry_failed">La session enregistrée est toujours illisible. Reconnectez-vous.</string>
     <string name="loading_slow_title">Cela prend plus de temps que d’habitude</string>
     <string name="loading_slow_message">L’application est toujours en cours de démarrage. Vérifiez votre connexion ou réessayez.</string>
+    <string name="auth_revocation_pending">Déconnecté sur cet appareil. Le serveur confirmera la déconnexion dès que vous serez en ligne.</string>
+    <string name="auth_revocation_unconfirmed">Sessions sans confirmation du serveur : %1$d. Elles ne sont plus utilisées sur cet appareil et expireront automatiquement sous 30 jours.</string>
+    <string name="auth_revocation_confirmed">Déconnecté également sur le serveur.</string>
+    <string name="auth_revocation_queue_full">Trop de déconnexions attendent le serveur. Connectez-vous à Internet, patientez un instant et réessayez.</string>
 
 
     <string name="err_register">Échec de l’inscription</string>

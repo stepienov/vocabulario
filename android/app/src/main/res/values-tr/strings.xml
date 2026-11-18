@@ -687,6 +687,10 @@
     <string name="auth_recovery_retry_failed">Kayıtlı oturum hâlâ okunamıyor. Tekrar giriş yapın.</string>
     <string name="loading_slow_title">Bu, normalden uzun sürüyor</string>
     <string name="loading_slow_message">Uygulama hâlâ başlatılıyor. Bağlantınızı kontrol edin veya tekrar deneyin.</string>
+    <string name="auth_revocation_pending">Bu cihazda oturum kapatıldı. Çevrimiçi olduğunuzda sunucu çıkışı onaylayacak.</string>
+    <string name="auth_revocation_unconfirmed">Sunucu onayı olmayan oturumlar: %1$d. Artık bu cihazda kullanılmıyorlar ve 30 gün içinde otomatik olarak sona erecekler.</string>
+    <string name="auth_revocation_confirmed">Sunucuda da oturum kapatıldı.</string>
+    <string name="auth_revocation_queue_full">Sunucuyu bekleyen çok fazla çıkış var. İnternete bağlanın, biraz bekleyin ve tekrar deneyin.</string>
 
 
     <string name="err_register">Kayıt başarısız</string>

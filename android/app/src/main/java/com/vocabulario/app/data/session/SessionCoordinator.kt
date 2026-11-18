@@ -100,10 +100,15 @@ class SessionCoordinator @Inject constructor(
         }
     }
 
-    /** Lokalne usunięcie rekordu sesji; rzuca, gdy zapis zawiódł (pamięć zostaje bez zmian). */
-    suspend fun signOutLocally() = withContext(Dispatchers.IO) {
+    /**
+     * Lokalne usunięcie rekordu sesji; rzuca, gdy zapis zawiódł (pamięć zostaje bez zmian).
+     * [beforeClear] dostaje materiał odwołania pod tą samą blokadą co refresh, więc nie przegapi
+     * rotacji; jego wyjątek przerywa wylogowanie, zanim znikną poświadczenia.
+     */
+    suspend fun signOutLocally(beforeClear: (RevocationMaterial) -> Unit = {}) = withContext(Dispatchers.IO) {
         ensureLoaded()
         synchronized(lock) {
+            current?.revocationMaterial()?.let(beforeClear)
             persistence.write(null)
             current = null
             publish()

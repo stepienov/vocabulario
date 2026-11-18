@@ -655,6 +655,10 @@
     <string name="auth_recovery_retry_failed">Ainda não é possível ler a sessão guardada. Inicie sessão novamente.</string>
     <string name="loading_slow_title">Está a demorar mais do que o habitual</string>
     <string name="loading_slow_message">A aplicação ainda está a iniciar. Verifique a ligação ou tente novamente.</string>
+    <string name="auth_revocation_pending">Terminou a sessão neste dispositivo. O servidor confirmará o fim da sessão quando estiver online.</string>
+    <string name="auth_revocation_unconfirmed">Sessões sem confirmação do servidor: %1$d. Já não são usadas neste dispositivo e expiram automaticamente no prazo de 30 dias.</string>
+    <string name="auth_revocation_confirmed">Sessão terminada também no servidor.</string>
+    <string name="auth_revocation_queue_full">Há demasiados fins de sessão à espera do servidor. Ligue-se à Internet, aguarde um momento e tente novamente.</string>
 
 
     <string name="err_register">Falha no cadastro</string>

@@ -70,6 +70,7 @@ import com.vocabulario.app.R
 import com.vocabulario.app.data.ApiBaseUrl
 import com.vocabulario.app.data.session.AuthNotice
 import com.vocabulario.app.data.session.AuthNoticeKind
+import com.vocabulario.app.data.session.RevocationSummary
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppAlertDialog
 import com.vocabulario.app.ui.components.AppButtonShape
@@ -116,6 +117,8 @@ fun AuthScreen(
     val debugLoginError by viewModel.debugLoginError.collectAsState()
     val unclaimedData by viewModel.unclaimedData.collectAsState()
     val notice by viewModel.notice.collectAsState()
+    val revocations by viewModel.revocations.collectAsState()
+    val infoMessage by viewModel.infoMessage.collectAsState()
     var confirmSignOut by remember { mutableStateOf(false) }
     var confirmDiscard by remember { mutableStateOf(false) }
     notice?.takeIf { confirmSignOut }?.let { current ->
@@ -258,6 +261,14 @@ fun AuthScreen(
                     Spacer(Modifier.height(20.dp))
                 }
 
+                if (revocations.pending > 0 || revocations.unconfirmed > 0) {
+                    RevocationStatusCard(
+                        summary = revocations,
+                        onDismissUnconfirmed = viewModel::dismissUnconfirmedRevocations,
+                    )
+                    Spacer(Modifier.height(20.dp))
+                }
+
                 GoogleSignInButton(
                     onClick = {
                         hideKeyboard()
@@ -373,6 +384,10 @@ fun AuthScreen(
                     Spacer(Modifier.height(12.dp))
                     Text(it, color = scheme.error, textAlign = TextAlign.Center)
                 }
+                infoMessage?.let {
+                    Spacer(Modifier.height(12.dp))
+                    Text(it, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                }
                 debugLoginError?.let {
                     Spacer(Modifier.height(6.dp))
                     Text(
@@ -419,6 +434,42 @@ private fun UnclaimedDataDialogs(
             )
         },
     )
+}
+
+/** Odwołanie sesji na serwerze: oczekuje na sieć albo zakończyło się bez potwierdzenia. */
+@Composable
+private fun RevocationStatusCard(
+    summary: RevocationSummary,
+    onDismissUnconfirmed: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = scheme.surfaceVariant,
+        contentColor = scheme.onSurfaceVariant,
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            if (summary.pending > 0) {
+                Text(stringResource(R.string.auth_revocation_pending), style = MaterialTheme.typography.bodyMedium)
+            }
+            if (summary.unconfirmed > 0) {
+                if (summary.pending > 0) Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.auth_revocation_unconfirmed, summary.unconfirmed),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onDismissUnconfirmed,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = AppButtonShape,
+                ) {
+                    ButtonLabel(stringResource(R.string.action_ok))
+                }
+            }
+        }
+    }
 }
 
 /** Sesja wymagająca ponownego loginu/odzyskania albo pozostawione dane konta: wyjaśnienie i jawne wyjścia. */

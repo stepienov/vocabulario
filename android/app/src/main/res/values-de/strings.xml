@@ -655,6 +655,10 @@
     <string name="auth_recovery_retry_failed">Die gespeicherte Sitzung kann weiterhin nicht gelesen werden. Melde dich erneut an.</string>
     <string name="loading_slow_title">Das dauert länger als üblich</string>
     <string name="loading_slow_message">Die App wird noch gestartet. Prüfe deine Verbindung oder versuche es erneut.</string>
+    <string name="auth_revocation_pending">Auf diesem Gerät abgemeldet. Der Server bestätigt die Abmeldung, sobald du online bist.</string>
+    <string name="auth_revocation_unconfirmed">Sitzungen ohne Serverbestätigung: %1$d. Sie werden auf diesem Gerät nicht mehr verwendet und laufen innerhalb von 30 Tagen automatisch ab.</string>
+    <string name="auth_revocation_confirmed">Auch auf dem Server abgemeldet.</string>
+    <string name="auth_revocation_queue_full">Zu viele Abmeldungen warten auf den Server. Verbinde dich mit dem Internet, warte kurz und versuche es erneut.</string>
 
 
     <string name="err_register">Registrierung fehlgeschlagen</string>

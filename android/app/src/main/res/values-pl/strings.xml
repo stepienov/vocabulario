@@ -690,6 +690,10 @@
     <string name="auth_recovery_retry_failed">Nadal nie można odczytać zapisanej sesji. Zaloguj się ponownie.</string>
     <string name="loading_slow_title">Trwa to dłużej niż zwykle</string>
     <string name="loading_slow_message">Aplikacja wciąż się uruchamia. Sprawdź połączenie lub spróbuj ponownie.</string>
+    <string name="auth_revocation_pending">Wylogowano na tym urządzeniu. Serwer potwierdzi wylogowanie, gdy będziesz online.</string>
+    <string name="auth_revocation_unconfirmed">Sesje bez potwierdzenia serwera: %1$d. Nie są już używane na tym urządzeniu i wygasną automatycznie w ciągu 30 dni.</string>
+    <string name="auth_revocation_confirmed">Wylogowano także na serwerze.</string>
+    <string name="auth_revocation_queue_full">Zbyt wiele wylogowań czeka na serwer. Połącz się z internetem, odczekaj chwilę i spróbuj ponownie.</string>
 
 
     <string name="err_register">Błąd rejestracji</string>

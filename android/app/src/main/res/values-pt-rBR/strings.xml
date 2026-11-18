@@ -655,6 +655,10 @@
     <string name="auth_recovery_retry_failed">Ainda não é possível ler a sessão salva. Entre novamente.</string>
     <string name="loading_slow_title">Isso está demorando mais que o normal</string>
     <string name="loading_slow_message">O app ainda está iniciando. Verifique sua conexão ou tente novamente.</string>
+    <string name="auth_revocation_pending">Você saiu neste dispositivo. O servidor confirmará a saída quando você estiver online.</string>
+    <string name="auth_revocation_unconfirmed">Sessões sem confirmação do servidor: %1$d. Elas não são mais usadas neste dispositivo e expiram automaticamente em até 30 dias.</string>
+    <string name="auth_revocation_confirmed">Você também saiu no servidor.</string>
+    <string name="auth_revocation_queue_full">Há saídas demais aguardando o servidor. Conecte-se à internet, aguarde um momento e tente novamente.</string>
 
 
     <string name="err_register">Falha no cadastro</string>

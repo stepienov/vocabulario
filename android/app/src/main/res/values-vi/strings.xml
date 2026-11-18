@@ -686,6 +686,10 @@
     <string name="auth_recovery_retry_failed">Vẫn không thể đọc phiên đã lưu. Hãy đăng nhập lại.</string>
     <string name="loading_slow_title">Việc này mất nhiều thời gian hơn bình thường</string>
     <string name="loading_slow_message">Ứng dụng vẫn đang khởi động. Hãy kiểm tra kết nối hoặc thử lại.</string>
+    <string name="auth_revocation_pending">Đã đăng xuất trên thiết bị này. Máy chủ sẽ xác nhận đăng xuất khi bạn trực tuyến.</string>
+    <string name="auth_revocation_unconfirmed">Phiên chưa được máy chủ xác nhận: %1$d. Chúng không còn được dùng trên thiết bị này và sẽ tự hết hạn trong vòng 30 ngày.</string>
+    <string name="auth_revocation_confirmed">Đã đăng xuất cả trên máy chủ.</string>
+    <string name="auth_revocation_queue_full">Có quá nhiều lượt đăng xuất đang chờ máy chủ. Hãy kết nối internet, đợi một lát rồi thử lại.</string>
 
 
     <string name="err_register">Đăng ký không thành công</string>

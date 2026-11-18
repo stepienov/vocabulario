@@ -39,7 +39,7 @@ Pakiet [`data/session`](../../../../../../android/app/src/main/java/com/vocabula
 
 **Tymczasowo:**
 - Zmiana konta: od kroku 3 możliwa tylko przez jawne „Wyloguj na tym urządzeniu” z usunięciem danych (jak dotychczasowy logout w ustawieniach). Login na B przy danych A nadal kończy się odmową. Wydanie T-002 wymaga ochrony zapisów z części (d).
-- Odwołanie kandydata to jedna próba, nie trwałe zlecenie (krok logout).
+- Odwołanie kandydata to jedna próba, nie trwałe zlecenie (krok logout) — **rozwiązane w kroku 4a**.
 - Logout z ustawień nadal bez dialogu niewysłanych zmian.
 - Migracji Room nie da się sprawdzić testem JVM (brak Robolectric/urządzenia); SQL odpowiada schematowi encji i wymaga ręcznego sprawdzenia aktualizacji na urządzeniu.
 - Obecna instalacja debug z danymi trafi do kwarantanny: po aktualizacji wymagany login i świadome usunięcie lokalnych danych; zsynchronizowane dane wrócą z serwera.
@@ -56,6 +56,20 @@ Pakiet [`data/session`](../../../../../../android/app/src/main/java/com/vocabula
 - Start dłuższy niż 10 s: panel „Trwa to dłużej niż zwykle” z ponowieniem zamiast samego spinnera; ponowienie anuluje poprzedni bootstrap. Ścieżki start → AUTH/HOME bez zmian.
 - 15 nowych kluczy w 17 lokalizacjach.
 - Testy: `authNotice`, `sessionLost` w `OwnerDecisionsTest`, `retryLoad` w `SessionCoordinatorTest`. Gradle: unit tests 250/250, lint bez uwag do zmian, `assembleDebug` OK.
+
+### Krok 4a · Trwałe odwołanie sesji na serwerze (18.11.2026)
+
+- Kolejka zleceń w osobnym zaszyfrowanym DataStore `vocabulario_revocations` (ten sam Keystore AES/GCM), poza danymi konta — logout jej nie kasuje. Zlecenie: losowe ID, dawne `owner_id`/`session_id`, refresh, ewentualny pending refresh `{input, request_id}`, data utworzenia, stan `PENDING`/`UNCONFIRMED`, `notBefore` po 429. Nieczytelna kolejka (brak klucza) liczy się jako pusta; Room nie jest dotykany.
+- Logout: `SessionCoordinator.signOutLocally(beforeClear)` przekazuje materiał pod tą samą blokadą co refresh, więc trwałe zlecenie powstaje **przed** usunięciem poświadczeń i nie przegapia rotacji. Błąd zapisu zlecenia przerywa logout (sesja i dane zostają, zamiar wycofany); błąd usunięcia sesji kasuje świeże zlecenie, żeby nie odwołało sesji za plecami użytkownika. Dokończenie przerwanego logout przy starcie tworzy zlecenie, ale jego brak nie blokuje cleanupu.
+- Odrzucony lub niezapisany kandydat loginu (inne konto, kwarantanna, brak `user_id`, błąd instalacji) dostaje własne trwałe zlecenie; pojedyncza próba `POST /auth/logout` została tylko jako awaryjna, gdy zapis zlecenia się nie uda.
+- `RevocationProcessor`: najpierw odzyskanie nieznanej rotacji **tym samym** pending input/ID (200 → nowa para tylko do zlecenia i logout; `session_revoked` → potwierdzone; przejściowy błąd → ponowienie), potem `POST /auth/logout`. 204 usuwa sekret; inne 4xx kończą jako „niepotwierdzone” bez sekretu; 429 ustawia `notBefore` z `Retry-After`; 5xx/408/transport zostawiają zlecenie.
+- `SessionRevocationWorker`: jedna unikalna praca, CONNECTED, backoff wykładniczy od 30 s, bez tokenów w `inputData`, działa w `SignedOut` bez Bearer. Uruchamiana po nowym zleceniu i przy starcie aplikacji, gdy są oczekujące; po 429 dopięta z opóźnieniem. Bez cyklicznego pollingu.
+- Limit 32 miejsc: login, rejestracja i Google rezerwują miejsce kandydata **przed HTTP** (liczą się oczekujące zlecenia, rezerwacje i miejsce aktywnej sesji); przy braku miejsca komunikat i próba opróżnienia kolejki. Oczekujących zleceń nigdy nie usuwamy dla zwolnienia miejsca; wylogowanie aktywnej sesji ma własne miejsce.
+- Po 30 dniach od logout sekret jest fizycznie usuwany przy odczycie kolejki; zostaje stan „niepotwierdzone” (max 32 wpisy bez sekretów).
+- AUTH: karta „Wylogowano na tym urządzeniu; serwer potwierdzi po połączeniu”, osobno „Sesje bez potwierdzenia serwera: N … wygasną w ciągu 30 dni” z „OK”, a po potwierdzeniu własnego logout neutralny komunikat „Wylogowano także na serwerze”. 4 nowe klucze w 17 lokalizacjach. Reset hasła jako sposób na zakończenie wszystkich sesji zostanie dopisany po F-004 (backend nie ma go jeszcze).
+- Testy: [`RevocationTest`](../../../../../../android/app/src/test/java/com/vocabulario/app/data/session/RevocationTest.kt) (11: klasyfikacja 204/401/429/503/408, potwierdzenie, niepotwierdzone, przejściowy błąd, `Retry-After`, odzyskanie rotacji z zapisem przed logout, `session_revoked`/offline/nieważny dowód przy odzyskaniu, fizyczny purge po 30 dniach, limit i rezerwacje, nieudany zapis, nieczytelna kolejka) oraz przekazanie materiału w `SessionCoordinatorTest`. Gradle: unit tests 262/262, lint bez uwag do zmian, `assembleDebug` OK.
+
+**Dalej w kroku 4:** dialog logout z ustawień przy niewysłanych zmianach („Synchronizuj i wyloguj” / „Anuluj” / „Odrzuć i wyloguj” z drugim potwierdzeniem) oraz trwałe `logout_disposition` z fingerprintem kolejek sprawdzanym w transakcji bariery.
 
 ## Cel, decyzje i zależności
 

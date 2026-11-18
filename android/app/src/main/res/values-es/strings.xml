@@ -655,6 +655,10 @@
     <string name="auth_recovery_retry_failed">Todavía no se puede leer la sesión guardada. Vuelve a iniciar sesión.</string>
     <string name="loading_slow_title">Esto está tardando más de lo habitual</string>
     <string name="loading_slow_message">La aplicación aún se está iniciando. Comprueba tu conexión o inténtalo de nuevo.</string>
+    <string name="auth_revocation_pending">Sesión cerrada en este dispositivo. El servidor confirmará el cierre cuando tengas conexión.</string>
+    <string name="auth_revocation_unconfirmed">Sesiones sin confirmación del servidor: %1$d. Ya no se usan en este dispositivo y caducarán automáticamente en un máximo de 30 días.</string>
+    <string name="auth_revocation_confirmed">Sesión cerrada también en el servidor.</string>
+    <string name="auth_revocation_queue_full">Hay demasiados cierres de sesión pendientes del servidor. Conéctate a internet, espera un momento e inténtalo de nuevo.</string>
 
 
     <string name="err_register">Error al registrarse</string>

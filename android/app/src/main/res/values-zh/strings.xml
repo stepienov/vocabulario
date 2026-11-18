@@ -655,6 +655,10 @@
     <string name="auth_recovery_retry_failed">仍然无法读取保存的会话。请重新登录。</string>
     <string name="loading_slow_title">所需时间比平时长</string>
     <string name="loading_slow_message">应用仍在启动。请检查网络连接或重试。</string>
+    <string name="auth_revocation_pending">已在此设备上退出登录。联网后服务器将确认退出。</string>
+    <string name="auth_revocation_unconfirmed">未经服务器确认的会话：%1$d。它们已不在此设备上使用，并将在 30 天内自动过期。</string>
+    <string name="auth_revocation_confirmed">已同时在服务器上退出登录。</string>
+    <string name="auth_revocation_queue_full">等待服务器处理的退出登录过多。请连接互联网，稍等片刻后重试。</string>
 
 
     <string name="err_register">注册失败</string>

@@ -12,12 +12,22 @@ import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.session.LoginDecision
 import com.vocabulario.app.data.session.OwnerSnapshot
 import com.vocabulario.app.data.session.REAUTH_REASON_SESSION_MISMATCH
+import com.vocabulario.app.data.session.RevocationMaterial
+import com.vocabulario.app.data.session.RevocationQueueFullException
+import com.vocabulario.app.data.session.RevocationRequest
+import com.vocabulario.app.data.session.RevocationReservation
+import com.vocabulario.app.data.session.RevocationScheduler
+import com.vocabulario.app.data.session.RevocationStore
+import com.vocabulario.app.data.session.RevocationSummary
 import com.vocabulario.app.data.session.SessionCoordinator
 import com.vocabulario.app.data.session.SessionInstallException
 import com.vocabulario.app.data.session.SessionState
 import com.vocabulario.app.data.session.StartupAction
 import com.vocabulario.app.data.session.decideStartup
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,34 +45,55 @@ class AuthRepository @Inject constructor(
     private val offlineStore: OfflineStore,
     private val importStatePersistence: ImportStatePersistence,
     private val sessionCoordinator: SessionCoordinator,
+    private val revocationStore: RevocationStore,
+    private val revocationScheduler: RevocationScheduler,
 ) {
-    suspend fun register(email: String, password: String) {
-        installCandidate(api.register(RegisterRequest(email, password)))
+    suspend fun register(email: String, password: String) = withCandidateSlot { slot ->
+        installCandidate(api.register(RegisterRequest(email, password)), slot)
     }
 
-    suspend fun login(email: String, password: String) {
-        installCandidate(api.login(LoginRequest(email, password)))
+    suspend fun login(email: String, password: String) = withCandidateSlot { slot ->
+        installCandidate(api.login(LoginRequest(email, password)), slot)
     }
 
-    suspend fun googleLogin(idToken: String) {
-        installCandidate(api.googleAuth(GoogleAuthRequest(idToken)))
+    suspend fun googleLogin(idToken: String) = withCandidateSlot { slot ->
+        installCandidate(api.googleAuth(GoogleAuthRequest(idToken)), slot)
+    }
+
+    /** Miejsce na ewentualne odwołanie kandydata rezerwujemy przed HTTP (T-002 §5). */
+    private suspend fun withCandidateSlot(block: suspend (RevocationReservation) -> Unit) {
+        val reservation = try {
+            withContext(Dispatchers.IO) {
+                revocationStore.reserve(activeSession = sessionCoordinator.state.value is SessionState.Active)
+            }
+        } catch (e: RevocationQueueFullException) {
+            revocationScheduler.runNow()
+            throw e
+        }
+        try {
+            block(reservation)
+        } finally {
+            revocationStore.release(reservation)
+        }
     }
 
     /**
      * Odpowiedź loginu jest kandydatem: dopiero po porównaniu `user_id` z właścicielem danych
      * zostaje zapisana. Błąd lub odmowa zostawia poprzednie dane nietknięte (T-002 §4).
      */
-    private suspend fun installCandidate(tokens: TokenResponse) {
-        val candidateUserId = tokens.user_id?.takeIf { it.isNotBlank() }
-            ?: throw SessionInstallException("missing user_id")
+    private suspend fun installCandidate(tokens: TokenResponse, slot: RevocationReservation) {
+        val candidateUserId = tokens.user_id?.takeIf { it.isNotBlank() } ?: run {
+            revokeCandidate(tokens, slot)
+            throw SessionInstallException("missing user_id")
+        }
         val transitionId = UUID.randomUUID().toString()
         when (val decision = offlineStore.beginInstall(candidateUserId, transitionId)) {
             is LoginDecision.OtherAccount -> {
-                revokeCandidate(tokens)
+                revokeCandidate(tokens, slot)
                 throw OtherAccountDataException(decision.unsentCount)
             }
             is LoginDecision.LegacyQuarantine -> {
-                revokeCandidate(tokens)
+                revokeCandidate(tokens, slot)
                 throw UnclaimedLocalDataException(decision.unsentCount)
             }
             LoginDecision.Claim -> {
@@ -71,37 +102,66 @@ class AuthRepository @Inject constructor(
             }
             LoginDecision.SameOwner -> Unit
         }
-        sessionCoordinator.install(tokens)
-        offlineStore.completeInstall(transitionId)
-    }
-
-    // TODO(E-001/F-003/T-002 §5): trwałe zlecenie odwołania zamiast jednej próby.
-    private suspend fun revokeCandidate(tokens: TokenResponse) {
         try {
-            api.logout(LogoutRequest(tokens.refresh_token))
+            sessionCoordinator.install(tokens)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Kandydat nie został zapisany; awaria odwołania nie zmienia decyzji loginu.
+            revokeCandidate(tokens, slot)
+            throw e
+        }
+        offlineStore.completeInstall(transitionId)
+    }
+
+    /** Niezapisany kandydat dostaje własne trwałe zlecenie; nie zastępuje sesji A. */
+    private suspend fun revokeCandidate(tokens: TokenResponse, slot: RevocationReservation) {
+        val material = RevocationMaterial(
+            ownerUserId = tokens.user_id,
+            sessionId = tokens.session_id,
+            refreshToken = tokens.refresh_token,
+            pendingRefresh = null,
+        )
+        try {
+            withContext(Dispatchers.IO) { revocationStore.add(material, slot) }
+            revocationScheduler.runNow()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Bez trwałego zlecenia zostaje jedna próba; awaria nie zmienia decyzji loginu.
+            runCatching { api.logout(LogoutRequest(tokens.refresh_token)) }
         }
     }
 
     /**
-     * Zamiar wylogowania trafia do Room przed usunięciem sesji, więc restart dokończy
-     * cleanup zamiast wskrzesić dane poprzedniego konta.
+     * Zamiar wylogowania trafia do Room, a zlecenie odwołania do zaszyfrowanej kolejki, zanim
+     * znikną poświadczenia; restart dokończy cleanup zamiast wskrzesić dane poprzedniego konta.
+     * Zwraca true, gdy odwołanie na serwerze czeka na wysłanie.
      */
-    suspend fun logout() {
+    suspend fun logout(): Boolean {
         val transitionId = UUID.randomUUID().toString()
         offlineStore.beginLogout(transitionId)
+        var queued: RevocationRequest? = null
         try {
-            sessionCoordinator.signOutLocally()
+            sessionCoordinator.signOutLocally { material -> queued = revocationStore.add(material) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            // Sesja zostaje, więc zlecenie nie może jej odwołać za plecami użytkownika.
+            queued?.let { request ->
+                runCatching { withContext(Dispatchers.IO) { revocationStore.update(request.id) { null } } }
+            }
             offlineStore.abortLogout(transitionId)
             throw e
         }
         finishLogoutLocally()
+        if (queued != null) revocationScheduler.runNow()
+        return queued != null
+    }
+
+    val revocationSummary: StateFlow<RevocationSummary> get() = revocationStore.summary
+
+    suspend fun dismissUnconfirmedRevocations() {
+        withContext(Dispatchers.IO) { runCatching { revocationStore.dismissUnconfirmed() } }
     }
 
     /** Świadome odrzucenie danych, których nie można przypisać do konta (stara instalacja). */
@@ -132,7 +192,14 @@ class AuthRepository @Inject constructor(
             StartupAction.CompleteInstall ->
                 snapshot.transitionId?.let { offlineStore.completeInstall(it) }
             StartupAction.CompleteLogout -> {
-                if (state !is SessionState.SignedOut) sessionCoordinator.signOutLocally()
+                if (state !is SessionState.SignedOut) {
+                    var queued = false
+                    sessionCoordinator.signOutLocally { material ->
+                        // Przy przerwanym logout prywatność ma pierwszeństwo: brak zlecenia nie blokuje cleanupu.
+                        queued = runCatching { revocationStore.add(material) }.isSuccess
+                    }
+                    if (queued) revocationScheduler.runNow()
+                }
                 finishLogoutLocally()
             }
             is StartupAction.ClaimEmpty ->

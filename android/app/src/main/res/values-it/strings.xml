@@ -681,6 +681,10 @@
     <string name="auth_recovery_retry_failed">Non è ancora possibile leggere la sessione salvata. Accedi di nuovo.</string>
     <string name="loading_slow_title">Ci vuole più tempo del solito</string>
     <string name="loading_slow_message">L’app si sta ancora avviando. Controlla la connessione o riprova.</string>
+    <string name="auth_revocation_pending">Disconnesso su questo dispositivo. Il server confermerà la disconnessione quando sarai online.</string>
+    <string name="auth_revocation_unconfirmed">Sessioni senza conferma del server: %1$d. Non sono più usate su questo dispositivo e scadranno automaticamente entro 30 giorni.</string>
+    <string name="auth_revocation_confirmed">Disconnesso anche sul server.</string>
+    <string name="auth_revocation_queue_full">Troppe disconnessioni sono in attesa del server. Connettiti a internet, attendi un momento e riprova.</string>
 
 
     <string name="err_register">Registrazione fallita</string>

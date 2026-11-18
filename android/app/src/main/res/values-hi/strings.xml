@@ -655,6 +655,10 @@
     <string name="auth_recovery_retry_failed">सहेजा गया सत्र अभी भी पढ़ा नहीं जा सकता। फिर से साइन इन करें।</string>
     <string name="loading_slow_title">इसमें सामान्य से अधिक समय लग रहा है</string>
     <string name="loading_slow_message">ऐप अभी भी शुरू हो रहा है। अपना कनेक्शन जाँचें या फिर से कोशिश करें।</string>
+    <string name="auth_revocation_pending">इस डिवाइस पर साइन आउट हो गया। ऑनलाइन होने पर सर्वर साइन आउट की पुष्टि करेगा।</string>
+    <string name="auth_revocation_unconfirmed">सर्वर पुष्टि के बिना सत्र: %1$d. ये अब इस डिवाइस पर उपयोग नहीं होते और 30 दिनों के भीतर अपने आप समाप्त हो जाएंगे।</string>
+    <string name="auth_revocation_confirmed">सर्वर पर भी साइन आउट हो गया।</string>
+    <string name="auth_revocation_queue_full">बहुत सारे साइन आउट सर्वर की प्रतीक्षा में हैं। इंटरनेट से कनेक्ट करें, थोड़ा रुकें और फिर से कोशिश करें।</string>
 
 
     <string name="err_register">पंजीकरण विफल</string>

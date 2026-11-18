@@ -655,6 +655,10 @@
     <string name="auth_recovery_retry_failed">Сохранённую сессию по-прежнему не удаётся прочитать. Войдите снова.</string>
     <string name="loading_slow_title">Это занимает больше времени, чем обычно</string>
     <string name="loading_slow_message">Приложение ещё запускается. Проверьте подключение или попробуйте ещё раз.</string>
+    <string name="auth_revocation_pending">Вы вышли на этом устройстве. Сервер подтвердит выход, когда появится подключение.</string>
+    <string name="auth_revocation_unconfirmed">Сеансы без подтверждения сервера: %1$d. Они больше не используются на этом устройстве и автоматически истекут в течение 30 дней.</string>
+    <string name="auth_revocation_confirmed">Выход выполнен и на сервере.</string>
+    <string name="auth_revocation_queue_full">Слишком много выходов ожидают сервера. Подключитесь к интернету, подождите немного и попробуйте снова.</string>
 
 
     <string name="err_register">Ошибка регистрации</string>

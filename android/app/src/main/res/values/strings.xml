@@ -690,6 +690,10 @@
     <string name="auth_recovery_retry_failed">The saved session still can’t be read. Sign in again.</string>
     <string name="loading_slow_title">This is taking longer than usual</string>
     <string name="loading_slow_message">The app is still starting. Check your connection or try again.</string>
+    <string name="auth_revocation_pending">Signed out on this device. The server will confirm the sign-out once you’re online.</string>
+    <string name="auth_revocation_unconfirmed">Sessions without server confirmation: %1$d. They’re no longer used on this device and expire automatically within 30 days.</string>
+    <string name="auth_revocation_confirmed">Signed out on the server too.</string>
+    <string name="auth_revocation_queue_full">Too many sign-outs are waiting for the server. Connect to the internet, wait a moment and try again.</string>
 
 
     <string name="err_register">Registration failed</string>

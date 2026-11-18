@@ -687,6 +687,10 @@
     <string name="auth_recovery_retry_failed">保存されたセッションをまだ読み取れません。再度ログインしてください。</string>
     <string name="loading_slow_title">通常より時間がかかっています</string>
     <string name="loading_slow_message">アプリはまだ起動中です。接続を確認するか、もう一度お試しください。</string>
+    <string name="auth_revocation_pending">このデバイスからログアウトしました。オンラインになるとサーバーがログアウトを確認します。</string>
+    <string name="auth_revocation_unconfirmed">サーバーで確認されていないセッション: %1$d。このデバイスではもう使用されず、30日以内に自動的に失効します。</string>
+    <string name="auth_revocation_confirmed">サーバーからもログアウトしました。</string>
+    <string name="auth_revocation_queue_full">サーバー待ちのログアウトが多すぎます。インターネットに接続し、しばらく待ってからもう一度お試しください。</string>
 
 
     <string name="err_register">登録に失敗しました</string>
