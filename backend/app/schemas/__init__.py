@@ -24,6 +24,8 @@ class TokenResponse(BaseModel):
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
+    # UI language for the verification mail; the account has no profile yet.
+    locale: str | None = Field(default=None, max_length=16)
 
 
 class LoginRequest(BaseModel):
@@ -71,12 +73,27 @@ class PasswordResetResponse(BaseModel):
     requires_login: bool = True
 
 
+class EmailVerificationConfirm(BaseModel):
+    token: str = Field(min_length=1, max_length=512)
+
+
+class StatusResponse(BaseModel):
+    status: str
+
+
+class EmailVerificationStatusResponse(BaseModel):
+    email_verified: bool
+    delivery_status: str
+    delivery_delayed: bool
+    resend_available_at: datetime | None
+
+
 class UserResponse(BaseModel):
     id: UUID
     email: str
     role: str
-
-    model_config = {"from_attributes": True}
+    email_verified: bool
+    login_methods: list[str]
 
 
 class UserSettingsResponse(BaseModel):

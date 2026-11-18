@@ -17,7 +17,7 @@ pytestmark = pytest.mark.pg
 
 PASSWORD = "correct horse battery"
 NEW_PASSWORD = "a much longer new passphrase"
-_TOKEN = re.compile(r"/account/reset-password#token=([A-Za-z0-9_-]+)")
+_TOKEN = re.compile(r"/account/(?:reset-password|verify-email)#token=([A-Za-z0-9_-]+)")
 
 
 def _code(response) -> str:
@@ -144,7 +144,7 @@ async def test_reset_link_expires_and_dies_after_newer_reset(pg, pg_client):
             assert await svc.request_password_reset(db, email, None, now=now_utc() - age)
         await db.commit()
     expired, older, newer = [_token_from(row) for row in await _outbox(pg, "reset_password")]
-    assert _decrypt((await _outbox(pg))[0]).locale == "de"
+    assert _decrypt((await _outbox(pg, "reset_password"))[0]).locale == "de"
 
     gone = await _confirm(pg_client, expired)
     assert (gone.status_code, _code(gone)) == (410, "action_token_expired")
@@ -221,3 +221,120 @@ async def test_change_password_requires_existing_password(pg, pg_client):
     )
     assert (response.status_code, _code(response)) == (403, "password_not_set")
     assert await _outbox(pg) == []
+
+
+async def _verify_status(client, tokens) -> dict:
+    response = await client.get("/api/v1/auth/email-verification/status", headers=_bearer(tokens))
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def test_registration_queues_verification_and_link_verifies(pg, pg_client):
+    email = f"verify-{uuid4()}@test.com"
+    response = await pg_client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": PASSWORD, "locale": "pt-rBR"},
+    )
+    assert response.status_code == 200, response.text
+    tokens = response.json()
+    me = (await pg_client.get("/api/v1/me", headers=_bearer(tokens))).json()
+    assert (me["email_verified"], me["login_methods"]) == (False, ["password"])
+    assert "password_hash" not in me
+
+    [row] = await _outbox(pg, "verify_email")
+    assert (_decrypt(row).locale, _decrypt(row).to) == ("pt-BR", email)
+    status = await _verify_status(pg_client, tokens)
+    assert status["email_verified"] is False
+    assert (status["delivery_status"], status["delivery_delayed"]) == ("queued", False)
+    assert status["resend_available_at"] is not None
+
+    limited = await pg_client.post(
+        "/api/v1/auth/email-verification/request", headers=_bearer(tokens)
+    )
+    assert (limited.status_code, _code(limited)) == (429, "mail_rate_limited")
+    assert 1 <= int(limited.headers["retry-after"]) <= 60
+
+    token = _token_from(row)
+    confirmed = await pg_client.post(
+        "/api/v1/auth/email-verification/confirm", json={"token": token}
+    )
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json() == {"status": "email_verified"}
+    me = (await pg_client.get("/api/v1/me", headers=_bearer(tokens))).json()
+    assert me["email_verified"] is True
+    again = await pg_client.post("/api/v1/auth/email-verification/confirm", json={"token": token})
+    assert (again.status_code, _code(again)) == (409, "action_token_used")
+
+    already = await pg_client.post(
+        "/api/v1/auth/email-verification/request", headers=_bearer(tokens)
+    )
+    assert already.status_code == 200
+    assert already.json() == {"status": "already_verified"}
+    status = await _verify_status(pg_client, tokens)
+    assert (status["email_verified"], status["resend_available_at"]) == (True, None)
+    assert len(await _outbox(pg, "verify_email")) == 1
+
+
+async def test_verification_resend_and_delivery_states(pg, pg_client, monkeypatch):
+    email = f"resend-{uuid4()}@test.com"
+    tokens = await _register(pg_client, email)
+    start = now_utc()
+    monkeypatch.setattr(svc, "now_utc", lambda: start + timedelta(seconds=61))
+    resent = await pg_client.post(
+        "/api/v1/auth/email-verification/request", headers=_bearer(tokens)
+    )
+    assert resent.status_code == 202, resent.text
+    assert resent.json() == {"status": "accepted", "retry_after_seconds": 60}
+    rows = await _outbox(pg, "verify_email")
+    assert len(rows) == 2
+
+    async def latest_state(dispatch: str, delivery: str) -> tuple[str, bool]:
+        async with pg() as db:
+            row = await db.get(MailOutbox, rows[-1].id)
+            row.dispatch_state, row.delivery_state = dispatch, delivery
+            await db.commit()
+        status = await _verify_status(pg_client, tokens)
+        return status["delivery_status"], status["delivery_delayed"]
+
+    assert await latest_state("accepted", "unknown") == ("provider_accepted", False)
+    assert await latest_state("accepted", "delayed") == ("provider_accepted", True)
+    assert await latest_state("accepted", "delivered") == ("delivered", False)
+    assert await latest_state("accepted", "bounced") == ("failed", False)
+    assert await latest_state("cancelled", "unknown") == ("failed", False)
+
+    # Both links stay valid: a resend does not break the earlier one.
+    first = await pg_client.post(
+        "/api/v1/auth/email-verification/confirm", json={"token": _token_from(rows[0])}
+    )
+    assert first.status_code == 200
+
+
+async def test_expired_verification_link(pg, pg_client):
+    email = f"late-{uuid4()}@test.com"
+    await _register(pg_client, email)
+    user = await _user(pg, email)
+    async with pg() as db:
+        locked = await db.get(User, user.id)
+        await svc.queue_verification_mail(db, locked, "en", now=now_utc() - timedelta(hours=25))
+        await db.commit()
+    old = min(await _outbox(pg, "verify_email"), key=lambda r: r.created_at)
+    gone = await pg_client.post(
+        "/api/v1/auth/email-verification/confirm", json={"token": _token_from(old)}
+    )
+    assert (gone.status_code, _code(gone)) == (410, "action_token_expired")
+    assert (await _user(pg, email)).email_verified_at is None
+
+
+async def test_mail_unavailable_refuses_before_writing(pg, pg_client, monkeypatch):
+    from app.core.config import Settings
+
+    monkeypatch.setattr(Settings, "mail_ready", lambda self: False)
+    email = f"nomail-{uuid4()}@test.com"
+    response = await pg_client.post(
+        "/api/v1/auth/register", json={"email": email, "password": PASSWORD}
+    )
+    assert (response.status_code, _code(response)) == (503, "mail_temporarily_unavailable")
+    reset = await pg_client.post("/api/v1/auth/password-reset/request", json={"email": email})
+    assert (reset.status_code, _code(reset)) == (503, "mail_temporarily_unavailable")
+    async with pg() as db:
+        assert (await db.execute(select(User).where(User.email == email))).first() is None

@@ -286,4 +286,23 @@ Osobny smoke przed betą na syntetycznym koncie i rzeczywistych skrzynkach: send
 - **Okres przejściowy bcrypt:** `passwords.verify_current_password` sprawdza Argon2 oraz rozpoznany bcrypt (stary weryfikator, w puli wątków). Login i zmiana hasła działają więc dla starych i nowych hashy. Rejestracja nadal zapisuje bcrypt z minimum 8 znaków, dopóki T-001 nie przełączy jej razem z Androidem. Odcięcie bcrypt nastąpi w kroku 7 T-001.
 - Testy: `test_mail_templates.py`, `test_account_recovery.py` (neutralne 202, limit, 410/409/400, słabe hasło bez zużycia tokenu, odwołanie sesji, zachowanie `email_verified_at`, zmiana hasła). Zielone na lokalnym PostgreSQL.
 
-**Zostało:** weryfikacja adresu (`email-verification/*`, mail po rejestracji, `email_verified` w `/me`) (krok 2b); strony `/account/...` (krok 3); bramka `email_verification_required` i pola w `/me` (krok 4); Android (krok 5); limity T-003 i webhooki Svix z `mail_provider_events` (krok 6); prawdziwa skrzynka i urządzenie.
+**Krok 2b — weryfikacja adresu (zrobiony):**
+
+- Rejestracja e-mail w jednej transakcji tworzy konto, sesję i zlecenie maila `verify_email`. Opcjonalne pole `locale` w `RegisterRequest` określa język maila. Gdy wdrożona poczta jest źle skonfigurowana, rejestracja i publiczny reset dostają 503 `mail_temporarily_unavailable` przed zapisem (`Settings.mail_ready`). Budżet globalny dojdzie w T-003.
+- `POST /auth/email-verification/request`:
+  - 202, gdy mail został zlecony;
+  - 200 `already_verified`, gdy adres jest już potwierdzony;
+  - 429 `mail_rate_limited` z `Retry-After` po przekroczeniu limitu adresata (ten sam limit co przy resecie, liczony razem z mailem z rejestracji).
+- `GET /auth/email-verification/status` zwraca `email_verified`, `delivery_status` (`not_requested/queued/provider_accepted/delivered/failed/unknown`), `delivery_delayed` i `resend_available_at`. Uwzględnia tylko maile dla bieżącego `email_revision` i robi jeden odczyt z indeksu.
+- `POST /auth/email-verification/confirm` jest publiczny, ustawia `email_verified_at` i nie tworzy sesji. Ponowne wysłanie maila nie unieważnia wcześniejszego linku.
+- `/me` zwraca dodatkowo `email_verified` i `login_methods` (`password`, `google`). Android ignoruje nieznane pola.
+- Konto Google nadal nie dostaje maila ani nie jest uznawane za zweryfikowane. Ocena adresu z Google należy do F-005 i musi być gotowa przed bramką z kroku 4.
+- Testy (`test_account_recovery.py`):
+  - mail po rejestracji w wybranym języku;
+  - 429 z `Retry-After`;
+  - potwierdzenie, 409 dla użytego linku i 410 dla wygasłego;
+  - `already_verified`;
+  - mapowanie stanów dostarczenia;
+  - 503 bez zapisu konta.
+
+**Zostało:** strony `/account/...` (krok 3); bramka `email_verification_required` i pola w `/me` (krok 4); Android (krok 5); limity T-003 i webhooki Svix z `mail_provider_events` (krok 6); prawdziwa skrzynka i urządzenie.

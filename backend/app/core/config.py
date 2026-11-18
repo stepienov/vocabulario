@@ -171,6 +171,10 @@ class Settings(BaseSettings):
         refresh_minutes = self.refresh_token_expire_days * 24 * 60
         return 0 < access < refresh_minutes
 
+    def mail_ready(self) -> bool:
+        """Whether account mail can be accepted; local environments use the log transport."""
+        return not self.is_deployed or not self._mail_errors()
+
     def _mail_errors(self) -> list[str]:
         errors: list[str] = []
         if not _is_bare_public_origin(self.public_app_origin):

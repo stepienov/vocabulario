@@ -1,4 +1,5 @@
 import logging
+import math
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import select
@@ -8,10 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user
 from app.core.http_errors import api_error
 from app.core.passwords import verify_current_password
-from app.core.security import hash_password
+from app.core.security import hash_password, now_utc
 from app.db.session import get_db
 from app.models import LanguageProfile, User, UserSettings
 from app.schemas import (
+    EmailVerificationConfirm,
+    EmailVerificationStatusResponse,
     GoogleAuthRequest,
     LanguageProfileCreate,
     LanguageProfileResponse,
@@ -25,6 +28,7 @@ from app.schemas import (
     PasswordResetResponse,
     RefreshRequest,
     RegisterRequest,
+    StatusResponse,
     TokenResponse,
     UserResponse,
     UserSettingsResponse,
@@ -33,9 +37,15 @@ from app.schemas import (
 from app.services.account_recovery import (
     RETRY_AFTER_SECONDS,
     CredentialError,
+    MailRateLimited,
     change_password,
+    confirm_email_verification,
     confirm_password_reset,
+    ensure_mail_available,
+    queue_verification_mail,
+    request_email_verification,
     request_password_reset,
+    verification_status,
 )
 from app.services.action_tokens import ActionTokenError
 from app.services.auth_sessions import (
@@ -86,6 +96,10 @@ async def _ensure_settings(db: AsyncSession, user_id) -> UserSettings:
 
 @router.post("/register", response_model=TokenResponse)
 async def register(body: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
+    try:
+        ensure_mail_available()
+    except CredentialError as exc:
+        raise api_error(exc.status_code, exc.code) from exc
     existing = await db.execute(select(User).where(User.email == body.email.lower()))
     if existing.scalar_one_or_none():
         raise api_error(status.HTTP_409_CONFLICT, "email_taken", "Email already registered")
@@ -95,7 +109,10 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
     await db.flush()
     await _ensure_settings(db, user.id)
     issued = await create_session(db, user.id)
+    # Same transaction as the account: success means the first mail is durably queued.
+    await queue_verification_mail(db, user, body.locale, now=now_utc())
     await db.commit()
+    wake_mail_worker()
     return _token_response(issued, response)
 
 
@@ -194,6 +211,10 @@ async def password_reset_request(
     body: PasswordResetRequest, db: AsyncSession = Depends(get_db)
 ) -> MailAcceptedResponse:
     """Same answer for every address; never reveals whether an account exists."""
+    try:
+        ensure_mail_available()
+    except CredentialError as exc:
+        raise api_error(exc.status_code, exc.code) from exc
     queued = await request_password_reset(db, str(body.email), body.locale)
     await db.commit()
     if queued:
@@ -236,12 +257,81 @@ async def password_change(
     return _token_response(issued, response)
 
 
+@router.post(
+    "/email-verification/request",
+    response_model=MailAcceptedResponse | StatusResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def email_verification_request(
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        ensure_mail_available()
+        queued = await request_email_verification(db, user.id)
+    except CredentialError as exc:
+        raise await _rollback_error(db, exc) from exc
+    except SessionAuthError as exc:
+        raise await _session_error(db, exc) from exc
+    except MailRateLimited as exc:
+        await db.rollback()
+        wait_s = max(1, math.ceil((exc.retry_at - now_utc()).total_seconds()))
+        raise api_error(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "mail_rate_limited",
+            headers={"Retry-After": str(wait_s)},
+        ) from exc
+    await db.commit()
+    if not queued:
+        response.status_code = status.HTTP_200_OK
+        return StatusResponse(status="already_verified")
+    wake_mail_worker()
+    return MailAcceptedResponse(retry_after_seconds=RETRY_AFTER_SECONDS)
+
+
+@router.get("/email-verification/status", response_model=EmailVerificationStatusResponse)
+async def email_verification_status(
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> EmailVerificationStatusResponse:
+    state = await verification_status(db, user)
+    return EmailVerificationStatusResponse(
+        email_verified=state.email_verified,
+        delivery_status=state.delivery_status,
+        delivery_delayed=state.delivery_delayed,
+        resend_available_at=state.resend_available_at,
+    )
+
+
+@router.post("/email-verification/confirm", response_model=StatusResponse)
+async def email_verification_confirm(
+    body: EmailVerificationConfirm, db: AsyncSession = Depends(get_db)
+) -> StatusResponse:
+    try:
+        await confirm_email_verification(db, body.token)
+    except ActionTokenError as exc:
+        raise await _rollback_error(db, exc) from exc
+    await db.commit()
+    return StatusResponse(status="email_verified")
+
+
 me_router = APIRouter(prefix="/me", tags=["me"])
 
 
 @me_router.get("", response_model=UserResponse)
-async def get_me(user: User = Depends(get_current_user)):
-    return user
+async def get_me(user: User = Depends(get_current_user)) -> UserResponse:
+    methods = [
+        name
+        for name, value in (("password", user.password_hash), ("google", user.google_id))
+        if value
+    ]
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        role=user.role,
+        email_verified=user.email_verified_at is not None,
+        login_methods=methods,
+    )
 
 
 @me_router.get("/settings", response_model=UserSettingsResponse)

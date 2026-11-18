@@ -7,6 +7,7 @@ user -> sessions -> action token -> outbox.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -16,10 +17,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.passwords import hash_new_password, password_error, verify_current_password
 from app.core.security import now_utc
-from app.models import LanguageProfile, MailOutbox, User
+from app.models import AccountActionToken, LanguageProfile, MailOutbox, User
 from app.services.action_tokens import (
     RESET_PASSWORD,
     TOKEN_TTL,
+    VERIFY_EMAIL,
     ActionTokenError,
     consume_action_token,
     find_token_owner,
@@ -27,6 +29,7 @@ from app.services.action_tokens import (
 )
 from app.services.auth_sessions import (
     IssuedSession,
+    SessionAuthError,
     lock_user,
     renew_session,
     revoke_user_sessions,
@@ -36,10 +39,12 @@ from app.services.mail_templates import (
     RenderedMail,
     render_password_changed,
     render_reset_password,
+    render_verify_email,
 )
 
 PASSWORD_CHANGED = "password_changed"
 RESET_PATH = "/account/reset-password"
+VERIFY_PATH = "/account/verify-email"
 # Per-recipient limits; IP and global budgets come with the shared limiter (T-003).
 MAIL_COOLDOWN = timedelta(seconds=60)
 MAIL_WINDOW = timedelta(minutes=60)
@@ -56,6 +61,20 @@ class CredentialError(Exception):
         super().__init__(code)
         self.status_code = status_code
         self.code = code
+
+
+class MailRateLimited(Exception):
+    """Authenticated mail request over the per-recipient limit; maps to 429."""
+
+    def __init__(self, retry_at: datetime) -> None:
+        super().__init__("mail_rate_limited")
+        self.retry_at = retry_at
+
+
+def ensure_mail_available() -> None:
+    """Refuse new mail requests up front while deployed mail settings are unusable."""
+    if not get_settings().mail_ready():
+        raise CredentialError(503, "mail_temporarily_unavailable")
 
 
 def account_link(path: str, token: str) -> str:
@@ -235,3 +254,106 @@ async def change_password(
     await _queue_password_changed(db, locked, now)
     await db.flush()
     return issued
+
+
+async def queue_verification_mail(
+    db: AsyncSession, user: User, locale: str | None, *, now: datetime
+) -> None:
+    """New verification link for the current address of an already locked user."""
+    issued = await issue_action_token(db, user, VERIFY_EMAIL, now=now)
+    hours = int(TOKEN_TTL[VERIFY_EMAIL].total_seconds() // 3600)
+    rendered = render_verify_email(
+        locale or await profile_locale(db, user.id) or "",
+        account_link(VERIFY_PATH, issued.token),
+        hours=hours,
+    )
+    await _queue(
+        db,
+        user,
+        VERIFY_EMAIL,
+        rendered,
+        expires_at=issued.row.expires_at,
+        now=now,
+        action_token_id=issued.row.id,
+    )
+
+
+async def request_email_verification(
+    db: AsyncSession, user_id: UUID, *, now: datetime | None = None
+) -> bool:
+    """Queue a verification mail; False when the address is already verified."""
+    now = now or now_utc()
+    user = await lock_user(db, user_id)
+    if user is None:
+        raise SessionAuthError(401, "session_revoked")
+    if user.email_verified_at is not None:
+        return False
+    retry_at = await next_mail_allowed_at(db, user.id, VERIFY_EMAIL, now)
+    if retry_at is not None:
+        raise MailRateLimited(retry_at)
+    await queue_verification_mail(db, user, None, now=now)
+    return True
+
+
+async def confirm_email_verification(
+    db: AsyncSession, token: str, *, now: datetime | None = None
+) -> None:
+    """Mark the current address verified; the link grants no session."""
+    owner_id = await find_token_owner(db, token, VERIFY_EMAIL)
+    now = now or now_utc()
+    user = await lock_user(db, owner_id)
+    if user is None:
+        raise ActionTokenError(400, "action_token_invalid")
+    await consume_action_token(db, user, token, VERIFY_EMAIL, now=now)
+    if user.email_verified_at is None:
+        user.email_verified_at = now
+    await db.flush()
+
+
+@dataclass(frozen=True)
+class VerificationStatus:
+    email_verified: bool
+    delivery_status: str
+    delivery_delayed: bool
+    resend_available_at: datetime | None
+
+
+_FAILED_DELIVERY = frozenset({"failed", "suppressed", "bounced", "complained"})
+
+
+def _delivery(dispatch_state: str, delivery_state: str) -> tuple[str, bool]:
+    if dispatch_state in ("queued", "leased"):
+        return "queued", False
+    if dispatch_state in ("failed", "cancelled"):
+        return "failed", False
+    if dispatch_state != "accepted":
+        return "unknown", False
+    if delivery_state == "delivered":
+        return "delivered", False
+    if delivery_state in _FAILED_DELIVERY:
+        return "failed", False
+    return "provider_accepted", delivery_state == "delayed"
+
+
+async def verification_status(
+    db: AsyncSession, user: User, *, now: datetime | None = None
+) -> VerificationStatus:
+    """State of the newest verification mail for the current address (one indexed read)."""
+    now = now or now_utc()
+    latest = (
+        await db.execute(
+            select(MailOutbox.dispatch_state, MailOutbox.delivery_state)
+            .join(AccountActionToken, AccountActionToken.id == MailOutbox.action_token_id)
+            .where(
+                MailOutbox.user_id == user.id,
+                MailOutbox.kind == VERIFY_EMAIL,
+                AccountActionToken.email_revision == user.email_revision,
+            )
+            .order_by(MailOutbox.created_at.desc())
+            .limit(1)
+        )
+    ).one_or_none()
+    status, delayed = ("not_requested", False) if latest is None else _delivery(*latest)
+    verified = user.email_verified_at is not None
+    resend_at = None if verified else await next_mail_allowed_at(db, user.id, VERIFY_EMAIL, now)
+    return VerificationStatus(verified, status, delayed, resend_at)
