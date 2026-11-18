@@ -17,7 +17,7 @@ Dodać sekcję konta z e-mailem, weryfikacją, metodami logowania, zmianą hasł
 
 [SettingsScreen](../../../../../../android/app/src/main/java/com/vocabulario/app/ui/settings/SettingsScreen.kt) zawiera preferencje nauki/wyglądu i logout, lecz nie kompletną tożsamość konta. [SettingsViewModel](../../../../../../android/app/src/main/java/com/vocabulario/app/ui/settings/SettingsViewModel.kt) zarządza ustawieniami i profilami. Nie dopisujemy do niego całego protokołu bezpieczeństwa: osobny stan/route „Moje konto” otwierany z czytelnej grupy w ustawieniach; istniejące profile i preferencje pozostają na swoich miejscach.
 
-[GET /me](../../../../../../backend/app/api/v1/auth.py) zwraca dziś jedynie `id`, `email`, `role`. Poniższe pola/ekrany są projektem, nie obietnicą istniejącej funkcji.
+[GET /me](../../../../../../backend/app/api/v1/auth.py) zwraca `id`, `email`, `role`, a od F-004/T-002 (kroki 2b i 5) także `email_verified`, `login_methods` i `email_verification_required`. Android ma już podstawową sekcję „Konto” w Ustawieniach (adres, stan potwierdzenia, Google, zmiana hasła dla kont z hasłem; bez cache, offline pokazuje niedostępność). Pozostałe pola/ekrany poniżej są projektem, nie obietnicą istniejącej funkcji.
 
 ## 1. Kontrakt tożsamości
 

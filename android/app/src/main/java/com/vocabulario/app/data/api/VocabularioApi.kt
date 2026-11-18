@@ -26,6 +26,18 @@ interface VocabularioApi {
     @POST("auth/logout")
     suspend fun logout(@Body body: LogoutRequest): retrofit2.Response<Unit>
 
+    @POST("auth/password-reset/request")
+    suspend fun passwordResetRequest(@Body body: PasswordResetRequestBody): MailStatusResponse
+
+    @POST("auth/password/change")
+    suspend fun passwordChange(@Body body: PasswordChangeRequest): TokenResponse
+
+    @POST("auth/email-verification/request")
+    suspend fun emailVerificationRequest(): MailStatusResponse
+
+    @GET("auth/email-verification/status")
+    suspend fun emailVerificationStatus(): EmailVerificationStatusResponse
+
     @GET("me")
     suspend fun me(): UserResponse
 

@@ -38,6 +38,7 @@ import com.vocabulario.app.data.imports.ImportController
 import com.vocabulario.app.ui.auth.AuthScreen
 import com.vocabulario.app.ui.auth.AuthViewModel
 import com.vocabulario.app.ui.auth.LogoutUnsentDialog
+import com.vocabulario.app.ui.auth.VerifyEmailScreen
 import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.BusyOverlayHost
 import com.vocabulario.app.ui.components.ButtonLabel
@@ -57,6 +58,7 @@ import dagger.hilt.components.SingletonComponent
 
 object Routes {
     const val AUTH = "auth"
+    const val VERIFY_EMAIL = "verify_email"
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
     const val PRACTICE = "practice"
@@ -138,6 +140,7 @@ fun VocabularioAppRoot(
                 }
                 val graphStart = when (startRoute) {
                     AppStartRoute.AUTH -> Routes.AUTH
+                    AppStartRoute.VERIFY_EMAIL -> Routes.VERIFY_EMAIL
                     AppStartRoute.ONBOARDING -> Routes.ONBOARDING
                     AppStartRoute.HOME -> Routes.HOME
                     AppStartRoute.LOADING -> Routes.AUTH
@@ -153,6 +156,11 @@ fun VocabularioAppRoot(
                                 appViewModel.completeAuthenticated(needsOnboarding = true)
                             },
                         )
+                    }
+                    composable(Routes.VERIFY_EMAIL) {
+                        val onLoggedOut: suspend () -> Unit = { appViewModel.onLogout() }
+                        LogoutPromptHost(authViewModel, onLoggedOut)
+                        VerifyEmailScreen(onLogout = { authViewModel.requestLogout(onLoggedOut) })
                     }
                     composable(Routes.ONBOARDING) {
                         OnboardingScreen(
@@ -207,16 +215,7 @@ fun VocabularioAppRoot(
                     }
                     composable(Routes.SETTINGS) {
                         val onLoggedOut: suspend () -> Unit = { appViewModel.onLogout() }
-                        val logoutPrompt by authViewModel.logoutPrompt.collectAsState()
-                        logoutPrompt?.let { prompt ->
-                            LogoutUnsentDialog(
-                                prompt = prompt,
-                                onSyncAndLogout = { authViewModel.syncAndLogout(onLoggedOut) },
-                                onAskDiscard = authViewModel::askDiscardConfirmation,
-                                onDiscard = { authViewModel.discardAndLogout(onLoggedOut) },
-                                onCancel = authViewModel::cancelLogout,
-                            )
-                        }
+                        LogoutPromptHost(authViewModel, onLoggedOut)
                         SettingsScreen(
                             onBack = { navController.popBackStack() },
                             onLogout = { authViewModel.requestLogout(onLoggedOut) },
@@ -237,6 +236,20 @@ fun VocabularioAppRoot(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LogoutPromptHost(authViewModel: AuthViewModel, onLoggedOut: suspend () -> Unit) {
+    val logoutPrompt by authViewModel.logoutPrompt.collectAsState()
+    logoutPrompt?.let { prompt ->
+        LogoutUnsentDialog(
+            prompt = prompt,
+            onSyncAndLogout = { authViewModel.syncAndLogout(onLoggedOut) },
+            onAskDiscard = authViewModel::askDiscardConfirmation,
+            onDiscard = { authViewModel.discardAndLogout(onLoggedOut) },
+            onCancel = authViewModel::cancelLogout,
+        )
     }
 }
 

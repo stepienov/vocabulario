@@ -52,7 +52,7 @@ class AuthRepository @Inject constructor(
     private val signOutCleanup: AccountSignOutCleanup,
 ) {
     suspend fun register(email: String, password: String) = withCandidateSlot { slot ->
-        installCandidate(api.register(RegisterRequest(email, password)), slot)
+        installCandidate(api.register(RegisterRequest(email, password, tokenStore.mailLocale())), slot)
     }
 
     suspend fun login(email: String, password: String) = withCandidateSlot { slot ->
@@ -60,7 +60,7 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun googleLogin(idToken: String) = withCandidateSlot { slot ->
-        installCandidate(api.googleAuth(GoogleAuthRequest(idToken)), slot)
+        installCandidate(api.googleAuth(GoogleAuthRequest(idToken, tokenStore.mailLocale())), slot)
     }
 
     /** Miejsce na ewentualne odwołanie kandydata rezerwujemy przed HTTP (T-002 §5). */

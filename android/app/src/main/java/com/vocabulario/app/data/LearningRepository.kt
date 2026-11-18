@@ -41,6 +41,7 @@ import com.vocabulario.app.data.api.WordListAddWordRequest
 import com.vocabulario.app.data.api.WordListCreate
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.api.WordListUpdate
+import com.vocabulario.app.data.api.isEmailVerificationRequired
 import com.vocabulario.app.data.local.LocalAnswerCheck
 import com.vocabulario.app.data.local.OfflineStore
 import com.vocabulario.app.data.local.TokenStore
@@ -1043,6 +1044,8 @@ class LearningRepository @Inject constructor(
                 } catch (http: retrofit2.HttpException) {
                     // 401/5xx: token albo BE. Nie parkuj — Authenticator odświeży, kolejny sync dociągnie.
                     if (http.code() == 401 || http.code() == 408 || http.code() >= 500) break
+                    // Niepotwierdzony adres blokuje sync, ale nie odrzuca zmian: czekają na weryfikację.
+                    if (http.isEmailVerificationRequired()) break
                     offlineStore.markOpFailed(op, http.message)
                     break
                 } catch (e: Exception) {

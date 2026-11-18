@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -121,6 +122,15 @@ fun AuthScreen(
     val infoMessage by viewModel.infoMessage.collectAsState()
     var confirmSignOut by remember { mutableStateOf(false) }
     var confirmDiscard by remember { mutableStateOf(false) }
+    val forgotPassword by viewModel.forgotPassword.collectAsState()
+    forgotPassword?.let { state ->
+        ForgotPasswordDialog(
+            state = state,
+            onEmailChange = viewModel::updateForgotPasswordEmail,
+            onSend = viewModel::sendForgotPassword,
+            onDismiss = viewModel::closeForgotPassword,
+        )
+    }
     notice?.takeIf { confirmSignOut }?.let { current ->
         SignOutOnDeviceDialog(
             unsentCount = current.unsentCount,
@@ -341,7 +351,20 @@ fun AuthScreen(
                     unfocusedBorderColor = fieldBorder,
                 )
 
-                Spacer(Modifier.height(22.dp))
+                if (!isRegister) {
+                    TextButton(
+                        onClick = {
+                            hideKeyboard()
+                            viewModel.openForgotPassword(email)
+                        },
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .testTag(TestTags.AUTH_FORGOT_PASSWORD),
+                    ) { Text(stringResource(R.string.auth_forgot_password)) }
+                    Spacer(Modifier.height(8.dp))
+                } else {
+                    Spacer(Modifier.height(22.dp))
+                }
 
                 Button(
                     onClick = submit,
@@ -533,6 +556,65 @@ private fun SessionNoticeCard(
             }
         }
     }
+}
+
+@Composable
+private fun ForgotPasswordDialog(
+    state: ForgotPasswordState,
+    onEmailChange: (String) -> Unit,
+    onSend: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AppAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.auth_forgot_password_title),
+        text = {
+            Column {
+                if (state.sent) {
+                    Text(stringResource(R.string.auth_forgot_password_sent, state.email.trim()))
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.auth_forgot_password_google_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Text(stringResource(R.string.auth_forgot_password_body))
+                    Spacer(Modifier.height(12.dp))
+                    AppGrayField(
+                        value = state.email,
+                        onValueChange = onEmailChange,
+                        placeholder = stringResource(R.string.auth_email),
+                        singleLine = true,
+                        isError = state.error != null,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Send,
+                        ),
+                        keyboardActions = KeyboardActions(onSend = { onSend() }),
+                    )
+                    state.error?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        },
+        buttons = {
+            if (state.sent) {
+                AppDialogButtonRow(primaryText = stringResource(R.string.action_ok), onPrimary = onDismiss)
+            } else {
+                AppDialogButtonRow(
+                    secondaryText = stringResource(R.string.action_cancel),
+                    onSecondary = onDismiss,
+                    secondaryKind = AppDialogAction.Neutral,
+                    primaryText = stringResource(R.string.auth_forgot_password_send),
+                    onPrimary = onSend,
+                    primaryEnabled = !state.sending,
+                )
+            }
+        },
+    )
 }
 
 @Composable

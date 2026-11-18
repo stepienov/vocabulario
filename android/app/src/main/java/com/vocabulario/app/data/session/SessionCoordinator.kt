@@ -101,6 +101,15 @@ class SessionCoordinator @Inject constructor(
     }
 
     /**
+     * Para odnowiona przez serwer po zmianie hasła: ta sama sesja i właściciel, inaczej reauth.
+     * False, gdy para nie została zapisana (wtedy stara przestanie działać przy następnym refresh).
+     */
+    suspend fun installRenewed(tokens: TokenResponse): Boolean = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        synchronized(lock) { installRefreshedLocked(tokens) is RefreshOutcome.Refreshed }
+    }
+
+    /**
      * Lokalne usunięcie rekordu sesji; rzuca, gdy zapis zawiódł (pamięć zostaje bez zmian).
      * [beforeClear] dostaje materiał odwołania pod tą samą blokadą co refresh, więc nie przegapi
      * rotacji; jego wyjątek przerywa wylogowanie, zanim znikną poświadczenia.

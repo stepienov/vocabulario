@@ -36,6 +36,8 @@ class TokenStore @Inject constructor(
     private val themeKey = stringPreferencesKey("theme")
     private val appLangKey = stringPreferencesKey("app_lang")
     private val legacyUiLangKey = stringPreferencesKey("ui_lang")
+    // Właściciel, dla którego serwer ostatnio wymagał potwierdzenia adresu (F-003: stan przy koncie).
+    private val verificationOwnerKey = stringPreferencesKey("email_verification_required_owner")
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val cachedAppLang = AtomicReference<String?>(null)
@@ -49,6 +51,9 @@ class TokenStore @Inject constructor(
     private val _activeProfileId = MutableStateFlow<String?>(null)
     val activeProfileId: StateFlow<String?> = _activeProfileId.asStateFlow()
 
+    private val _verificationRequiredOwner = MutableStateFlow<String?>(null)
+    val verificationRequiredOwner: StateFlow<String?> = _verificationRequiredOwner.asStateFlow()
+
     val theme: Flow<String> = context.dataStore.data.map { it[themeKey] ?: "system" }
     val appLang: Flow<String> = context.dataStore.data.map { readAppLang(it) }
 
@@ -57,6 +62,7 @@ class TokenStore @Inject constructor(
             migrateLegacyUiLangKey()
             val prefs = context.dataStore.data.first()
             _activeProfileId.value = prefs[profileKey]
+            _verificationRequiredOwner.value = prefs[verificationOwnerKey]
             cachedAppLang.set(readAppLang(prefs))
             _ready.value = true
         }
@@ -126,6 +132,18 @@ class TokenStore @Inject constructor(
 
     fun peekAppLang(): String = cachedAppLang.get().orEmpty()
 
+    /** null = brak wymogu; pamięć od razu, zapis w tle nie blokuje wywołującego (np. interceptor). */
+    fun setVerificationRequiredOwner(ownerUserId: String?) {
+        if (_verificationRequiredOwner.value == ownerUserId) return
+        _verificationRequiredOwner.value = ownerUserId
+        scope.launch {
+            context.dataStore.edit { prefs ->
+                val newest = _verificationRequiredOwner.value
+                if (newest == null) prefs.remove(verificationOwnerKey) else prefs[verificationOwnerKey] = newest
+            }
+        }
+    }
+
     fun markExpandLimits() {
         expandLimits.set(true)
     }
@@ -149,6 +167,7 @@ class TokenStore @Inject constructor(
     /** Natychmiastowe wylogowanie w pamięci (bez blokady DataStore). */
     fun clearMemory() {
         _activeProfileId.value = null
+        _verificationRequiredOwner.value = null
         cachedAppLang.set(null)
     }
 }

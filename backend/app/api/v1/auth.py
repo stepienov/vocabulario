@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings as get_app_settings
 from app.core.deps import get_current_user, get_verified_user
 from app.core.http_errors import api_error
 from app.core.passwords import verify_current_password
@@ -353,11 +354,13 @@ async def get_me(user: User = Depends(get_current_user)) -> UserResponse:
         for name, value in (("password", user.password_hash), ("google", user.google_id))
         if value
     ]
+    verified = user.email_verified_at is not None
     return UserResponse(
         id=user.id,
         email=user.email,
         role=user.role,
-        email_verified=user.email_verified_at is not None,
+        email_verified=verified,
+        email_verification_required=get_app_settings().email_verification_gate and not verified,
         login_methods=methods,
     )
 

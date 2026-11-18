@@ -325,4 +325,15 @@ Osobny smoke przed betą na syntetycznym koncie i rzeczywistych skrzynkach: send
 - Nowe konto Google bez takiego dowodu dostaje mail `verify_email` w tej samej transakcji (opcjonalne `locale` w `GoogleAuthRequest`; przy niedziałającej poczcie 503 przed zapisem, jak rejestracja).
 - Testy: `test_email_verification_gate.py` (przełącznik wyłączony = dzisiejsze zachowanie; włączony = 403 dla nauki, dostęp do listy wyjątków, odblokowanie po potwierdzeniu; reguła Google w 7 wariantach; łączenie po adresie; zmiana adresu w Google). Pełny `ci_check` na lokalnym PostgreSQL: 734 passed.
 
-**Zostało:** Android (krok 5), potem włączenie bramki; limity T-003 i webhooki Svix z `mail_provider_events` (krok 6); domena `PUBLIC_APP_ORIGIN` (F-007/T-004), prawdziwa skrzynka i urządzenie.
+**Krok 5 — Android (zrobiony):**
+
+- `/me` zwraca też `email_verification_required` (bramka włączona i adres niepotwierdzony), więc aplikacja nie musi zgadywać po 403.
+- Dane: [AccountRepository.kt](../../../../../../android/app/src/main/java/com/vocabulario/app/data/AccountRepository.kt) (konto, ponowne wysłanie i status weryfikacji, reset, zmiana hasła) oraz `EmailVerificationGate`. Stan bramki jest zapisany per właściciel konta, więc nie przechodzi na inne konto po przelogowaniu. Interceptor OkHttp oznacza bramkę po 403 `email_verification_required` (także z SyncWorkera). Outbox przy tym kodzie zatrzymuje się bez naliczania prób i bez parkowania zmian.
+- Ekran „Potwierdź adres e-mail” (`VerifyEmailScreen`): adres, przycisk „Sprawdź”, ponowne wysłanie z odliczaniem (`resend_available_at`, `Retry-After`), stan dostarczenia (w drodze, wysłany, opóźniony, nieudany), wskazówka o spamie, informacja, że dane na urządzeniu zostają, wylogowanie przez tę samą barierę niewysłanych zmian co w Ustawieniach. Bez pollingu: odczyt przy wejściu, powrocie do aplikacji i na przycisk. Po potwierdzeniu aplikacja sama przechodzi do nauki albo onboardingu.
+- Logowanie: link „Nie pamiętasz hasła?” z dialogiem (adres wypełniony z formularza), neutralny komunikat po wysłaniu i wskazówka dla kont Google.
+- Ustawienia: sekcja „Konto” (adres, stan potwierdzenia, logowanie przez Google). „Zmień hasło” tylko dla kont z hasłem: walidacja 15–128 znaków (punkty kodowe) i zgodności, nowa para tokenów tej samej sesji (`installRenewed`; inna sesja = reauth), komunikat o wylogowaniu innych urządzeń. Hasła tylko w pamięci ViewModelu.
+- Rejestracja i Google wysyłają `locale` (język UI albo systemu), więc mail przychodzi w języku użytkownika.
+- 44 nowe napisy we wszystkich 17 locale; nowe kody błędów API mają własne komunikaty.
+- Testy: `test_email_verification_gate.py` (pole w `/me`), `EmailVerificationGateTest`, `NewPasswordValidationTest`, `installRenewed` i publiczna ścieżka resetu w `SessionCoordinatorTest`. Lokalnie: `:app:testDebugUnitTest :app:assembleDebug` i pełny `ci_check` na PostgreSQL (734 passed).
+
+**Zostało:** włączenie bramki (`EMAIL_VERIFICATION_GATE=true`) po wydaniu tej wersji Androida; limity T-003 i webhooki Svix z `mail_provider_events` (krok 6); domena `PUBLIC_APP_ORIGIN` (F-007/T-004), prawdziwa skrzynka i test na urządzeniu.

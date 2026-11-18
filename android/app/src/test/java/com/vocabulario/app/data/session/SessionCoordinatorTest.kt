@@ -322,11 +322,27 @@ class SessionCoordinatorTest {
     }
 
     @Test
+    fun renewedPairAfterPasswordChangeInstallsOnlyForSameSession() = runBlocking {
+        val persistence = FakePersistence(StoredSession.Present(active))
+        val coordinator = SessionCoordinator(persistence, FakeTransport(), FakeLegacy())
+
+        assertTrue(coordinator.installRenewed(TokenResponse("access-2", "refresh-2", user_id = "user-a", session_id = "session-1")))
+        assertEquals("access-2", coordinator.peekAccessToken())
+        assertEquals("refresh-2", persistence.record?.refreshToken)
+
+        assertFalse(coordinator.installRenewed(TokenResponse("access-3", "refresh-3", user_id = "user-a", session_id = "session-9")))
+        assertTrue(coordinator.state.value is SessionState.ReauthRequired)
+        assertNull(coordinator.peekAccessToken())
+    }
+
+    @Test
     fun onlyPublicAuthRoutesSkipBearer() {
         assertTrue(isPublicAuthPath("/api/v1/auth/login"))
         assertTrue(isPublicAuthPath("/auth/refresh/"))
         assertTrue(isPublicAuthPath("/api/v1/auth/logout"))
         assertFalse(isPublicAuthPath("/api/v1/auth/password"))
+        assertTrue(isPublicAuthPath("/api/v1/auth/password-reset/request"))
+        assertFalse(isPublicAuthPath("/api/v1/auth/password/change"))
         assertFalse(isPublicAuthPath("/api/v1/me"))
     }
 

@@ -93,8 +93,21 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
+    accountViewModel: AccountSettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val account by accountViewModel.account.collectAsState()
+    val changePassword by accountViewModel.changePassword.collectAsState()
+    changePassword?.let { form ->
+        ChangePasswordDialog(
+            form = form,
+            onCurrentChange = { accountViewModel.updateChangePassword(current = it) },
+            onNewChange = { accountViewModel.updateChangePassword(new = it) },
+            onRepeatChange = { accountViewModel.updateChangePassword(repeat = it) },
+            onSubmit = accountViewModel::submitChangePassword,
+            onDismiss = accountViewModel::closeChangePassword,
+        )
+    }
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -108,7 +121,10 @@ fun SettingsScreen(
             viewModel.setNotificationsEnabled(true)
         }
     }
-    LaunchedEffect(Unit) { viewModel.load() }
+    LaunchedEffect(Unit) {
+        viewModel.load()
+        accountViewModel.load()
+    }
     LaunchedEffect(state.expanded, state.notificationsEnabled) {
         if (state.expanded == SettingsSection.NOTIFICATIONS &&
             state.notificationsEnabled &&
@@ -409,6 +425,19 @@ fun SettingsScreen(
             }
 
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+
+            SettingsGroupLabel(stringResource(R.string.settings_group_account))
+            AccordionSection(
+                title = stringResource(R.string.settings_account),
+                subtitle = account.email,
+                expanded = state.expanded == SettingsSection.ACCOUNT,
+                onHeaderClick = { viewModel.toggleSection(SettingsSection.ACCOUNT) },
+                testTag = TestTags.SETTINGS_SECTION_ACCOUNT,
+                showDivider = false,
+            ) {
+                AccountSectionBody(account, onChangePassword = accountViewModel::openChangePassword)
+            }
+            account.info?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 
             Spacer(Modifier.height(8.dp))
             OutlinedButton(

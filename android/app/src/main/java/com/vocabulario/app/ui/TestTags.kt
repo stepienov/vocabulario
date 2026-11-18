@@ -11,6 +11,11 @@ object TestTags {
     const val AUTH_SUBMIT = "auth_submit"
     const val AUTH_GOOGLE = "auth_google"
     const val AUTH_TOGGLE_MODE = "auth_toggle_mode"
+    const val AUTH_FORGOT_PASSWORD = "auth_forgot_password"
+
+    const val VERIFY_EMAIL_CHECK = "verify_email_check"
+    const val VERIFY_EMAIL_RESEND = "verify_email_resend"
+    const val VERIFY_EMAIL_LOGOUT = "verify_email_logout"
 
     const val ONBOARDING_NATIVE = "onboarding_native_lang"
     const val ONBOARDING_CONTINUE = "onboarding_continue"
@@ -128,6 +133,8 @@ object TestTags {
     const val SETTINGS_NATIVE_LANG = "settings_native_lang"
     const val SETTINGS_LEARNING_LANG = "settings_learning_lang"
     const val SETTINGS_LOGOUT = "settings_logout"
+    const val SETTINGS_SECTION_ACCOUNT = "settings_section_account"
+    const val SETTINGS_CHANGE_PASSWORD = "settings_change_password"
 
     const val BTN_VIEW_CARD = "btn_view_card"
     const val BTN_VIEW_CARD_CLOSE = "btn_view_card_close"

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
 import com.vocabulario.app.auth.GoogleAuthHelper
 import androidx.annotation.StringRes
+import com.vocabulario.app.data.AccountRepository
 import com.vocabulario.app.data.AuthRepository
 import com.vocabulario.app.data.OtherAccountDataException
 import com.vocabulario.app.data.UnclaimedLocalDataException
@@ -38,6 +39,7 @@ class AuthViewModel @Inject constructor(
     private val googleAuthHelper: GoogleAuthHelper,
     private val strings: UiStrings,
     private val blockingBusy: BlockingBusy,
+    private val accountRepository: AccountRepository,
     sessionCoordinator: SessionCoordinator,
 ) : ViewModel() {
 
@@ -97,6 +99,51 @@ class AuthViewModel @Inject constructor(
     /** Ostrzeżenie o niewysłanych zmianach przy logout z ustawień; null = brak dialogu. */
     private val _logoutPrompt = MutableStateFlow<LogoutPrompt?>(null)
     val logoutPrompt: StateFlow<LogoutPrompt?> = _logoutPrompt.asStateFlow()
+
+    /** Dialog „Nie pamiętam hasła”; null = zamknięty. */
+    private val _forgotPassword = MutableStateFlow<ForgotPasswordState?>(null)
+    val forgotPassword: StateFlow<ForgotPasswordState?> = _forgotPassword.asStateFlow()
+
+    fun openForgotPassword(prefillEmail: String) {
+        _forgotPassword.value = ForgotPasswordState(email = prefillEmail.trim())
+    }
+
+    fun updateForgotPasswordEmail(value: String) {
+        _forgotPassword.value = _forgotPassword.value?.copy(email = value, error = null)
+    }
+
+    fun closeForgotPassword() {
+        _forgotPassword.value = null
+    }
+
+    /** Odpowiedź serwera jest neutralna (202 także dla nieznanego adresu), więc komunikat też. */
+    fun sendForgotPassword() {
+        val current = _forgotPassword.value ?: return
+        val email = current.email.trim()
+        if (current.sending || current.sent) return
+        if (email.isBlank()) {
+            _forgotPassword.value = current.copy(error = strings.get(R.string.err_email_required))
+            return
+        }
+        if (!email.contains('@')) {
+            _forgotPassword.value = current.copy(error = strings.get(R.string.err_email_invalid))
+            return
+        }
+        viewModelScope.launch {
+            _forgotPassword.value = current.copy(sending = true, error = null)
+            try {
+                accountRepository.requestPasswordReset(email)
+                _forgotPassword.value = _forgotPassword.value?.copy(sending = false, sent = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _forgotPassword.value = _forgotPassword.value?.copy(
+                    sending = false,
+                    error = e.userMessage(strings, R.string.err_account_request_failed),
+                )
+            }
+        }
+    }
 
     /** Logout z ustawień: bez niewysłanych zmian od razu, inaczej dialog z decyzją użytkownika. */
     fun requestLogout(onDone: suspend () -> Unit) {
@@ -355,4 +402,11 @@ data class LogoutPrompt(
     val fingerprint: String,
     val reason: LogoutPromptReason,
     val confirmDiscard: Boolean = false,
+)
+
+data class ForgotPasswordState(
+    val email: String,
+    val sending: Boolean = false,
+    val sent: Boolean = false,
+    val error: String? = null,
 )

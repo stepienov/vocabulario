@@ -17,13 +17,13 @@ data class TokenResponse(
 )
 
 @Serializable
-data class RegisterRequest(val email: String, val password: String)
+data class RegisterRequest(val email: String, val password: String, val locale: String? = null)
 
 @Serializable
 data class LoginRequest(val email: String, val password: String)
 
 @Serializable
-data class GoogleAuthRequest(val id_token: String)
+data class GoogleAuthRequest(val id_token: String, val locale: String? = null)
 
 @Serializable
 data class RefreshRequest(val refresh_token: String, val request_id: String)
@@ -36,6 +36,27 @@ data class UserResponse(
     val id: String,
     val email: String,
     val role: String,
+    val email_verified: Boolean = true,
+    val email_verification_required: Boolean = false,
+    val login_methods: List<String> = emptyList(),
+)
+
+@Serializable
+data class PasswordResetRequestBody(val email: String, val locale: String? = null)
+
+@Serializable
+data class PasswordChangeRequest(val current_password: String, val new_password: String)
+
+/** 202 `accepted` (mail w kolejce) albo 200 `already_verified`. */
+@Serializable
+data class MailStatusResponse(val status: String, val retry_after_seconds: Int? = null)
+
+@Serializable
+data class EmailVerificationStatusResponse(
+    val email_verified: Boolean,
+    val delivery_status: String = "not_requested",
+    val delivery_delayed: Boolean = false,
+    val resend_available_at: String? = null,
 )
 
 @Serializable

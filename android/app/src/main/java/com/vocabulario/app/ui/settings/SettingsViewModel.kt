@@ -33,6 +33,7 @@ enum class SettingsSection {
     LANGUAGES,
     CEFR,
     NOTIFICATIONS,
+    ACCOUNT,
 }
 
 data class SettingsUiState(

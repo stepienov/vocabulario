@@ -73,6 +73,14 @@ private val CODE_TO_RES: Map<String, Int> = mapOf(
     "offline_card" to R.string.err_offline_card,
     "no_inbox" to R.string.err_no_inbox,
     "add_failed" to R.string.err_add,
+    "email_verification_required" to R.string.err_email_verification_required,
+    "mail_rate_limited" to R.string.err_mail_rate_limited,
+    "mail_temporarily_unavailable" to R.string.err_mail_unavailable,
+    "current_password_invalid" to R.string.err_current_password_invalid,
+    "password_not_set" to R.string.err_password_not_set,
+    "password_too_short" to R.string.err_new_password_short,
+    "password_too_long" to R.string.err_password_too_long,
+    "password_invalid_unicode" to R.string.err_password_invalid_chars,
 )
 
 private val DETAIL_ALIASES: Map<String, String> = mapOf(
@@ -115,6 +123,16 @@ fun Throwable.userMessage(default: String, strings: UiStrings): String {
 
 fun Throwable.isWordAlreadyOnList(): Boolean =
     mappedErrorRes() == R.string.err_word_on_list
+
+/** Kod `detail.code` z odpowiedzi API (bez aliasów tekstowych). */
+fun Throwable.apiErrorCode(): String? =
+    (this as? HttpException)?.readApiError()?.code?.trim()?.lowercase()
+
+/** Bramka F-004: zmiana uprawnienia, nie końca sesji ani odrzucenia danych. */
+fun Throwable.isEmailVerificationRequired(): Boolean =
+    (this as? HttpException)?.code() == 403 && apiErrorCode() == EMAIL_VERIFICATION_REQUIRED
+
+const val EMAIL_VERIFICATION_REQUIRED = "email_verification_required"
 
 fun Throwable.mappedErrorRes(): Int? {
     val parsed = if (this is HttpException) readApiError() else null

@@ -95,6 +95,8 @@ class UserResponse(BaseModel):
     email: str
     role: str
     email_verified: bool
+    # True when the server gate blocks study/sync until this address is confirmed.
+    email_verification_required: bool = False
     login_methods: list[str]
 
 

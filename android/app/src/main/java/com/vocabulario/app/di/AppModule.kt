@@ -1,6 +1,8 @@
 package com.vocabulario.app.di
 
 import com.vocabulario.app.data.ApiBaseUrl
+import com.vocabulario.app.data.EmailVerificationGate
+import com.vocabulario.app.data.api.EMAIL_VERIFICATION_REQUIRED
 import com.vocabulario.app.data.api.TokenAuthenticator
 import com.vocabulario.app.data.api.VocabularioApi
 import com.vocabulario.app.data.api.isPublicAuthPath
@@ -38,6 +40,7 @@ object AppModule {
   fun provideOkHttpClient(
     authenticator: TokenAuthenticator,
     sessionCoordinator: SessionCoordinator,
+    verificationGate: EmailVerificationGate,
   ): OkHttpClient {
     val authInterceptor = Interceptor { chain ->
       val path = chain.request().url.encodedPath
@@ -49,7 +52,12 @@ object AppModule {
       } else {
         chain.request()
       }
-      chain.proceed(request)
+      val response = chain.proceed(request)
+      if (response.code == 403 && !token.isNullOrBlank()) {
+        val body = runCatching { response.peekBody(2048).string() }.getOrNull().orEmpty()
+        if (EMAIL_VERIFICATION_REQUIRED in body) verificationGate.onServerRequired()
+      }
+      response
     }
     val logging = HttpLoggingInterceptor().apply {
       level = HttpLoggingInterceptor.Level.BASIC

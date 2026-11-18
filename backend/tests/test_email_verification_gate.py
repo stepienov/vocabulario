@@ -100,6 +100,8 @@ async def test_gate_off_keeps_todays_access(pg, pg_client):
     for path, status, code in await _learning_calls(pg_client, headers):
         assert code != "email_verification_required", path
         assert status != 403, path
+    me = await pg_client.get("/api/v1/me", headers=headers)
+    assert me.json()["email_verification_required"] is False
 
 
 async def test_gate_blocks_unverified_until_link_confirmed(pg, pg_client, gate_on):
@@ -108,7 +110,8 @@ async def test_gate_blocks_unverified_until_link_confirmed(pg, pg_client, gate_o
         assert (path, status, code) == (path, 403, "email_verification_required")
 
     me = await pg_client.get("/api/v1/me", headers=headers)
-    assert (me.status_code, me.json()["email_verified"]) == (200, False)
+    assert me.status_code == 200
+    assert (me.json()["email_verified"], me.json()["email_verification_required"]) == (False, True)
     assert (await pg_client.get("/api/v1/me/settings", headers=headers)).status_code == 200
     status = await pg_client.get("/api/v1/auth/email-verification/status", headers=headers)
     assert status.status_code == 200
@@ -121,6 +124,8 @@ async def test_gate_blocks_unverified_until_link_confirmed(pg, pg_client, gate_o
         await db.commit()
     for path, status, code in await _learning_calls(pg_client, headers):
         assert status != 403 and code != "email_verification_required", path
+    me = await pg_client.get("/api/v1/me", headers=headers)
+    assert me.json()["email_verification_required"] is False
 
 
 def _fake_google(monkeypatch, **claims):

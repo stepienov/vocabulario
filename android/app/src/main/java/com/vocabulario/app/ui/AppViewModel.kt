@@ -3,8 +3,10 @@ package com.vocabulario.app.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
+import com.vocabulario.app.data.AccountRepository
 import com.vocabulario.app.data.AuthRepository
 import com.vocabulario.app.data.BlockingBusy
+import com.vocabulario.app.data.EmailVerificationGate
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.session.SessionCoordinator
@@ -30,6 +32,8 @@ private const val LOADING_SLOW_MS = 10_000L
 enum class AppStartRoute {
     LOADING,
     AUTH,
+    /** Bramka F-004: konto bez potwierdzonego adresu; nauka/import/sync zablokowane, dane zostają. */
+    VERIFY_EMAIL,
     ONBOARDING,
     HOME,
 }
@@ -37,6 +41,8 @@ enum class AppStartRoute {
 @HiltViewModel
 class AppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val accountRepository: AccountRepository,
+    private val verificationGate: EmailVerificationGate,
     private val learningRepository: LearningRepository,
     private val tokenStore: TokenStore,
     private val sessionCoordinator: SessionCoordinator,
@@ -56,16 +62,60 @@ class AppViewModel @Inject constructor(
     val loadingSlow: StateFlow<Boolean> = _loadingSlow.asStateFlow()
 
     private var bootstrapJob: Job? = null
+    private var resumeJob: Job? = null
 
     init {
         // Utrata sesji w trakcie pracy prowadzi na logowanie; dane lokalne zostają.
+        // Wymóg potwierdzenia adresu zmienia uprawnienie (ekran weryfikacji), nie właściciela.
         viewModelScope.launch {
-            combine(_startRoute, sessionCoordinator.state) { route, state -> route to state }
-                .collect { (route, state) ->
-                    if ((route == AppStartRoute.HOME || route == AppStartRoute.ONBOARDING) && sessionLost(state)) {
-                        _startRoute.value = AppStartRoute.AUTH
-                    }
+            combine(_startRoute, sessionCoordinator.state, verificationGate.required) { route, state, required ->
+                Triple(route, state, required)
+            }.collect { (route, state, required) ->
+                val signedInRoute = route == AppStartRoute.HOME ||
+                    route == AppStartRoute.ONBOARDING ||
+                    route == AppStartRoute.VERIFY_EMAIL
+                when {
+                    signedInRoute && sessionLost(state) -> _startRoute.value = AppStartRoute.AUTH
+                    required && (route == AppStartRoute.HOME || route == AppStartRoute.ONBOARDING) ->
+                        _startRoute.value = AppStartRoute.VERIFY_EMAIL
+                    !required && route == AppStartRoute.VERIFY_EMAIL && state is SessionState.Active ->
+                        resumeAfterVerification()
                 }
+            }
+        }
+    }
+
+    /** Adres potwierdzony: ta sama ścieżka co po loginie, bez ponownego logowania. */
+    private fun resumeAfterVerification() {
+        if (resumeJob?.isActive == true) return
+        resumeJob = viewModelScope.launch {
+            val hasProfile = try {
+                authRepository.ensureActiveProfile()
+                runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
+                runCatching { learningRepository.syncThemeFromSettings() }
+                authRepository.hasProfile()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                true
+            }
+            if (_startRoute.value != AppStartRoute.VERIFY_EMAIL) return@launch
+            if (hasProfile) {
+                _startRoute.value = AppStartRoute.HOME
+                syncInBackground()
+            } else {
+                _startRoute.value = AppStartRoute.ONBOARDING
+            }
+        }
+    }
+
+    private suspend fun refreshAccountQuietly() {
+        try {
+            accountRepository.refreshAccount()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Offline/5xx: zostaje ostatni znany stan weryfikacji.
         }
     }
 
@@ -104,6 +154,13 @@ class AppViewModel @Inject constructor(
 
         if (sessionCoordinator.awaitLoaded() !is SessionState.Active) {
             _startRoute.value = AppStartRoute.AUTH
+            return
+        }
+
+        // Ostatni znany stan: bez potwierdzenia nie ma pełnego dostępu także offline.
+        if (verificationGate.isRequired()) {
+            _startRoute.value = AppStartRoute.VERIFY_EMAIL
+            refreshAccountQuietly()
             return
         }
 
@@ -149,6 +206,7 @@ class AppViewModel @Inject constructor(
 
     private fun syncInBackground() {
         viewModelScope.launch {
+            refreshAccountQuietly()
             runCatching { authRepository.ensureActiveProfile() }
             syncScheduler.schedulePeriodic()
             syncScheduler.requestNow()
@@ -162,6 +220,11 @@ class AppViewModel @Inject constructor(
     }
 
     suspend fun completeAuthenticated(needsOnboarding: Boolean) {
+        refreshAccountQuietly()
+        if (verificationGate.isRequired()) {
+            _startRoute.value = AppStartRoute.VERIFY_EMAIL
+            return
+        }
         if (needsOnboarding) {
             _startRoute.value = AppStartRoute.ONBOARDING
             return
