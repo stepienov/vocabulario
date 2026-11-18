@@ -664,6 +664,14 @@
     <string name="err_login_wrong_password">Yanlış şifre</string>
     <string name="err_login_use_google">Bu hesap Google kullanıyor. Google ile devam edin.</string>
     <string name="err_session_ended">Oturumunuz sona erdi. Yeniden giriş yapın.</string>
+    <string name="err_login_other_account">Bu cihazda başka bir hesaba ait veriler var. Devam etmek için o hesaba giriş yapın.</string>
+    <string name="legacy_data_title">Bu cihazda atanmamış veriler</string>
+    <string name="legacy_data_message">Bu cihazda, uygulamanın önceki bir sürümünden kalan ve hiçbir hesaba bağlanamayan veriler var. Gönderilmemiş değişiklikler: %1$d. Giriş yapmak için bu verileri kaldırın. Zaten senkronize edilenler giriş yaptıktan sonra yeniden indirilir.</string>
+    <string name="legacy_data_discard">Yerel verileri kaldır</string>
+    <string name="legacy_data_discard_confirm_title">Kalıcı olarak kaldırılsın mı?</string>
+    <string name="legacy_data_discard_confirm">Gönderilmemiş değişiklikler (%1$d) kaybolacak ve geri alınamayacak.</string>
+    <string name="legacy_data_discarded">Yerel veriler kaldırıldı. Yeniden giriş yapın.</string>
+    <string name="legacy_data_discard_failed">Yerel veriler kaldırılamadı. Tekrar deneyin.</string>
 
 
     <string name="err_register">Kayıt başarısız</string>

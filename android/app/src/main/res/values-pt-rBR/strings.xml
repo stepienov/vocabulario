@@ -632,6 +632,14 @@
     <string name="err_login_wrong_password">Senha incorreta</string>
     <string name="err_login_use_google">Esta conta usa o Google. Continue com o Google.</string>
     <string name="err_session_ended">Sua sessão terminou. Entre novamente.</string>
+    <string name="err_login_other_account">Este dispositivo tem dados de outra conta. Entre nessa conta para continuar.</string>
+    <string name="legacy_data_title">Dados não atribuídos neste dispositivo</string>
+    <string name="legacy_data_message">Este dispositivo tem dados de uma versão anterior do app que não podem ser vinculados a uma conta. Alterações não enviadas: %1$d. Para entrar, remova esses dados. O que já foi sincronizado será baixado novamente depois que você entrar.</string>
+    <string name="legacy_data_discard">Remover dados locais</string>
+    <string name="legacy_data_discard_confirm_title">Remover permanentemente?</string>
+    <string name="legacy_data_discard_confirm">As alterações não enviadas (%1$d) serão perdidas e não poderão ser recuperadas.</string>
+    <string name="legacy_data_discarded">Dados locais removidos. Entre novamente.</string>
+    <string name="legacy_data_discard_failed">Não foi possível remover os dados locais. Tente novamente.</string>
 
 
     <string name="err_register">Falha no cadastro</string>

@@ -23,6 +23,9 @@ interface VocabularioApi {
     @POST("auth/google")
     suspend fun googleAuth(@Body body: GoogleAuthRequest): TokenResponse
 
+    @POST("auth/logout")
+    suspend fun logout(@Body body: LogoutRequest): retrofit2.Response<Unit>
+
     @GET("me")
     suspend fun me(): UserResponse
 

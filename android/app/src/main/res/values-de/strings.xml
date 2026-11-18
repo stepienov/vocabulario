@@ -632,6 +632,14 @@
     <string name="err_login_wrong_password">Falsches Passwort</string>
     <string name="err_login_use_google">Dieses Konto nutzt Google. Melde dich mit Google an.</string>
     <string name="err_session_ended">Deine Sitzung ist beendet. Melde dich erneut an.</string>
+    <string name="err_login_other_account">Auf diesem Gerät sind Daten eines anderen Kontos gespeichert. Melde dich bei diesem Konto an, um fortzufahren.</string>
+    <string name="legacy_data_title">Nicht zugeordnete Daten auf diesem Gerät</string>
+    <string name="legacy_data_message">Auf diesem Gerät sind Daten aus einer früheren App-Version, die keinem Konto zugeordnet werden können. Nicht gesendete Änderungen: %1$d. Entferne diese Daten, um dich anzumelden. Bereits synchronisierte Inhalte werden nach der Anmeldung erneut geladen.</string>
+    <string name="legacy_data_discard">Lokale Daten entfernen</string>
+    <string name="legacy_data_discard_confirm_title">Endgültig entfernen?</string>
+    <string name="legacy_data_discard_confirm">Nicht gesendete Änderungen (%1$d) gehen verloren und können nicht wiederhergestellt werden.</string>
+    <string name="legacy_data_discarded">Lokale Daten entfernt. Melde dich erneut an.</string>
+    <string name="legacy_data_discard_failed">Lokale Daten konnten nicht entfernt werden. Versuche es erneut.</string>
 
 
     <string name="err_register">Registrierung fehlgeschlagen</string>

@@ -632,6 +632,14 @@
     <string name="err_login_wrong_password">Неверный пароль</string>
     <string name="err_login_use_google">Этот аккаунт через Google. Войдите через Google.</string>
     <string name="err_session_ended">Сеанс завершён. Войдите снова.</string>
+    <string name="err_login_other_account">На этом устройстве хранятся данные другого аккаунта. Войдите в этот аккаунт, чтобы продолжить.</string>
+    <string name="legacy_data_title">Неназначенные данные на устройстве</string>
+    <string name="legacy_data_message">На этом устройстве есть данные из более ранней версии приложения, которые нельзя связать с аккаунтом. Неотправленные изменения: %1$d. Чтобы войти, удалите эти данные. Уже синхронизированное снова загрузится после входа.</string>
+    <string name="legacy_data_discard">Удалить локальные данные</string>
+    <string name="legacy_data_discard_confirm_title">Удалить безвозвратно?</string>
+    <string name="legacy_data_discard_confirm">Неотправленные изменения (%1$d) будут потеряны без возможности восстановления.</string>
+    <string name="legacy_data_discarded">Локальные данные удалены. Войдите снова.</string>
+    <string name="legacy_data_discard_failed">Не удалось удалить локальные данные. Попробуйте ещё раз.</string>
 
 
     <string name="err_register">Ошибка регистрации</string>

@@ -632,6 +632,14 @@
     <string name="err_login_wrong_password">كلمة المرور غير صحيحة</string>
     <string name="err_login_use_google">هذا الحساب يستخدم Google. تابِع عبر Google.</string>
     <string name="err_session_ended">انتهت جلستك. سجّل الدخول مرة أخرى.</string>
+    <string name="err_login_other_account">يحتوي هذا الجهاز على بيانات حساب آخر. سجّل الدخول إلى ذلك الحساب للمتابعة.</string>
+    <string name="legacy_data_title">بيانات غير مرتبطة بحساب على هذا الجهاز</string>
+    <string name="legacy_data_message">يحتوي هذا الجهاز على بيانات من إصدار سابق من التطبيق لا يمكن ربطها بأي حساب. التغييرات غير المُرسلة: %1$d. لتسجيل الدخول، احذف هذه البيانات. سيُعاد تنزيل ما تمت مزامنته بالفعل بعد تسجيل الدخول.</string>
+    <string name="legacy_data_discard">حذف البيانات المحلية</string>
+    <string name="legacy_data_discard_confirm_title">هل تريد الحذف نهائيًا؟</string>
+    <string name="legacy_data_discard_confirm">ستُفقد التغييرات غير المُرسلة (%1$d) ولا يمكن استعادتها.</string>
+    <string name="legacy_data_discarded">تم حذف البيانات المحلية. سجّل الدخول مرة أخرى.</string>
+    <string name="legacy_data_discard_failed">تعذّر حذف البيانات المحلية. حاول مرة أخرى.</string>
 
 
     <string name="err_register">فشل إنشاء الحساب</string>

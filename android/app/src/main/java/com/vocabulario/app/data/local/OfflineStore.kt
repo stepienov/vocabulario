@@ -25,7 +25,12 @@ import com.vocabulario.app.data.local.db.PendingLookupEntity
 import com.vocabulario.app.data.local.db.PendingMoveEntity
 import com.vocabulario.app.data.local.db.PendingReviewEntity
 import com.vocabulario.app.data.local.db.PendingUndoEntity
+import com.vocabulario.app.data.local.db.OwnerPhase
+import com.vocabulario.app.data.local.db.SessionOwnerEntity
 import com.vocabulario.app.data.local.db.SyncMetaEntity
+import com.vocabulario.app.data.session.LoginDecision
+import com.vocabulario.app.data.session.OwnerSnapshot
+import com.vocabulario.app.data.session.decideLogin
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -49,6 +54,7 @@ class OfflineStore @Inject constructor(
             AppDatabase.MIGRATION_6_7,
             AppDatabase.MIGRATION_7_8,
             AppDatabase.MIGRATION_8_9,
+            AppDatabase.MIGRATION_9_10,
         )
         // Zachowaj dane (w tym niewysłany outbox) przy aktualizacji z v6.
         // Twardy reset tylko dla prehistorycznych wersji, których w praktyce nie ma w terenie.
@@ -64,6 +70,7 @@ class OfflineStore @Inject constructor(
     private val syncMetaDao = db.syncMetaDao()
     private val profileDao = db.cachedProfileDao()
     private val outboxDao = db.outboxOpDao()
+    private val ownerDao = db.sessionOwnerDao()
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun applyPull(profileId: String, pull: SyncPullResponse, fullReplace: Boolean) {
@@ -172,10 +179,115 @@ class OfflineStore @Inject constructor(
         return runCatching { json.decodeFromString(LanguageProfileResponse.serializer(), raw) }.getOrNull()
     }
 
-    suspend fun clearAll() {
-        withContext(Dispatchers.IO) {
-            db.clearAllTables()
+    suspend fun ownerSnapshot(): OwnerSnapshot = db.withTransaction { ownerSnapshotLocked() }
+
+    /** Decyzja loginu i zapis zamiaru instalacji w jednej transakcji; inne decyzje niczego nie zmieniają. */
+    suspend fun beginInstall(candidateUserId: String, transitionId: String): LoginDecision =
+        db.withTransaction {
+            val snapshot = ownerSnapshotLocked()
+            val decision = decideLogin(snapshot, candidateUserId)
+            when (decision) {
+                LoginDecision.Claim -> {
+                    deleteOwnedDataLocked()
+                    writeOwnerLocked(snapshot, candidateUserId, OwnerPhase.INSTALLING, transitionId)
+                }
+                LoginDecision.SameOwner ->
+                    writeOwnerLocked(snapshot, candidateUserId, OwnerPhase.INSTALLING, transitionId)
+                is LoginDecision.OtherAccount, is LoginDecision.LegacyQuarantine -> Unit
+            }
+            decision
         }
+
+    /** Kończy przejście tylko wtedy, gdy w międzyczasie nie zaczęło się inne. */
+    suspend fun completeInstall(transitionId: String): Boolean = db.withTransaction {
+        val row = ownerDao.get()
+        if (row?.transitionId != transitionId || row.phase != OwnerPhase.INSTALLING) return@withTransaction false
+        ownerDao.upsert(row.copy(phase = OwnerPhase.ACTIVE, transitionId = null))
+        true
+    }
+
+    /** Aktywna sesja przejmuje bazę tylko wtedy, gdy ta nadal nie zawiera danych. */
+    suspend fun claimEmpty(ownerUserId: String): Boolean = db.withTransaction {
+        val snapshot = ownerSnapshotLocked()
+        if (snapshot.hasOwnedData) return@withTransaction false
+        writeOwnerLocked(snapshot, ownerUserId, OwnerPhase.ACTIVE, null)
+        true
+    }
+
+    suspend fun beginLogout(transitionId: String) {
+        db.withTransaction {
+            val snapshot = ownerSnapshotLocked()
+            writeOwnerLocked(snapshot, snapshot.ownerUserId, OwnerPhase.LOGGING_OUT, transitionId)
+        }
+    }
+
+    /** Wycofanie zamiaru, gdy usunięcie sesji się nie powiodło; generacja nie wraca. */
+    suspend fun abortLogout(transitionId: String) {
+        db.withTransaction {
+            val row = ownerDao.get() ?: return@withTransaction
+            if (row.transitionId != transitionId || row.phase != OwnerPhase.LOGGING_OUT) return@withTransaction
+            ownerDao.upsert(row.copy(phase = OwnerPhase.ACTIVE, transitionId = null))
+        }
+    }
+
+    /** Usuwa dane właściciela, ale nie rekord metadanych ani licznik generacji. */
+    suspend fun completeLogout() {
+        db.withTransaction {
+            val snapshot = ownerSnapshotLocked()
+            deleteOwnedDataLocked()
+            ownerDao.upsert(
+                SessionOwnerEntity(
+                    ownerUserId = null,
+                    generation = snapshot.generation,
+                    phase = OwnerPhase.SIGNED_OUT,
+                    transitionId = null,
+                ),
+            )
+        }
+    }
+
+    /** Świadome odrzucenie danych bez właściciela; inne fazy pozostają nietknięte. */
+    suspend fun discardUnclaimedData(): Boolean = db.withTransaction {
+        val snapshot = ownerSnapshotLocked()
+        val unclaimed = snapshot.phase == OwnerPhase.LEGACY_UNCLAIMED ||
+            (snapshot.ownerUserId == null && snapshot.phase != OwnerPhase.LOGGING_OUT)
+        if (!unclaimed) return@withTransaction false
+        deleteOwnedDataLocked()
+        writeOwnerLocked(snapshot, null, OwnerPhase.SIGNED_OUT, null)
+        true
+    }
+
+    private suspend fun ownerSnapshotLocked(): OwnerSnapshot {
+        val row = ownerDao.get() ?: SessionOwnerEntity()
+        return OwnerSnapshot(
+            ownerUserId = row.ownerUserId,
+            generation = row.generation,
+            phase = row.phase,
+            transitionId = row.transitionId,
+            hasOwnedData = ownerDao.hasOwnedData(),
+            unsentCount = ownerDao.unsentCount(),
+        )
+    }
+
+    private suspend fun writeOwnerLocked(
+        snapshot: OwnerSnapshot,
+        ownerUserId: String?,
+        phase: String,
+        transitionId: String?,
+    ) {
+        ownerDao.upsert(
+            SessionOwnerEntity(
+                ownerUserId = ownerUserId,
+                generation = snapshot.generation + 1,
+                phase = phase,
+                transitionId = transitionId,
+            ),
+        )
+    }
+
+    private fun deleteOwnedDataLocked() {
+        val sqlite = db.openHelper.writableDatabase
+        AppDatabase.OWNED_TABLES.forEach { table -> sqlite.execSQL("DELETE FROM `$table`") }
     }
 
     suspend fun cardCount(profileId: String): Int = cardDao.countForProfile(profileId)

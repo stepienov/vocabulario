@@ -4,7 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
 import com.vocabulario.app.auth.GoogleAuthHelper
+import androidx.annotation.StringRes
 import com.vocabulario.app.data.AuthRepository
+import com.vocabulario.app.data.OtherAccountDataException
+import com.vocabulario.app.data.UnclaimedLocalDataException
 import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.userMessage
@@ -32,9 +35,44 @@ class AuthViewModel @Inject constructor(
     private val _debugLoginError = MutableStateFlow<String?>(null)
     val debugLoginError: StateFlow<String?> = _debugLoginError.asStateFlow()
 
+    /** Liczba niewysłanych zmian w danych bez właściciela; null = brak dialogu. */
+    private val _unclaimedData = MutableStateFlow<Int?>(null)
+    val unclaimedData: StateFlow<Int?> = _unclaimedData.asStateFlow()
+
     fun clearError() {
         _errorMessage.value = null
         _debugLoginError.value = null
+    }
+
+    fun dismissUnclaimedData() {
+        _unclaimedData.value = null
+    }
+
+    fun discardUnclaimedData() {
+        viewModelScope.launch {
+            blockingBusy.run {
+                val discarded = try {
+                    authRepository.discardUnclaimedLocalData()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    false
+                }
+                _unclaimedData.value = null
+                _errorMessage.value = strings.get(
+                    if (discarded) R.string.legacy_data_discarded else R.string.legacy_data_discard_failed,
+                )
+            }
+        }
+    }
+
+    private fun authFailureMessage(error: Throwable, @StringRes defaultRes: Int): String? = when (error) {
+        is UnclaimedLocalDataException -> {
+            _unclaimedData.value = error.unsentCount
+            null
+        }
+        is OtherAccountDataException -> strings.get(R.string.err_login_other_account)
+        else -> error.userMessage(strings, defaultRes)
     }
 
     private fun validate(email: String, password: String, isRegister: Boolean): String? {
@@ -69,7 +107,7 @@ class AuthViewModel @Inject constructor(
                     if (com.vocabulario.app.BuildConfig.DEBUG) {
                         _debugLoginError.value = it.javaClass.simpleName + ": " + (it.message ?: it.toString())
                     }
-                    _errorMessage.value = it.userMessage(strings, R.string.err_login)
+                    _errorMessage.value = authFailureMessage(it, R.string.err_login)
                 }
             }
         }
@@ -87,7 +125,7 @@ class AuthViewModel @Inject constructor(
                     authRepository.register(email.trim(), password)
                 }.onSuccess { onSuccess() }
                     .onFailure {
-                        _errorMessage.value = it.userMessage(strings, R.string.err_register)
+                        _errorMessage.value = authFailureMessage(it, R.string.err_register)
                     }
             }
         }
@@ -113,7 +151,7 @@ class AuthViewModel @Inject constructor(
                     runCatching { learningRepository.syncThemeFromSettings() }
                     onSuccess(needsOnboarding)
                 }.onFailure {
-                    _errorMessage.value = it.userMessage(strings, R.string.err_google_login)
+                    _errorMessage.value = authFailureMessage(it, R.string.err_google_login)
                 }
             }
         }

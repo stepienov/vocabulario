@@ -12,6 +12,7 @@ import com.vocabulario.app.data.session.SessionState
 import com.vocabulario.app.data.sync.SyncScheduler
 import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,6 +51,14 @@ class AppViewModel @Inject constructor(
     fun bootstrap() {
         viewModelScope.launch {
             withTimeoutOrNull(1_500) { tokenStore.awaitReady() }
+
+            // Błąd uzgodnienia nie wylogowuje; sesja niepasująca do danych przechodzi w reauth.
+            try {
+                authRepository.reconcileOwnerOnStart()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+            }
 
             if (sessionCoordinator.awaitLoaded() !is SessionState.Active) {
                 _startRoute.value = AppStartRoute.AUTH

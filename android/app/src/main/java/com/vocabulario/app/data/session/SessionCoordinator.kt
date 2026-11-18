@@ -110,6 +110,14 @@ class SessionCoordinator @Inject constructor(
         }
     }
 
+    /** Aktywna sesja nie pasuje do właściciela danych lokalnych: wymagany ponowny login. */
+    suspend fun requireReauth(reason: String) = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        synchronized(lock) {
+            if (current?.status == SessionStatus.ACTIVE) requireReauthLocked(reason)
+        }
+    }
+
     private fun loadLocked() {
         val stored = try {
             persistence.read()

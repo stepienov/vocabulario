@@ -664,6 +664,14 @@
     <string name="err_login_wrong_password">비밀번호가 올바르지 않습니다</string>
     <string name="err_login_use_google">이 계정은 Google을 사용합니다. Google로 계속하세요.</string>
     <string name="err_session_ended">세션이 종료되었습니다. 다시 로그인하세요.</string>
+    <string name="err_login_other_account">이 기기에 다른 계정의 데이터가 있습니다. 계속하려면 해당 계정으로 로그인하세요.</string>
+    <string name="legacy_data_title">이 기기의 할당되지 않은 데이터</string>
+    <string name="legacy_data_message">이 기기에 계정과 연결할 수 없는 이전 버전 앱의 데이터가 있습니다. 전송되지 않은 변경 사항: %1$d개. 로그인하려면 이 데이터를 삭제하세요. 이미 동기화된 내용은 로그인 후 다시 다운로드됩니다.</string>
+    <string name="legacy_data_discard">로컬 데이터 삭제</string>
+    <string name="legacy_data_discard_confirm_title">영구적으로 삭제할까요?</string>
+    <string name="legacy_data_discard_confirm">전송되지 않은 변경 사항(%1$d개)은 사라지며 복구할 수 없습니다.</string>
+    <string name="legacy_data_discarded">로컬 데이터를 삭제했습니다. 다시 로그인하세요.</string>
+    <string name="legacy_data_discard_failed">로컬 데이터를 삭제하지 못했습니다. 다시 시도하세요.</string>
 
 
     <string name="err_register">등록 실패</string>

@@ -664,6 +664,14 @@
     <string name="err_login_wrong_password">パスワードが違います</string>
     <string name="err_login_use_google">このアカウントはGoogleを使います。Googleで続行してください。</string>
     <string name="err_session_ended">セッションが終了しました。もう一度ログインしてください。</string>
+    <string name="err_login_other_account">このデバイスには別のアカウントのデータがあります。続けるには、そのアカウントでログインしてください。</string>
+    <string name="legacy_data_title">このデバイスの未割り当てデータ</string>
+    <string name="legacy_data_message">このデバイスには、アカウントに関連付けられない以前のバージョンのアプリのデータがあります。未送信の変更: %1$d件。ログインするには、このデータを削除してください。同期済みの内容はログイン後に再度ダウンロードされます。</string>
+    <string name="legacy_data_discard">ローカルデータを削除</string>
+    <string name="legacy_data_discard_confirm_title">完全に削除しますか？</string>
+    <string name="legacy_data_discard_confirm">未送信の変更（%1$d件）は失われ、復元できません。</string>
+    <string name="legacy_data_discarded">ローカルデータを削除しました。もう一度ログインしてください。</string>
+    <string name="legacy_data_discard_failed">ローカルデータを削除できませんでした。もう一度お試しください。</string>
 
 
     <string name="err_register">登録に失敗しました</string>

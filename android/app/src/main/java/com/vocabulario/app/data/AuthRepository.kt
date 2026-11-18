@@ -2,14 +2,30 @@ package com.vocabulario.app.data
 
 import com.vocabulario.app.data.api.GoogleAuthRequest
 import com.vocabulario.app.data.api.LoginRequest
+import com.vocabulario.app.data.api.LogoutRequest
 import com.vocabulario.app.data.api.RegisterRequest
+import com.vocabulario.app.data.api.TokenResponse
 import com.vocabulario.app.data.api.VocabularioApi
 import com.vocabulario.app.data.imports.ImportStatePersistence
 import com.vocabulario.app.data.local.OfflineStore
 import com.vocabulario.app.data.local.TokenStore
+import com.vocabulario.app.data.session.LoginDecision
+import com.vocabulario.app.data.session.REAUTH_REASON_SESSION_MISMATCH
 import com.vocabulario.app.data.session.SessionCoordinator
+import com.vocabulario.app.data.session.SessionInstallException
+import com.vocabulario.app.data.session.SessionState
+import com.vocabulario.app.data.session.StartupAction
+import com.vocabulario.app.data.session.decideStartup
+import kotlinx.coroutines.CancellationException
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** Login na konto inne niż właściciel danych na urządzeniu; zmiana konta wymaga jawnego logout. */
+class OtherAccountDataException(val unsentCount: Int) : Exception("other_account_data")
+
+/** Dane bez wiarygodnego właściciela; wymagają świadomego odrzucenia przed loginem. */
+class UnclaimedLocalDataException(val unsentCount: Int) : Exception("unclaimed_local_data")
 
 @Singleton
 class AuthRepository @Inject constructor(
@@ -20,32 +36,106 @@ class AuthRepository @Inject constructor(
     private val sessionCoordinator: SessionCoordinator,
 ) {
     suspend fun register(email: String, password: String) {
-        beginNewSession()
-        val tokens = api.register(RegisterRequest(email, password))
-        sessionCoordinator.install(tokens)
+        installCandidate(api.register(RegisterRequest(email, password)))
     }
 
     suspend fun login(email: String, password: String) {
-        beginNewSession()
-        val tokens = api.login(LoginRequest(email, password))
-        sessionCoordinator.install(tokens)
+        installCandidate(api.login(LoginRequest(email, password)))
     }
 
     suspend fun googleLogin(idToken: String) {
-        beginNewSession()
-        val tokens = api.googleAuth(GoogleAuthRequest(idToken))
+        installCandidate(api.googleAuth(GoogleAuthRequest(idToken)))
+    }
+
+    /**
+     * Odpowiedź loginu jest kandydatem: dopiero po porównaniu `user_id` z właścicielem danych
+     * zostaje zapisana. Błąd lub odmowa zostawia poprzednie dane nietknięte (T-002 §4).
+     */
+    private suspend fun installCandidate(tokens: TokenResponse) {
+        val candidateUserId = tokens.user_id?.takeIf { it.isNotBlank() }
+            ?: throw SessionInstallException("missing user_id")
+        val transitionId = UUID.randomUUID().toString()
+        when (val decision = offlineStore.beginInstall(candidateUserId, transitionId)) {
+            is LoginDecision.OtherAccount -> {
+                revokeCandidate(tokens)
+                throw OtherAccountDataException(decision.unsentCount)
+            }
+            is LoginDecision.LegacyQuarantine -> {
+                revokeCandidate(tokens)
+                throw UnclaimedLocalDataException(decision.unsentCount)
+            }
+            LoginDecision.Claim -> {
+                tokenStore.clear()
+                importStatePersistence.saveJobId(null)
+            }
+            LoginDecision.SameOwner -> Unit
+        }
         sessionCoordinator.install(tokens)
+        offlineStore.completeInstall(transitionId)
     }
 
+    // TODO(E-001/F-003/T-002 §5): trwałe zlecenie odwołania zamiast jednej próby.
+    private suspend fun revokeCandidate(tokens: TokenResponse) {
+        try {
+            api.logout(LogoutRequest(tokens.refresh_token))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Kandydat nie został zapisany; awaria odwołania nie zmienia decyzji loginu.
+        }
+    }
+
+    /**
+     * Zamiar wylogowania trafia do Room przed usunięciem sesji, więc restart dokończy
+     * cleanup zamiast wskrzesić dane poprzedniego konta.
+     */
     suspend fun logout() {
-        beginNewSession()
+        val transitionId = UUID.randomUUID().toString()
+        offlineStore.beginLogout(transitionId)
+        try {
+            sessionCoordinator.signOutLocally()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            offlineStore.abortLogout(transitionId)
+            throw e
+        }
+        finishLogoutLocally()
     }
 
-    /** Najpierw trwałe usunięcie sesji; jeśli zawiedzie, dane lokalne zostają nietknięte. */
-    private suspend fun beginNewSession() {
-        sessionCoordinator.signOutLocally()
+    /** Świadome odrzucenie danych, których nie można przypisać do konta (stara instalacja). */
+    suspend fun discardUnclaimedLocalData(): Boolean {
+        val discarded = offlineStore.discardUnclaimedData()
+        if (discarded) {
+            tokenStore.clear()
+            importStatePersistence.saveJobId(null)
+        }
+        return discarded
+    }
+
+    /** Uzgodnienie sesji z właścicielem danych po starcie procesu (przed wyborem ekranu). */
+    suspend fun reconcileOwnerOnStart() {
+        val state = sessionCoordinator.awaitLoaded()
+        val snapshot = offlineStore.ownerSnapshot()
+        when (val action = decideStartup(snapshot, state)) {
+            StartupAction.None -> Unit
+            StartupAction.CompleteInstall ->
+                snapshot.transitionId?.let { offlineStore.completeInstall(it) }
+            StartupAction.CompleteLogout -> {
+                if (state !is SessionState.SignedOut) sessionCoordinator.signOutLocally()
+                finishLogoutLocally()
+            }
+            is StartupAction.ClaimEmpty ->
+                if (!offlineStore.claimEmpty(action.ownerUserId)) {
+                    sessionCoordinator.requireReauth(REAUTH_REASON_SESSION_MISMATCH)
+                }
+            is StartupAction.RequireReauth -> sessionCoordinator.requireReauth(action.reason)
+        }
+    }
+
+    private suspend fun finishLogoutLocally() {
+        offlineStore.completeLogout()
         tokenStore.clear()
-        offlineStore.clearAll()
         importStatePersistence.saveJobId(null)
     }
 

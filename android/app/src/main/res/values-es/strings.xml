@@ -632,6 +632,14 @@
     <string name="err_login_wrong_password">Contraseña incorrecta</string>
     <string name="err_login_use_google">Esta cuenta usa Google. Continúa con Google.</string>
     <string name="err_session_ended">Tu sesión ha finalizado. Vuelve a iniciar sesión.</string>
+    <string name="err_login_other_account">Este dispositivo tiene datos de otra cuenta. Inicia sesión en esa cuenta para continuar.</string>
+    <string name="legacy_data_title">Datos sin asignar en este dispositivo</string>
+    <string name="legacy_data_message">Este dispositivo tiene datos de una versión anterior de la app que no se pueden vincular a ninguna cuenta. Cambios sin enviar: %1$d. Para iniciar sesión, elimina estos datos. Lo que ya esté sincronizado se volverá a descargar al iniciar sesión.</string>
+    <string name="legacy_data_discard">Eliminar datos locales</string>
+    <string name="legacy_data_discard_confirm_title">¿Eliminar definitivamente?</string>
+    <string name="legacy_data_discard_confirm">Los cambios sin enviar (%1$d) se perderán y no se podrán recuperar.</string>
+    <string name="legacy_data_discarded">Datos locales eliminados. Vuelve a iniciar sesión.</string>
+    <string name="legacy_data_discard_failed">No se pudieron eliminar los datos locales. Inténtalo de nuevo.</string>
 
 
     <string name="err_register">Error al registrarse</string>

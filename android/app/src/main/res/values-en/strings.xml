@@ -667,6 +667,14 @@
     <string name="err_login_wrong_password">Wrong password</string>
     <string name="err_login_use_google">This account uses Google. Continue with Google.</string>
     <string name="err_session_ended">Your session has ended. Please sign in again.</string>
+    <string name="err_login_other_account">This device holds data from a different account. Sign in to that account to continue.</string>
+    <string name="legacy_data_title">Unassigned data on this device</string>
+    <string name="legacy_data_message">This device has data from an earlier app version that can’t be linked to an account. Unsent changes: %1$d. To sign in, remove this data. Anything already synced will download again after you sign in.</string>
+    <string name="legacy_data_discard">Remove local data</string>
+    <string name="legacy_data_discard_confirm_title">Remove permanently?</string>
+    <string name="legacy_data_discard_confirm">Unsent changes (%1$d) will be lost and can’t be recovered.</string>
+    <string name="legacy_data_discarded">Local data removed. Sign in again.</string>
+    <string name="legacy_data_discard_failed">Couldn’t remove local data. Try again.</string>
 
 
     <string name="err_register">Registration failed</string>

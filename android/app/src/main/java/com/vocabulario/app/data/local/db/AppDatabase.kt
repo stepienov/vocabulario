@@ -17,8 +17,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SyncMetaEntity::class,
         CachedProfileEntity::class,
         OutboxOpEntity::class,
+        SessionOwnerEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -32,6 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun syncMetaDao(): SyncMetaDao
     abstract fun cachedProfileDao(): CachedProfileDao
     abstract fun outboxOpDao(): OutboxOpDao
+    abstract fun sessionOwnerDao(): SessionOwnerDao
 
     companion object {
         /**
@@ -93,6 +95,47 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_cached_lists_profileId` " +
                         "ON `cached_lists` (`profileId`)",
+                )
+            }
+        }
+
+        /** Tabele z danymi jednego właściciela; czyszczone przy logout bez `clearAllTables`. */
+        val OWNED_TABLES = listOf(
+            "cached_cards",
+            "cached_lists",
+            "pending_reviews",
+            "pending_moves",
+            "pending_lookups",
+            "pending_undos",
+            "local_settings",
+            "sync_meta",
+            "cached_profile",
+            "outbox_ops",
+        )
+
+        /**
+         * v9 → v10: rekord właściciela bazy. Istniejące dane nie mają wiarygodnego właściciela,
+         * więc trafiają do `legacy_unclaimed` (kwarantanna) — migracja niczego nie kasuje.
+         */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `session_owner` (" +
+                        "`id` INTEGER NOT NULL, " +
+                        "`ownerUserId` TEXT, " +
+                        "`generation` INTEGER NOT NULL, " +
+                        "`phase` TEXT NOT NULL, " +
+                        "`transitionId` TEXT, " +
+                        "PRIMARY KEY(`id`))",
+                )
+                val hasData = OWNED_TABLES.any { table ->
+                    db.query("SELECT 1 FROM `$table` LIMIT 1").use { it.moveToFirst() }
+                }
+                val phase = if (hasData) OwnerPhase.LEGACY_UNCLAIMED else OwnerPhase.SIGNED_OUT
+                db.execSQL(
+                    "INSERT OR IGNORE INTO `session_owner` (`id`, `ownerUserId`, `generation`, `phase`, `transitionId`) " +
+                        "VALUES (0, NULL, 0, ?, NULL)",
+                    arrayOf<Any>(phase),
                 )
             }
         }

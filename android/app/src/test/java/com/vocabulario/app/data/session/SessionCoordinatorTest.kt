@@ -251,6 +251,19 @@ class SessionCoordinatorTest {
     }
 
     @Test
+    fun requireReauthDropsTokensButKeepsOwner() = runBlocking {
+        val persistence = FakePersistence(StoredSession.Present(active))
+        val coordinator = SessionCoordinator(persistence, FakeTransport(), FakeLegacy())
+
+        coordinator.requireReauth(REAUTH_REASON_LEGACY_DATA)
+
+        assertEquals(SessionState.ReauthRequired("user-a", REAUTH_REASON_LEGACY_DATA), coordinator.state.value)
+        assertNull(coordinator.peekAccessToken())
+        assertNull(persistence.record?.refreshToken)
+        assertEquals("user-a", persistence.record?.ownerUserId)
+    }
+
+    @Test
     fun classifiesRefreshResponses() {
         val body = { code: String -> """{"detail":{"code":"$code","message":"x"}}""" }
         assertEquals(RefreshHttpResult.Rejected("session_revoked"), classifyRefreshResponse(401, body("session_revoked")))

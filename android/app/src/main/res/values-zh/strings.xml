@@ -632,6 +632,14 @@
     <string name="err_login_wrong_password">密码不正确</string>
     <string name="err_login_use_google">该账户使用 Google。请通过 Google 继续。</string>
     <string name="err_session_ended">你的会话已结束，请重新登录。</string>
+    <string name="err_login_other_account">此设备上有其他账号的数据。请登录该账号以继续。</string>
+    <string name="legacy_data_title">此设备上的未分配数据</string>
+    <string name="legacy_data_message">此设备上有来自旧版应用的数据，无法关联到任何账号。未发送的更改：%1$d 项。要登录，请删除这些数据。已同步的内容会在登录后重新下载。</string>
+    <string name="legacy_data_discard">删除本地数据</string>
+    <string name="legacy_data_discard_confirm_title">要永久删除吗？</string>
+    <string name="legacy_data_discard_confirm">未发送的更改（%1$d 项）将会丢失且无法恢复。</string>
+    <string name="legacy_data_discarded">本地数据已删除。请重新登录。</string>
+    <string name="legacy_data_discard_failed">无法删除本地数据。请重试。</string>
 
 
     <string name="err_register">注册失败</string>

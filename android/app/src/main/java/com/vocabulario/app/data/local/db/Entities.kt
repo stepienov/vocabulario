@@ -149,3 +149,24 @@ data class CachedProfileEntity(
     val isActive: Boolean = true,
     val jsonBlob: String = "{}",
 )
+
+/**
+ * Jedyny rekord właściciela lokalnej bazy (E-001/F-003/T-002). Nie jest kasowany przy logout;
+ * generation rośnie przy każdym loginie/reauth/logout, więc stary kontekst nie pasuje ponownie.
+ */
+@Entity(tableName = "session_owner")
+data class SessionOwnerEntity(
+    @PrimaryKey val id: Int = 0,
+    val ownerUserId: String? = null,
+    val generation: Long = 0,
+    val phase: String = OwnerPhase.SIGNED_OUT,
+    val transitionId: String? = null,
+)
+
+object OwnerPhase {
+    const val SIGNED_OUT = "signed_out"
+    const val INSTALLING = "installing"
+    const val ACTIVE = "active"
+    const val LOGGING_OUT = "logging_out"
+    const val LEGACY_UNCLAIMED = "legacy_unclaimed"
+}

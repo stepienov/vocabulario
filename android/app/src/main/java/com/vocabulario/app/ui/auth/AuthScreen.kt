@@ -68,7 +68,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.vocabulario.app.R
 import com.vocabulario.app.data.ApiBaseUrl
 import com.vocabulario.app.ui.TestTags
+import com.vocabulario.app.ui.components.AppAlertDialog
 import com.vocabulario.app.ui.components.AppButtonShape
+import com.vocabulario.app.ui.components.AppDialogAction
+import com.vocabulario.app.ui.components.AppDialogButtonRow
 import com.vocabulario.app.ui.components.AppGrayField
 import com.vocabulario.app.ui.components.BrandLogo
 import com.vocabulario.app.ui.components.ButtonLabel
@@ -108,6 +111,26 @@ fun AuthScreen(
     }
     val errorMessage by viewModel.errorMessage.collectAsState()
     val debugLoginError by viewModel.debugLoginError.collectAsState()
+    val unclaimedData by viewModel.unclaimedData.collectAsState()
+    var confirmDiscard by remember { mutableStateOf(false) }
+    unclaimedData?.let { unsent ->
+        UnclaimedDataDialogs(
+            unsentCount = unsent,
+            confirmStep = confirmDiscard,
+            onDismiss = {
+                confirmDiscard = false
+                viewModel.dismissUnclaimedData()
+            },
+            onDiscard = {
+                if (unsent > 0 && !confirmDiscard) {
+                    confirmDiscard = true
+                } else {
+                    confirmDiscard = false
+                    viewModel.discardUnclaimedData()
+                }
+            },
+        )
+    }
     val scheme = MaterialTheme.colorScheme
     val dark = scheme.background.luminance() < 0.5f
     val fieldFill = if (dark) scheme.surfaceVariant else Color.White
@@ -332,6 +355,40 @@ fun AuthScreen(
             }
         }
     }
+}
+
+/** Dane starej instalacji bez właściciela: informacja, potem (gdy są niewysłane zmiany) ponowne potwierdzenie. */
+@Composable
+private fun UnclaimedDataDialogs(
+    unsentCount: Int,
+    confirmStep: Boolean,
+    onDismiss: () -> Unit,
+    onDiscard: () -> Unit,
+) {
+    AppAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(if (confirmStep) R.string.legacy_data_discard_confirm_title else R.string.legacy_data_title),
+        text = {
+            Text(
+                if (confirmStep) {
+                    stringResource(R.string.legacy_data_discard_confirm, unsentCount)
+                } else {
+                    stringResource(R.string.legacy_data_message, unsentCount)
+                },
+            )
+        },
+        warning = true,
+        buttons = {
+            AppDialogButtonRow(
+                secondaryText = stringResource(R.string.action_cancel),
+                onSecondary = onDismiss,
+                secondaryKind = AppDialogAction.Neutral,
+                primaryText = stringResource(R.string.legacy_data_discard),
+                onPrimary = onDiscard,
+                primaryKind = AppDialogAction.Destroy,
+            )
+        },
+    )
 }
 
 @Composable

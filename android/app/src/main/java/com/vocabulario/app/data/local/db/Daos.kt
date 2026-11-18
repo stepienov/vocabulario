@@ -269,3 +269,28 @@ interface CachedProfileDao {
     @Query("DELETE FROM cached_profile")
     suspend fun deleteAll()
 }
+
+@Dao
+interface SessionOwnerDao {
+    @Query("SELECT * FROM session_owner WHERE id = 0 LIMIT 1")
+    suspend fun get(): SessionOwnerEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(owner: SessionOwnerEntity)
+
+    /** Operacje czekające na wysłanie (także zaparkowane w outboxie i lookupy do decyzji). */
+    @Query(
+        "SELECT (SELECT COUNT(*) FROM pending_reviews) + (SELECT COUNT(*) FROM pending_moves) + " +
+            "(SELECT COUNT(*) FROM pending_lookups) + (SELECT COUNT(*) FROM outbox_ops)",
+    )
+    suspend fun unsentCount(): Int
+
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM cached_cards) OR EXISTS(SELECT 1 FROM cached_lists) OR " +
+            "EXISTS(SELECT 1 FROM pending_reviews) OR EXISTS(SELECT 1 FROM pending_moves) OR " +
+            "EXISTS(SELECT 1 FROM pending_lookups) OR EXISTS(SELECT 1 FROM pending_undos) OR " +
+            "EXISTS(SELECT 1 FROM local_settings) OR EXISTS(SELECT 1 FROM sync_meta) OR " +
+            "EXISTS(SELECT 1 FROM cached_profile) OR EXISTS(SELECT 1 FROM outbox_ops)",
+    )
+    suspend fun hasOwnedData(): Boolean
+}

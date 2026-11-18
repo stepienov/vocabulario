@@ -632,6 +632,14 @@
     <string name="err_login_wrong_password">Mot de passe incorrect</string>
     <string name="err_login_use_google">Ce compte utilise Google. Continuez avec Google.</string>
     <string name="err_session_ended">Votre session a pris fin. Reconnectez-vous.</string>
+    <string name="err_login_other_account">Cet appareil contient les données d’un autre compte. Connectez-vous à ce compte pour continuer.</string>
+    <string name="legacy_data_title">Données non attribuées sur cet appareil</string>
+    <string name="legacy_data_message">Cet appareil contient des données d’une version antérieure de l’application qui ne peuvent être associées à aucun compte. Modifications non envoyées : %1$d. Pour vous connecter, supprimez ces données. Ce qui est déjà synchronisé sera de nouveau téléchargé après la connexion.</string>
+    <string name="legacy_data_discard">Supprimer les données locales</string>
+    <string name="legacy_data_discard_confirm_title">Supprimer définitivement ?</string>
+    <string name="legacy_data_discard_confirm">Les modifications non envoyées (%1$d) seront perdues et ne pourront pas être récupérées.</string>
+    <string name="legacy_data_discarded">Données locales supprimées. Reconnectez-vous.</string>
+    <string name="legacy_data_discard_failed">Impossible de supprimer les données locales. Réessayez.</string>
 
 
     <string name="err_register">Échec de l’inscription</string>

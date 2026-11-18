@@ -663,6 +663,14 @@
     <string name="err_login_wrong_password">Sai mật khẩu</string>
     <string name="err_login_use_google">Tài khoản này dùng Google. Tiếp tục với Google.</string>
     <string name="err_session_ended">Phiên của bạn đã kết thúc. Vui lòng đăng nhập lại.</string>
+    <string name="err_login_other_account">Thiết bị này có dữ liệu của một tài khoản khác. Hãy đăng nhập vào tài khoản đó để tiếp tục.</string>
+    <string name="legacy_data_title">Dữ liệu chưa được gán trên thiết bị này</string>
+    <string name="legacy_data_message">Thiết bị này có dữ liệu từ phiên bản ứng dụng cũ không thể liên kết với tài khoản nào. Thay đổi chưa gửi: %1$d. Để đăng nhập, hãy xóa dữ liệu này. Những gì đã đồng bộ sẽ được tải lại sau khi bạn đăng nhập.</string>
+    <string name="legacy_data_discard">Xóa dữ liệu cục bộ</string>
+    <string name="legacy_data_discard_confirm_title">Xóa vĩnh viễn?</string>
+    <string name="legacy_data_discard_confirm">Các thay đổi chưa gửi (%1$d) sẽ bị mất và không thể khôi phục.</string>
+    <string name="legacy_data_discarded">Đã xóa dữ liệu cục bộ. Vui lòng đăng nhập lại.</string>
+    <string name="legacy_data_discard_failed">Không thể xóa dữ liệu cục bộ. Vui lòng thử lại.</string>
 
 
     <string name="err_register">Đăng ký không thành công</string>

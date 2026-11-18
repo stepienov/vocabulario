@@ -29,6 +29,9 @@ data class GoogleAuthRequest(val id_token: String)
 data class RefreshRequest(val refresh_token: String, val request_id: String)
 
 @Serializable
+data class LogoutRequest(val refresh_token: String)
+
+@Serializable
 data class UserResponse(
     val id: String,
     val email: String,

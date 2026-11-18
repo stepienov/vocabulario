@@ -46,5 +46,7 @@ internal fun SessionRecord?.toState(): SessionState = when {
 
 internal const val REAUTH_REASON_UNKNOWN = "unknown"
 internal const val REAUTH_REASON_SESSION_MISMATCH = "session_mismatch"
+internal const val REAUTH_REASON_OWNER_UNKNOWN = "owner_unknown"
+internal const val REAUTH_REASON_LEGACY_DATA = "legacy_unclaimed"
 internal const val RECOVERY_UNREADABLE = "session_unreadable"
 internal const val RECOVERY_STORAGE = "session_storage_unavailable"

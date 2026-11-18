@@ -658,6 +658,14 @@
     <string name="err_login_wrong_password">Password errata</string>
     <string name="err_login_use_google">Questo account usa Google. Continua con Google.</string>
     <string name="err_session_ended">La sessione è terminata. Accedi di nuovo.</string>
+    <string name="err_login_other_account">Su questo dispositivo ci sono dati di un altro account. Accedi a quell’account per continuare.</string>
+    <string name="legacy_data_title">Dati non assegnati su questo dispositivo</string>
+    <string name="legacy_data_message">Su questo dispositivo ci sono dati di una versione precedente dell’app che non possono essere collegati a un account. Modifiche non inviate: %1$d. Per accedere, rimuovi questi dati. Ciò che è già sincronizzato verrà scaricato di nuovo dopo l’accesso.</string>
+    <string name="legacy_data_discard">Rimuovi dati locali</string>
+    <string name="legacy_data_discard_confirm_title">Rimuovere definitivamente?</string>
+    <string name="legacy_data_discard_confirm">Le modifiche non inviate (%1$d) andranno perse e non potranno essere recuperate.</string>
+    <string name="legacy_data_discarded">Dati locali rimossi. Accedi di nuovo.</string>
+    <string name="legacy_data_discard_failed">Impossibile rimuovere i dati locali. Riprova.</string>
 
 
     <string name="err_register">Registrazione fallita</string>

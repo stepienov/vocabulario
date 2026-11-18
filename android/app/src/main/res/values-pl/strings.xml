@@ -667,6 +667,14 @@
     <string name="err_login_wrong_password">Nieprawidłowe hasło</string>
     <string name="err_login_use_google">To konto korzysta z Google. Zaloguj się przez Google.</string>
     <string name="err_session_ended">Sesja wygasła. Zaloguj się ponownie.</string>
+    <string name="err_login_other_account">Na tym urządzeniu są dane innego konta. Zaloguj się na to konto, aby kontynuować.</string>
+    <string name="legacy_data_title">Nieprzypisane dane na urządzeniu</string>
+    <string name="legacy_data_message">Na tym urządzeniu są dane z wcześniejszej wersji aplikacji, których nie można przypisać do konta. Niewysłane zmiany: %1$d. Aby się zalogować, usuń te dane. To, co zostało już zsynchronizowane, pobierze się ponownie po zalogowaniu.</string>
+    <string name="legacy_data_discard">Usuń dane lokalne</string>
+    <string name="legacy_data_discard_confirm_title">Usunąć na stałe?</string>
+    <string name="legacy_data_discard_confirm">Niewysłane zmiany (%1$d) zostaną utracone bez możliwości odzyskania.</string>
+    <string name="legacy_data_discarded">Dane lokalne usunięte. Zaloguj się ponownie.</string>
+    <string name="legacy_data_discard_failed">Nie udało się usunąć danych lokalnych. Spróbuj ponownie.</string>
 
 
     <string name="err_register">Błąd rejestracji</string>

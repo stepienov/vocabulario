@@ -19,6 +19,31 @@ Pakiet [`data/session`](../../../../../../android/app/src/main/java/com/vocabula
 
 **Tymczasowo, do kolejnych kroków:** login nadal czyści dane przed wynikiem, stan `ReauthRequired`/`RecoveryRequired` prowadzi na zwykły ekran AUTH (kroki 2–3: ekrany i nawigacja, login tego samego/innego konta), logout bez `POST /auth/logout` i bez zlecenia odwołania (krok logout), brak metadanych właściciela w Room i ochrony workerów (część d). Ta wersja Androida wymaga backendu z F-003/T-001 (pola `user_id`/`session_id` w odpowiedzi); oba wdrażamy razem.
 
+### Krok 2 · Właściciel danych w Room i login bez kasowania (18.11.2026)
+
+- Room v10: tabela `session_owner` (jeden wiersz: `ownerUserId`, monotoniczna `generation`, `phase`, `transitionId`). Addytywna `MIGRATION_9_10` niczego nie kasuje. Baza z jakimikolwiek danymi lub kolejkami dostaje `legacy_unclaimed`, pusta `signed_out`.
+- Czyste decyzje w [`OwnerDecisions.kt`](../../../../../../android/app/src/main/java/com/vocabulario/app/data/session/OwnerDecisions.kt):
+  - login: pusta baza → przejęcie, ten sam `user_id` → reauth z zachowaniem danych, dane innego konta → odmowa „To inne konto”, dane bez właściciela → kwarantanna;
+  - start: dokończenie przerwanej instalacji lub logout, przejęcie pustej bazy, w pozostałych przypadkach reauth bez wysyłki kolejek.
+- `OfflineStore`: decyzja i zapis zamiaru w jednej transakcji. `clearAll()`/`clearAllTables` usunięte; dane właściciela kasuje `OWNED_TABLES` bez rekordu metadanych.
+- `AuthRepository`:
+  - login, rejestracja i Google nie kasują niczego przed odpowiedzią serwera;
+  - odrzucony kandydat dostaje jednorazowe `POST /auth/logout`;
+  - logout: najpierw zamiar `logging_out` z nową generacją w Room, potem usunięcie sesji, na końcu dane; nieudane usunięcie sesji wycofuje zamiar;
+  - `reconcileOwnerOnStart()` w bootstrapie przed wyborem ekranu.
+- AUTH:
+  - komunikat „To inne konto” (`err_login_other_account`);
+  - dla danych bez właściciela dialog z liczbą niewysłanych zmian i przyciskiem „Usuń dane lokalne”; przy niewysłanych zmianach drugie potwierdzenie.
+  - 8 nowych kluczy w 17 lokalizacjach.
+- Testy: [`OwnerDecisionsTest`](../../../../../../android/app/src/test/java/com/vocabulario/app/data/session/OwnerDecisionsTest.kt) (10) oraz `requireReauth` w `SessionCoordinatorTest`. Gradle: unit tests 246/246, lint bez uwag do zmian, `assembleDebug` OK.
+
+**Tymczasowo:**
+- Zmiana konta jest celowo niedostępna (§7: dopiero po ochronie zapisów z części d). Przy danych konta A login na B kończy się odmową, a z AUTH nie ma jeszcze wyjścia przez logout (ekrany reauth w kroku 3).
+- Odwołanie kandydata to jedna próba, nie trwałe zlecenie (krok logout).
+- Logout nadal bez dialogu niewysłanych zmian.
+- Migracji Room nie da się sprawdzić testem JVM (brak Robolectric/urządzenia); SQL odpowiada schematowi encji i wymaga ręcznego sprawdzenia aktualizacji na urządzeniu.
+- Obecna instalacja debug z danymi trafi do kwarantanny: po aktualizacji wymagany login i świadome usunięcie lokalnych danych; zsynchronizowane dane wrócą z serwera.
+
 ## Cel, decyzje i zależności
 
 Jedna spójna sesja Androida, bez utraty pracy i mieszania kont. **Zatwierdzone:** zwykła awaria sieci pozwala kontynuować naukę z cache; jednoznacznie odwołana/wygasła sesja blokuje bibliotekę i naukę do ponownego loginu tego samego właściciela, ale nie usuwa danych. Logout może zakończyć się lokalnie offline; odwołanie serwerowe jest wtedy jawnie odroczone.

@@ -632,6 +632,14 @@
     <string name="err_login_wrong_password">Palavra-passe incorreta</string>
     <string name="err_login_use_google">Esta conta usa o Google. Continue com o Google.</string>
     <string name="err_session_ended">A sua sessão terminou. Inicie sessão novamente.</string>
+    <string name="err_login_other_account">Este dispositivo tem dados de outra conta. Inicie sessão nessa conta para continuar.</string>
+    <string name="legacy_data_title">Dados não atribuídos neste dispositivo</string>
+    <string name="legacy_data_message">Este dispositivo tem dados de uma versão anterior da aplicação que não podem ser associados a uma conta. Alterações por enviar: %1$d. Para iniciar sessão, remova estes dados. O que já estiver sincronizado será transferido novamente após iniciar sessão.</string>
+    <string name="legacy_data_discard">Remover dados locais</string>
+    <string name="legacy_data_discard_confirm_title">Remover definitivamente?</string>
+    <string name="legacy_data_discard_confirm">As alterações por enviar (%1$d) serão perdidas e não poderão ser recuperadas.</string>
+    <string name="legacy_data_discarded">Dados locais removidos. Inicie sessão novamente.</string>
+    <string name="legacy_data_discard_failed">Não foi possível remover os dados locais. Tente novamente.</string>
 
 
     <string name="err_register">Falha no cadastro</string>
