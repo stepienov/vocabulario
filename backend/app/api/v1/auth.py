@@ -1,18 +1,13 @@
-from fastapi import APIRouter, Depends, status
+import logging
+
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
 from app.core.http_errors import api_error
-from app.core.security import (
-    create_access_token,
-    create_refresh_token,
-    decode_token,
-    hash_password,
-    verify_password,
-    verify_token_type,
-)
+from app.core.security import hash_password, verify_password
 from app.db.session import get_db
 from app.models import LanguageProfile, User, UserSettings
 from app.schemas import (
@@ -21,23 +16,47 @@ from app.schemas import (
     LanguageProfileResponse,
     LanguageProfileUpdate,
     LoginRequest,
-    RegisterRequest,
+    LogoutRequest,
     RefreshRequest,
+    RegisterRequest,
     TokenResponse,
     UserResponse,
     UserSettingsResponse,
     UserSettingsUpdate,
 )
+from app.services.auth_sessions import (
+    IssuedSession,
+    RetryRecordError,
+    SessionAuthError,
+    create_session,
+    lock_user,
+    logout_session,
+    refresh_session,
+)
 from app.services.llm import verify_google_id_token
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-async def _issue_tokens(user: User) -> TokenResponse:
+def _token_response(issued: IssuedSession, response: Response) -> TokenResponse:
+    response.headers["Cache-Control"] = "no-store"
     return TokenResponse(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
+        access_token=issued.access_token,
+        refresh_token=issued.refresh_token,
+        user_id=issued.user_id,
+        session_id=issued.session_id,
+        expires_in=issued.expires_in(),
     )
+
+
+async def _session_error(db: AsyncSession, exc: SessionAuthError):
+    if exc.commit:
+        await db.commit()
+    else:
+        await db.rollback()
+    return api_error(exc.status_code, exc.code)
 
 
 async def _ensure_settings(db: AsyncSession, user_id) -> UserSettings:
@@ -51,7 +70,7 @@ async def _ensure_settings(db: AsyncSession, user_id) -> UserSettings:
 
 
 @router.post("/register", response_model=TokenResponse)
-async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(body: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
     existing = await db.execute(select(User).where(User.email == body.email.lower()))
     if existing.scalar_one_or_none():
         raise api_error(status.HTTP_409_CONFLICT, "email_taken", "Email already registered")
@@ -60,13 +79,13 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     db.add(user)
     await db.flush()
     await _ensure_settings(db, user.id)
+    issued = await create_session(db, user.id)
     await db.commit()
-    await db.refresh(user)
-    return await _issue_tokens(user)
+    return _token_response(issued, response)
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == body.email.lower()))
     user = result.scalar_one_or_none()
     if user is None:
@@ -77,13 +96,21 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
             "google_login_required",
             "This account uses Google sign-in",
         )
-    if not verify_password(body.password, user.password_hash):
+    verified_hash = user.password_hash
+    if not verify_password(body.password, verified_hash):
         raise api_error(status.HTTP_401_UNAUTHORIZED, "wrong_password", "Wrong password")
-    return await _issue_tokens(user)
+    # The password may have changed while it was being verified; re-check under the lock.
+    locked = await lock_user(db, user.id)
+    if locked is None or locked.password_hash != verified_hash:
+        await db.rollback()
+        raise api_error(status.HTTP_401_UNAUTHORIZED, "wrong_password", "Wrong password")
+    issued = await create_session(db, user.id)
+    await db.commit()
+    return _token_response(issued, response)
 
 
 @router.post("/google", response_model=TokenResponse)
-async def google_auth(body: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+async def google_auth(body: GoogleAuthRequest, response: Response, db: AsyncSession = Depends(get_db)):
     try:
         token_data = await verify_google_id_token(body.id_token)
     except Exception as exc:
@@ -105,24 +132,37 @@ async def google_auth(body: GoogleAuthRequest, db: AsyncSession = Depends(get_db
             await db.flush()
             await _ensure_settings(db, user.id)
 
+    await db.flush()
+    await lock_user(db, user.id)
+    issued = await create_session(db, user.id)
     await db.commit()
-    await db.refresh(user)
-    return await _issue_tokens(user)
+    return _token_response(issued, response)
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
+async def refresh(body: RefreshRequest, response: Response, db: AsyncSession = Depends(get_db)):
     try:
-        payload = decode_token(body.refresh_token)
-        user_id = verify_token_type(payload, "refresh")
-    except Exception as exc:
-        raise api_error(status.HTTP_401_UNAUTHORIZED, "invalid_refresh_token", "Invalid refresh token") from exc
+        issued = await refresh_session(db, body.refresh_token, body.request_id)
+    except SessionAuthError as exc:
+        raise await _session_error(db, exc) from exc
+    except RetryRecordError as exc:
+        await db.rollback()
+        logger.error("auth refresh retry record unusable: %s", exc)
+        raise api_error(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, "refresh_unavailable", "Refresh failed"
+        ) from exc
+    await db.commit()
+    return _token_response(issued, response)
 
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise api_error(status.HTTP_401_UNAUTHORIZED, "user_not_found", "User not found")
-    return await _issue_tokens(user)
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(body: LogoutRequest, db: AsyncSession = Depends(get_db)) -> Response:
+    try:
+        await logout_session(db, body.refresh_token)
+    except SessionAuthError as exc:
+        raise await _session_error(db, exc) from exc
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 me_router = APIRouter(prefix="/me", tags=["me"])

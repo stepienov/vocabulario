@@ -300,7 +300,7 @@ async def test_completed_more_operation_replays_without_another_model_call(pg, m
 
 @pytest.mark.pg
 async def test_more_http_retry_reuses_completed_operation(pg, pg_client, monkeypatch):
-    from app.core.security import create_access_token
+    from app.services.auth_sessions import create_session
 
     calls = 0
     started = asyncio.Event()
@@ -318,7 +318,10 @@ async def test_more_http_retry_reuses_completed_operation(pg, pg_client, monkeyp
         pg, complete=True,
         candidates=[{"lemma": "el perro", "pos": "noun", "gloss": "pies"}],
     )
-    headers = {"Authorization": f"Bearer {create_access_token(user_id)}"}
+    async with pg() as session:
+        issued = await create_session(session, user_id)
+        await session.commit()
+    headers = {"Authorization": f"Bearer {issued.access_token}"}
     payload = {
         "text": "pies", "profile_id": str(profile_id), "local_membership": True,
         "more": True, "operation_id": str(uuid4()),
@@ -429,7 +432,7 @@ async def test_expand_annotates_only_without_local_membership(pg, pg_client, mon
             )
         )
         await session.commit()
-        headers = auth_headers(user)
+        headers = await auth_headers(session, user)
         profile_id = str(profile.id)
         card_id = str(card.id)
 

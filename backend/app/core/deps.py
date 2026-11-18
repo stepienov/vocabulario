@@ -2,52 +2,75 @@ import re
 import unicodedata
 from uuid import UUID
 
-from fastapi import Depends, status
+from fastapi import Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.http_errors import api_error
-from app.core.security import verify_token_type
+from app.core.security import TokenClaims
 from app.db.session import get_db
-from app.models import User
+from app.models import AuthSession, User
+from app.services.auth_sessions import (
+    AccessContext,
+    SessionAuthError,
+    access_claims,
+    check_access_session,
+)
 
 security = HTTPBearer(auto_error=False)
 
 
-async def get_current_user_id(
-    credentials: HTTPAuthorizationCredentials | None = Depends(security),
-) -> UUID:
+def _claims(credentials: HTTPAuthorizationCredentials | None) -> TokenClaims:
     if credentials is None:
         raise api_error(status.HTTP_401_UNAUTHORIZED, "not_authenticated", "Not authenticated")
     try:
-        from app.core.security import decode_token
+        return access_claims(credentials.credentials)
+    except SessionAuthError as exc:
+        raise api_error(exc.status_code, exc.code) from exc
 
-        payload = decode_token(credentials.credentials)
-        return verify_token_type(payload, "access")
-    except (JWTError, ValueError) as exc:
-        raise api_error(status.HTTP_401_UNAUTHORIZED, "invalid_token", "Invalid token") from exc
+
+def _context(request: Request, claims: TokenClaims, session: AuthSession | None) -> AccessContext:
+    try:
+        context = check_access_session(claims, session)
+    except SessionAuthError as exc:
+        raise api_error(exc.status_code, exc.code) from exc
+    request.state.auth_context = context
+    return context
+
+
+async def get_current_user_id(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> UUID:
+    """Session check in a short own DB session, so long handlers do not hold a connection."""
+    claims = _claims(credentials)
+    cached: AccessContext | None = getattr(request.state, "auth_context", None)
+    if cached is not None and cached.session_id == claims.session_id:
+        return cached.user_id
+    from app.db import session as db_session
+
+    async with db_session.async_session_factory() as db:
+        session = await db.get(AuthSession, claims.session_id)
+    return _context(request, claims, session).user_id
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    if credentials is None:
-        raise api_error(status.HTTP_401_UNAUTHORIZED, "not_authenticated", "Not authenticated")
-    try:
-        from app.core.security import decode_token
-
-        payload = decode_token(credentials.credentials)
-        user_id = verify_token_type(payload, "access")
-    except (JWTError, ValueError) as exc:
-        raise api_error(status.HTTP_401_UNAUTHORIZED, "invalid_token", "Invalid token") from exc
-
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise api_error(status.HTTP_401_UNAUTHORIZED, "user_not_found", "User not found")
+    """One joined read of the live session and its user per request."""
+    claims = _claims(credentials)
+    row = (
+        await db.execute(
+            select(AuthSession, User)
+            .join(User, User.id == AuthSession.user_id)
+            .where(AuthSession.id == claims.session_id)
+        )
+    ).first()
+    session, user = row if row is not None else (None, None)
+    _context(request, claims, session)
     return user
 
 

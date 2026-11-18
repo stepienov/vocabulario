@@ -4,9 +4,9 @@ import asyncio
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import event, select
+from sqlalchemy import delete, event, select
 
-from app.models import LookupEvent, LookupQueryCache
+from app.models import LookupEvent, LookupQueryCache, User
 from app.services.background import drain_background
 from app.services.lexical import LexicalService
 from app.services.lookup_candidates import normalize_lookup_query
@@ -39,7 +39,7 @@ async def test_fast_path_skips_learning_fields_and_uses_one_select(pg, pg_client
         profile = await create_profile(session, user, "pl", "es")
         await create_card(session, profile, "el prado", "noun")
         await _ready_row(session, profile)
-        headers = auth_headers(user)
+        headers = await auth_headers(session, user)
         profile_id = profile.id
 
     from app.db import session as db_session
@@ -84,7 +84,7 @@ async def test_default_membership_still_annotates_the_card(pg, pg_client):
         profile = await create_profile(session, user, "pl", "es")
         card = await create_card(session, profile, "el prado", "noun")
         await _ready_row(session, profile)
-        headers = auth_headers(user)
+        headers = await auth_headers(session, user)
         profile_id = profile.id
         card_id = card.id
 
@@ -127,7 +127,7 @@ async def test_background_history_bumps_hit_count_once(pg, pg_client):
         user = await create_user(session)
         profile = await create_profile(session, user, "pl", "es")
         row = await _ready_row(session, profile)
-        headers = auth_headers(user)
+        headers = await auth_headers(session, user)
         profile_id = profile.id
         row_id = row.id
 
@@ -162,7 +162,7 @@ async def test_two_cached_lookups_bump_hit_count_by_two(pg, pg_client):
         user = await create_user(session)
         profile = await create_profile(session, user, "pl", "es")
         row = await _ready_row(session, profile)
-        headers = auth_headers(user)
+        headers = await auth_headers(session, user)
         profile_id = str(profile.id)
         row_id = row.id
 
@@ -180,11 +180,14 @@ async def test_two_cached_lookups_bump_hit_count_by_two(pg, pg_client):
     assert stored.hit_count == 6
 
 
-async def test_missing_user_is_404_on_fast_path_and_401_otherwise(pg, pg_client):
-    from app.core.security import create_access_token
-
-    headers = {"Authorization": f"Bearer {create_access_token(uuid4())}"}
-    profile_id = str(uuid4())
+async def test_deleted_user_session_is_revoked_on_fast_and_slow_paths(pg, pg_client):
+    async with pg() as session:
+        user = await create_user(session)
+        profile = await create_profile(session, user, "pl", "es")
+        headers = await auth_headers(session, user)
+        profile_id = str(profile.id)
+        await session.execute(delete(User).where(User.id == user.id))
+        await session.commit()
     fast = await pg_client.post(
         "/api/v1/lookup/cached",
         headers=headers,
@@ -195,9 +198,9 @@ async def test_missing_user_is_404_on_fast_path_and_401_otherwise(pg, pg_client)
         headers=headers,
         json={"text": "prado", "profile_id": profile_id},
     )
-    assert fast.status_code == 404
-    assert slow.status_code == 401
-    assert slow.json()["detail"]["code"] == "user_not_found"
+    for response in (fast, slow):
+        assert response.status_code == 401
+        assert response.json()["detail"]["code"] == "session_revoked"
 
 
 async def test_cached_lookup_without_token_is_401(pg_client):

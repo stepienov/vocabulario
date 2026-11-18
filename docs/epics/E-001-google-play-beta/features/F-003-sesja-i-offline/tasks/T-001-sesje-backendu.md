@@ -219,14 +219,14 @@ Po implementacji najpierw wybrany moduł testów sesji, potem testy dotkniętych
 
 ## Kryteria i weryfikacja
 
-- [ ] Refresh/rotacja/logout/reset mają testy endpointów z izolowanym PostgreSQL.
-- [ ] Ponowienia i równoległe żądania nie zostawiają przypadkowo ważnego starego refresh ani nie blokują legalnego klienta poza ustalonym kontraktem.
-- [ ] Logout odwołuje bieżącą sesję; reset i usunięcie konta wszystkie odpowiednie sesje, a zmiana hasła pozostałe z odnowieniem bieżącej. Odwołane access/refresh nie pozwalają na nowe żądania zgodnie z kontraktem.
+- [ ] Refresh/rotacja/logout/reset mają testy endpointów z izolowanym PostgreSQL. *(refresh/rotacja/logout — tak, [test_auth_api.py](../../../../../../backend/tests/test_auth_api.py); reset czeka na F-004/T-002)*
+- [x] Ponowienia i równoległe żądania nie zostawiają przypadkowo ważnego starego refresh ani nie blokują legalnego klienta poza ustalonym kontraktem.
+- [ ] Logout odwołuje bieżącą sesję; reset i usunięcie konta wszystkie odpowiednie sesje, a zmiana hasła pozostałe z odnowieniem bieżącej. Odwołane access/refresh nie pozwalają na nowe żądania zgodnie z kontraktem. *(logout i odwołanie wszystkich sesji — tak; podłączenie do resetu/zmiany hasła/usunięcia konta należy do F-004/F-006)*
 - [ ] Dwie sesje i kontrolowany równoległy refresh sprawdzają różnicę reset vs zmiana hasła; utrata odpowiedzi nie przywraca odwołanych sesji.
-- [ ] Stare tokeny odrzucane zgodnie z kontraktem; niebezpieczny sekret/brak wymaganej konfiguracji blokuje start produkcji.
+- [x] Stare tokeny odrzucane zgodnie z kontraktem; niebezpieczny sekret/brak wymaganej konfiguracji blokuje start produkcji.
 
 **Poza zakresem:** lista urządzeń w UI, migracja całego dostawcy auth, nowe funkcje nauki i wdrożenie bez osobnego zlecenia.  
-**Wynik weryfikacji:** sprawdzono punkty kodu i kompletność projektu/integracji. Nie ma implementacji, testów runtime ani zaliczenia kryteriów produktu.
+**Wynik weryfikacji:** fundament i trasy sesji zaimplementowane i przetestowane na lokalnym PostgreSQL (sekcja Postęp). Otwarte kryteria zależą od operacji konta F-004/F-006.
 
 ## Postęp
 
@@ -240,4 +240,17 @@ Modele [AuthSession i AuthRefreshRetry](../../../../../../backend/app/models/__i
 
 **Dowód lokalny (tymczasowy PostgreSQL 16, `REQUIRE_PG_TESTS=1`):** [test_auth_sessions.py](../../../../../../backend/tests/test_auth_sessions.py) — dwa loginy w tej samej sekundzie, rotacja ze stałym `sid`, ten sam `request_id` sekwencyjnie i równolegle (jedna rotacja, jedna para), 409 dla innego ID/wejścia/po nowszej rotacji, granica 5 min sterowanym zegarem, replay odwołujący tylko właściwą sesję, logout dwukrotny i ze starym dowodem, odwołanie pozostałych + odnowienie, wygaśnięcie, uszkodzony szyfrogram → `RetryRecordError`, klasyfikacja tokenów. Nowe przypadki konfiguracji w [test_readiness.py](../../../../../../backend/tests/test_readiness.py). Pełne `ci_check` zielone; ruff czysty.
 
-**Otwarte w tym tasku:** podłączenie do register/login/google/refresh/logout, `TokenResponse` z `user_id`/`session_id`/`expires_in` i `Cache-Control: no-store`, wspólny kontekst w `deps.py` dla obu zależności, middleware logów, fabryki testowe; testy endpointów. Bramki `require_identity`/`require_study_access` i operacje konta należą do F-004/F-006/F-007. Sprzątanie wygasłych retry poza rotacją — F-004/T-003. Wdrożenie dopiero po T-002 Androida i osobnym przełączeniu.
+**Otwarte po etapie 1** zostało zrealizowane w etapie 2 poniżej, poza punktami wymienionymi tam jako otwarte.
+
+### Etap 2 · Podłączenie tras i zależności (18.11.2026)
+
+- [auth.py](../../../../../../backend/app/api/v1/auth.py): register, login i google tworzą sesję w tej samej transakcji co konto lub logowanie. Login po weryfikacji hasła blokuje użytkownika i ponownie porównuje `password_hash`, więc równoległa zmiana hasła nie wyda sesji ze starym dowodem. `/auth/refresh` wymaga `request_id` (UUID4); 409 `refresh_conflict`, replay → commit odwołania i 401, nieczytelny zapis retry → 500 `refresh_unavailable` bez tokenów. Nowy `POST /auth/logout` (204, idempotentny). Odpowiedzi tokenowe mają `user_id`, `session_id`, `expires_in` i `Cache-Control: no-store`.
+- [deps.py](../../../../../../backend/app/core/deps.py): `get_current_user` wykonuje jeden odczyt `auth_sessions` JOIN `users`; `get_current_user_id` sprawdza sesję w krótkiej własnej sesji DB (długie lookupy nie trzymają połączenia). Oba używają wspólnego `check_access_session` i zapisują kontekst w `request.state`; admin przechodzi przez `get_current_user`. Brak usera po usunięciu konta = kaskadowo brak sesji → `session_revoked` (kod `user_not_found` nie jest już zwracany przez auth).
+- [security.py](../../../../../../backend/app/core/security.py): usunięte stare `create_*_token`/`decode_token`/`verify_token_type`; middleware logów używa `token_subject` tylko do przypisania `user_id` (body i nagłówki `/auth` nie są logowane; komunikaty błędów retry są stałe).
+- Fabryki testowe: `auth_headers(session, user)` tworzy prawdziwą sesję; zależne testy przepięte bez osłabiania autoryzacji.
+
+**Dowód lokalny (PostgreSQL 16, `REQUIRE_PG_TESTS=1`):** [test_auth_api.py](../../../../../../backend/tests/test_auth_api.py) — pełny przepływ register → `/me` → dwa loginy (różne sesje) → refresh z tym samym `request_id` (ta sama para) → 409 → logout ×2 → 401 `session_revoked` dla access i refresh, druga sesja nadal działa; walidacja wejścia (brak `request_id`, UUID1 → 422; access jako refresh i śmieci w logout → 401 bez skutków); stare JWT → `session_upgrade_required`, śmieci → `invalid_token`; odwołanie wszystkich sesji działa na `/me`, admin i lookup (`get_current_user_id`); jeden odczyt `auth_sessions` na request. Pełne `ci_check`: 638 passed, 2 skipped.
+
+**Uwaga wdrożeniowa:** backend z tej gałęzi **nie może trafić na produkcję** przed F-003/T-002 (Android: `request_id`, nowe kody, logout) i osobnym przełączeniem z §7 — obecna aplikacja dostałaby 422 przy refresh i `session_upgrade_required` dla zapisanych tokenów.
+
+**Otwarte w tym tasku:** bramki `require_identity`/`require_study_access` (F-004/F-007), podłączenie odwołań do resetu/zmiany hasła/usunięcia konta i testy reset vs zmiana hasła (F-004/F-006), sprzątanie wygasłych retry poza rotacją (F-004/T-003), limity żądań auth, test aktualizacji schematu na syntetycznej starej bazie.

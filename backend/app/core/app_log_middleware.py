@@ -5,7 +5,6 @@ import time
 import traceback as tb_mod
 from uuid import UUID, uuid4
 
-from jose import JWTError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -70,13 +69,9 @@ def _user_id_from_request(request: Request) -> UUID | None:
     token = auth.split(" ", 1)[1].strip()
     if not token:
         return None
-    try:
-        from app.core.security import decode_token
+    from app.core.security import token_subject
 
-        payload = decode_token(token)
-        return UUID(str(payload.get("sub")))
-    except (JWTError, ValueError, TypeError, KeyError):
-        return None
+    return token_subject(token)
 
 
 def _profile_id_from_request(request: Request) -> UUID | None:

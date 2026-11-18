@@ -201,7 +201,7 @@ async def test_get_card_enrichment_active_follows_claim(pg, pg_client):
             content={"lemma": "mesa"},
         )
         await session.commit()
-        headers = auth_headers(user)
+        headers = await auth_headers(session, user)
         card_id = card.id
         profile_id = profile.id
     url = f"/api/v1/cards/{card_id}?profile_id={profile_id}"

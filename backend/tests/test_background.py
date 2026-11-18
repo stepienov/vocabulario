@@ -130,7 +130,7 @@ async def test_http_response_returns_before_the_log_write(pg, pg_client, monkeyp
     async with pg() as session:
         user = await create_user(session, email="bg-me@test.com")
         await session.commit()
-        headers = auth_headers(user)
+        headers = await auth_headers(session, user)
     health = await pg_client.get("/health")
     me = await pg_client.get("/api/v1/me", headers=headers)
     assert health.status_code == 200

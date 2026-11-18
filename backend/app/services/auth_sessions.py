@@ -114,8 +114,12 @@ def _token_error(exc: TokenError, *, refresh: bool) -> SessionAuthError:
 
 
 async def lock_user(db: AsyncSession, user_id: UUID) -> User | None:
+    """Lock and re-read the user row; flush pending changes to it first."""
     result = await db.execute(
-        select(User).where(User.id == user_id).with_for_update(key_share=True)
+        select(User)
+        .where(User.id == user_id)
+        .with_for_update(key_share=True)
+        .execution_options(populate_existing=True)
     )
     return result.scalar_one_or_none()
 

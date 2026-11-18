@@ -1,13 +1,24 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, computed_field, field_validator, model_validator
+from pydantic import (
+    UUID4,
+    BaseModel,
+    EmailStr,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    user_id: UUID
+    session_id: UUID
+    expires_in: int
 
 
 class RegisterRequest(BaseModel):
@@ -25,7 +36,12 @@ class GoogleAuthRequest(BaseModel):
 
 
 class RefreshRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str = Field(min_length=1, max_length=4096)
+    request_id: UUID4
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str = Field(min_length=1, max_length=4096)
 
 
 class UserResponse(BaseModel):
