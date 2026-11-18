@@ -663,6 +663,7 @@
     <string name="err_login_email_unknown">Bu e-posta ile hesap yok</string>
     <string name="err_login_wrong_password">Yanlış şifre</string>
     <string name="err_login_use_google">Bu hesap Google kullanıyor. Google ile devam edin.</string>
+    <string name="err_session_ended">Oturumunuz sona erdi. Yeniden giriş yapın.</string>
 
 
     <string name="err_register">Kayıt başarısız</string>

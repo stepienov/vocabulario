@@ -631,6 +631,7 @@
     <string name="err_login_email_unknown">لا يوجد حساب بهذا البريد</string>
     <string name="err_login_wrong_password">كلمة المرور غير صحيحة</string>
     <string name="err_login_use_google">هذا الحساب يستخدم Google. تابِع عبر Google.</string>
+    <string name="err_session_ended">انتهت جلستك. سجّل الدخول مرة أخرى.</string>
 
 
     <string name="err_register">فشل إنشاء الحساب</string>

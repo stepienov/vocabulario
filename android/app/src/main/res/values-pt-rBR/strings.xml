@@ -631,6 +631,7 @@
     <string name="err_login_email_unknown">Não há conta com este e-mail</string>
     <string name="err_login_wrong_password">Senha incorreta</string>
     <string name="err_login_use_google">Esta conta usa o Google. Continue com o Google.</string>
+    <string name="err_session_ended">Sua sessão terminou. Entre novamente.</string>
 
 
     <string name="err_register">Falha no cadastro</string>

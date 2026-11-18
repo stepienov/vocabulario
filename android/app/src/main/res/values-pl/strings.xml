@@ -666,6 +666,7 @@
     <string name="err_login_email_unknown">Nie ma konta z tym e-mailem</string>
     <string name="err_login_wrong_password">Nieprawidłowe hasło</string>
     <string name="err_login_use_google">To konto korzysta z Google. Zaloguj się przez Google.</string>
+    <string name="err_session_ended">Sesja wygasła. Zaloguj się ponownie.</string>
 
 
     <string name="err_register">Błąd rejestracji</string>

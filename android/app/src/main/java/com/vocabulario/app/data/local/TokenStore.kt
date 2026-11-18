@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.vocabulario.app.data.session.LegacyTokenSource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
@@ -26,17 +28,16 @@ private val Context.dataStore by preferencesDataStore("vocabulario_prefs")
 @Singleton
 class TokenStore @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
-    private val accessKey = stringPreferencesKey("access_token")
-    private val refreshKey = stringPreferencesKey("refresh_token")
+) : LegacyTokenSource {
+    // Tylko do jednorazowej migracji do zaszyfrowanego rekordu SessionCoordinator.
+    private val legacyAccessKey = stringPreferencesKey("access_token")
+    private val legacyRefreshKey = stringPreferencesKey("refresh_token")
     private val profileKey = stringPreferencesKey("active_profile_id")
     private val themeKey = stringPreferencesKey("theme")
     private val appLangKey = stringPreferencesKey("app_lang")
     private val legacyUiLangKey = stringPreferencesKey("ui_lang")
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val cachedAccess = AtomicReference<String?>(null)
-    private val cachedRefresh = AtomicReference<String?>(null)
     private val cachedAppLang = AtomicReference<String?>(null)
     private val reopenSettings = AtomicBoolean(false)
     private val expandLanguages = AtomicBoolean(false)
@@ -44,9 +45,6 @@ class TokenStore @Inject constructor(
 
     private val _ready = MutableStateFlow(false)
     val ready: StateFlow<Boolean> = _ready.asStateFlow()
-
-    private val _accessToken = MutableStateFlow<String?>(null)
-    val accessToken: Flow<String?> = _accessToken
 
     private val _activeProfileId = MutableStateFlow<String?>(null)
     val activeProfileId: StateFlow<String?> = _activeProfileId.asStateFlow()
@@ -58,11 +56,6 @@ class TokenStore @Inject constructor(
         scope.launch {
             migrateLegacyUiLangKey()
             val prefs = context.dataStore.data.first()
-            val access = prefs[accessKey]
-            val refresh = prefs[refreshKey]
-            cachedAccess.set(access)
-            cachedRefresh.set(refresh)
-            _accessToken.value = access
             _activeProfileId.value = prefs[profileKey]
             cachedAppLang.set(readAppLang(prefs))
             _ready.value = true
@@ -88,44 +81,27 @@ class TokenStore @Inject constructor(
         }
     }
 
-    /** Tylko pamięć — nigdy nie blokuj wątku (OkHttp / Main). */
-    fun peekAccessToken(): String? = cachedAccess.get()
-
-    fun peekRefreshToken(): String? = cachedRefresh.get()
-
     suspend fun awaitReady() {
         ready.first { it }
     }
 
-    suspend fun saveTokens(access: String, refresh: String) {
-        cachedAccess.set(access)
-        cachedRefresh.set(refresh)
-        _accessToken.value = access
-        context.dataStore.edit {
-            it[accessKey] = access
-            it[refreshKey] = refresh
-        }
+    override fun readLegacyTokens(): Pair<String, String>? = runBlocking(Dispatchers.IO) {
+        val prefs = context.dataStore.data.first()
+        val access = prefs[legacyAccessKey]?.takeIf { it.isNotBlank() }
+        val refresh = prefs[legacyRefreshKey]?.takeIf { it.isNotBlank() }
+        if (access != null && refresh != null) access to refresh else null
     }
 
-    /** Dla Authenticatora — cache od razu, zapis DataStore w tle. */
-    fun saveTokensAsync(access: String, refresh: String) {
-        cachedAccess.set(access)
-        cachedRefresh.set(refresh)
-        _accessToken.value = access
-        scope.launch {
-            runCatching {
-                context.dataStore.edit {
-                    it[accessKey] = access
-                    it[refreshKey] = refresh
-                }
+    override fun removeLegacyTokens() {
+        runBlocking(Dispatchers.IO) {
+            val prefs = context.dataStore.data.first()
+            if (prefs[legacyAccessKey] == null && prefs[legacyRefreshKey] == null) return@runBlocking
+            context.dataStore.edit {
+                it.remove(legacyAccessKey)
+                it.remove(legacyRefreshKey)
             }
         }
     }
-
-    suspend fun getRefreshToken(): String? =
-        cachedRefresh.get()
-            ?: context.dataStore.data.first()[refreshKey]?.also { cachedRefresh.set(it) }
-
     suspend fun saveActiveProfile(profileId: String) {
         if (_activeProfileId.value == profileId) return
         _activeProfileId.value = profileId
@@ -172,9 +148,6 @@ class TokenStore @Inject constructor(
 
     /** Natychmiastowe wylogowanie w pamięci (bez blokady DataStore). */
     fun clearMemory() {
-        cachedAccess.set(null)
-        cachedRefresh.set(null)
-        _accessToken.value = null
         _activeProfileId.value = null
         cachedAppLang.set(null)
     }

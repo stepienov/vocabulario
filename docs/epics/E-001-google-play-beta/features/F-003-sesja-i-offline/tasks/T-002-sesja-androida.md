@@ -1,7 +1,23 @@
 # T-002 · Spójna sesja Androida i bezpieczny logout
 
-**ID:** `E-001/F-003/T-002` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / L.  
+**ID:** `E-001/F-003/T-002` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / L.  
 **Feature:** [Sesja i offline](../README.md). **Źródło:** B-03; F-04/F-05/F-12 w [analizie](../../../sources/analiza-2026-11-17.md).
+
+## Postęp
+
+### Krok 1 · Zaszyfrowany rekord sesji i wspólny refresh (18.11.2026)
+
+Pakiet [`data/session`](../../../../../../android/app/src/main/java/com/vocabulario/app/data/session/):
+
+- `SessionRecord`: jeden wersjonowany rekord (właściciel, `session_id`, para tokenów, `pending_refresh {request_id, input_refresh}`, status `ACTIVE`/`REAUTH_REQUIRED`). Zapis do osobnego DataStore `vocabulario_session` przez `KeystoreSessionCipher` (AES-256/GCM, świeży IV, format v1). Brak klucza lub uszkodzony blob → `RecoveryRequired`, bez zapisu i bez kasowania danych.
+- `SessionCoordinator`: jedna blokada dla interceptora, authenticatora i repozytorium. Zapis przed publikacją w pamięci. `request_id` zapisany przed HTTP i ponawiany po timeout/restarcie. Kompletność i zgodność właściciela/sesji odpowiedzi są sprawdzane. 409 jednorazowo porównuje się z trwałym snapshotem. 401 `session_revoked`/`session_expired`/`session_upgrade_required`/`invalid_refresh_token`/`invalid_token` → `ReauthRequired` z zachowanym właścicielem. Timeout, IO, 429, 5xx i wadliwa odpowiedź nie są wylogowaniem.
+- Migracja jawnych tokenów z `vocabulario_prefs`: najpierw trwały zaszyfrowany zapis, potem usunięcie jawnych kluczy. Migrowany rekord nie ma właściciela, więc backend odpowie `session_upgrade_required` → reauth.
+- Publiczne `/auth/register|login|google|refresh|logout` bez Bearer i bez refresh po 401. Pozostałe `/auth/...` są traktowane jak zwykłe uwierzytelnione trasy. Usunięte `TokenRefresher`, `saveTokensAsync`, nieużywane `isLoggedIn` z tokena i Retrofitowe `auth/refresh`.
+- Start aplikacji: AUTH tylko przy stanie innym niż `Active`. Błąd sieci przy starcie nie wywołuje już `logout()` ani kasowania Room. `hasSyncableSession` wymaga `Active`. Nieudany trwały zapis wylogowania nie przechodzi do AUTH.
+- `err_session_ended` w 17 lokalizacjach dla kodów sesji.
+- Testy: [`SessionCoordinatorTest`](../../../../../../android/app/src/test/java/com/vocabulario/app/data/session/SessionCoordinatorTest.kt) (14 przypadków, m.in. współbieżne 401 → jeden refresh, ten sam ID po restarcie, błąd zapisu nie publikuje pary, recovery bez zapisów). Gradle: unit tests 235/235, lint i `assembleDebug` OK.
+
+**Tymczasowo, do kolejnych kroków:** login nadal czyści dane przed wynikiem, stan `ReauthRequired`/`RecoveryRequired` prowadzi na zwykły ekran AUTH (kroki 2–3: ekrany i nawigacja, login tego samego/innego konta), logout bez `POST /auth/logout` i bez zlecenia odwołania (krok logout), brak metadanych właściciela w Room i ochrony workerów (część d). Ta wersja Androida wymaga backendu z F-003/T-001 (pola `user_id`/`session_id` w odpowiedzi); oba wdrażamy razem.
 
 ## Cel, decyzje i zależności
 

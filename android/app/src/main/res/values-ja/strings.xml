@@ -663,6 +663,7 @@
     <string name="err_login_email_unknown">このメールアドレスのアカウントはありません</string>
     <string name="err_login_wrong_password">パスワードが違います</string>
     <string name="err_login_use_google">このアカウントはGoogleを使います。Googleで続行してください。</string>
+    <string name="err_session_ended">セッションが終了しました。もう一度ログインしてください。</string>
 
 
     <string name="err_register">登録に失敗しました</string>

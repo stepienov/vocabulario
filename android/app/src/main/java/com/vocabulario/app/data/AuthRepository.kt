@@ -7,6 +7,7 @@ import com.vocabulario.app.data.api.VocabularioApi
 import com.vocabulario.app.data.imports.ImportStatePersistence
 import com.vocabulario.app.data.local.OfflineStore
 import com.vocabulario.app.data.local.TokenStore
+import com.vocabulario.app.data.session.SessionCoordinator
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,32 +17,33 @@ class AuthRepository @Inject constructor(
     private val tokenStore: TokenStore,
     private val offlineStore: OfflineStore,
     private val importStatePersistence: ImportStatePersistence,
+    private val sessionCoordinator: SessionCoordinator,
 ) {
     suspend fun register(email: String, password: String) {
         beginNewSession()
         val tokens = api.register(RegisterRequest(email, password))
-        tokenStore.saveTokens(tokens.access_token, tokens.refresh_token)
+        sessionCoordinator.install(tokens)
     }
 
     suspend fun login(email: String, password: String) {
         beginNewSession()
         val tokens = api.login(LoginRequest(email, password))
-        tokenStore.saveTokens(tokens.access_token, tokens.refresh_token)
+        sessionCoordinator.install(tokens)
     }
 
     suspend fun googleLogin(idToken: String) {
         beginNewSession()
         val tokens = api.googleAuth(GoogleAuthRequest(idToken))
-        tokenStore.saveTokens(tokens.access_token, tokens.refresh_token)
+        sessionCoordinator.install(tokens)
     }
 
     suspend fun logout() {
-        tokenStore.clear()
-        offlineStore.clearAll()
-        importStatePersistence.saveJobId(null)
+        beginNewSession()
     }
 
+    /** Najpierw trwałe usunięcie sesji; jeśli zawiedzie, dane lokalne zostają nietknięte. */
     private suspend fun beginNewSession() {
+        sessionCoordinator.signOutLocally()
         tokenStore.clear()
         offlineStore.clearAll()
         importStatePersistence.saveJobId(null)

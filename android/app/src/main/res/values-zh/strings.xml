@@ -631,6 +631,7 @@
     <string name="err_login_email_unknown">没有使用该邮箱的账户</string>
     <string name="err_login_wrong_password">密码不正确</string>
     <string name="err_login_use_google">该账户使用 Google。请通过 Google 继续。</string>
+    <string name="err_session_ended">你的会话已结束，请重新登录。</string>
 
 
     <string name="err_register">注册失败</string>

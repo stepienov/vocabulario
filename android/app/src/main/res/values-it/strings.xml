@@ -657,6 +657,7 @@
     <string name="err_login_email_unknown">Nessun account con questa e-mail</string>
     <string name="err_login_wrong_password">Password errata</string>
     <string name="err_login_use_google">Questo account usa Google. Continua con Google.</string>
+    <string name="err_session_ended">La sessione è terminata. Accedi di nuovo.</string>
 
 
     <string name="err_register">Registrazione fallita</string>

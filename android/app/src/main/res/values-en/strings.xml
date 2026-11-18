@@ -666,6 +666,7 @@
     <string name="err_login_email_unknown">No account with this email</string>
     <string name="err_login_wrong_password">Wrong password</string>
     <string name="err_login_use_google">This account uses Google. Continue with Google.</string>
+    <string name="err_session_ended">Your session has ended. Please sign in again.</string>
 
 
     <string name="err_register">Registration failed</string>

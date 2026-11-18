@@ -45,6 +45,8 @@ import com.vocabulario.app.data.local.LocalAnswerCheck
 import com.vocabulario.app.data.local.OfflineStore
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.local.db.PendingReviewEntity
+import com.vocabulario.app.data.session.SessionCoordinator
+import com.vocabulario.app.data.session.SessionState
 import com.vocabulario.app.data.sync.SyncScheduler
 import com.vocabulario.app.notifications.NotificationScheduler
 import com.vocabulario.app.notifications.ReadyBatchTracker
@@ -85,6 +87,7 @@ class LearningRepository @Inject constructor(
     private val readyBatchTracker: ReadyBatchTracker,
     private val notificationScheduler: NotificationScheduler,
     private val dailyNewCounter: com.vocabulario.app.data.local.DailyNewCounter,
+    private val sessionCoordinator: SessionCoordinator,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val outboxMutex = Mutex()
@@ -202,9 +205,9 @@ class LearningRepository @Inject constructor(
     }
 
     suspend fun hasSyncableSession(): Boolean {
-        val token = tokenStore.peekAccessToken()
+        if (sessionCoordinator.awaitLoaded() !is SessionState.Active) return false
         val profile = tokenStore.activeProfileId.first()
-        return !token.isNullOrBlank() && !profile.isNullOrBlank()
+        return !profile.isNullOrBlank()
     }
 
     suspend fun lookup(text: String): LookupResponse {

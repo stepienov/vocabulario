@@ -2,9 +2,9 @@ package com.vocabulario.app.di
 
 import com.vocabulario.app.data.ApiBaseUrl
 import com.vocabulario.app.data.api.TokenAuthenticator
-import com.vocabulario.app.data.api.TokenRefresher
 import com.vocabulario.app.data.api.VocabularioApi
-import com.vocabulario.app.data.local.TokenStore
+import com.vocabulario.app.data.api.isPublicAuthPath
+import com.vocabulario.app.data.session.SessionCoordinator
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
@@ -36,17 +36,12 @@ object AppModule {
   @Provides
   @Singleton
   fun provideOkHttpClient(
-    tokenStore: TokenStore,
     authenticator: TokenAuthenticator,
-    tokenRefresher: TokenRefresher,
+    sessionCoordinator: SessionCoordinator,
   ): OkHttpClient {
     val authInterceptor = Interceptor { chain ->
       val path = chain.request().url.encodedPath
-      val token = if (path.contains("/auth/")) {
-        tokenStore.peekAccessToken()
-      } else {
-        tokenRefresher.accessTokenForRequest()
-      }
+      val token = if (isPublicAuthPath(path)) null else sessionCoordinator.accessTokenForRequest()
       val request = if (!token.isNullOrBlank()) {
         chain.request().newBuilder()
           .header("Authorization", "Bearer $token")

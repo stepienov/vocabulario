@@ -11,6 +11,9 @@ data class TokenResponse(
     val access_token: String,
     val refresh_token: String,
     val token_type: String = "bearer",
+    val user_id: String? = null,
+    val session_id: String? = null,
+    val expires_in: Long? = null,
 )
 
 @Serializable
@@ -23,7 +26,7 @@ data class LoginRequest(val email: String, val password: String)
 data class GoogleAuthRequest(val id_token: String)
 
 @Serializable
-data class RefreshRequest(val refresh_token: String)
+data class RefreshRequest(val refresh_token: String, val request_id: String)
 
 @Serializable
 data class UserResponse(

@@ -631,6 +631,7 @@
     <string name="err_login_email_unknown">Aucun compte avec cet e-mail</string>
     <string name="err_login_wrong_password">Mot de passe incorrect</string>
     <string name="err_login_use_google">Ce compte utilise Google. Continuez avec Google.</string>
+    <string name="err_session_ended">Votre session a pris fin. Reconnectez-vous.</string>
 
 
     <string name="err_register">Échec de l’inscription</string>

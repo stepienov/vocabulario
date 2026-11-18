@@ -8,15 +8,12 @@ import com.vocabulario.app.data.AuthRepository
 import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.userMessage
-import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,15 +21,10 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val learningRepository: LearningRepository,
-    private val tokenStore: TokenStore,
     private val googleAuthHelper: GoogleAuthHelper,
     private val strings: UiStrings,
     private val blockingBusy: BlockingBusy,
 ) : ViewModel() {
-
-    val isLoggedIn: StateFlow<Boolean> = tokenStore.accessToken
-        .map { !it.isNullOrBlank() }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
@@ -130,8 +122,16 @@ class AuthViewModel @Inject constructor(
     fun logout(onDone: suspend () -> Unit) {
         viewModelScope.launch {
             blockingBusy.run {
-                authRepository.logout()
-                onDone()
+                // Nieudany trwały zapis wylogowania nie może udawać sukcesu.
+                val loggedOut = try {
+                    authRepository.logout()
+                    true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    false
+                }
+                if (loggedOut) onDone()
             }
         }
     }

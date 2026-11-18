@@ -631,6 +631,7 @@
     <string name="err_login_email_unknown">Нет аккаунта с этим email</string>
     <string name="err_login_wrong_password">Неверный пароль</string>
     <string name="err_login_use_google">Этот аккаунт через Google. Войдите через Google.</string>
+    <string name="err_session_ended">Сеанс завершён. Войдите снова.</string>
 
 
     <string name="err_register">Ошибка регистрации</string>

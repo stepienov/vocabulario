@@ -7,18 +7,16 @@ import com.vocabulario.app.data.AuthRepository
 import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.local.TokenStore
+import com.vocabulario.app.data.session.SessionCoordinator
+import com.vocabulario.app.data.session.SessionState
 import com.vocabulario.app.data.sync.SyncScheduler
 import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import retrofit2.HttpException
 import javax.inject.Inject
 
 enum class AppStartRoute {
@@ -33,14 +31,11 @@ class AppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val learningRepository: LearningRepository,
     private val tokenStore: TokenStore,
+    private val sessionCoordinator: SessionCoordinator,
     private val syncScheduler: SyncScheduler,
     private val blockingBusy: BlockingBusy,
     private val strings: UiStrings,
 ) : ViewModel() {
-
-    val isLoggedIn: StateFlow<Boolean> = tokenStore.accessToken
-        .map { !it.isNullOrBlank() }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _startRoute = MutableStateFlow(AppStartRoute.LOADING)
     val startRoute: StateFlow<AppStartRoute> = _startRoute.asStateFlow()
@@ -56,8 +51,7 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch {
             withTimeoutOrNull(1_500) { tokenStore.awaitReady() }
 
-            val token = tokenStore.peekAccessToken()
-            if (token.isNullOrBlank()) {
+            if (sessionCoordinator.awaitLoaded() !is SessionState.Active) {
                 _startRoute.value = AppStartRoute.AUTH
                 return@launch
             }
@@ -86,10 +80,8 @@ class AppViewModel @Inject constructor(
                     syncInBackground()
                 }
                 result.isFailure -> {
-                    val err = result.exceptionOrNull()
-                    val unauthorized = err is HttpException && err.code() == 401
-                    if (unauthorized || tokenStore.peekAccessToken().isNullOrBlank()) {
-                        runCatching { authRepository.logout() }
+                    // Błąd sieci/serwera nie jest wylogowaniem; o końcu sesji decyduje koordynator.
+                    if (sessionCoordinator.state.value !is SessionState.Active) {
                         _startRoute.value = AppStartRoute.AUTH
                     } else {
                         _startRoute.value = AppStartRoute.HOME

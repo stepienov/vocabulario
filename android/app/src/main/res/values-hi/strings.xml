@@ -631,6 +631,7 @@
     <string name="err_login_email_unknown">इस ईमेल से कोई खाता नहीं है</string>
     <string name="err_login_wrong_password">गलत पासवर्ड</string>
     <string name="err_login_use_google">यह खाता Google का उपयोग करता है। Google से जारी रखें।</string>
+    <string name="err_session_ended">आपका सत्र समाप्त हो गया है। फिर से साइन इन करें।</string>
 
 
     <string name="err_register">पंजीकरण विफल</string>

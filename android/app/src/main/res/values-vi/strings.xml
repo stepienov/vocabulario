@@ -662,6 +662,7 @@
     <string name="err_login_email_unknown">Không có tài khoản với email này</string>
     <string name="err_login_wrong_password">Sai mật khẩu</string>
     <string name="err_login_use_google">Tài khoản này dùng Google. Tiếp tục với Google.</string>
+    <string name="err_session_ended">Phiên của bạn đã kết thúc. Vui lòng đăng nhập lại.</string>
 
 
     <string name="err_register">Đăng ký không thành công</string>

@@ -1,6 +1,6 @@
 package com.vocabulario.app.data.api
 
-import com.vocabulario.app.data.local.TokenStore
+import com.vocabulario.app.data.session.SessionCoordinator
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
@@ -8,37 +8,37 @@ import okhttp3.Route
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private val PUBLIC_AUTH_SUFFIXES = listOf(
+    "/auth/register",
+    "/auth/login",
+    "/auth/google",
+    "/auth/refresh",
+    "/auth/logout",
+)
+
+/** Publiczne operacje auth: bez Bearer i bez refresh po 401 (np. błędne hasło to nie koniec sesji). */
+internal fun isPublicAuthPath(encodedPath: String): Boolean {
+    val path = encodedPath.trimEnd('/')
+    return PUBLIC_AUTH_SUFFIXES.any { path.endsWith(it) }
+}
+
 /**
- * Fallback gdy access token jednak wygasł w locie. Jak refresh się nie uda — czyści sesję.
+ * Po 401 jedna próba wspólnego refresh i jedno ponowienie żądania. Nieudany refresh
+ * nie czyści sesji — o odwołaniu decyduje [SessionCoordinator].
  */
 @Singleton
 class TokenAuthenticator @Inject constructor(
-    private val tokenStore: TokenStore,
-    private val tokenRefresher: TokenRefresher,
+    private val sessionCoordinator: SessionCoordinator,
 ) : Authenticator {
 
     override fun authenticate(route: Route?, response: Response): Request? {
-        if (responseCount(response) >= 2) {
-            tokenStore.clearMemory()
-            return null
-        }
-        val path = response.request.url.encodedPath
-        if (path.contains("/auth/")) return null
+        if (response.priorResponse != null) return null
+        if (isPublicAuthPath(response.request.url.encodedPath)) return null
 
         val failedToken = response.request.header("Authorization")?.removePrefix("Bearer ")?.trim()
-        val fresh = tokenRefresher.refreshIfUnauthorized(failedToken) ?: return null
+        val fresh = sessionCoordinator.refreshAfterUnauthorized(failedToken) ?: return null
         return response.request.newBuilder()
             .header("Authorization", "Bearer $fresh")
             .build()
-    }
-
-    private fun responseCount(response: Response): Int {
-        var count = 1
-        var prior = response.priorResponse
-        while (prior != null) {
-            count++
-            prior = prior.priorResponse
-        }
-        return count
     }
 }

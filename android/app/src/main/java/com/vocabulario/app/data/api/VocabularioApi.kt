@@ -23,9 +23,6 @@ interface VocabularioApi {
     @POST("auth/google")
     suspend fun googleAuth(@Body body: GoogleAuthRequest): TokenResponse
 
-    @POST("auth/refresh")
-    suspend fun refresh(@Body body: RefreshRequest): TokenResponse
-
     @GET("me")
     suspend fun me(): UserResponse
 
