@@ -78,7 +78,10 @@ async def test_fast_path_skips_learning_fields_and_uses_one_select(pg, pg_client
         assert candidate["in_learning"] is False
 
 
-async def test_default_membership_still_annotates_the_card(pg, pg_client):
+async def test_default_membership_still_annotates_the_card(pg, pg_client, monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "persist_words", True)
     async with pg() as session:
         user = await create_user(session)
         profile = await create_profile(session, user, "pl", "es")

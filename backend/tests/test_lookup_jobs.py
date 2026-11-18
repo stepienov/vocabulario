@@ -417,6 +417,9 @@ async def test_expand_annotates_only_without_local_membership(pg, pg_client, mon
     async def fake(self, text, native, learning, already=None):
         raise AssertionError("model")
 
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "persist_words", True)
     monkeypatch.setattr(LLMService, "lookup_expand", fake)
     async with pg() as session:
         user = await create_user(session)
