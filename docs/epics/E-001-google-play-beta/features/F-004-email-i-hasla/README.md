@@ -1,6 +1,6 @@
 # F-004 · E-mail i hasła
 
-**ID:** `E-001/F-004` · **Status:** `ready` · **Epic:** [E-001](../../README.md).
+**ID:** `E-001/F-004` · **Status:** `in_progress` · **Epic:** [E-001](../../README.md).
 
 **Wartość:** użytkownik rejestruje się i odzyskuje dostęp samodzielnie, a zaakceptowane hasło jest sprawdzane w całości.
 
@@ -132,7 +132,7 @@ Szczegóły techniczne są zapisane przez wykonawcę po sprawdzeniu kodu. Nowe z
 
 | ID | Task | Status |
 |---|---|---|
-| E-001/F-004/T-001 | [Pełne hashowanie haseł](./tasks/T-001-haszowanie-hasel.md), B-04 | `ready` |
+| E-001/F-004/T-001 | [Pełne hashowanie haseł](./tasks/T-001-haszowanie-hasel.md), B-04 | `in_progress` — etap 1: komponent Argon2/walidacji, niepodłączony |
 | E-001/F-004/T-002 | [Poczta i odzyskiwanie](./tasks/T-002-poczta-i-odzyskiwanie.md), B-05 | `ready` |
 | E-001/F-004/T-003 | [Odporność auth](./tasks/T-003-odpornosc-auth.md), B-10 | `ready` |
 | E-001/F-004/T-004 | [Zmiana adresu e-mail](./tasks/T-004-zmiana-emaila.md), decyzja z 17.11.2026 | `ready` |
@@ -142,4 +142,4 @@ Szczegóły techniczne są zapisane przez wykonawcę po sprawdzeniu kodu. Nowe z
 
 **Poza zakresem:** zmiana dostawcy całego auth, MFA/passkeys, samodzielne odłączanie metod. Dawna propozycja odłożenia zmiany e-maila do P1 została zastąpiona decyzją o pierwszej becie i pełnym kontraktem T-004; nie jest ponownie otwartą decyzją.
 
-**Weryfikacja:** A-01…A-05 i limity; testy z bazą oraz realna skrzynka/deep link. **Dowody:** brak.
+**Weryfikacja:** A-01…A-05 i limity; testy z bazą oraz realna skrzynka/deep link. **Dowody:** T-001 etap 1 — testy jednostkowe komponentu haseł (lokalnie); poza tym brak.

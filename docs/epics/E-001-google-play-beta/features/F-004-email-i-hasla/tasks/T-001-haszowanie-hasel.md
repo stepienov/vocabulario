@@ -1,6 +1,6 @@
 # T-001 · Pełne hashowanie haseł i zgodna migracja
 
-**ID:** `E-001/F-004/T-001` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / M.  
+**ID:** `E-001/F-004/T-001` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / M.  
 **Feature:** [E-mail i hasła](../README.md). **Źródło:** B-04; potwierdzony F-03 w [analizie](../../../sources/analiza-2026-11-17.md).
 
 ## Cel i zakres
@@ -102,3 +102,19 @@ Nie da się uzyskać Argon2 z bcrypt bez nowego dowodu/hasła; nie przeliczamy h
 - [ ] Testy nowych i starych hashy, w tym dawnych długich haseł; brak realnych haseł w fixture/logach.
 
 **Poza zakresem:** implementacja resetu pocztą (T-002), publiczny transfer danych i zmiana całego dostawcy auth. **Wynik weryfikacji:** przegląd kodu/dokumentacji i kompletny projekt z migracją; bez implementacji, benchmarków, testów runtime i operacji na produkcji.
+
+## Postęp
+
+### Etap 1 · Czysty komponent haseł (18.11.2026)
+
+[passwords.py](../../../../../../backend/app/core/passwords.py) z [testami](../../../../../../backend/tests/test_passwords.py); **jeszcze niepodłączony do tras**. Trasy nadal używają bcrypt z [security.py](../../../../../../backend/app/core/security.py), bo przełączenie loginu przed resetem T-002 zablokowałoby obecne konta.
+
+- Walidacja `password_error(password, new=...)`: wartości skalarne Unicode (`len` po odrzuceniu izolowanych surogatów), nowe 15–128, dowód 1–128, kody `password_too_short` / `password_too_long` / `password_invalid_unicode`. Bez trimowania, normalizacji i `isBlank`. 128 znaków to najwyżej 512 bajtów UTF-8.
+- `argon2-cffi>=25.1.0` (wheel dla Python 3.12 z obrazu), Argon2id v19 z jawnymi parametrami m=19456 KiB, t=2, p=1, sól 16, hash 32. Format PHC zmieścił się w 255 znakach dla 128 znaków spoza BMP.
+- `verify_password` zwraca `MATCH` / `MISMATCH` / `LEGACY_BCRYPT`. Rozpoznany bcrypt nie jest sprawdzany: wykonuje tę samą pracę Argon2 na stałym hashu i nigdy nie zwraca sukcesu. Nieznany/uszkodzony format → `PasswordHashError` z logiem bez hasła/hashu. `dummy_verify` dla kont bez hasła.
+- `needs_rehash` jest prawdziwe tylko dla słabszych parametrów, innego typu lub wersji; mocniejszy zapisany hash nie jest obniżany po wycofaniu konfiguracji.
+- Niepoprawne hasło odrzucane przed hashowaniem. Hash/verify w osobnej puli 2 wątków na proces, poza pętlą zdarzeń; wywołujący nie może czekać na nią, trzymając blokadę wiersza.
+
+**Dowód lokalny:** 24 testy (granice 14/15/128/129, 14 ASCII + znak spoza BMP = 15, spacje, NFC≠NFD, izolowane surogaty, dwa hasła ze wspólnymi 72 bajtami w ASCII i przez granicę Unicode, świeża sól, bcrypt nigdy nie przechodzi, uszkodzone hashe bez wycieku w logach, brak downgrade'u, szczyt współbieżności 2 poza wątkiem pętli). Pełne `ci_check` bez bazy: 559 passed; ruff czysty.
+
+**Otwarte:** podłączenie do rejestracji/loginu razem z Androidem i 17 locale (komunikaty 15/128) oraz mapowaniem 422 bez `input` w błędach Pydantic; `password_upgrade_required` w `/me`; warunkowy zapis rehashu z rewizją poświadczeń (F-003/T-001); ścieżka resetu T-002 przed odcięciem bcrypt i usunięcie `passlib`/`bcrypt`; pomiary p95/RSS na zasobach Railway (warunek odbioru); testy UI.
