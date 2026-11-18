@@ -44,7 +44,16 @@ W skonfigurowanym środowisku backendu uruchom bazową kontrolę repo:
 python scripts\ci_check.py
 ```
 
-Testy PostgreSQL wymagają osobnej lokalnej bazy `*_test` z `TEST_DATABASE_URL`; fixture wykonuje `TRUNCATE`. Test pominięty nie jest testem zaliczonym: CI ustawia `REQUIRE_PG_TESTS=1`, więc brak bazy albo pominięty test `pg` daje błąd. Ustaw tę flagę lokalnie, gdy zmieniasz kod korzystający z bazy. Dodatkowe kontrole Androida i wydania dobieramy według [planu bety](docs/epics/E-001-google-play-beta/sources/analiza-2026-11-17.md#10-macierz-testów-akceptacyjnych).
+Testy PostgreSQL wymagają osobnej lokalnej bazy `*_test` z `TEST_DATABASE_URL`; fixture wykonuje `TRUNCATE`. Test pominięty nie jest testem zaliczonym: CI ustawia `REQUIRE_PG_TESTS=1`, więc brak bazy albo pominięty test `pg` daje błąd. Ustaw tę flagę lokalnie, gdy zmieniasz kod korzystający z bazy.
+
+Przy zmianach Androida uruchom to samo co osobny job CI (JDK 17; lint przerywa build tylko na błędach, ostrzeżenia go nie blokują):
+
+```powershell
+cd android
+.\gradlew.bat :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+```
+
+Kontrole wydania (release/AAB, urządzenia) dobieramy według [planu bety](docs/epics/E-001-google-play-beta/sources/analiza-2026-11-17.md#10-macierz-testów-akceptacyjnych).
 
 Zmiana wyłącznie dokumentacji nie wymaga budowania APK. Sprawdź odnośniki i `git diff --check`. Przed commitem przejrzyj także listę dodawanych plików:
 

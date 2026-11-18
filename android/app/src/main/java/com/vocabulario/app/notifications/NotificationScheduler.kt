@@ -52,24 +52,26 @@ class NotificationScheduler @Inject constructor(
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        runCatching {
+        val exactScheduled = canScheduleExact() && try {
             alarmManager.setAlarmClock(
                 AlarmManager.AlarmClockInfo(triggerAt, showIntent),
                 pending,
             )
-        }.onFailure {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerAt,
-                    pending,
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pending)
-            }
+            true
+        } catch (e: SecurityException) {
+            false
+        }
+        if (!exactScheduled) {
+            alarmManager.setAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAt,
+                pending,
+            )
         }
     }
+
+    private fun canScheduleExact(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
 
     fun rescheduleFromPrefs() {
         scheduleStudyReminder(reminderHour(), reminderEnabled(), reminderMinute())
