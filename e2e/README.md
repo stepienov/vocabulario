@@ -1,6 +1,6 @@
 # E2E (Maestro) — quick start
 
-Plans: `doc/PLAN_TESTY_E2E_INFRA.md`, `doc/PLAN_TESTY_E2E_SCENARIUSZE.md`, `doc/TEST_POLICY.md`.
+Current work: [E-001 · Google Play beta](../docs/epics/E-001-google-play-beta/README.md); acceptance scenarios: [A-01…A-24](../docs/epics/E-001-google-play-beta/sources/analiza-2026-11-17.md#10-macierz-testów-akceptacyjnych). Repository rules: [CONTRIBUTING](../CONTRIBUTING.md). Local/private historical notes are not required to run this suite.
 
 ## Setup
 
@@ -27,7 +27,7 @@ Plans: `doc/PLAN_TESTY_E2E_INFRA.md`, `doc/PLAN_TESTY_E2E_SCENARIUSZE.md`, `doc/
 .\scripts\e2e-maestro.ps1 -Tags regression
 ```
 
-If the emulator shows **“Vocabulario isn't responding”**, tap Close / re-run — long suites can ANR a slow AVD. Prefer smoke for day-to-day; `-All` when the machine is free.
+If the emulator shows **“Vocabulario isn't responding”**, record the ANR and investigate the app/device logs; a successful rerun does not erase the failure. Prefer smoke for day-to-day; `-All` when the machine is free.
 
 ## Coverage (reachable UI)
 

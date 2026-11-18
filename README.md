@@ -2,6 +2,17 @@
 
 Aplikacja Android do nauki słówek (PL ↔ ES i inne pary) z AI i SRS.
 
+## Bieżąca praca: przygotowanie bety
+
+**Punkt wyjścia: [E-001 · Beta Google Play](docs/epics/E-001-google-play-beta/README.md).**
+To bieżący kierunek pracy, z założeniami biznesowymi, features, zadaniami i kryteriami gotowości — nie deklaracja gotowej aplikacji.
+
+- [Rejestr epików](docs/epics/README.md) i [zasady numeracji](docs/epics/zasady.md) — stały układ epic → feature → task; po zakończeniu zmienia się status, nie lokalizacja.
+- [Mapa dokumentacji](docs/README.md) — aktualne instrukcje, referencje i archiwum.
+- [Zasady pracy i publikowania](CONTRIBUTING.md) — co trafia do Git, jak aktualizować dokumentację.
+- [Katalog skryptów](scripts/README.md) — kontrole CI, narzędzia i operacje utrzymaniowe.
+- [E2E](e2e/README.md) — konfiguracja i uruchamianie Maestro.
+
 ## Szybki start (lokalnie)
 
 ### 1. Baza danych
@@ -77,7 +88,17 @@ PERSIST_WORDS=true
 
 `DATABASE_URL` i `PORT` ustawia Railway. Po deployu sprawdź `https://<twoja-domena>/health`.
 
-Lokalny dostęp agenta do statusu/logów: [docs/railway-cli.md](docs/railway-cli.md) (CLI + `RAILWAY_API_TOKEN` / `RAILWAY_TOKEN` w `.env`).
+Status/logi i zasady operacji na produkcji: [Railway CLI](docs/setup/railway-cli.md). Zmiany produkcji wymagają osobnego zlecenia.
+
+## Sprawdzenia
+
+W środowisku z zainstalowanymi zależnościami backendu:
+
+```powershell
+python scripts\ci_check.py
+```
+
+Komenda sprawdza napisy UI, spójność LSP i testy backendu. Testy oznaczone `pg` wymagają **oddzielnej lokalnej bazy** z `TEST_DATABASE_URL`, o nazwie kończącej się na `_test`; fixture czyści jej tabele. Wynik z pominiętymi testami nie potwierdza pełnej integracji z bazą. Szczegóły: [kontrakt testów PostgreSQL](docs/epics/E-002-szybka-nauka/features/F-001-fundamenty/tasks/T-001-testy-postgresql.md).
 
 ## Struktura
 
@@ -87,11 +108,12 @@ vocabulario/
 ├── backend/          # API FastAPI (+ Dockerfile, railway.toml)
 ├── e2e/              # Maestro E2E
 ├── infra/            # docker-compose (Postgres + Redis)
-├── scripts/          # CI, i18n, e2e
-├── docs/             # instalacja APK, epiki, szablon LSP
-└── doc/              # notatki robocze (lokalnie, nie na GitHub)
+├── scripts/          # utrzymywane narzędzia CI, i18n, E2E i backfill
+├── docs/             # epiki/features/taski, instrukcje, referencje i audyty
+└── .local/           # prywatne notatki i eksperymenty (ignorowane przez Git)
 ```
 
+Archiwum dokumentacji nadal jest publiczne. `.local/`, sekrety, buildy i surowe raporty nie należą do publikowanej zawartości. Wyjątkiem przejściowym pozostaje opisany wyżej klucz **debug**; klucze produkcyjne nigdy nie trafiają do repozytorium.
 
 ## Diagnostyka importu (admin)
 

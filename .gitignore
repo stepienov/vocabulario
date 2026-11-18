@@ -7,6 +7,7 @@
 *.p12
 *.jks
 *.keystore
+# Temporary exception for existing shared debug APKs; never use for production signing.
 !android/keystore/debug.keystore
 credentials.json
 **/google-services.json
@@ -14,8 +15,11 @@ credentials.json
 secrets/
 *.secret
 
-# Private / working docs (keep locally, not on GitHub)
+# Private notes, probes, raw reports and machine-specific setup (never publish)
+.local/
+# Legacy local notes directory; use .local/ for new files.
 doc/
+/docs/local-*.md
 
 # Python
 __pycache__/
@@ -64,6 +68,10 @@ compile-out.txt
 
 # Scratch probes and their dumps (do not commit)
 **/_tmp_*
+/backend/_[!_]*.py
+/scripts/_[!_]*.py
+/scripts/import_a2_lists_prod.py
+/scripts/re_enrich_card.py
 *_out.txt
 backend/_import_probe.txt
 backend/_import_resolve_report.txt
@@ -78,6 +86,7 @@ backend/tests/fixtures/import/Assimil_El_nuevo_ingles_sin_esfuerzo_real_spoken_a
 backend/tests/fixtures/import/Spanish_Tenses_a_Lisardos_KOFI_Conjugation_Method_Primer.apkg
 backend/tests/fixtures/import/Saludos_Basicos_EnglishSpanish.apkg
 backend/tests/fixtures/import/Testowa_25.txt
+backend/tests/fixtures/import/Testowa2.txt
 
 # Generated local test artefacts
 e2e/fixtures/lang-pairs/LAST_REPORT.txt
