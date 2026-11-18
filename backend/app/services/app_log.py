@@ -115,7 +115,7 @@ def is_noisy_get(method: str, path: str) -> bool:
     if method.upper() != "GET":
         return False
     p = path.lower()
-    if p.endswith("/health"):
+    if p.endswith("/health") or p.endswith("/health/ready"):
         return True
     if "/progress" in p or p.endswith("/jobs/active"):
         return True

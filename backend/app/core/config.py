@@ -1,7 +1,16 @@
 from functools import lru_cache
+from urllib.parse import urlsplit
 
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
+
+KNOWN_ENVIRONMENTS = frozenset({"development", "test", "staging", "beta", "production"})
+DEPLOYED_ENVIRONMENTS = frozenset({"staging", "beta", "production"})
+_DEFAULT_JWT_SECRET = "change-me"
+_MIN_JWT_SECRET_CHARS = 32
+_LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "0.0.0.0", "10.0.2.2"})
 
 
 def normalize_database_url(url: str) -> str:
@@ -42,7 +51,7 @@ class Settings(BaseSettings):
             return normalize_database_url(value)
         return value
 
-    jwt_secret: str = "change-me"
+    jwt_secret: str = _DEFAULT_JWT_SECRET
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 30
@@ -101,6 +110,54 @@ class Settings(BaseSettings):
             if value:
                 ids.append(value)
         return ids
+
+    @property
+    def is_deployed(self) -> bool:
+        return self.environment in DEPLOYED_ENVIRONMENTS
+
+    def deployment_errors(self) -> list[str]:
+        """Names of invalid settings; never their values.
+
+        Local environments accept dev defaults; staging/beta/production must not.
+        """
+        if self.environment not in KNOWN_ENVIRONMENTS:
+            return ["environment"]
+        if not self.is_deployed:
+            return []
+        errors: list[str] = []
+        if self.debug:
+            errors.append("debug")
+        secret = self.jwt_secret or ""
+        if secret == _DEFAULT_JWT_SECRET or len(secret) < _MIN_JWT_SECRET_CHARS:
+            errors.append("jwt_secret")
+        if not _is_remote_database(self.database_url):
+            errors.append("database_url")
+        if not all(_is_public_https_origin(origin) for origin in self.cors_origins):
+            errors.append("allowed_origins")
+        if not self.google_client_ids:
+            errors.append("google_oauth_client_id")
+        if self.llm_mock:
+            errors.append("llm_mock")
+        elif not self.openai_api_key.strip():
+            errors.append("openai_api_key")
+        import_provider = (self.llm_import_provider or "openai").strip().lower()
+        if import_provider == "anthropic" and not self.anthropic_api_key.strip():
+            errors.append("anthropic_api_key")
+        return errors
+
+
+def _is_remote_database(url: str) -> bool:
+    try:
+        parsed = make_url(url)
+    except ArgumentError:
+        return False
+    return bool(parsed.host) and parsed.host.lower() not in _LOCAL_HOSTS
+
+
+def _is_public_https_origin(origin: str) -> bool:
+    parts = urlsplit(origin)
+    host = (parts.hostname or "").lower()
+    return parts.scheme == "https" and bool(host) and host not in _LOCAL_HOSTS
 
 
 @lru_cache

@@ -79,14 +79,16 @@ Sekrety w pliku `.env` w katalogu głównym repo (nie commituj). Szablon: `.env.
 ```
 ENVIRONMENT=production
 DEBUG=false
-JWT_SECRET=<losowy-długi-string>
+JWT_SECRET=<losowy-długi-string, min. 32 znaki>
 OPENAI_API_KEY=sk-...
 LLM_PROVIDER=openai
 LLM_MOCK=false
 PERSIST_WORDS=true
+GOOGLE_OAUTH_CLIENT_ID=<web client ID>
+ALLOWED_ORIGINS=<puste albo publiczne https://… po przecinku>
 ```
 
-`DATABASE_URL` i `PORT` ustawia Railway. Po deployu sprawdź `https://<twoja-domena>/health`.
+`DATABASE_URL` i `PORT` ustawia Railway. Po deployu sprawdź `https://<twoja-domena>/health` (proces żyje) i `https://<twoja-domena>/health/ready` (konfiguracja, schemat i baza). Przy 503 log startu wymienia nazwy błędnych ustawień, bez ich wartości; reguły w [E-001/F-008/T-002](docs/epics/E-001-google-play-beta/features/F-008-jakosc-i-operacje/tasks/T-002-srodowiska-i-konfiguracja.md#postęp).
 
 Status/logi i zasady operacji na produkcji: [Railway CLI](docs/setup/railway-cli.md). Zmiany produkcji wymagają osobnego zlecenia.
 

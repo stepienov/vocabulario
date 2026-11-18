@@ -1,6 +1,6 @@
 # T-002 · Odizolowane środowiska i konfiguracja
 
-**ID:** `E-001/F-008/T-002` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / M.  
+**ID:** `E-001/F-008/T-002` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / M.  
 **Feature:** [Jakość i operacje](../README.md). **Źródło:** podział B-13 i decyzje z 17.11.2026.
 
 ## Rezultat i decyzje
@@ -56,3 +56,16 @@ Nieudany start/migracja zatrzymuje publikację. Brak DB nie tworzy pustej biblio
 - [ ] Zapisano realny plan/region, przewidywany dodatkowy koszt i osobną zgodę operatora przed zmianą usług.
 
 **Poza zakresem:** zakup infrastruktury teraz, reset obecnej bazy, kopiowanie testerów do CI, Kubernetes i przebudowa całego deployu. **Wynik:** projekt; brak zmian konfiguracji/uruchomienia. `ready` dotyczy zakresu do wykonania po zleceniu, nie gotowego staging.
+
+## Postęp
+
+### Etap 1 · Walidacja ustawień i `/health/ready` (18.11.2026)
+
+- [config.py](../../../../../../backend/app/core/config.py): `deployment_errors()` zwraca **wyłącznie nazwy** błędnych pól. Znane środowiska: `development`, `test`, `staging`, `beta`, `production`; inna wartość to błąd `environment`. Lokalne akceptują wartości deweloperskie. Wdrożone wymagają `debug=false`, `jwt_secret` ≥32 znaki i różnego od domyślnego, bazy poza localhost/emulatorem, origins wyłącznie publiczne `https` (bez `*`), co najmniej jednego klienta Google, `llm_mock=false` i klucza OpenAI oraz klucza Anthropic, gdy import go używa. Ostatnie zamyka ciche przejście [LLM](../../../../../../backend/app/services/llm.py) w tryb mock przy braku klucza.
+- Start ([main.py](../../../../../../backend/app/main.py)) loguje nazwy błędnych pól i nie przerywa procesu — stan not-ready, zgodnie z punktem 3.
+- [readiness.py](../../../../../../backend/app/core/readiness.py) i `GET /health/ready`: konfiguracja → schemat zastosowany przez ten proces (`apply_schema` w lifespan) → `SELECT 1` z limitem 1 s; całość do 2 s. Publicznie tylko `200 {"status":"ok"}` albo `503 {"status":"unavailable"}`, `Cache-Control: no-store`, poza schematem OpenAPI. Bez AI/poczty/Google i skanów tabel. Przyczyna trafia do logu tylko przy zmianie stanu (kategoria i nazwa klasy wyjątku, bez wartości). Żądania nie trafiają do `app_logs`, jak `/health`.
+- `/health` (liveness) i `healthcheckPath` Railway bez zmian. Przełączenie healthchecku na `/health/ready` dopiero po sprawdzeniu konfiguracji bety przez właściciela — inaczej deploy z obecnymi ustawieniami mógłby nie przejść.
+
+**Dowód lokalny:** 21 testów ([test_readiness](../../../../../../backend/tests/test_readiness.py)): macierz 12 pojedynczych błędów, środowiska lokalne, nieznane środowisko, brak wartości sekretów w wyniku/logach/odpowiedzi; 503 przy złej konfiguracji, braku schematu, odmowie połączenia i zawieszonej bazie (odpowiedź przed 2 s); 200 na prawdziwym PostgreSQL. Pełne `ci_check` z `REQUIRE_PG_TESTS=1` na tymczasowym PostgreSQL 16.2: 615 passed, 0 pominiętych `pg`. Smoke uvicorn z lifespanem: `development` → `/health/ready` 200; `beta` z wartościami lokalnymi → 503 i log z samymi nazwami pól.
+
+**Otwarte:** heartbeat maintenance (≤30 min) i ochrona backupu w readiness — po powstaniu ich stanu w T-003/T-004; obowiązkowe pola bety z innych tasków (poczta, `PUBLIC_APP_ORIGIN`, dokumenty, kontakt, progi AI) dopisywać do `deployment_errors()` razem z tymi ustawieniami; zaufane proxy/`X-Forwarded-For` (z limiterem F-004/T-003); topologia staging/recovery, osobne sekrety i kosztorys (wymagają zgody właściciela); wersjonowane kroki migracji i upgrade z syntetycznej starej bazy; 426 `app_update_required` (F-002/T-001); test na drugiej replice i na Railway.

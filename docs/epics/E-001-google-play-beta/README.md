@@ -4,7 +4,7 @@
 **Priorytet:** bieżący kierunek pracy.  
 **Odbiorca:** nowy i powracający tester Androida, bez pomocy autora aplikacji.
 
-**Etap pracy:** przygotowanie specyfikacji zakończone: **8 features / 24 taski**, z czego decyzje F-001/T-001 `done`. Implementacja trwa: F-008/T-001 `in_progress` (PostgreSQL i Android w CI), F-004/T-001 `in_progress` (komponent haseł, niepodłączony), pozostałe 21 `ready` do wykonania po osobnym zleceniu. [Rejestr decyzji](./features/F-001-prowadzenie-bety/tasks/T-001-decyzje-i-zakres.md) oddziela uzgodniony biznes od realnych bramek konfiguracji. Nie potrzeba kolejnych rund „ok” do kończenia tych bloków.
+**Etap pracy:** przygotowanie specyfikacji zakończone: **8 features / 24 taski**, z czego decyzje F-001/T-001 `done`. Implementacja trwa: F-008/T-001 `in_progress` (PostgreSQL i Android w CI), F-008/T-002 `in_progress` (walidacja ustawień, `/health/ready`), F-004/T-001 `in_progress` (komponent haseł, niepodłączony), pozostałe 20 `ready` do wykonania po osobnym zleceniu. [Rejestr decyzji](./features/F-001-prowadzenie-bety/tasks/T-001-decyzje-i-zakres.md) oddziela uzgodniony biznes od realnych bramek konfiguracji. Nie potrzeba kolejnych rund „ok” do kończenia tych bloków.
 
 ## Problem i cel biznesowy
 

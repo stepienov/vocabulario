@@ -1,8 +1,10 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.admin_ui.router import mount_admin
 from app.api.v1.admin_logs import router as admin_logs_router
@@ -14,15 +16,28 @@ from app.api.v1.meta import router as meta_router
 from app.api.v1.sync import router as sync_router
 from app.core.app_log_middleware import AppLogMiddleware
 from app.core.config import get_settings
+from app.core.readiness import check_ready, mark_schema_ready
 from app.db.base import Base
 from app.db.migrations import apply_schema
 from app.db.session import engine
 from app import models  # noqa: F401
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    settings = get_settings()
+    config_errors = settings.deployment_errors()
+    if config_errors:
+        # Field names only; /health/ready stays 503 until fixed.
+        logger.error(
+            "invalid settings for environment %r: %s",
+            settings.environment,
+            ", ".join(config_errors),
+        )
     await apply_schema(engine, Base.metadata)
+    mark_schema_ready()
     from app.services.card_jobs import resume_pending_enrichment
     from app.services.import_jobs import resume_unfinished_jobs, start_heartbeat_watchdog
     from app.services.llm_usage import purge_expired_llm_payloads
@@ -79,6 +94,13 @@ def create_app() -> FastAPI:
             "environment": settings.environment,
             "persist_words": settings.persist_words,
         }
+
+    @app.get("/health/ready", include_in_schema=False)
+    async def health_ready():
+        headers = {"Cache-Control": "no-store"}
+        if await check_ready():
+            return JSONResponse({"status": "ok"}, headers=headers)
+        return JSONResponse({"status": "unavailable"}, status_code=503, headers=headers)
 
     return app
 
