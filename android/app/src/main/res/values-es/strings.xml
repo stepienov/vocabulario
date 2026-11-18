@@ -659,6 +659,14 @@
     <string name="auth_revocation_unconfirmed">Sesiones sin confirmación del servidor: %1$d. Ya no se usan en este dispositivo y caducarán automáticamente en un máximo de 30 días.</string>
     <string name="auth_revocation_confirmed">Sesión cerrada también en el servidor.</string>
     <string name="auth_revocation_queue_full">Hay demasiados cierres de sesión pendientes del servidor. Conéctate a internet, espera un momento e inténtalo de nuevo.</string>
+    <string name="logout_unsent_title">Cambios no enviados</string>
+    <string name="logout_unsent_message">Al cerrar sesión se eliminan los datos de esta cuenta de este dispositivo. Los cambios que aún no se han enviado al servidor se perderán.</string>
+    <string name="logout_unsent_sync_incomplete">No se pudieron enviar todos los cambios. Comprueba la conexión e inténtalo de nuevo, o descártalos.</string>
+    <string name="logout_unsent_changed">Mientras tanto aparecieron nuevos cambios no enviados. Vuelve a decidir.</string>
+    <string name="logout_discard_confirm_title">¿Descartar los cambios no enviados?</string>
+    <string name="logout_discard_confirm_message">Cambios que se eliminarán definitivamente de este dispositivo: %1$d. Esta acción no se puede deshacer.</string>
+    <string name="action_sync_and_logout">Sincronizar y cerrar sesión</string>
+    <string name="action_discard_and_logout">Descartar y cerrar sesión</string>
 
 
     <string name="err_register">Error al registrarse</string>

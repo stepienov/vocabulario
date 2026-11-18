@@ -659,6 +659,14 @@
     <string name="auth_revocation_unconfirmed">सर्वर पुष्टि के बिना सत्र: %1$d. ये अब इस डिवाइस पर उपयोग नहीं होते और 30 दिनों के भीतर अपने आप समाप्त हो जाएंगे।</string>
     <string name="auth_revocation_confirmed">सर्वर पर भी साइन आउट हो गया।</string>
     <string name="auth_revocation_queue_full">बहुत सारे साइन आउट सर्वर की प्रतीक्षा में हैं। इंटरनेट से कनेक्ट करें, थोड़ा रुकें और फिर से कोशिश करें।</string>
+    <string name="logout_unsent_title">न भेजे गए बदलाव</string>
+    <string name="logout_unsent_message">लॉग आउट करने से इस खाते का डेटा इस डिवाइस से हट जाता है। जो बदलाव अभी तक सर्वर पर नहीं भेजे गए हैं, वे खो जाएंगे।</string>
+    <string name="logout_unsent_sync_incomplete">सभी बदलाव नहीं भेजे जा सके। अपना कनेक्शन जांचें और फिर से कोशिश करें, या उन्हें हटा दें।</string>
+    <string name="logout_unsent_changed">इस बीच नए न भेजे गए बदलाव आ गए हैं। कृपया फिर से चुनें।</string>
+    <string name="logout_discard_confirm_title">न भेजे गए बदलाव हटाएं?</string>
+    <string name="logout_discard_confirm_message">इस डिवाइस से स्थायी रूप से हटाए जाने वाले बदलाव: %1$d। इसे पूर्ववत नहीं किया जा सकता।</string>
+    <string name="action_sync_and_logout">सिंक करें और लॉग आउट करें</string>
+    <string name="action_discard_and_logout">हटाएं और लॉग आउट करें</string>
 
 
     <string name="err_register">पंजीकरण विफल</string>

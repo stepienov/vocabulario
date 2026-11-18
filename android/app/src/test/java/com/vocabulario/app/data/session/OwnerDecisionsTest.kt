@@ -1,7 +1,11 @@
 package com.vocabulario.app.data.session
 
+import com.vocabulario.app.data.local.db.LogoutDisposition
 import com.vocabulario.app.data.local.db.OwnerPhase
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OwnerDecisionsTest {
@@ -12,7 +16,20 @@ class OwnerDecisionsTest {
         hasData: Boolean = false,
         unsent: Int = 0,
         transitionId: String? = null,
-    ) = OwnerSnapshot(owner, generation = 3, phase = phase, transitionId = transitionId, hasOwnedData = hasData, unsentCount = unsent)
+        fingerprint: String = "",
+        disposition: String? = null,
+        accepted: String? = null,
+    ) = OwnerSnapshot(
+        owner,
+        generation = 3,
+        phase = phase,
+        transitionId = transitionId,
+        hasOwnedData = hasData,
+        unsentCount = unsent,
+        unsentFingerprint = fingerprint,
+        logoutDisposition = disposition,
+        acceptedUnsentFingerprint = accepted,
+    )
 
     private fun active(owner: String?) = SessionState.Active(owner, "s1")
 
@@ -48,6 +65,58 @@ class OwnerDecisionsTest {
         val s = snapshot(owner = "A", phase = OwnerPhase.LOGGING_OUT, hasData = true)
         assertEquals(StartupAction.CompleteLogout, decideStartup(s, active("A")))
         assertEquals(StartupAction.CompleteLogout, decideStartup(s, SessionState.SignedOut))
+    }
+
+    @Test
+    fun interruptedLogoutNeverDerivesDiscardConsentFromPhaseAlone() {
+        val fp = unsentFingerprint(listOf("r:1", "o:7"))
+        fun loggingOut(disposition: String?, accepted: String?) = snapshot(
+            owner = "A",
+            phase = OwnerPhase.LOGGING_OUT,
+            hasData = true,
+            unsent = 2,
+            fingerprint = fp,
+            disposition = disposition,
+            accepted = accepted,
+        )
+        assertEquals(StartupAction.AbortLogout, decideStartup(loggingOut(null, null), SessionState.SignedOut))
+        assertEquals(
+            StartupAction.AbortLogout,
+            decideStartup(loggingOut(LogoutDisposition.REQUIRE_EMPTY, null), active("A")),
+        )
+        assertEquals(
+            StartupAction.CompleteLogout,
+            decideStartup(loggingOut(LogoutDisposition.DISCARD_CONFIRMED, fp), SessionState.SignedOut),
+        )
+        // Praca dopisana po potwierdzeniu zmienia fingerprint: zgoda jej nie obejmuje.
+        val older = unsentFingerprint(listOf("r:1"))
+        assertEquals(
+            StartupAction.AbortLogout,
+            decideStartup(loggingOut(LogoutDisposition.DISCARD_CONFIRMED, older), SessionState.SignedOut),
+        )
+    }
+
+    @Test
+    fun fingerprintIdentifiesExactSetOfUnsentOperations() {
+        assertEquals("", unsentFingerprint(emptyList()))
+        assertEquals(unsentFingerprint(listOf("r:a", "m:b")), unsentFingerprint(listOf("m:b", "r:a")))
+        assertNotEquals(unsentFingerprint(listOf("r:a")), unsentFingerprint(listOf("r:a", "o:1")))
+        // Separator: sklejenie identyfikatorów nie daje kolizji.
+        assertNotEquals(unsentFingerprint(listOf("r:ab")), unsentFingerprint(listOf("r:a", "b")))
+    }
+
+    @Test
+    fun logoutConsentCoversOnlyEmptyQueuesOrTheConfirmedSnapshot() {
+        val fp = unsentFingerprint(listOf("l:x"))
+        val requireEmpty = LogoutConsent.RequireEmpty
+        val discard = LogoutConsent.DiscardConfirmed(fp)
+        assertTrue(consentCovers(requireEmpty.disposition, requireEmpty.acceptedFingerprint, 0, ""))
+        assertFalse(consentCovers(requireEmpty.disposition, requireEmpty.acceptedFingerprint, 1, fp))
+        assertTrue(consentCovers(discard.disposition, discard.acceptedFingerprint, 1, fp))
+        assertFalse(consentCovers(discard.disposition, discard.acceptedFingerprint, 2, unsentFingerprint(listOf("l:x", "l:y"))))
+        // Inny zbiór tej samej wielkości też wymaga nowej decyzji; pusta kolejka zawsze wystarcza.
+        assertFalse(consentCovers(discard.disposition, discard.acceptedFingerprint, 1, unsentFingerprint(listOf("l:z"))))
+        assertTrue(consentCovers(discard.disposition, discard.acceptedFingerprint, 0, ""))
     }
 
     @Test

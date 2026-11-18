@@ -659,6 +659,14 @@
     <string name="auth_revocation_unconfirmed">Sitzungen ohne Serverbestätigung: %1$d. Sie werden auf diesem Gerät nicht mehr verwendet und laufen innerhalb von 30 Tagen automatisch ab.</string>
     <string name="auth_revocation_confirmed">Auch auf dem Server abgemeldet.</string>
     <string name="auth_revocation_queue_full">Zu viele Abmeldungen warten auf den Server. Verbinde dich mit dem Internet, warte kurz und versuche es erneut.</string>
+    <string name="logout_unsent_title">Nicht gesendete Änderungen</string>
+    <string name="logout_unsent_message">Beim Abmelden werden die Daten dieses Kontos von diesem Gerät entfernt. Noch nicht an den Server gesendete Änderungen gehen verloren.</string>
+    <string name="logout_unsent_sync_incomplete">Nicht alle Änderungen konnten gesendet werden. Prüfe deine Verbindung und versuche es erneut oder verwirf sie.</string>
+    <string name="logout_unsent_changed">Inzwischen sind neue nicht gesendete Änderungen hinzugekommen. Bitte entscheide erneut.</string>
+    <string name="logout_discard_confirm_title">Nicht gesendete Änderungen verwerfen?</string>
+    <string name="logout_discard_confirm_message">Änderungen, die dauerhaft von diesem Gerät gelöscht werden: %1$d. Dies kann nicht rückgängig gemacht werden.</string>
+    <string name="action_sync_and_logout">Synchronisieren und abmelden</string>
+    <string name="action_discard_and_logout">Verwerfen und abmelden</string>
 
 
     <string name="err_register">Registrierung fehlgeschlagen</string>

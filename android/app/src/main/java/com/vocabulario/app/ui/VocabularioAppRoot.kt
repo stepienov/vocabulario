@@ -37,6 +37,7 @@ import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.imports.ImportController
 import com.vocabulario.app.ui.auth.AuthScreen
 import com.vocabulario.app.ui.auth.AuthViewModel
+import com.vocabulario.app.ui.auth.LogoutUnsentDialog
 import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.BusyOverlayHost
 import com.vocabulario.app.ui.components.ButtonLabel
@@ -205,13 +206,20 @@ fun VocabularioAppRoot(
                         )
                     }
                     composable(Routes.SETTINGS) {
+                        val onLoggedOut: suspend () -> Unit = { appViewModel.onLogout() }
+                        val logoutPrompt by authViewModel.logoutPrompt.collectAsState()
+                        logoutPrompt?.let { prompt ->
+                            LogoutUnsentDialog(
+                                prompt = prompt,
+                                onSyncAndLogout = { authViewModel.syncAndLogout(onLoggedOut) },
+                                onAskDiscard = authViewModel::askDiscardConfirmation,
+                                onDiscard = { authViewModel.discardAndLogout(onLoggedOut) },
+                                onCancel = authViewModel::cancelLogout,
+                            )
+                        }
                         SettingsScreen(
                             onBack = { navController.popBackStack() },
-                            onLogout = {
-                                authViewModel.logout {
-                                    appViewModel.onLogout()
-                                }
-                            },
+                            onLogout = { authViewModel.requestLogout(onLoggedOut) },
                         )
                     }
                     composable(Routes.PROFILE) {

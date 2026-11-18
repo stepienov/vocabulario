@@ -10,6 +10,7 @@ import com.vocabulario.app.data.imports.ImportStatePersistence
 import com.vocabulario.app.data.local.OfflineStore
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.session.LoginDecision
+import com.vocabulario.app.data.session.LogoutConsent
 import com.vocabulario.app.data.session.OwnerSnapshot
 import com.vocabulario.app.data.session.REAUTH_REASON_SESSION_MISMATCH
 import com.vocabulario.app.data.session.RevocationMaterial
@@ -135,11 +136,13 @@ class AuthRepository @Inject constructor(
     /**
      * Zamiar wylogowania trafia do Room, a zlecenie odwołania do zaszyfrowanej kolejki, zanim
      * znikną poświadczenia; restart dokończy cleanup zamiast wskrzesić dane poprzedniego konta.
+     * Niewysłana praca spoza [consent] przerywa logout przed zmianą sesji
+     * ([com.vocabulario.app.data.session.UnsentChangesException]).
      * Zwraca true, gdy odwołanie na serwerze czeka na wysłanie.
      */
-    suspend fun logout(): Boolean {
+    suspend fun logout(consent: LogoutConsent = LogoutConsent.RequireEmpty): Boolean {
         val transitionId = UUID.randomUUID().toString()
-        offlineStore.beginLogout(transitionId)
+        offlineStore.beginLogout(transitionId, consent)
         var queued: RevocationRequest? = null
         try {
             sessionCoordinator.signOutLocally { material -> queued = revocationStore.add(material) }
@@ -202,6 +205,11 @@ class AuthRepository @Inject constructor(
                 }
                 finishLogoutLocally()
             }
+            StartupAction.AbortLogout -> {
+                // Zgoda nie obejmuje obecnych kolejek: dane zostają, sesja (jeśli jest) też.
+                val aborted = snapshot.transitionId?.let { offlineStore.abortLogout(it) } ?: false
+                if (aborted) reconcileOwnerOnStart()
+            }
             is StartupAction.ClaimEmpty ->
                 if (!offlineStore.claimEmpty(action.ownerUserId)) {
                     sessionCoordinator.requireReauth(REAUTH_REASON_SESSION_MISMATCH)
@@ -210,8 +218,9 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    /** Bez pełnego czyszczenia (praca spoza zgody) zostają też ustawienia lokalne właściciela. */
     private suspend fun finishLogoutLocally() {
-        offlineStore.completeLogout()
+        if (!offlineStore.completeLogout()) return
         tokenStore.clear()
         importStatePersistence.saveJobId(null)
     }

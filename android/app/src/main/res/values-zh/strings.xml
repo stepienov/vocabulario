@@ -659,6 +659,14 @@
     <string name="auth_revocation_unconfirmed">未经服务器确认的会话：%1$d。它们已不在此设备上使用，并将在 30 天内自动过期。</string>
     <string name="auth_revocation_confirmed">已同时在服务器上退出登录。</string>
     <string name="auth_revocation_queue_full">等待服务器处理的退出登录过多。请连接互联网，稍等片刻后重试。</string>
+    <string name="logout_unsent_title">未发送的更改</string>
+    <string name="logout_unsent_message">退出登录会从此设备删除该账户的数据。尚未发送到服务器的更改将会丢失。</string>
+    <string name="logout_unsent_sync_incomplete">未能发送所有更改。请检查网络连接后重试，或放弃这些更改。</string>
+    <string name="logout_unsent_changed">在此期间出现了新的未发送更改。请重新决定。</string>
+    <string name="logout_discard_confirm_title">放弃未发送的更改？</string>
+    <string name="logout_discard_confirm_message">将从此设备永久删除的更改：%1$d。此操作无法撤销。</string>
+    <string name="action_sync_and_logout">同步并退出登录</string>
+    <string name="action_discard_and_logout">放弃并退出登录</string>
 
 
     <string name="err_register">注册失败</string>

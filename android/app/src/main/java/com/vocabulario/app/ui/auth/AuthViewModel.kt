@@ -12,10 +12,12 @@ import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.session.AuthNotice
+import com.vocabulario.app.data.session.LogoutConsent
 import com.vocabulario.app.data.session.RevocationQueueFullException
 import com.vocabulario.app.data.session.RevocationSummary
 import com.vocabulario.app.data.session.SessionCoordinator
 import com.vocabulario.app.data.session.SessionState
+import com.vocabulario.app.data.session.UnsentChangesException
 import com.vocabulario.app.data.session.authNotice
 import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -81,15 +83,86 @@ class AuthViewModel @Inject constructor(
     }
 
     /** Flaga przed wywołaniem, bo worker może potwierdzić odwołanie, zanim logout wróci. */
-    private suspend fun logoutAndTrack() {
+    private suspend fun logoutAndTrack(consent: LogoutConsent) {
         _infoMessage.value = null
         awaitingServerSignOut = true
         try {
-            if (!authRepository.logout()) awaitingServerSignOut = false
+            if (!authRepository.logout(consent)) awaitingServerSignOut = false
         } catch (e: Throwable) {
             awaitingServerSignOut = false
             throw e
         }
+    }
+
+    /** Ostrzeżenie o niewysłanych zmianach przy logout z ustawień; null = brak dialogu. */
+    private val _logoutPrompt = MutableStateFlow<LogoutPrompt?>(null)
+    val logoutPrompt: StateFlow<LogoutPrompt?> = _logoutPrompt.asStateFlow()
+
+    /** Logout z ustawień: bez niewysłanych zmian od razu, inaczej dialog z decyzją użytkownika. */
+    fun requestLogout(onDone: suspend () -> Unit) {
+        viewModelScope.launch {
+            blockingBusy.run { attemptLogout(LogoutConsent.RequireEmpty, LogoutPromptReason.INITIAL, onDone) }
+        }
+    }
+
+    /** Błąd lub brak sieci przy synchronizacji nie jest zgodą na odrzucenie: wraca ostrzeżenie. */
+    fun syncAndLogout(onDone: suspend () -> Unit) {
+        viewModelScope.launch {
+            blockingBusy.run {
+                _logoutPrompt.value = null
+                try {
+                    learningRepository.syncNow(awaitLock = true)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    // Wynik oceni bariera logoutu na podstawie kolejek.
+                }
+                attemptLogout(LogoutConsent.RequireEmpty, LogoutPromptReason.SYNC_INCOMPLETE, onDone)
+            }
+        }
+    }
+
+    fun askDiscardConfirmation() {
+        _logoutPrompt.value = _logoutPrompt.value?.copy(confirmDiscard = true)
+    }
+
+    /** Odrzuca tylko snapshot z ostrzeżenia; nowa praca wymaga ponownej decyzji. */
+    fun discardAndLogout(onDone: suspend () -> Unit) {
+        val prompt = _logoutPrompt.value ?: return
+        viewModelScope.launch {
+            blockingBusy.run {
+                _logoutPrompt.value = null
+                attemptLogout(
+                    LogoutConsent.DiscardConfirmed(prompt.fingerprint),
+                    LogoutPromptReason.CHANGED,
+                    onDone,
+                )
+            }
+        }
+    }
+
+    fun cancelLogout() {
+        _logoutPrompt.value = null
+    }
+
+    private suspend fun attemptLogout(
+        consent: LogoutConsent,
+        reasonIfUnsent: LogoutPromptReason,
+        onDone: suspend () -> Unit,
+    ) {
+        try {
+            logoutAndTrack(consent)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: UnsentChangesException) {
+            _logoutPrompt.value = LogoutPrompt(e.unsentCount, e.fingerprint, reasonIfUnsent)
+            return
+        } catch (_: Exception) {
+            // Nieudany trwały zapis wylogowania nie może udawać sukcesu.
+            return
+        }
+        _logoutPrompt.value = null
+        onDone()
     }
 
     /** Stan sesji i danych na urządzeniu widoczny nad formularzem logowania. */
@@ -134,22 +207,22 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    /** Jawne wyjście z sesji wymagającej reauth/odzyskania: usuwa dane konta z tego urządzenia. */
-    fun signOutOnDevice() {
+    /** Jawne wyjście z sesji wymagającej reauth/odzyskania: usuwa pokazane w ostrzeżeniu dane. */
+    fun signOutOnDevice(acceptedFingerprint: String) {
         viewModelScope.launch {
             blockingBusy.run {
-                val signedOut = try {
-                    logoutAndTrack()
-                    true
+                val message = try {
+                    logoutAndTrack(LogoutConsent.DiscardConfirmed(acceptedFingerprint))
+                    R.string.auth_signed_out_device
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: Exception) {
-                    false
+                } catch (_: UnsentChangesException) {
+                    R.string.logout_unsent_changed
+                } catch (_: Exception) {
+                    R.string.auth_sign_out_device_failed
                 }
                 noticeRefresh.value++
-                _errorMessage.value = strings.get(
-                    if (signedOut) R.string.auth_signed_out_device else R.string.auth_sign_out_device_failed,
-                )
+                _errorMessage.value = strings.get(message)
             }
         }
     }
@@ -264,21 +337,22 @@ class AuthViewModel @Inject constructor(
             }
         }
     }
-
-    fun logout(onDone: suspend () -> Unit) {
-        viewModelScope.launch {
-            blockingBusy.run {
-                // Nieudany trwały zapis wylogowania nie może udawać sukcesu.
-                val loggedOut = try {
-                    logoutAndTrack()
-                    true
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    false
-                }
-                if (loggedOut) onDone()
-            }
-        }
-    }
 }
+
+enum class LogoutPromptReason {
+    /** Pierwsze ostrzeżenie przed logout. */
+    INITIAL,
+
+    /** Po synchronizacji nadal zostały niewysłane zmiany (brak sieci, błąd, zmiany do decyzji). */
+    SYNC_INCOMPLETE,
+
+    /** Od potwierdzenia pojawiła się nowa praca; zgoda jej nie obejmowała. */
+    CHANGED,
+}
+
+data class LogoutPrompt(
+    val unsentCount: Int,
+    val fingerprint: String,
+    val reason: LogoutPromptReason,
+    val confirmDiscard: Boolean = false,
+)

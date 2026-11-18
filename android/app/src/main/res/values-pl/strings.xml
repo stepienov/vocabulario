@@ -694,6 +694,14 @@
     <string name="auth_revocation_unconfirmed">Sesje bez potwierdzenia serwera: %1$d. Nie są już używane na tym urządzeniu i wygasną automatycznie w ciągu 30 dni.</string>
     <string name="auth_revocation_confirmed">Wylogowano także na serwerze.</string>
     <string name="auth_revocation_queue_full">Zbyt wiele wylogowań czeka na serwer. Połącz się z internetem, odczekaj chwilę i spróbuj ponownie.</string>
+    <string name="logout_unsent_title">Niewysłane zmiany</string>
+    <string name="logout_unsent_message">Wylogowanie usuwa dane tego konta z urządzenia. Zmiany, których serwer jeszcze nie ma, zostaną utracone.</string>
+    <string name="logout_unsent_sync_incomplete">Nie udało się wysłać wszystkich zmian. Sprawdź połączenie i spróbuj ponownie albo je odrzuć.</string>
+    <string name="logout_unsent_changed">W międzyczasie pojawiły się nowe niewysłane zmiany. Zdecyduj ponownie.</string>
+    <string name="logout_discard_confirm_title">Odrzucić niewysłane zmiany?</string>
+    <string name="logout_discard_confirm_message">Zmiany, które zostaną trwale usunięte z tego urządzenia: %1$d. Tej operacji nie można cofnąć.</string>
+    <string name="action_sync_and_logout">Synchronizuj i wyloguj</string>
+    <string name="action_discard_and_logout">Odrzuć i wyloguj</string>
 
 
     <string name="err_register">Błąd rejestracji</string>

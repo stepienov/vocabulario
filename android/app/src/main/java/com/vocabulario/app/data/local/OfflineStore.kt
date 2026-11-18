@@ -29,8 +29,13 @@ import com.vocabulario.app.data.local.db.OwnerPhase
 import com.vocabulario.app.data.local.db.SessionOwnerEntity
 import com.vocabulario.app.data.local.db.SyncMetaEntity
 import com.vocabulario.app.data.session.LoginDecision
+import com.vocabulario.app.data.session.LogoutConsent
 import com.vocabulario.app.data.session.OwnerSnapshot
+import com.vocabulario.app.data.session.UnsentChangesException
+import com.vocabulario.app.data.session.consentCovers
 import com.vocabulario.app.data.session.decideLogin
+import com.vocabulario.app.data.session.logoutCovered
+import com.vocabulario.app.data.session.unsentFingerprint
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -55,6 +60,7 @@ class OfflineStore @Inject constructor(
             AppDatabase.MIGRATION_7_8,
             AppDatabase.MIGRATION_8_9,
             AppDatabase.MIGRATION_9_10,
+            AppDatabase.MIGRATION_10_11,
         )
         // Zachowaj dane (w tym niewysłany outbox) przy aktualizacji z v6.
         // Twardy reset tylko dla prehistorycznych wersji, których w praktyce nie ma w terenie.
@@ -214,37 +220,68 @@ class OfflineStore @Inject constructor(
         true
     }
 
-    suspend fun beginLogout(transitionId: String) {
+    /**
+     * Bariera logoutu: końcowy odczyt kolejek i zapis zamiaru są jedną transakcją. Praca spoza
+     * zgody przerywa logout bez zmian ([UnsentChangesException] z aktualnym snapshotem).
+     */
+    suspend fun beginLogout(transitionId: String, consent: LogoutConsent) {
         db.withTransaction {
             val snapshot = ownerSnapshotLocked()
-            writeOwnerLocked(snapshot, snapshot.ownerUserId, OwnerPhase.LOGGING_OUT, transitionId)
+            val covered = consentCovers(
+                consent.disposition,
+                consent.acceptedFingerprint,
+                snapshot.unsentCount,
+                snapshot.unsentFingerprint,
+            )
+            if (!covered) throw UnsentChangesException(snapshot.unsentCount, snapshot.unsentFingerprint)
+            writeOwnerLocked(
+                snapshot,
+                snapshot.ownerUserId,
+                OwnerPhase.LOGGING_OUT,
+                transitionId,
+                logoutDisposition = consent.disposition,
+                acceptedUnsentFingerprint = consent.acceptedFingerprint,
+            )
         }
     }
 
     /** Wycofanie zamiaru, gdy usunięcie sesji się nie powiodło; generacja nie wraca. */
-    suspend fun abortLogout(transitionId: String) {
-        db.withTransaction {
-            val row = ownerDao.get() ?: return@withTransaction
-            if (row.transitionId != transitionId || row.phase != OwnerPhase.LOGGING_OUT) return@withTransaction
-            ownerDao.upsert(row.copy(phase = OwnerPhase.ACTIVE, transitionId = null))
-        }
+    suspend fun abortLogout(transitionId: String): Boolean = db.withTransaction {
+        val row = ownerDao.get() ?: return@withTransaction false
+        if (row.transitionId != transitionId || row.phase != OwnerPhase.LOGGING_OUT) return@withTransaction false
+        ownerDao.upsert(row.cancelledLogout())
+        true
     }
 
-    /** Usuwa dane właściciela, ale nie rekord metadanych ani licznik generacji. */
-    suspend fun completeLogout() {
-        db.withTransaction {
-            val snapshot = ownerSnapshotLocked()
-            deleteOwnedDataLocked()
-            ownerDao.upsert(
-                SessionOwnerEntity(
-                    ownerUserId = null,
-                    generation = snapshot.generation,
-                    phase = OwnerPhase.SIGNED_OUT,
-                    transitionId = null,
-                ),
-            )
+    /**
+     * Usuwa dane właściciela, ale nie rekord metadanych ani licznik generacji. Gdy w kolejkach
+     * jest praca nieobjęta zapisaną zgodą, dane zostają (właściciel bez sesji) i zwraca false.
+     */
+    suspend fun completeLogout(): Boolean = db.withTransaction {
+        val snapshot = ownerSnapshotLocked()
+        if (snapshot.phase != OwnerPhase.LOGGING_OUT) return@withTransaction false
+        if (!logoutCovered(snapshot)) {
+            ownerDao.get()?.let { ownerDao.upsert(it.cancelledLogout()) }
+            return@withTransaction false
         }
+        deleteOwnedDataLocked()
+        ownerDao.upsert(
+            SessionOwnerEntity(
+                ownerUserId = null,
+                generation = snapshot.generation,
+                phase = OwnerPhase.SIGNED_OUT,
+                transitionId = null,
+            ),
+        )
+        true
     }
+
+    private fun SessionOwnerEntity.cancelledLogout() = copy(
+        phase = OwnerPhase.ACTIVE,
+        transitionId = null,
+        logoutDisposition = null,
+        acceptedUnsentFingerprint = null,
+    )
 
     /** Świadome odrzucenie danych bez właściciela; inne fazy pozostają nietknięte. */
     suspend fun discardUnclaimedData(): Boolean = db.withTransaction {
@@ -259,13 +296,17 @@ class OfflineStore @Inject constructor(
 
     private suspend fun ownerSnapshotLocked(): OwnerSnapshot {
         val row = ownerDao.get() ?: SessionOwnerEntity()
+        val unsentIds = ownerDao.unsentIds()
         return OwnerSnapshot(
             ownerUserId = row.ownerUserId,
             generation = row.generation,
             phase = row.phase,
             transitionId = row.transitionId,
             hasOwnedData = ownerDao.hasOwnedData(),
-            unsentCount = ownerDao.unsentCount(),
+            unsentCount = unsentIds.size,
+            unsentFingerprint = unsentFingerprint(unsentIds),
+            logoutDisposition = row.logoutDisposition,
+            acceptedUnsentFingerprint = row.acceptedUnsentFingerprint,
         )
     }
 
@@ -274,6 +315,8 @@ class OfflineStore @Inject constructor(
         ownerUserId: String?,
         phase: String,
         transitionId: String?,
+        logoutDisposition: String? = null,
+        acceptedUnsentFingerprint: String? = null,
     ) {
         ownerDao.upsert(
             SessionOwnerEntity(
@@ -281,6 +324,8 @@ class OfflineStore @Inject constructor(
                 generation = snapshot.generation + 1,
                 phase = phase,
                 transitionId = transitionId,
+                logoutDisposition = logoutDisposition,
+                acceptedUnsentFingerprint = acceptedUnsentFingerprint,
             ),
         )
     }

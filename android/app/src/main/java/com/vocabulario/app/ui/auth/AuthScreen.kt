@@ -127,7 +127,7 @@ fun AuthScreen(
             onDismiss = { confirmSignOut = false },
             onConfirm = {
                 confirmSignOut = false
-                viewModel.signOutOnDevice()
+                viewModel.signOutOnDevice(current.unsentFingerprint)
             },
         )
     }
@@ -255,7 +255,11 @@ fun AuthScreen(
                         },
                         onSignOut = {
                             hideKeyboard()
-                            if (current.hasLocalData) confirmSignOut = true else viewModel.signOutOnDevice()
+                            if (current.hasLocalData) {
+                                confirmSignOut = true
+                            } else {
+                                viewModel.signOutOnDevice(current.unsentFingerprint)
+                            }
                         },
                     )
                     Spacer(Modifier.height(20.dp))

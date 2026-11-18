@@ -161,7 +161,16 @@ data class SessionOwnerEntity(
     val generation: Long = 0,
     val phase: String = OwnerPhase.SIGNED_OUT,
     val transitionId: String? = null,
+    /** Zgoda zapisana razem z `logging_out`; recovery nie wywodzi jej z samej fazy. */
+    val logoutDisposition: String? = null,
+    /** Fingerprint kolejek, których utratę użytkownik potwierdził (tylko `discard_confirmed`). */
+    val acceptedUnsentFingerprint: String? = null,
 )
+
+object LogoutDisposition {
+    const val REQUIRE_EMPTY = "require_empty"
+    const val DISCARD_CONFIRMED = "discard_confirmed"
+}
 
 object OwnerPhase {
     const val SIGNED_OUT = "signed_out"

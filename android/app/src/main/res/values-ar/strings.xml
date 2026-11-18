@@ -659,6 +659,14 @@
     <string name="auth_revocation_unconfirmed">جلسات بدون تأكيد من الخادم: %1$d. لم تعد مستخدمة على هذا الجهاز وستنتهي تلقائيًا خلال 30 يومًا.</string>
     <string name="auth_revocation_confirmed">تم تسجيل الخروج على الخادم أيضًا.</string>
     <string name="auth_revocation_queue_full">هناك عدد كبير جدًا من عمليات تسجيل الخروج بانتظار الخادم. اتصل بالإنترنت وانتظر قليلًا ثم حاول مرة أخرى.</string>
+    <string name="logout_unsent_title">تغييرات غير مُرسلة</string>
+    <string name="logout_unsent_message">يؤدي تسجيل الخروج إلى حذف بيانات هذا الحساب من هذا الجهاز. ستُفقد التغييرات التي لم تُرسل إلى الخادم بعد.</string>
+    <string name="logout_unsent_sync_incomplete">تعذّر إرسال جميع التغييرات. تحقّق من الاتصال وحاول مرة أخرى، أو تجاهلها.</string>
+    <string name="logout_unsent_changed">ظهرت تغييرات جديدة غير مُرسلة في هذه الأثناء. يُرجى اتخاذ القرار مرة أخرى.</string>
+    <string name="logout_discard_confirm_title">تجاهل التغييرات غير المُرسلة؟</string>
+    <string name="logout_discard_confirm_message">التغييرات التي ستُحذف نهائيًا من هذا الجهاز: %1$d. لا يمكن التراجع عن ذلك.</string>
+    <string name="action_sync_and_logout">مزامنة وتسجيل الخروج</string>
+    <string name="action_discard_and_logout">تجاهل وتسجيل الخروج</string>
 
 
     <string name="err_register">فشل إنشاء الحساب</string>

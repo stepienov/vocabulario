@@ -659,6 +659,14 @@
     <string name="auth_revocation_unconfirmed">Sessões sem confirmação do servidor: %1$d. Já não são usadas neste dispositivo e expiram automaticamente no prazo de 30 dias.</string>
     <string name="auth_revocation_confirmed">Sessão terminada também no servidor.</string>
     <string name="auth_revocation_queue_full">Há demasiados fins de sessão à espera do servidor. Ligue-se à Internet, aguarde um momento e tente novamente.</string>
+    <string name="logout_unsent_title">Alterações não enviadas</string>
+    <string name="logout_unsent_message">Terminar sessão remove os dados desta conta deste dispositivo. As alterações ainda não enviadas para o servidor serão perdidas.</string>
+    <string name="logout_unsent_sync_incomplete">Não foi possível enviar todas as alterações. Verifique a ligação e tente novamente, ou descarte-as.</string>
+    <string name="logout_unsent_changed">Entretanto surgiram novas alterações não enviadas. Decida novamente.</string>
+    <string name="logout_discard_confirm_title">Descartar as alterações não enviadas?</string>
+    <string name="logout_discard_confirm_message">Alterações que serão eliminadas permanentemente deste dispositivo: %1$d. Não é possível anular.</string>
+    <string name="action_sync_and_logout">Sincronizar e terminar sessão</string>
+    <string name="action_discard_and_logout">Descartar e terminar sessão</string>
 
 
     <string name="err_register">Falha no cadastro</string>

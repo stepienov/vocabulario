@@ -659,6 +659,14 @@
     <string name="auth_revocation_unconfirmed">Sessions sans confirmation du serveur : %1$d. Elles ne sont plus utilisées sur cet appareil et expireront automatiquement sous 30 jours.</string>
     <string name="auth_revocation_confirmed">Déconnecté également sur le serveur.</string>
     <string name="auth_revocation_queue_full">Trop de déconnexions attendent le serveur. Connectez-vous à Internet, patientez un instant et réessayez.</string>
+    <string name="logout_unsent_title">Modifications non envoyées</string>
+    <string name="logout_unsent_message">La déconnexion supprime les données de ce compte de cet appareil. Les modifications pas encore envoyées au serveur seront perdues.</string>
+    <string name="logout_unsent_sync_incomplete">Toutes les modifications n’ont pas pu être envoyées. Vérifiez votre connexion et réessayez, ou supprimez-les.</string>
+    <string name="logout_unsent_changed">De nouvelles modifications non envoyées sont apparues entre-temps. Veuillez décider à nouveau.</string>
+    <string name="logout_discard_confirm_title">Supprimer les modifications non envoyées ?</string>
+    <string name="logout_discard_confirm_message">Modifications qui seront définitivement supprimées de cet appareil : %1$d. Cette action est irréversible.</string>
+    <string name="action_sync_and_logout">Synchroniser et se déconnecter</string>
+    <string name="action_discard_and_logout">Supprimer et se déconnecter</string>
 
 
     <string name="err_register">Échec de l’inscription</string>

@@ -691,6 +691,14 @@
     <string name="auth_revocation_unconfirmed">Sunucu onayı olmayan oturumlar: %1$d. Artık bu cihazda kullanılmıyorlar ve 30 gün içinde otomatik olarak sona erecekler.</string>
     <string name="auth_revocation_confirmed">Sunucuda da oturum kapatıldı.</string>
     <string name="auth_revocation_queue_full">Sunucuyu bekleyen çok fazla çıkış var. İnternete bağlanın, biraz bekleyin ve tekrar deneyin.</string>
+    <string name="logout_unsent_title">Gönderilmemiş değişiklikler</string>
+    <string name="logout_unsent_message">Çıkış yapmak bu hesabın verilerini bu cihazdan kaldırır. Henüz sunucuya gönderilmemiş değişiklikler kaybolur.</string>
+    <string name="logout_unsent_sync_incomplete">Tüm değişiklikler gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin veya değişiklikleri silin.</string>
+    <string name="logout_unsent_changed">Bu arada yeni gönderilmemiş değişiklikler oluştu. Lütfen yeniden karar verin.</string>
+    <string name="logout_discard_confirm_title">Gönderilmemiş değişiklikler silinsin mi?</string>
+    <string name="logout_discard_confirm_message">Bu cihazdan kalıcı olarak silinecek değişiklikler: %1$d. Bu işlem geri alınamaz.</string>
+    <string name="action_sync_and_logout">Eşitle ve çıkış yap</string>
+    <string name="action_discard_and_logout">Sil ve çıkış yap</string>
 
 
     <string name="err_register">Kayıt başarısız</string>

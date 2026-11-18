@@ -685,6 +685,14 @@
     <string name="auth_revocation_unconfirmed">Sessioni senza conferma del server: %1$d. Non sono più usate su questo dispositivo e scadranno automaticamente entro 30 giorni.</string>
     <string name="auth_revocation_confirmed">Disconnesso anche sul server.</string>
     <string name="auth_revocation_queue_full">Troppe disconnessioni sono in attesa del server. Connettiti a internet, attendi un momento e riprova.</string>
+    <string name="logout_unsent_title">Modifiche non inviate</string>
+    <string name="logout_unsent_message">La disconnessione rimuove i dati di questo account da questo dispositivo. Le modifiche non ancora inviate al server andranno perse.</string>
+    <string name="logout_unsent_sync_incomplete">Non è stato possibile inviare tutte le modifiche. Controlla la connessione e riprova, oppure scartale.</string>
+    <string name="logout_unsent_changed">Nel frattempo sono comparse nuove modifiche non inviate. Decidi di nuovo.</string>
+    <string name="logout_discard_confirm_title">Scartare le modifiche non inviate?</string>
+    <string name="logout_discard_confirm_message">Modifiche che verranno eliminate definitivamente da questo dispositivo: %1$d. L’operazione non può essere annullata.</string>
+    <string name="action_sync_and_logout">Sincronizza e disconnetti</string>
+    <string name="action_discard_and_logout">Scarta e disconnetti</string>
 
 
     <string name="err_register">Registrazione fallita</string>

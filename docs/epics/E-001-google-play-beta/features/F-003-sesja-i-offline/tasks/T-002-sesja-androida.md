@@ -40,7 +40,7 @@ Pakiet [`data/session`](../../../../../../android/app/src/main/java/com/vocabula
 **Tymczasowo:**
 - Zmiana konta: od kroku 3 możliwa tylko przez jawne „Wyloguj na tym urządzeniu” z usunięciem danych (jak dotychczasowy logout w ustawieniach). Login na B przy danych A nadal kończy się odmową. Wydanie T-002 wymaga ochrony zapisów z części (d).
 - Odwołanie kandydata to jedna próba, nie trwałe zlecenie (krok logout) — **rozwiązane w kroku 4a**.
-- Logout z ustawień nadal bez dialogu niewysłanych zmian.
+- Logout z ustawień nadal bez dialogu niewysłanych zmian — **rozwiązane w kroku 4b**.
 - Migracji Room nie da się sprawdzić testem JVM (brak Robolectric/urządzenia); SQL odpowiada schematowi encji i wymaga ręcznego sprawdzenia aktualizacji na urządzeniu.
 - Obecna instalacja debug z danymi trafi do kwarantanny: po aktualizacji wymagany login i świadome usunięcie lokalnych danych; zsynchronizowane dane wrócą z serwera.
 
@@ -69,7 +69,19 @@ Pakiet [`data/session`](../../../../../../android/app/src/main/java/com/vocabula
 - AUTH: karta „Wylogowano na tym urządzeniu; serwer potwierdzi po połączeniu”, osobno „Sesje bez potwierdzenia serwera: N … wygasną w ciągu 30 dni” z „OK”, a po potwierdzeniu własnego logout neutralny komunikat „Wylogowano także na serwerze”. 4 nowe klucze w 17 lokalizacjach. Reset hasła jako sposób na zakończenie wszystkich sesji zostanie dopisany po F-004 (backend nie ma go jeszcze).
 - Testy: [`RevocationTest`](../../../../../../android/app/src/test/java/com/vocabulario/app/data/session/RevocationTest.kt) (11: klasyfikacja 204/401/429/503/408, potwierdzenie, niepotwierdzone, przejściowy błąd, `Retry-After`, odzyskanie rotacji z zapisem przed logout, `session_revoked`/offline/nieważny dowód przy odzyskaniu, fizyczny purge po 30 dniach, limit i rezerwacje, nieudany zapis, nieczytelna kolejka) oraz przekazanie materiału w `SessionCoordinatorTest`. Gradle: unit tests 262/262, lint bez uwag do zmian, `assembleDebug` OK.
 
-**Dalej w kroku 4:** dialog logout z ustawień przy niewysłanych zmianach („Synchronizuj i wyloguj” / „Anuluj” / „Odrzuć i wyloguj” z drugim potwierdzeniem) oraz trwałe `logout_disposition` z fingerprintem kolejek sprawdzanym w transakcji bariery.
+### Krok 4b · Logout z decyzją o niewysłanych zmianach (18.11.2026)
+
+- Room v11 (migracja addytywna 10→11): `session_owner` dostaje `logoutDisposition` (`require_empty`/`discard_confirmed`) i `acceptedUnsentFingerprint`.
+- Fingerprint: SHA-256 posortowanych identyfikatorów `pending_reviews`, `pending_moves`, `pending_lookups` (także „do decyzji”) i `outbox_ops` (także zaparkowanych). Liczba i fingerprint pochodzą z jednego odczytu.
+- Bariera: `OfflineStore.beginLogout(transitionId, consent)` czyta kolejki i zapisuje `logging_out` w jednej transakcji. Praca spoza zgody → `UnsentChangesException` z aktualną liczbą i fingerprintem, bez zmian sesji i danych. `completeLogout()` sprawdza zgodę ponownie przed usunięciem; jeśli nie obejmuje kolejek, dane zostają u właściciela (karta „Dane Twojego konta” na AUTH).
+- Recovery: przerwany logout kończy się tylko, gdy zapisana zgoda obejmuje obecne kolejki; w przeciwnym razie `AbortLogout` (dane i ewentualna sesja zostają). Brak dyspozycji = `require_empty`.
+- Ustawienia → „Wyloguj”: bez niewysłanych zmian od razu. Inaczej dialog z liczbą: „Synchronizuj i wyloguj” (sync z oczekiwaniem na blokadę, potem ponowna bariera; jeśli coś zostało — ostrzeżenie „Nie udało się wysłać wszystkich zmian”, nigdy automatyczne odrzucenie), „Odrzuć i wyloguj” z drugim potwierdzeniem (zgoda na dokładnie pokazany snapshot; nowa praca → „Pojawiły się nowe zmiany”, ponowna decyzja), „Anuluj”.
+- „Wyloguj na tym urządzeniu” na AUTH używa tej samej zgody z fingerprintem z karty.
+- 8 nowych kluczy w 17 lokalizacjach.
+- Testy w `OwnerDecisionsTest`: recovery bez zgody z samej fazy, fingerprint (kolejność, nowa praca, separator), pokrycie zgody. Gradle: unit tests 265/265, lint bez uwag do zmian, `assembleDebug` OK.
+- Migracja v10→v11 wymaga ręcznego sprawdzenia aktualizacji na urządzeniu (jak v9→v10).
+
+**Dalej w kroku 4 (część d, wymagana przed wydaniem T-002):** `SessionContext(owner, generation)` w workerach, imporcie i powiadomieniach z kontrolą generacji przed zapisem, żeby praca w tle nie dopisywała się po barierze ani do innego właściciela.
 
 ## Cel, decyzje i zależności
 

@@ -694,6 +694,14 @@
     <string name="auth_revocation_unconfirmed">Sessions without server confirmation: %1$d. They’re no longer used on this device and expire automatically within 30 days.</string>
     <string name="auth_revocation_confirmed">Signed out on the server too.</string>
     <string name="auth_revocation_queue_full">Too many sign-outs are waiting for the server. Connect to the internet, wait a moment and try again.</string>
+    <string name="logout_unsent_title">Unsent changes</string>
+    <string name="logout_unsent_message">Logging out removes this account’s data from this device. Changes not yet sent to the server will be lost.</string>
+    <string name="logout_unsent_sync_incomplete">Not all changes could be sent. Check your connection and try again, or discard them.</string>
+    <string name="logout_unsent_changed">New unsent changes appeared in the meantime. Please decide again.</string>
+    <string name="logout_discard_confirm_title">Discard unsent changes?</string>
+    <string name="logout_discard_confirm_message">Changes to be permanently deleted from this device: %1$d. This cannot be undone.</string>
+    <string name="action_sync_and_logout">Sync and log out</string>
+    <string name="action_discard_and_logout">Discard and log out</string>
 
 
     <string name="err_register">Registration failed</string>

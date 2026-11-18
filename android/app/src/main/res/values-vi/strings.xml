@@ -690,6 +690,14 @@
     <string name="auth_revocation_unconfirmed">Phiên chưa được máy chủ xác nhận: %1$d. Chúng không còn được dùng trên thiết bị này và sẽ tự hết hạn trong vòng 30 ngày.</string>
     <string name="auth_revocation_confirmed">Đã đăng xuất cả trên máy chủ.</string>
     <string name="auth_revocation_queue_full">Có quá nhiều lượt đăng xuất đang chờ máy chủ. Hãy kết nối internet, đợi một lát rồi thử lại.</string>
+    <string name="logout_unsent_title">Thay đổi chưa gửi</string>
+    <string name="logout_unsent_message">Đăng xuất sẽ xóa dữ liệu của tài khoản này khỏi thiết bị. Các thay đổi chưa gửi lên máy chủ sẽ bị mất.</string>
+    <string name="logout_unsent_sync_incomplete">Không thể gửi tất cả thay đổi. Hãy kiểm tra kết nối và thử lại, hoặc hủy bỏ chúng.</string>
+    <string name="logout_unsent_changed">Trong lúc đó đã có thêm thay đổi chưa gửi. Vui lòng quyết định lại.</string>
+    <string name="logout_discard_confirm_title">Hủy bỏ các thay đổi chưa gửi?</string>
+    <string name="logout_discard_confirm_message">Thay đổi sẽ bị xóa vĩnh viễn khỏi thiết bị này: %1$d. Không thể hoàn tác.</string>
+    <string name="action_sync_and_logout">Đồng bộ và đăng xuất</string>
+    <string name="action_discard_and_logout">Hủy bỏ và đăng xuất</string>
 
 
     <string name="err_register">Đăng ký không thành công</string>

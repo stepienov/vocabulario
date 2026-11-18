@@ -278,12 +278,17 @@ interface SessionOwnerDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(owner: SessionOwnerEntity)
 
-    /** Operacje czekające na wysłanie (także zaparkowane w outboxie i lookupy do decyzji). */
+    /**
+     * Identyfikatory operacji czekających na wysłanie (także zaparkowanych w outboxie i lookupów
+     * do decyzji); liczba i fingerprint zgody na logout pochodzą z tego samego odczytu.
+     */
     @Query(
-        "SELECT (SELECT COUNT(*) FROM pending_reviews) + (SELECT COUNT(*) FROM pending_moves) + " +
-            "(SELECT COUNT(*) FROM pending_lookups) + (SELECT COUNT(*) FROM outbox_ops)",
+        "SELECT 'r:' || clientId FROM pending_reviews UNION ALL " +
+            "SELECT 'm:' || clientId FROM pending_moves UNION ALL " +
+            "SELECT 'l:' || clientId FROM pending_lookups UNION ALL " +
+            "SELECT 'o:' || seq FROM outbox_ops",
     )
-    suspend fun unsentCount(): Int
+    suspend fun unsentIds(): List<String>
 
     @Query(
         "SELECT EXISTS(SELECT 1 FROM cached_cards) OR EXISTS(SELECT 1 FROM cached_lists) OR " +

@@ -659,6 +659,14 @@
     <string name="auth_revocation_unconfirmed">Сеансы без подтверждения сервера: %1$d. Они больше не используются на этом устройстве и автоматически истекут в течение 30 дней.</string>
     <string name="auth_revocation_confirmed">Выход выполнен и на сервере.</string>
     <string name="auth_revocation_queue_full">Слишком много выходов ожидают сервера. Подключитесь к интернету, подождите немного и попробуйте снова.</string>
+    <string name="logout_unsent_title">Неотправленные изменения</string>
+    <string name="logout_unsent_message">При выходе данные этого аккаунта удаляются с устройства. Изменения, ещё не отправленные на сервер, будут потеряны.</string>
+    <string name="logout_unsent_sync_incomplete">Не удалось отправить все изменения. Проверьте подключение и попробуйте снова или удалите их.</string>
+    <string name="logout_unsent_changed">Тем временем появились новые неотправленные изменения. Примите решение ещё раз.</string>
+    <string name="logout_discard_confirm_title">Удалить неотправленные изменения?</string>
+    <string name="logout_discard_confirm_message">Изменения, которые будут безвозвратно удалены с этого устройства: %1$d. Это действие нельзя отменить.</string>
+    <string name="action_sync_and_logout">Синхронизировать и выйти</string>
+    <string name="action_discard_and_logout">Удалить и выйти</string>
 
 
     <string name="err_register">Ошибка регистрации</string>

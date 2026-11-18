@@ -19,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         OutboxOpEntity::class,
         SessionOwnerEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -137,6 +137,14 @@ abstract class AppDatabase : RoomDatabase() {
                         "VALUES (0, NULL, 0, ?, NULL)",
                     arrayOf<Any>(phase),
                 )
+            }
+        }
+
+        /** v10 → v11: trwała dyspozycja logoutu i zaakceptowany fingerprint kolejek (addytywnie). */
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `session_owner` ADD COLUMN `logoutDisposition` TEXT")
+                db.execSQL("ALTER TABLE `session_owner` ADD COLUMN `acceptedUnsentFingerprint` TEXT")
             }
         }
     }
