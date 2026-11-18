@@ -47,6 +47,8 @@ import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.local.db.PendingReviewEntity
 import com.vocabulario.app.data.session.SessionCoordinator
 import com.vocabulario.app.data.session.SessionState
+import com.vocabulario.app.data.session.ensureOwner
+import com.vocabulario.app.data.session.runAsOwner
 import com.vocabulario.app.data.sync.SyncScheduler
 import com.vocabulario.app.notifications.NotificationScheduler
 import com.vocabulario.app.notifications.ReadyBatchTracker
@@ -209,6 +211,20 @@ class LearningRepository @Inject constructor(
         val profile = tokenStore.activeProfileId.first()
         return !profile.isNullOrBlank()
     }
+
+    /** Sesja do pracy w tle i właściciel danych w fazie ACTIVE (przed powiadomieniem konta). */
+    suspend fun hasActiveOwner(): Boolean =
+        hasSyncableSession() && offlineStore.activeOwnerContext() != null
+
+    /**
+     * Praca w tle jako właściciel przechwycony na starcie; zapisy w Room po HTTP sprawdzają go
+     * w tej samej transakcji. Null, gdy nie ma aktywnego właściciela albo wynik został zastąpiony.
+     */
+    suspend fun <T> asCurrentOwner(block: suspend () -> T): T? =
+        runAsOwner({ offlineStore.activeOwnerContext() }, block)
+
+    /** Kontrola po HTTP; w zakresie [asCurrentOwner] przerywa pracę innego właściciela lub generacji. */
+    suspend fun ensureOwnerCurrent() = ensureOwner { offlineStore.activeOwnerContext() }
 
     suspend fun lookup(text: String): LookupResponse {
         val profileId = activeProfileId()
@@ -894,37 +910,52 @@ class LearningRepository @Inject constructor(
         if (!networkMonitor.isCurrentlyOnline()) return
         if (awaitLock) syncMutex.lock() else if (!syncMutex.tryLock()) return
         try {
-            runCatching { withTimeout(FLUSH_LOOKUPS_TIMEOUT_MS) { flushPendingLookups() } }
-            runCatching { withTimeout(API_SYNC_TIMEOUT_MS) { pushOutbox() } }
-            runCatching {
-                val profileId = activeProfileId()
-                val lastPulled = offlineStore.lastPulledAt(profileId)
-                val doFull = fullReplace || lastPulled == null
-                val since = if (doFull) null else lastPulled
-                val pullTimeout = if (doFull) API_FULL_PULL_TIMEOUT_MS else API_SYNC_TIMEOUT_MS
-                withTimeout(pullTimeout) {
-                    val pull = api.syncPull(profileId, since = since)
-                    offlineStore.applyPull(profileId, pull, fullReplace = doFull)
-                    offlineStore.localUserSettings()?.theme?.let { tokenStore.saveTheme(it) }
-                    val needProfiles = doFull || offlineStore.cachedProfiles().isEmpty()
-                    if (needProfiles) {
-                        runCatching { api.listProfiles() }.getOrNull()?.let { applyRemoteProfiles(it) }
-                    }
-                }
-            }
-            evaluateReadyBatches()
+            asCurrentOwner { syncAsOwner(fullReplace) }
         } finally {
             syncMutex.unlock()
         }
     }
 
+    /** Kroki syncu jednego właściciela; zmiana właściciela lub generacji kończy go przed kolejnym HTTP. */
+    private suspend fun syncAsOwner(fullReplace: Boolean) {
+        runCatching { withTimeout(FLUSH_LOOKUPS_TIMEOUT_MS) { flushPendingLookups() } }
+        ensureOwnerCurrent()
+        runCatching { withTimeout(API_SYNC_TIMEOUT_MS) { pushOutbox() } }
+        ensureOwnerCurrent()
+        runCatching {
+            val profileId = activeProfileId()
+            val lastPulled = offlineStore.lastPulledAt(profileId)
+            val doFull = fullReplace || lastPulled == null
+            val since = if (doFull) null else lastPulled
+            val pullTimeout = if (doFull) API_FULL_PULL_TIMEOUT_MS else API_SYNC_TIMEOUT_MS
+            withTimeout(pullTimeout) {
+                val pull = api.syncPull(profileId, since = since)
+                offlineStore.guardedWrite {
+                    offlineStore.applyPull(profileId, pull, fullReplace = doFull)
+                    offlineStore.localUserSettings()?.theme?.let { tokenStore.saveTheme(it) }
+                }
+                val needProfiles = doFull || offlineStore.cachedProfiles().isEmpty()
+                if (needProfiles) {
+                    runCatching { api.listProfiles() }.getOrNull()?.let { applyRemoteProfiles(it) }
+                }
+            }
+        }
+        ensureOwnerCurrent()
+        evaluateReadyBatches()
+        // Pierwszy pull po logowaniu przynosi ustawienia konta; wtedy dopiero włączamy alarm.
+        runCatching { restoreStudyReminders(onlyIfChanged = true) }
+    }
+
     suspend fun evaluateReadyBatches() {
-        val settings = runCatching { getSettings() }.getOrNull() ?: return
-        val on = settings.study_reminder_enabled || settings.cards_ready_push_enabled
-        val profileId = runCatching { activeProfileId() }.getOrNull() ?: return
-        val statusById = offlineStore.allCards(profileId).associate { it.id to it.enrichmentStatus }
-        readyBatchTracker.evaluate(statusById, on)
-        if (readyBatchTracker.hasWatches()) notificationScheduler.scheduleEnrichmentSoon()
+        asCurrentOwner {
+            val settings = runCatching { getSettings() }.getOrNull() ?: return@asCurrentOwner
+            val on = settings.study_reminder_enabled || settings.cards_ready_push_enabled
+            val profileId = runCatching { activeProfileId() }.getOrNull() ?: return@asCurrentOwner
+            val statusById = offlineStore.allCards(profileId).associate { it.id to it.enrichmentStatus }
+            // Powiadomienie i zdjęcie obserwacji tylko dla właściciela, który je zlecił.
+            offlineStore.guardedWrite { readyBatchTracker.evaluate(statusById, on) }
+            if (readyBatchTracker.hasWatches()) notificationScheduler.scheduleEnrichmentSoon()
+        }
     }
 
     fun watchImportCards(ids: Collection<String>) {
@@ -1299,6 +1330,29 @@ class LearningRepository @Inject constructor(
     suspend fun getSettings(): UserSettingsResponse =
         offlineStore.localUserSettings() ?: defaultSettings()
 
+    /**
+     * Alarm przypomnienia tylko dla aktywnego właściciela z zapisanymi ustawieniami.
+     * Domyślne ustawienia mają przypomnienia włączone, więc bez konta nie wolno ich użyć.
+     * [onlyIfChanged] pomija ponowne ustawianie alarmu po każdym syncu.
+     */
+    suspend fun restoreStudyReminders(onlyIfChanged: Boolean = false) {
+        val settings = if (hasActiveOwner()) offlineStore.localUserSettings() else null
+        val enabled = settings != null &&
+            (settings.study_reminder_enabled || settings.cards_ready_push_enabled)
+        val hour = settings?.reminder_hour ?: notificationScheduler.reminderHour()
+        if (onlyIfChanged &&
+            enabled == notificationScheduler.reminderEnabled() &&
+            (!enabled || hour == notificationScheduler.reminderHour())
+        ) {
+            return
+        }
+        notificationScheduler.scheduleStudyReminder(
+            hour = hour,
+            enabled = enabled,
+            minute = notificationScheduler.reminderMinute(),
+        )
+    }
+
     /** Local-first: zapisuje ustawienia w Room + operacja outboxu; online drenuje od razu. */
     suspend fun updateSettings(update: UserSettingsUpdate): UserSettingsResponse {
         val current = offlineStore.localUserSettings() ?: defaultSettings()
@@ -1391,12 +1445,12 @@ class LearningRepository @Inject constructor(
         return listProfiles()
     }
 
-    private suspend fun applyRemoteProfiles(profiles: List<LanguageProfileResponse>) {
+    private suspend fun applyRemoteProfiles(profiles: List<LanguageProfileResponse>): Unit = offlineStore.guardedWrite {
         val localActive = offlineStore.cachedActiveProfile()
         val chosenId = tokenStore.activeProfileId.value ?: localActive?.id
         val merged = mergeRemoteProfiles(profiles, localActive, chosenId)
         offlineStore.cacheProfiles(merged)
-        val chosen = merged.firstOrNull { it.is_active } ?: return
+        val chosen = merged.firstOrNull { it.is_active } ?: return@guardedWrite
         syncActiveProfileToLocal(chosen.copy(is_active = true))
     }
 

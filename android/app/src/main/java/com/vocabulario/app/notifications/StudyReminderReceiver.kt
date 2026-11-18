@@ -38,6 +38,11 @@ class StudyReminderReceiver : BroadcastReceiver() {
     }
 
     private suspend fun fireAndReschedule(app: Context) {
+        // Alarm sprzed wylogowania nie może pokazać przypomnienia ani się odnowić.
+        if (!repository.hasActiveOwner()) {
+            scheduler.scheduleStudyReminder(scheduler.reminderHour(), enabled = false)
+            return
+        }
         val settings = runCatching { repository.getSettings() }.getOrNull()
         val enabled = settings?.study_reminder_enabled == true || scheduler.reminderEnabled()
         if (enabled) {

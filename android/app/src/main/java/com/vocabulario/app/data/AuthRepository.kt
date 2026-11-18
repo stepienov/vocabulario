@@ -9,6 +9,7 @@ import com.vocabulario.app.data.api.VocabularioApi
 import com.vocabulario.app.data.imports.ImportStatePersistence
 import com.vocabulario.app.data.local.OfflineStore
 import com.vocabulario.app.data.local.TokenStore
+import com.vocabulario.app.data.session.AccountSignOutCleanup
 import com.vocabulario.app.data.session.LoginDecision
 import com.vocabulario.app.data.session.LogoutConsent
 import com.vocabulario.app.data.session.OwnerSnapshot
@@ -48,6 +49,7 @@ class AuthRepository @Inject constructor(
     private val sessionCoordinator: SessionCoordinator,
     private val revocationStore: RevocationStore,
     private val revocationScheduler: RevocationScheduler,
+    private val signOutCleanup: AccountSignOutCleanup,
 ) {
     suspend fun register(email: String, password: String) = withCandidateSlot { slot ->
         installCandidate(api.register(RegisterRequest(email, password)), slot)
@@ -100,6 +102,7 @@ class AuthRepository @Inject constructor(
             LoginDecision.Claim -> {
                 tokenStore.clear()
                 importStatePersistence.saveJobId(null)
+                signOutCleanup.afterOwnerDataRemoved()
             }
             LoginDecision.SameOwner -> Unit
         }
@@ -173,6 +176,7 @@ class AuthRepository @Inject constructor(
         if (discarded) {
             tokenStore.clear()
             importStatePersistence.saveJobId(null)
+            signOutCleanup.afterOwnerDataRemoved()
         }
         return discarded
     }
@@ -218,11 +222,15 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    /** Bez pełnego czyszczenia (praca spoza zgody) zostają też ustawienia lokalne właściciela. */
+    /**
+     * Bez pełnego czyszczenia (praca spoza zgody) zostają też ustawienia lokalne właściciela.
+     * Spóźniona praca A nie zapisze nic po tym kroku: generacja i faza nie pasują do jej zakresu.
+     */
     private suspend fun finishLogoutLocally() {
         if (!offlineStore.completeLogout()) return
         tokenStore.clear()
         importStatePersistence.saveJobId(null)
+        signOutCleanup.afterOwnerDataRemoved()
     }
 
     suspend fun hasProfile(): Boolean {

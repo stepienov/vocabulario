@@ -81,7 +81,18 @@ Pakiet [`data/session`](../../../../../../android/app/src/main/java/com/vocabula
 - Testy w `OwnerDecisionsTest`: recovery bez zgody z samej fazy, fingerprint (kolejność, nowa praca, separator), pokrycie zgody. Gradle: unit tests 265/265, lint bez uwag do zmian, `assembleDebug` OK.
 - Migracja v10→v11 wymaga ręcznego sprawdzenia aktualizacji na urządzeniu (jak v9→v10).
 
-**Dalej w kroku 4 (część d, wymagana przed wydaniem T-002):** `SessionContext(owner, generation)` w workerach, imporcie i powiadomieniach z kontrolą generacji przed zapisem, żeby praca w tle nie dopisywała się po barierze ani do innego właściciela.
+**Krok 4c (część d) poniżej zamyka ochronę pracy w tle.**
+
+### Krok 4c · Praca w tle tylko dla bieżącego właściciela (18.11.2026)
+
+- [`OwnerScope`](../../../../../../android/app/src/main/java/com/vocabulario/app/data/session/OwnerScope.kt): praca w tle przechwytuje `(ownerUserId, generation)` z `session_owner` (tylko faza `active`) i działa w elemencie korutyny. Zagnieżdżona praca dziedziczy zakres zewnętrzny, nie przechwytuje nowego właściciela.
+- `OfflineStore.guardedWrite`: w zakresie zapis i porównanie z aktualnym właścicielem/generacją w jednej transakcji Room (serializowanej z `beginLogout`/`completeLogout`/install). Niezgodność → wynik porzucony bez zapisu. Strzeżone są pull, ustawienia, profile, karty, listy, SRS i usuwanie wysłanych elementów kolejek.
+- Sync: flush lookupów → push → pull → ocena gotowych kart, z kontrolą właściciela po każdym kroku. Po zmianie generacji kolejne HTTP nie startują. Element wysłany przed logout, którego usunięcia z kolejki nie zapisano, zostaje u tego samego właściciela i jest ponawiany (serwer idempotentny po `client_id`).
+- Zakresem objęte: `SyncWorker` (przez `syncNow`), `EnrichmentCheckWorker`, `ImportPollWorker`, `LookupPollWorker`, pętla importu w `ImportController`, `EnrichmentPoller`, `evaluateReadyBatches` (notyfikacja „karty gotowe” tylko dla właściciela, który je zlecił). `ImportPollWorker` po porzuceniu ponawia tylko, gdy to samo konto nadal czeka na ten sam job — po reauth obserwacja trwa bez nowego importu.
+- Sprzątanie po usunięciu danych właściciela (`AccountSignOutCleanup`, wołane po `completeLogout`, przy przejęciu pustej bazy przez inne konto i po odrzuceniu danych bez właściciela): anulowanie jednorazowego syncu, lookupu i importu w tle, wyłączenie alarmu przypomnień i zaplanowanego sprawdzenia kart, wyczyszczenie obserwowanych kart, zdjęcie powiadomień konta z szuflady, zapomniany lookup. Singletony z pamięcią konta (import, lookup, skojarzenia, enrichment) czyszczą się przez `AccountResetHooks`.
+- Naprawione przy okazji: stan importu A był widoczny po zalogowaniu B; obserwacje kart A po logout planowały w kółko sprawdzanie enrichmentu; po logout i restarcie aplikacja włączała przypomnienie z domyślnych ustawień. Alarm ustawia teraz tylko aktywny właściciel z zapisanymi ustawieniami (`restoreStudyReminders`: start aplikacji i koniec syncu, gdy się zmieniło); receiver i worker przypomnień bez aktywnego właściciela nic nie pokazują.
+- Świadome odstępstwa od §6: okresowe `vocabulario_sync_periodic` i `vocabulario_enrichment_check` zostają pod tymi samymi nazwami i bez aktywnego właściciela kończą się od razu. Anulowanie ich przy logout zostawiłoby konto B bez okresowej pracy do restartu. Akcje wywołane z ekranu (bez zakresu) działają jak dotąd; ekrany znikają przy logout, a singletony czyści hook.
+- Testy: [`OwnerScopeTest`](../../../../../../android/app/src/test/java/com/vocabulario/app/data/session/OwnerScopeTest.kt) (7: tylko faza `active` daje kontekst, brak właściciela pomija pracę, nowa generacja i logout porzucają wynik po HTTP, zagnieżdżona praca dziedziczy właściciela, kontrola bez zakresu). Atomowość z Room wymaga testu na urządzeniu (brak Robolectric). Gradle: unit tests 272/272, lint bez uwag do zmian, `assembleDebug` OK.
 
 ## Cel, decyzje i zależności
 

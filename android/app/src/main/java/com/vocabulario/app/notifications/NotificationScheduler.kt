@@ -77,6 +77,12 @@ class NotificationScheduler @Inject constructor(
         scheduleStudyReminder(reminderHour(), reminderEnabled(), reminderMinute())
     }
 
+    /** Wylogowanie: alarm przypomnienia i zaplanowane sprawdzenie kart nie należą już do nikogo. */
+    fun silenceAccount() {
+        scheduleStudyReminder(reminderHour(), enabled = false, minute = reminderMinute())
+        workManager.cancelUniqueWork(ENRICHMENT_SOON)
+    }
+
     fun scheduleEnrichmentCheck() {
         val request = PeriodicWorkRequestBuilder<EnrichmentCheckWorker>(15, TimeUnit.MINUTES).build()
         workManager.enqueueUniquePeriodicWork(

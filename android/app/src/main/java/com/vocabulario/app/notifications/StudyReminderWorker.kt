@@ -17,6 +17,7 @@ class StudyReminderWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return try {
+            if (!repository.hasActiveOwner()) return Result.success()
             val settings = runCatching { repository.getSettings() }.getOrNull()
             if (settings?.study_reminder_enabled != true) return Result.success()
             val due = runCatching { repository.getQueue().due.size }.getOrDefault(0)

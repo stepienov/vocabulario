@@ -17,6 +17,15 @@ import com.vocabulario.app.R
 object NotificationHelper {
     const val CHANNEL_STUDY = "study"
     const val CHANNEL_CARDS = "cards"
+    private const val ID_STUDY = 1001
+    private const val ID_CARDS = 1002
+
+    /** Powiadomienia z danymi konta nie mogą zostać w szufladzie po wylogowaniu. */
+    fun cancelAccountNotifications(context: Context) {
+        val manager = NotificationManagerCompat.from(context)
+        manager.cancel(ID_STUDY)
+        manager.cancel(ID_CARDS)
+    }
 
     fun canPost(context: Context): Boolean {
         if (Build.VERSION.SDK_INT >= 33) {
@@ -57,7 +66,7 @@ object NotificationHelper {
         post(
             context,
             CHANNEL_STUDY,
-            1001,
+            ID_STUDY,
             context.getString(R.string.notif_study_title),
             body,
         )
@@ -67,7 +76,7 @@ object NotificationHelper {
         post(
             context,
             CHANNEL_CARDS,
-            1002,
+            ID_CARDS,
             context.getString(R.string.notif_cards_ready_title),
             context.getString(R.string.notif_cards_ready_body),
         )

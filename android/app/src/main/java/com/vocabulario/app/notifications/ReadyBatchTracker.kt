@@ -17,6 +17,11 @@ class ReadyBatchTracker @Inject constructor(
 
     fun hasWatches(): Boolean = load(KEY_IMPORT).isNotEmpty() || load(KEY_OFFLINE).isNotEmpty()
 
+    /** Obserwowane karty należą do konta; po wylogowaniu nigdy się nie dokończą. */
+    fun clearAll() {
+        prefs.edit().remove(KEY_IMPORT).remove(KEY_OFFLINE).apply()
+    }
+
     fun evaluate(statusById: Map<String, String>, notificationsOn: Boolean) {
         finish(KEY_IMPORT, statusById, notificationsOn) { count ->
             NotificationHelper.showImportReady(context, count)

@@ -30,14 +30,19 @@ import com.vocabulario.app.data.local.db.SessionOwnerEntity
 import com.vocabulario.app.data.local.db.SyncMetaEntity
 import com.vocabulario.app.data.session.LoginDecision
 import com.vocabulario.app.data.session.LogoutConsent
+import com.vocabulario.app.data.session.OwnerContext
+import com.vocabulario.app.data.session.OwnerScope
 import com.vocabulario.app.data.session.OwnerSnapshot
+import com.vocabulario.app.data.session.SupersededException
 import com.vocabulario.app.data.session.UnsentChangesException
 import com.vocabulario.app.data.session.consentCovers
+import com.vocabulario.app.data.session.ownerContextOf
 import com.vocabulario.app.data.session.decideLogin
 import com.vocabulario.app.data.session.logoutCovered
 import com.vocabulario.app.data.session.unsentFingerprint
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -79,7 +84,24 @@ class OfflineStore @Inject constructor(
     private val ownerDao = db.sessionOwnerDao()
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun applyPull(profileId: String, pull: SyncPullResponse, fullReplace: Boolean) {
+    /** Aktywny właściciel danych; null w każdej fazie przejściowej i po wylogowaniu. */
+    suspend fun activeOwnerContext(): OwnerContext? =
+        ownerDao.get()?.let { ownerContextOf(it.ownerUserId, it.generation, it.phase) }
+
+    /**
+     * Pod [OwnerScope] zapis przechodzi tylko dla tego samego właściciela i generacji, sprawdzonych
+     * w tej samej transakcji co zapis; w przeciwnym razie [SupersededException] bez zmian.
+     * Poza zakresem (akcje UI bieżącego właściciela) działa jak zwykły zapis.
+     */
+    suspend fun <T> guardedWrite(block: suspend () -> T): T {
+        val scoped = currentCoroutineContext()[OwnerScope]?.owner ?: return block()
+        return db.withTransaction {
+            if (activeOwnerContext() != scoped) throw SupersededException()
+            block()
+        }
+    }
+
+    suspend fun applyPull(profileId: String, pull: SyncPullResponse, fullReplace: Boolean): Unit = guardedWrite {
         db.withTransaction {
             applyPullLocked(profileId, pull, fullReplace)
         }
@@ -147,7 +169,7 @@ class OfflineStore @Inject constructor(
 
     fun observeLastPulledAt(profileId: String) = syncMetaDao.observeLastPulledAt(profileId)
 
-    suspend fun saveSettings(settings: UserSettingsResponse) {
+    suspend fun saveSettings(settings: UserSettingsResponse): Unit = guardedWrite {
         settingsDao.upsert(
             LocalSettingsEntity(
                 practiceInputPref = settings.practice_input_pref,
@@ -160,7 +182,7 @@ class OfflineStore @Inject constructor(
         )
     }
 
-    suspend fun cacheProfile(profile: LanguageProfileResponse) {
+    suspend fun cacheProfile(profile: LanguageProfileResponse): Unit = guardedWrite {
         if (profile.is_active) {
             profileDao.deactivateOthers(profile.id)
         }
@@ -347,7 +369,7 @@ class OfflineStore @Inject constructor(
             }.getOrNull()
         }
 
-    suspend fun cacheProfiles(profiles: List<LanguageProfileResponse>) {
+    suspend fun cacheProfiles(profiles: List<LanguageProfileResponse>): Unit = guardedWrite {
         db.withTransaction {
             if (profiles.isEmpty()) {
                 profileDao.deleteAll()
@@ -402,8 +424,8 @@ class OfflineStore @Inject constructor(
         cards: List<CardResponse>,
         deckId: String? = null,
         overwriteDeckId: Boolean = false,
-    ) {
-        if (cards.isEmpty()) return
+    ): Unit = guardedWrite {
+        if (cards.isEmpty()) return@guardedWrite
         val entities = cards.map { card ->
             val existing = cardDao.byId(card.id)
             CachedCardEntity(
@@ -619,7 +641,7 @@ class OfflineStore @Inject constructor(
      * Pełna synchronizacja list z odpowiedzi serwera — kasuje w Room wiersze usunięte na serwerze.
      * Tylko dla kompletnego GET /lists (sync pull, import refresh). Nigdy dla pojedynczej skrzynki.
      */
-    suspend fun cacheLists(profileId: String, lists: List<WordListResponse>) {
+    suspend fun cacheLists(profileId: String, lists: List<WordListResponse>): Unit = guardedWrite {
         consolidatePendingInboxes(profileId)
         val stubCount = pendingLookupCount(profileId)
         val serverLists = lists.filter { !it.id.startsWith("local-pending-inbox-") }
@@ -657,8 +679,8 @@ class OfflineStore @Inject constructor(
     }
 
     /** Aktualizuje / dopisuje wybrane listy bez kasowania pozostałych wierszy w Room. */
-    suspend fun upsertLists(profileId: String, lists: List<WordListResponse>) {
-        if (lists.isEmpty()) return
+    suspend fun upsertLists(profileId: String, lists: List<WordListResponse>): Unit = guardedWrite {
+        if (lists.isEmpty()) return@guardedWrite
         consolidatePendingInboxes(profileId)
         val stubCount = pendingLookupCount(profileId)
         val serverLists = lists.filter { !it.id.startsWith("local-pending-inbox-") }
@@ -782,7 +804,7 @@ class OfflineStore @Inject constructor(
         cardDao.update(card)
     }
 
-    suspend fun applyServerSrs(states: List<SyncSrsState>) {
+    suspend fun applyServerSrs(states: List<SyncSrsState>): Unit = guardedWrite {
         for (srs in states) {
             val card = cardDao.byId(srs.card_id) ?: continue
             cardDao.update(card.withSrs(srs))
@@ -829,7 +851,7 @@ class OfflineStore @Inject constructor(
 
     suspend fun pendingReviews(): List<PendingReviewEntity> = reviewDao.all()
 
-    suspend fun removePendingReviews(clientIds: List<String>) {
+    suspend fun removePendingReviews(clientIds: List<String>): Unit = guardedWrite {
         if (clientIds.isNotEmpty()) reviewDao.deleteIds(clientIds)
     }
 
@@ -839,7 +861,7 @@ class OfflineStore @Inject constructor(
 
     suspend fun pendingMoves(): List<PendingMoveEntity> = moveDao.all()
 
-    suspend fun removePendingMoves(clientIds: List<String>) {
+    suspend fun removePendingMoves(clientIds: List<String>): Unit = guardedWrite {
         if (clientIds.isNotEmpty()) moveDao.deleteIds(clientIds)
     }
 
@@ -872,12 +894,12 @@ class OfflineStore @Inject constructor(
         lookupDao.byId(clientId)
 
     /** Oznacza stub jako „wymaga sprawdzenia" i zapisuje propozycje. NIE tworzy karty na serwerze. */
-    suspend fun markLookupNeedsReview(clientId: String, suggestionsJson: String?) {
+    suspend fun markLookupNeedsReview(clientId: String, suggestionsJson: String?): Unit = guardedWrite {
         lookupDao.setStatus(clientId, "needs_review", suggestionsJson)
         lookupDao.byId(clientId)?.let { syncPendingInboxWordCount(it.profileId) }
     }
 
-    suspend fun removePendingLookup(clientId: String) {
+    suspend fun removePendingLookup(clientId: String): Unit = guardedWrite {
         val removed = lookupDao.all().firstOrNull { it.clientId == clientId }
         lookupDao.deleteIds(listOf(clientId))
         removed?.let { syncPendingInboxWordCount(it.profileId) }
@@ -939,7 +961,7 @@ class OfflineStore @Inject constructor(
 
     suspend fun pendingUndos(): List<PendingUndoEntity> = undoDao.all()
 
-    suspend fun removePendingUndo(clientId: String) {
+    suspend fun removePendingUndo(clientId: String): Unit = guardedWrite {
         undoDao.delete(clientId)
     }
 
@@ -993,7 +1015,7 @@ class OfflineStore @Inject constructor(
      * 401 na wygasłym tokenie parkowało settings_update i zmiana nigdy nie wylatywała.
      * Po udanym odświeżeniu sesji wracają do kolejki.
      */
-    suspend fun unparkAuthFailures() {
+    suspend fun unparkAuthFailures(): Unit = guardedWrite {
         for (op in outboxDao.all()) {
             if (op.status != "parked") continue
             val err = op.lastError.orEmpty()
@@ -1003,12 +1025,12 @@ class OfflineStore @Inject constructor(
         }
     }
 
-    suspend fun removeOp(op: OutboxOpEntity) {
+    suspend fun removeOp(op: OutboxOpEntity): Unit = guardedWrite {
         outboxDao.deleteBySeq(op.seq)
     }
 
     /** Zwiększa licznik prób; parkuje po [MAX_OP_ATTEMPTS], żeby poison-pill nie blokował reszty. */
-    suspend fun markOpFailed(op: OutboxOpEntity, error: String?) {
+    suspend fun markOpFailed(op: OutboxOpEntity, error: String?): Unit = guardedWrite {
         val attempts = op.attempts + 1
         outboxDao.update(
             op.copy(
@@ -1020,7 +1042,7 @@ class OfflineStore @Inject constructor(
     }
 
     /** Remap ID listy lokalnej → server ID w cache, kartach, ruchach i payloadach operacji. */
-    suspend fun remapLocalListId(localId: String, serverId: String) {
+    suspend fun remapLocalListId(localId: String, serverId: String): Unit = guardedWrite {
         listDao.byId(localId)?.let { entity ->
             listDao.deleteById(localId)
             listDao.upsertAll(listOf(entity.copy(id = serverId, isLocalOnly = false)))
@@ -1109,7 +1131,7 @@ class OfflineStore @Inject constructor(
         profileId: String,
         cards: List<CardResponse>,
         deckId: String? = null,
-    ) {
+    ): Unit = guardedWrite {
         val newIds = cards.map { it.id }.toSet()
         // Lista systemowa (deckId == null): tylko upsert. Niepełny GET nie może
         // skasować kart, które Room już ma — to nie jest restore z serwera.
@@ -1120,7 +1142,7 @@ class OfflineStore @Inject constructor(
                 cardDao.deleteIds(stale.map { it.id })
             }
         }
-        if (cards.isEmpty()) return
+        if (cards.isEmpty()) return@guardedWrite
         val entities = cards.map { card ->
             val existing = cardDao.byId(card.id)
             CachedCardEntity(

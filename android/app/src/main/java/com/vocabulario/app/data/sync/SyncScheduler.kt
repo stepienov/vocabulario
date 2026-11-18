@@ -47,6 +47,10 @@ class SyncScheduler @Inject constructor(
         )
     }
 
+    fun cancelOnce() {
+        workManager.cancelUniqueWork(ONCE_NAME)
+    }
+
     companion object {
         private const val PERIODIC_NAME = "vocabulario_sync_periodic"
         private const val ONCE_NAME = "vocabulario_sync_once"

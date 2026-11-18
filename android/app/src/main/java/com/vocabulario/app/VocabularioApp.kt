@@ -56,14 +56,7 @@ class VocabularioApp : Application(), Configuration.Provider {
             runCatching { if (revocationStore.load().pendingCount > 0) revocationScheduler.runNow() }
         }
         appScope.launch {
-            runCatching {
-                val settings = learningRepository.getSettings()
-                notificationScheduler.scheduleStudyReminder(
-                    hour = settings.reminder_hour,
-                    enabled = settings.study_reminder_enabled || settings.cards_ready_push_enabled,
-                    minute = notificationScheduler.reminderMinute(),
-                )
-            }
+            runCatching { learningRepository.restoreStudyReminders() }
         }
     }
 }
