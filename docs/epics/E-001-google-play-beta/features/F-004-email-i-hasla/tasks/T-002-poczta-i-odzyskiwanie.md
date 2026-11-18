@@ -275,4 +275,15 @@ Osobny smoke przed betą na syntetycznym koncie i rzeczywistych skrzynkach: send
 - Konfiguracja: `PUBLIC_APP_ORIGIN`, `MAIL_TRANSPORT`, `MAIL_FROM`, `MAIL_REPLY_TO`, `RESEND_API_KEY`, `MAIL_OUTBOX_KEY`. Poza development/test brak lub błąd tych ustawień daje 503 w `/health/ready`, więc **wdrożenie tej zmiany wymaga domeny, konta Resend i zmiennych na Railway**.
 - Testy: `test_action_tokens.py`, `test_mail_outbox.py` (m.in. dwa workery nie wysyłają tego samego maila), `test_mail_transport.py`, `test_readiness.py`. Zielone na lokalnym PostgreSQL.
 
-**Zostało:** endpointy resetu, zmiany hasła i weryfikacji adresu wraz z odwołaniem sesji (krok 2); szablony maili w 17 locale; strony `/account/...` (krok 3); bramka `email_verification_required` i pola w `/me` (krok 4); Android (krok 5); limity T-003 i webhooki Svix z `mail_provider_events` (krok 6); prawdziwa skrzynka i urządzenie.
+**Krok 2a — reset i zmiana hasła (zrobiony):**
+
+- [mail_templates.py](../../../../../../backend/app/services/mail_templates.py): maile `verify_email`, `reset_password` i `password_changed` w 16 językach interfejsu Androida (tekst + HTML z escapowaniem, `dir="rtl"` dla `ar`). Tag języka normalizowany (`pt-rBR`→`pt-BR`, `de-AT`→`de`, nieznany→`en`).
+- [account_recovery.py](../../../../../../backend/app/services/account_recovery.py) i trasy w `auth.py`:
+  - `POST /auth/password-reset/request` zawsze zwraca 202. Mail dostaje tylko konto z hasłem, z limitem 60 s przerwy i maksymalnie 3 maili na 60 minut dla adresata. Limity IP i globalne przyjdą w T-003.
+  - `POST /auth/password-reset/confirm` jest atomowy: ustawia Argon2id, podbija `credentials_revision` (starsze linki resetu przestają działać), odwołuje wszystkie sesje (`password_reset`) i ustawia `email_verified_at` tylko wtedy, gdy był NULL. Wysyła też mail `password_changed`.
+  - `POST /auth/password/change` sprawdza obecne hasło (`current_password_invalid`/`password_not_set` → 403), odwołuje pozostałe sesje (`password_change`), odnawia bieżącą i zwraca nowe tokeny.
+  - Język maila: `locale` z żądania resetu, w pozostałych przypadkach `app_lang` aktywnego profilu.
+- **Okres przejściowy bcrypt:** `passwords.verify_current_password` sprawdza Argon2 oraz rozpoznany bcrypt (stary weryfikator, w puli wątków). Login i zmiana hasła działają więc dla starych i nowych hashy. Rejestracja nadal zapisuje bcrypt z minimum 8 znaków, dopóki T-001 nie przełączy jej razem z Androidem. Odcięcie bcrypt nastąpi w kroku 7 T-001.
+- Testy: `test_mail_templates.py`, `test_account_recovery.py` (neutralne 202, limit, 410/409/400, słabe hasło bez zużycia tokenu, odwołanie sesji, zachowanie `email_verified_at`, zmiana hasła). Zielone na lokalnym PostgreSQL.
+
+**Zostało:** weryfikacja adresu (`email-verification/*`, mail po rejestracji, `email_verified` w `/me`) (krok 2b); strony `/account/...` (krok 3); bramka `email_verification_required` i pola w `/me` (krok 4); Android (krok 5); limity T-003 i webhooki Svix z `mail_provider_events` (krok 6); prawdziwa skrzynka i urządzenie.

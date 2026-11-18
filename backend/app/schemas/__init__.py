@@ -44,6 +44,33 @@ class LogoutRequest(BaseModel):
     refresh_token: str = Field(min_length=1, max_length=4096)
 
 
+# Password values get their own policy codes (422) in the service, so the schema only
+# caps the body size instead of using min/max_length.
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+    locale: str | None = Field(default=None, max_length=16)
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str = Field(min_length=1, max_length=512)
+    new_password: str = Field(max_length=4096)
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(max_length=4096)
+    new_password: str = Field(max_length=4096)
+
+
+class MailAcceptedResponse(BaseModel):
+    status: str = "accepted"
+    retry_after_seconds: int
+
+
+class PasswordResetResponse(BaseModel):
+    status: str = "password_reset"
+    requires_login: bool = True
+
+
 class UserResponse(BaseModel):
     id: UUID
     email: str

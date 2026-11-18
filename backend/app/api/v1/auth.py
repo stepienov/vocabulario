@@ -1,13 +1,14 @@
 import logging
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
 from app.core.http_errors import api_error
-from app.core.security import hash_password, verify_password
+from app.core.passwords import verify_current_password
+from app.core.security import hash_password
 from app.db.session import get_db
 from app.models import LanguageProfile, User, UserSettings
 from app.schemas import (
@@ -17,6 +18,11 @@ from app.schemas import (
     LanguageProfileUpdate,
     LoginRequest,
     LogoutRequest,
+    MailAcceptedResponse,
+    PasswordChangeRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
+    PasswordResetResponse,
     RefreshRequest,
     RegisterRequest,
     TokenResponse,
@@ -24,6 +30,14 @@ from app.schemas import (
     UserSettingsResponse,
     UserSettingsUpdate,
 )
+from app.services.account_recovery import (
+    RETRY_AFTER_SECONDS,
+    CredentialError,
+    change_password,
+    confirm_password_reset,
+    request_password_reset,
+)
+from app.services.action_tokens import ActionTokenError
 from app.services.auth_sessions import (
     IssuedSession,
     RetryRecordError,
@@ -34,6 +48,7 @@ from app.services.auth_sessions import (
     refresh_session,
 )
 from app.services.llm import verify_google_id_token
+from app.services.mail_outbox import wake_mail_worker
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +112,7 @@ async def login(body: LoginRequest, response: Response, db: AsyncSession = Depen
             "This account uses Google sign-in",
         )
     verified_hash = user.password_hash
-    if not verify_password(body.password, verified_hash):
+    if not await verify_current_password(body.password, verified_hash):
         raise api_error(status.HTTP_401_UNAUTHORIZED, "wrong_password", "Wrong password")
     # The password may have changed while it was being verified; re-check under the lock.
     locked = await lock_user(db, user.id)
@@ -163,6 +178,62 @@ async def logout(body: LogoutRequest, db: AsyncSession = Depends(get_db)) -> Res
         raise await _session_error(db, exc) from exc
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+async def _rollback_error(db: AsyncSession, exc: ActionTokenError | CredentialError):
+    await db.rollback()
+    return api_error(exc.status_code, exc.code)
+
+
+@router.post(
+    "/password-reset/request",
+    response_model=MailAcceptedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def password_reset_request(
+    body: PasswordResetRequest, db: AsyncSession = Depends(get_db)
+) -> MailAcceptedResponse:
+    """Same answer for every address; never reveals whether an account exists."""
+    queued = await request_password_reset(db, str(body.email), body.locale)
+    await db.commit()
+    if queued:
+        wake_mail_worker()
+    return MailAcceptedResponse(retry_after_seconds=RETRY_AFTER_SECONDS)
+
+
+@router.post("/password-reset/confirm", response_model=PasswordResetResponse)
+async def password_reset_confirm(
+    body: PasswordResetConfirm, db: AsyncSession = Depends(get_db)
+) -> PasswordResetResponse:
+    try:
+        await confirm_password_reset(db, body.token, body.new_password)
+    except (ActionTokenError, CredentialError) as exc:
+        raise await _rollback_error(db, exc) from exc
+    await db.commit()
+    wake_mail_worker()
+    return PasswordResetResponse()
+
+
+@router.post("/password/change", response_model=TokenResponse)
+async def password_change(
+    body: PasswordChangeRequest,
+    request: Request,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    session_id = request.state.auth_context.session_id
+    try:
+        issued = await change_password(
+            db, user, session_id, body.current_password, body.new_password
+        )
+    except CredentialError as exc:
+        raise await _rollback_error(db, exc) from exc
+    except SessionAuthError as exc:
+        raise await _session_error(db, exc) from exc
+    await db.commit()
+    wake_mail_worker()
+    return _token_response(issued, response)
 
 
 me_router = APIRouter(prefix="/me", tags=["me"])
