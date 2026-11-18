@@ -1,6 +1,6 @@
 # T-001 · Odwoływalne sesje backendu
 
-**ID:** `E-001/F-003/T-001` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / L.  
+**ID:** `E-001/F-003/T-001` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / L.  
 **Feature:** [Sesja i offline](../README.md). **Źródło:** B-02; F-06/F-16 w [analizie](../../../sources/analiza-2026-11-17.md).
 
 ## Cel i zakres
@@ -227,3 +227,17 @@ Po implementacji najpierw wybrany moduł testów sesji, potem testy dotkniętych
 
 **Poza zakresem:** lista urządzeń w UI, migracja całego dostawcy auth, nowe funkcje nauki i wdrożenie bez osobnego zlecenia.  
 **Wynik weryfikacji:** sprawdzono punkty kodu i kompletność projektu/integracji. Nie ma implementacji, testów runtime ani zaliczenia kryteriów produktu.
+
+## Postęp
+
+### Etap 1 · Fundament sesji bez podłączenia tras (18.11.2026)
+
+Modele [AuthSession i AuthRefreshRetry](../../../../../../backend/app/models/__init__.py) (tabele `auth_sessions` / `auth_refresh_retries` z indeksami z punktu 4 i częściowym `user_id WHERE revoked_at IS NULL`; CHECK wersji > 0 i zamkniętej listy powodów). Powstają addytywnie przez `create_all` w istniejącym `apply_schema` pod blokadą schematu, bez zmian w `users`.
+
+- [security.py](../../../../../../backend/app/core/security.py): `issue_token_pair` / `read_token` dla JWT v2 (`v`, `iss`, `aud`, `sub`, `sid`, `sv`, `jti`, `iat`, `exp`, `type`). Algorytm wyłącznie z konfiguracji; `alg=none`, zły `aud`/`iss`/typ/UUID/`sv` → `invalid`; poprawny stary JWT bez `v` → `legacy` (nigdy nie autoryzuje), wygasły stary → `invalid`; wygasły v2 → `expired`.
+- [auth_sessions.py](../../../../../../backend/app/services/auth_sessions.py): `create_session`, `refresh_session` (rotacja, wynik retry szyfrowany Fernet, okno 5 min liczone jako minimum z `exp`, 409 `refresh_conflict`, replay → odwołanie tylko tej sesji z `commit=True`), `logout_session` (idempotentny, stary refresh nie odwołuje aktywnej sesji), `revoke_user_sessions` (z opcjonalnym zachowaniem bieżącej), `renew_session` (wzrost wersji i usunięcie retry), `check_access_session`. Blokady: użytkownik (`FOR NO KEY UPDATE`) → sesje według ID → retry. Helpery nie wykonują commit.
+- [config.py](../../../../../../backend/app/core/config.py): `AUTH_REFRESH_RETRY_KEY` (Fernet). W środowiskach wdrożonych błąd zgłaszają `jwt_algorithm` ≠ HS256, `token_expiry` (access ≤ 0 lub ≥ refresh) i brak/niepoprawny klucz retry lub klucz równy sekretowi JWT. Lokalnie brak klucza = klucz ulotny procesu. `cryptography` zadeklarowane wprost w pyproject.
+
+**Dowód lokalny (tymczasowy PostgreSQL 16, `REQUIRE_PG_TESTS=1`):** [test_auth_sessions.py](../../../../../../backend/tests/test_auth_sessions.py) — dwa loginy w tej samej sekundzie, rotacja ze stałym `sid`, ten sam `request_id` sekwencyjnie i równolegle (jedna rotacja, jedna para), 409 dla innego ID/wejścia/po nowszej rotacji, granica 5 min sterowanym zegarem, replay odwołujący tylko właściwą sesję, logout dwukrotny i ze starym dowodem, odwołanie pozostałych + odnowienie, wygaśnięcie, uszkodzony szyfrogram → `RetryRecordError`, klasyfikacja tokenów. Nowe przypadki konfiguracji w [test_readiness.py](../../../../../../backend/tests/test_readiness.py). Pełne `ci_check` zielone; ruff czysty.
+
+**Otwarte w tym tasku:** podłączenie do register/login/google/refresh/logout, `TokenResponse` z `user_id`/`session_id`/`expires_in` i `Cache-Control: no-store`, wspólny kontekst w `deps.py` dla obu zależności, middleware logów, fabryki testowe; testy endpointów. Bramki `require_identity`/`require_study_access` i operacje konta należą do F-004/F-006/F-007. Sprzątanie wygasłych retry poza rotacją — F-004/T-003. Wdrożenie dopiero po T-002 Androida i osobnym przełączeniu.

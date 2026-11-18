@@ -80,6 +80,7 @@ Sekrety w pliku `.env` w katalogu głównym repo (nie commituj). Szablon: `.env.
 ENVIRONMENT=production
 DEBUG=false
 JWT_SECRET=<losowy-długi-string, min. 32 znaki>
+AUTH_REFRESH_RETRY_KEY=<klucz Fernet, inny niż JWT_SECRET>
 OPENAI_API_KEY=sk-...
 LLM_PROVIDER=openai
 LLM_MOCK=false

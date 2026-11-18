@@ -1,6 +1,6 @@
 # F-003 · Sesja i dane offline
 
-**ID:** `E-001/F-003` · **Status:** `ready` · **Epic:** [E-001](../../README.md).
+**ID:** `E-001/F-003` · **Status:** `in_progress` · **Epic:** [E-001](../../README.md).
 
 **Wartość:** chwilowa awaria nie zabiera dostępu ani postępu; użytkownik wie, co zapisano i na którym koncie.
 
@@ -25,7 +25,7 @@ Wspólny przegląd projektu obejmuje retencję F-007, procedurę F-002 i nowe st
 
 | ID | Task | Status |
 |---|---|---|
-| E-001/F-003/T-001 | [Sesje backendu](./tasks/T-001-sesje-backendu.md), B-02 | `ready` |
+| E-001/F-003/T-001 | [Sesje backendu](./tasks/T-001-sesje-backendu.md), B-02 | `in_progress` |
 | E-001/F-003/T-002 | [Sesja Androida i logout](./tasks/T-002-sesja-androida.md), B-03 | `ready` |
 | E-001/F-003/T-003 | [Wynik sync i profili](./tasks/T-003-wynik-synchronizacji.md), B-09a | `ready` |
 | E-001/F-003/T-004 | [Kolejka i zapis profilu](./tasks/T-004-kolejka-i-profil.md), B-09b | `ready` |

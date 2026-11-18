@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import time
 
 import pytest
@@ -10,10 +11,12 @@ from app.core.config import Settings
 from app.db import session as db_session
 
 SECRET = "S" * 40
+RETRY_KEY = base64.urlsafe_b64encode(b"r" * 32).decode()
 GOOD_DEPLOYED = {
     "environment": "beta",
     "debug": False,
     "jwt_secret": SECRET,
+    "auth_refresh_retry_key": RETRY_KEY,
     "database_url": "postgresql://app:db-secret-value@postgres.railway.internal:5432/railway",
     "allowed_origins": "https://vocabulario.example",
     "google_oauth_client_id": "client-id.apps.googleusercontent.com",
@@ -45,6 +48,12 @@ def test_unknown_environment_is_an_error():
         ({"debug": True}, "debug"),
         ({"jwt_secret": "change-me"}, "jwt_secret"),
         ({"jwt_secret": "short-secret"}, "jwt_secret"),
+        ({"jwt_algorithm": "HS512"}, "jwt_algorithm"),
+        ({"access_token_expire_minutes": 0}, "token_expiry"),
+        ({"refresh_token_expire_days": 0}, "token_expiry"),
+        ({"auth_refresh_retry_key": ""}, "auth_refresh_retry_key"),
+        ({"auth_refresh_retry_key": "not-a-fernet-key"}, "auth_refresh_retry_key"),
+        ({"jwt_secret": RETRY_KEY}, "auth_refresh_retry_key"),
         ({"database_url": "postgresql://u:p@localhost:5432/vocabulario"}, "database_url"),
         ({"database_url": "not a url"}, "database_url"),
         ({"allowed_origins": "https://ok.example,http://10.0.2.2:8000"}, "allowed_origins"),

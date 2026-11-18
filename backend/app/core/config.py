@@ -10,6 +10,7 @@ KNOWN_ENVIRONMENTS = frozenset({"development", "test", "staging", "beta", "produ
 DEPLOYED_ENVIRONMENTS = frozenset({"staging", "beta", "production"})
 _DEFAULT_JWT_SECRET = "change-me"
 _MIN_JWT_SECRET_CHARS = 32
+JWT_ALGORITHM = "HS256"
 _LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "0.0.0.0", "10.0.2.2"})
 
 
@@ -55,6 +56,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 30
+    # Fernet key for the 5-minute refresh retry results; never the JWT secret.
+    auth_refresh_retry_key: str = ""
 
     openai_api_key: str = ""
     llm_provider: str = "openai"
@@ -130,6 +133,14 @@ class Settings(BaseSettings):
         secret = self.jwt_secret or ""
         if secret == _DEFAULT_JWT_SECRET or len(secret) < _MIN_JWT_SECRET_CHARS:
             errors.append("jwt_secret")
+        if self.jwt_algorithm != JWT_ALGORITHM:
+            errors.append("jwt_algorithm")
+        if not self._token_periods_valid():
+            errors.append("token_expiry")
+        if not _is_fernet_key(self.auth_refresh_retry_key) or (
+            self.auth_refresh_retry_key.strip() == secret.strip()
+        ):
+            errors.append("auth_refresh_retry_key")
         if not _is_remote_database(self.database_url):
             errors.append("database_url")
         if not all(_is_public_https_origin(origin) for origin in self.cors_origins):
@@ -144,6 +155,24 @@ class Settings(BaseSettings):
         if import_provider == "anthropic" and not self.anthropic_api_key.strip():
             errors.append("anthropic_api_key")
         return errors
+
+    def _token_periods_valid(self) -> bool:
+        access = self.access_token_expire_minutes
+        refresh_minutes = self.refresh_token_expire_days * 24 * 60
+        return 0 < access < refresh_minutes
+
+
+def _is_fernet_key(value: str) -> bool:
+    key = (value or "").strip()
+    if not key:
+        return False
+    from cryptography.fernet import Fernet
+
+    try:
+        Fernet(key.encode("ascii"))
+    except (ValueError, UnicodeEncodeError):
+        return False
+    return True
 
 
 def _is_remote_database(url: str) -> bool:

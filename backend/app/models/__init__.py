@@ -1,7 +1,22 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, Numeric, String, UniqueConstraint, func, text
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    LargeBinary,
+    Numeric,
+    String,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -391,6 +406,69 @@ class DeviceToken(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     platform: Mapped[str] = mapped_column(String(16), default="android")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+SESSION_REVOCATION_REASONS = (
+    "logout",
+    "password_reset",
+    "password_change",
+    "password_added",
+    "email_changed",
+    "refresh_reuse",
+    "account_deleted",
+)
+
+
+class AuthSession(Base):
+    """One successful sign-in on one installation; stores only the refresh token hash."""
+
+    __tablename__ = "auth_sessions"
+    __table_args__ = (
+        Index(
+            "ix_auth_sessions_active_user",
+            "user_id",
+            postgresql_where=text("revoked_at IS NULL"),
+        ),
+        CheckConstraint("version > 0", name="ck_auth_sessions_version_positive"),
+        CheckConstraint(
+            "revocation_reason IS NULL OR revocation_reason IN ("
+            + ", ".join(f"'{reason}'" for reason in SESSION_REVOCATION_REASONS)
+            + ")",
+            name="ck_auth_sessions_revocation_reason",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
+    refresh_token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    refreshed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revocation_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
+
+class AuthRefreshRetry(Base):
+    """Short-lived encrypted result of one refresh, replayed for the same request_id."""
+
+    __tablename__ = "auth_refresh_retries"
+    __table_args__ = (
+        Index("ix_auth_refresh_retries_input", "session_id", "input_token_hash"),
+    )
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("auth_sessions.id", ondelete="CASCADE"), primary_key=True
+    )
+    request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    session_version: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    input_token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    output_token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    response_ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
 
 
 class AppliedSyncMove(Base):
