@@ -656,7 +656,7 @@
 
     <string name="err_password_required">Bir şifre girin</string>
 
-    <string name="err_password_short">Şifre en az 8 karakter olmalıdır</string>
+    <string name="err_password_short">Şifre en az 15 karakter olmalıdır</string>
 
     <string name="err_login">Giriş başarısız</string>
 
@@ -1002,4 +1002,9 @@
     <string name="verify_email_spam_hint">Bulamadın mı? Spam veya promosyonlar klasörüne bak.</string>
     <string name="verify_email_data_kept">Bu cihazdaki çalışma verilerin güvende ve onaydan sonra senkronize edilecek.</string>
     <string name="verify_email_wrong_address">Yanlış adres mi? Çıkış yap ve doğru e-postayla hesap oluştur.</string>
+    <string name="err_login_invalid_credentials">E-posta veya şifre geçersiz</string>
+    <string name="err_rate_limited">Çok fazla deneme. Biraz bekleyip tekrar deneyin.</string>
+    <string name="err_auth_unavailable">Giriş geçici olarak kullanılamıyor. Birazdan tekrar deneyin.</string>
+    <string name="account_password_reset_needed">Şifrenizin yeniden belirlenmesi gerekiyor. E-posta adresinize bir bağlantı göndereceğiz.</string>
+    <string name="account_password_reset_send">Sıfırlama bağlantısı gönder</string>
 </resources>

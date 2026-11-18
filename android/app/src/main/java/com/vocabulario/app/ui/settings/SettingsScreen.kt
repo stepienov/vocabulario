@@ -435,7 +435,11 @@ fun SettingsScreen(
                 testTag = TestTags.SETTINGS_SECTION_ACCOUNT,
                 showDivider = false,
             ) {
-                AccountSectionBody(account, onChangePassword = accountViewModel::openChangePassword)
+                AccountSectionBody(
+                    account,
+                    onChangePassword = accountViewModel::openChangePassword,
+                    onSendReset = accountViewModel::sendPasswordReset,
+                )
             }
             account.info?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 

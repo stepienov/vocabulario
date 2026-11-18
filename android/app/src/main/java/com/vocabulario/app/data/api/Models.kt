@@ -39,6 +39,7 @@ data class UserResponse(
     val email_verified: Boolean = true,
     val email_verification_required: Boolean = false,
     val login_methods: List<String> = emptyList(),
+    val password_upgrade_required: Boolean = false,
 )
 
 @Serializable

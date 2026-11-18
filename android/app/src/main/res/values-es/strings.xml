@@ -624,7 +624,7 @@
 
     <string name="err_password_required">Introduce una contraseña</string>
 
-    <string name="err_password_short">La contraseña debe tener al menos 8 caracteres</string>
+    <string name="err_password_short">La contraseña debe tener al menos 15 caracteres</string>
 
     <string name="err_login">Error al iniciar sesión</string>
 
@@ -935,5 +935,10 @@
     <string name="verify_email_spam_hint">¿No lo encuentras? Revisa la carpeta de spam o promociones.</string>
     <string name="verify_email_data_kept">Tus datos de estudio en este dispositivo están a salvo y se sincronizarán tras la confirmación.</string>
     <string name="verify_email_wrong_address">¿Dirección incorrecta? Cierra sesión y crea una cuenta con el correo correcto.</string>
+    <string name="err_login_invalid_credentials">Correo o contraseña no válidos</string>
+    <string name="err_rate_limited">Demasiados intentos. Espera un momento e inténtalo de nuevo.</string>
+    <string name="err_auth_unavailable">El inicio de sesión no está disponible temporalmente. Inténtalo en un momento.</string>
+    <string name="account_password_reset_needed">Hay que establecer de nuevo tu contraseña. Te enviaremos un enlace por correo.</string>
+    <string name="account_password_reset_send">Enviar enlace de restablecimiento</string>
 </resources>
 

@@ -624,7 +624,7 @@
 
     <string name="err_password_required">أدخل كلمة المرور</string>
 
-    <string name="err_password_short">يجب أن تكون كلمة المرور 8 أحرف على الأقل</string>
+    <string name="err_password_short">يجب أن تكون كلمة المرور 15 أحرف على الأقل</string>
 
     <string name="err_login">فشل تسجيل الدخول</string>
 
@@ -921,5 +921,10 @@
     <string name="verify_email_spam_hint">لم تجده؟ تحقّق من مجلد الرسائل غير المرغوب فيها أو العروض.</string>
     <string name="verify_email_data_kept">بيانات دراستك على هذا الجهاز آمنة وستتم مزامنتها بعد التأكيد.</string>
     <string name="verify_email_wrong_address">العنوان خاطئ؟ سجّل الخروج وأنشئ حسابًا بالبريد الإلكتروني الصحيح.</string>
+    <string name="err_login_invalid_credentials">البريد الإلكتروني أو كلمة المرور غير صحيحة</string>
+    <string name="err_rate_limited">محاولات كثيرة جدًا. انتظر قليلًا ثم حاول مرة أخرى.</string>
+    <string name="err_auth_unavailable">تسجيل الدخول غير متاح مؤقتًا. حاول مرة أخرى بعد قليل.</string>
+    <string name="account_password_reset_needed">يجب تعيين كلمة مرورك من جديد. سنرسل رابطًا إلى بريدك الإلكتروني.</string>
+    <string name="account_password_reset_send">إرسال رابط إعادة التعيين</string>
 </resources>
 

@@ -624,7 +624,7 @@
 
     <string name="err_password_required">Digite uma senha</string>
 
-    <string name="err_password_short">A senha deve ter pelo menos 8 caracteres</string>
+    <string name="err_password_short">A senha deve ter pelo menos 15 caracteres</string>
 
     <string name="err_login">Falha no login</string>
 
@@ -921,5 +921,10 @@
     <string name="verify_email_spam_hint">Não encontrou? Verifique a pasta de spam ou promoções.</string>
     <string name="verify_email_data_kept">Seus dados de estudo neste dispositivo estão seguros e serão sincronizados após a confirmação.</string>
     <string name="verify_email_wrong_address">Endereço errado? Saia e crie uma conta com o e-mail correto.</string>
+    <string name="err_login_invalid_credentials">E-mail ou senha inválidos</string>
+    <string name="err_rate_limited">Muitas tentativas. Aguarde um momento e tente novamente.</string>
+    <string name="err_auth_unavailable">O login está temporariamente indisponível. Tente novamente em instantes.</string>
+    <string name="account_password_reset_needed">Sua senha precisa ser definida novamente. Enviaremos um link para o seu e-mail.</string>
+    <string name="account_password_reset_send">Enviar link de redefinição</string>
 </resources>
 

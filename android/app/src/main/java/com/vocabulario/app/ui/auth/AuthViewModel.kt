@@ -11,6 +11,7 @@ import com.vocabulario.app.data.OtherAccountDataException
 import com.vocabulario.app.data.UnclaimedLocalDataException
 import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.LearningRepository
+import com.vocabulario.app.data.NEW_PASSWORD_MIN_CHARS
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.session.AuthNotice
 import com.vocabulario.app.data.session.LogoutConsent
@@ -320,7 +321,9 @@ class AuthViewModel @Inject constructor(
         if (trimmedEmail.isBlank()) return strings.get(R.string.err_email_required)
         if (!trimmedEmail.contains("@")) return strings.get(R.string.err_email_invalid)
         if (password.isBlank()) return strings.get(R.string.err_password_required)
-        if (isRegister && password.length < 8) return strings.get(R.string.err_password_short)
+        if (isRegister && password.codePointCount(0, password.length) < NEW_PASSWORD_MIN_CHARS) {
+            return strings.get(R.string.err_password_short)
+        }
         return null
     }
 

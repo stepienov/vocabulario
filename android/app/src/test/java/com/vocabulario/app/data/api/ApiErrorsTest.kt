@@ -62,6 +62,19 @@ class ApiErrorsTest {
     }
 
     @Test
+    fun authLimiterCodesWinOverStatus() {
+        assertEquals("rate_limited", resolveErrorCode(httpStatus = 429, apiCode = "rate_limited"))
+        assertEquals(
+            "auth_temporarily_unavailable",
+            resolveErrorCode(httpStatus = 503, apiCode = "auth_temporarily_unavailable"),
+        )
+        assertEquals(
+            "invalid_credentials",
+            resolveErrorCode(httpStatus = 401, apiCode = "invalid_credentials"),
+        )
+    }
+
+    @Test
     fun ignoresUnknownBackendText() {
         assertNull(resolveErrorCode(httpStatus = 400, apiMessage = "Some internal English dump"))
         assertNull(resolveErrorCode(throwableMessage = "HTTP 500"))

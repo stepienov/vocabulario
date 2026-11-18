@@ -52,7 +52,15 @@ object AppModule {
       } else {
         chain.request()
       }
-      val response = chain.proceed(request)
+      // Auth calls fail fast; the long timeouts below are for imports and enrichment.
+      val timed = if ("/auth/" in path) {
+        chain.withConnectTimeout(5, TimeUnit.SECONDS)
+          .withReadTimeout(15, TimeUnit.SECONDS)
+          .withWriteTimeout(15, TimeUnit.SECONDS)
+      } else {
+        chain
+      }
+      val response = timed.proceed(request)
       if (response.code == 403 && !token.isNullOrBlank()) {
         val body = runCatching { response.peekBody(2048).string() }.getOrNull().orEmpty()
         if (EMAIL_VERIFICATION_REQUIRED in body) verificationGate.onServerRequired()

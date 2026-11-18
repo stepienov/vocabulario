@@ -38,7 +38,9 @@ private val LOCAL_ERROR_CODES = setOf(
 
 private val CODE_TO_RES: Map<String, Int> = mapOf(
     "email_taken" to R.string.err_email_taken,
-    "invalid_credentials" to R.string.err_login_wrong_password,
+    "invalid_credentials" to R.string.err_login_invalid_credentials,
+    "rate_limited" to R.string.err_rate_limited,
+    "auth_temporarily_unavailable" to R.string.err_auth_unavailable,
     "email_not_found" to R.string.err_login_email_unknown,
     "wrong_password" to R.string.err_login_wrong_password,
     "google_login_required" to R.string.err_login_use_google,

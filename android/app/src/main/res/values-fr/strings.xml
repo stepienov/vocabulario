@@ -624,7 +624,7 @@
 
     <string name="err_password_required">Saisissez un mot de passe</string>
 
-    <string name="err_password_short">Le mot de passe doit contenir au moins 8 caractères</string>
+    <string name="err_password_short">Le mot de passe doit contenir au moins 15 caractères</string>
 
     <string name="err_login">Échec de la connexion</string>
 
@@ -920,5 +920,10 @@
     <string name="verify_email_spam_hint">Introuvable ? Regarde dans les spams ou les promotions.</string>
     <string name="verify_email_data_kept">Tes données d’étude sur cet appareil sont en sécurité et seront synchronisées après la confirmation.</string>
     <string name="verify_email_wrong_address">Mauvaise adresse ? Déconnecte-toi et crée un compte avec la bonne adresse e-mail.</string>
+    <string name="err_login_invalid_credentials">E-mail ou mot de passe incorrect</string>
+    <string name="err_rate_limited">Trop de tentatives. Patientez un instant et réessayez.</string>
+    <string name="err_auth_unavailable">La connexion est temporairement indisponible. Réessayez dans un instant.</string>
+    <string name="account_password_reset_needed">Votre mot de passe doit être redéfini. Nous enverrons un lien à votre adresse e-mail.</string>
+    <string name="account_password_reset_send">Envoyer le lien de réinitialisation</string>
 </resources>
 

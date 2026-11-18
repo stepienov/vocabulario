@@ -650,7 +650,7 @@
 
     <string name="err_password_required">Inserisci una password</string>
 
-    <string name="err_password_short">La password deve contenere almeno 8 caratteri</string>
+    <string name="err_password_short">La password deve contenere almeno 15 caratteri</string>
 
     <string name="err_login">Accesso fallito</string>
 
@@ -994,4 +994,9 @@
     <string name="verify_email_spam_hint">Non la trovi? Controlla lo spam o la cartella promozioni.</string>
     <string name="verify_email_data_kept">I tuoi dati di studio su questo dispositivo sono al sicuro e verranno sincronizzati dopo la conferma.</string>
     <string name="verify_email_wrong_address">Indirizzo sbagliato? Esci e crea un account con l’email corretta.</string>
+    <string name="err_login_invalid_credentials">Email o password non valide</string>
+    <string name="err_rate_limited">Troppi tentativi. Attendi un momento e riprova.</string>
+    <string name="err_auth_unavailable">L’accesso è temporaneamente non disponibile. Riprova tra un momento.</string>
+    <string name="account_password_reset_needed">La tua password va reimpostata. Ti invieremo un link via email.</string>
+    <string name="account_password_reset_send">Invia il link di reimpostazione</string>
 </resources>

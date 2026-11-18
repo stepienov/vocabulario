@@ -624,7 +624,7 @@
 
     <string name="err_password_required">Введите пароль</string>
 
-    <string name="err_password_short">Пароль должен быть не короче 8 символов</string>
+    <string name="err_password_short">Пароль должен быть не короче 15 символов</string>
 
     <string name="err_login">Ошибка входа</string>
 
@@ -921,5 +921,10 @@
     <string name="verify_email_spam_hint">Не нашли? Проверьте папки «Спам» и «Промоакции».</string>
     <string name="verify_email_data_kept">Ваши учебные данные на этом устройстве в безопасности и синхронизируются после подтверждения.</string>
     <string name="verify_email_wrong_address">Неверный адрес? Выйдите и создайте аккаунт с правильным email.</string>
+    <string name="err_login_invalid_credentials">Неверный адрес почты или пароль</string>
+    <string name="err_rate_limited">Слишком много попыток. Подождите немного и повторите.</string>
+    <string name="err_auth_unavailable">Вход временно недоступен. Повторите попытку чуть позже.</string>
+    <string name="account_password_reset_needed">Пароль нужно задать заново. Мы отправим ссылку на вашу почту.</string>
+    <string name="account_password_reset_send">Отправить ссылку для сброса</string>
 </resources>
 

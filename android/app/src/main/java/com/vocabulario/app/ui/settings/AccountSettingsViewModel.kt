@@ -22,6 +22,9 @@ data class AccountUiState(
     val emailVerified: Boolean = true,
     val hasPassword: Boolean = false,
     val hasGoogle: Boolean = false,
+    /** Stary format hasła: zmiana wymaga starego hasła, więc prowadzimy do resetu. */
+    val passwordUpgradeRequired: Boolean = false,
+    val resetSending: Boolean = false,
     val loading: Boolean = false,
     /** Brak sieci lub błąd `/me`: sekcja pokazuje komunikat zamiast danych. */
     val unavailable: Boolean = false,
@@ -75,6 +78,7 @@ class AccountSettingsViewModel @Inject constructor(
                         emailVerified = me.email_verified,
                         hasPassword = "password" in me.login_methods,
                         hasGoogle = "google" in me.login_methods,
+                        passwordUpgradeRequired = me.password_upgrade_required,
                         unavailable = false,
                     )
                 }
@@ -84,6 +88,27 @@ class AccountSettingsViewModel @Inject constructor(
                 _account.update { it.copy(unavailable = it.email == null) }
             } finally {
                 _account.update { it.copy(loading = false) }
+            }
+        }
+    }
+
+    fun sendPasswordReset() {
+        val state = _account.value
+        val email = state.email ?: return
+        if (state.resetSending) return
+        viewModelScope.launch {
+            _account.update { it.copy(resetSending = true, info = null) }
+            try {
+                accountRepository.requestPasswordReset(email)
+                _account.update { it.copy(info = strings.get(R.string.auth_forgot_password_sent, email)) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _account.update {
+                    it.copy(info = e.userMessage(strings, R.string.err_account_request_failed))
+                }
+            } finally {
+                _account.update { it.copy(resetSending = false) }
             }
         }
     }

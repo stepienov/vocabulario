@@ -655,7 +655,7 @@
 
     <string name="err_password_required">Nhập mật khẩu</string>
 
-    <string name="err_password_short">Mật khẩu phải có ít nhất 8 ký tự</string>
+    <string name="err_password_short">Mật khẩu phải có ít nhất 15 ký tự</string>
 
     <string name="err_login">Đăng nhập không thành công</string>
 
@@ -1000,4 +1000,9 @@
     <string name="verify_email_spam_hint">Không thấy thư? Hãy kiểm tra thư mục thư rác hoặc quảng cáo.</string>
     <string name="verify_email_data_kept">Dữ liệu học trên thiết bị này vẫn an toàn và sẽ đồng bộ sau khi xác nhận.</string>
     <string name="verify_email_wrong_address">Sai địa chỉ? Hãy đăng xuất và tạo tài khoản bằng email đúng.</string>
+    <string name="err_login_invalid_credentials">Email hoặc mật khẩu không hợp lệ</string>
+    <string name="err_rate_limited">Quá nhiều lần thử. Hãy chờ một lát rồi thử lại.</string>
+    <string name="err_auth_unavailable">Đăng nhập tạm thời không khả dụng. Hãy thử lại sau ít phút.</string>
+    <string name="account_password_reset_needed">Bạn cần đặt lại mật khẩu. Chúng tôi sẽ gửi một liên kết tới email của bạn.</string>
+    <string name="account_password_reset_send">Gửi liên kết đặt lại</string>
 </resources>

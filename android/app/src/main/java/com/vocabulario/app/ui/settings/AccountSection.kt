@@ -26,7 +26,11 @@ import com.vocabulario.app.ui.components.AppDialogButtonRow
 import com.vocabulario.app.ui.components.AppGrayField
 
 @Composable
-internal fun AccountSectionBody(account: AccountUiState, onChangePassword: () -> Unit) {
+internal fun AccountSectionBody(
+    account: AccountUiState,
+    onChangePassword: () -> Unit,
+    onSendReset: () -> Unit,
+) {
     val scheme = MaterialTheme.colorScheme
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
         if (account.email == null) {
@@ -52,7 +56,21 @@ internal fun AccountSectionBody(account: AccountUiState, onChangePassword: () ->
                 color = scheme.onSurfaceVariant,
             )
         }
-        if (account.hasPassword) {
+        if (account.hasPassword && account.passwordUpgradeRequired) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.account_password_reset_needed),
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onSendReset,
+                enabled = !account.resetSending,
+                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_CHANGE_PASSWORD),
+                shape = AppButtonShape,
+            ) { Text(stringResource(R.string.account_password_reset_send)) }
+        } else if (account.hasPassword) {
             Spacer(Modifier.height(12.dp))
             OutlinedButton(
                 onClick = onChangePassword,
