@@ -737,6 +737,7 @@ class LexicalService:
             return LookupOutcome([], "db", False, lang_pair=pair)
         row = await self._fetch_query_cache(pair, key)
         if row is not None and (row.candidates or row.ai_complete):
+            # Ranked like lookup_cached_fast, so one row looks the same on both paths.
             return await self._present_lookup(
                 user,
                 profile,
@@ -748,7 +749,6 @@ class LexicalService:
                 cache_row_id=row.id,
                 lang_pair=pair,
                 suggestions_exhausted=bool(row.more_exhausted),
-                preserve_order=True,
             )
         empty_row_id = row.id if row is not None else None
         await self.db.commit()

@@ -1,6 +1,6 @@
 # F-008 · Jakość i operacje
 
-**ID:** `E-001/F-008` · **Status:** `ready` · **Epic:** [E-001](../../README.md).
+**ID:** `E-001/F-008` · **Status:** `in_progress` · **Epic:** [E-001](../../README.md).
 
 **Wartość:** tester nie jest pierwszą linią wykrywania utraty danych; autor potrafi rozpoznać awarię, zatrzymać rollout i odtworzyć usługę.
 
@@ -17,7 +17,7 @@ Minimalny koszt, infrastruktura dodatkowa do 50 EUR/miesiąc, RPO 1 h i RTO 24 h
 
 | ID | Task | Status |
 |---|---|---|
-| E-001/F-008/T-001 | [Bramki CI, PostgreSQL, Android i akceptacja](./tasks/T-001-bramki-jakosci.md), zachowany punkt wejścia B-13 | `ready` |
+| E-001/F-008/T-001 | [Bramki CI, PostgreSQL, Android i akceptacja](./tasks/T-001-bramki-jakosci.md), zachowany punkt wejścia B-13 | `in_progress` — etap 1 PostgreSQL w CI |
 | E-001/F-008/T-002 | [Środowiska i konfiguracja](./tasks/T-002-srodowiska-i-konfiguracja.md) | `ready` |
 | E-001/F-008/T-003 | [Backup, rejestr i odtwarzanie](./tasks/T-003-backup-rejestr-i-odtwarzanie.md) | `ready` |
 | E-001/F-008/T-004 | [Monitoring, koszty i incydenty](./tasks/T-004-monitoring-koszty-i-incydenty.md) | `ready` |
@@ -28,4 +28,4 @@ Numerów i ścieżek nie zmieniono; dawny duży zakres B-13 ma teraz osobnych w�
 
 **Bramki wykonawcze:** właściwe konta/umowy/region i kosztorys usług, kwoty AI, prywatne klucze/kontakty, realny S24/Play i próba odtworzenia. Nie wymagamy ich zakupu, by przygotować specyfikację; bez potwierdzenia nie ma uruchomienia testerów.
 
-**Weryfikacja:** istniejące `python scripts\ci_check.py` rozszerzone według T-001, wymagane Gradle/release/device oraz izolowany PostgreSQL. **Dowody:** analiza/projekty i decyzje; brak implementacji/testów runtime.
+**Weryfikacja:** istniejące `python scripts\ci_check.py` rozszerzone według T-001, wymagane Gradle/release/device oraz izolowany PostgreSQL. **Dowody:** analiza/projekty i decyzje; etap 1 T-001 (PostgreSQL w CI) zweryfikowany lokalnie na prawdziwej bazie, bez przebiegu GitHub Actions.

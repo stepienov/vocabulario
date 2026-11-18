@@ -1,10 +1,10 @@
 # E-001 · Beta Google Play
 
-**Status:** `ready` — przygotowane kontrakty i kolejność wykonania; aplikacja nie jest jeszcze odebrana do bety.  
+**Status:** `in_progress` — kontrakty gotowe, trwa implementacja; aplikacja nie jest jeszcze odebrana do bety.  
 **Priorytet:** bieżący kierunek pracy.  
 **Odbiorca:** nowy i powracający tester Androida, bez pomocy autora aplikacji.
 
-**Etap pracy:** przygotowanie specyfikacji zakończone: **8 features / 24 taski**, z czego decyzje F-001/T-001 `done`, pozostałe 23 `ready` do wykonania po osobnym zleceniu. [Rejestr decyzji](./features/F-001-prowadzenie-bety/tasks/T-001-decyzje-i-zakres.md) oddziela uzgodniony biznes od realnych bramek konfiguracji. Nie potrzeba kolejnych rund „ok” do kończenia tych bloków.
+**Etap pracy:** przygotowanie specyfikacji zakończone: **8 features / 24 taski**, z czego decyzje F-001/T-001 `done`. Implementacja trwa: F-008/T-001 `in_progress` (etap 1: PostgreSQL w CI), pozostałe 22 `ready` do wykonania po osobnym zleceniu. [Rejestr decyzji](./features/F-001-prowadzenie-bety/tasks/T-001-decyzje-i-zakres.md) oddziela uzgodniony biznes od realnych bramek konfiguracji. Nie potrzeba kolejnych rund „ok” do kończenia tych bloków.
 
 ## Problem i cel biznesowy
 
@@ -38,7 +38,7 @@ Progi to cele produktu, nie wymagania Google. Wymogi sklepu sprawdzamy ponownie 
 | [F-005 · Google](./features/F-005-google/README.md) | Bezpieczny login i jawne łączenie metod | `ready` |
 | [F-006 · Zarządzanie kontem](./features/F-006-zarzadzanie-kontem/README.md) | Tożsamość konta, operacje i skuteczne usuwanie danych | `ready` |
 | [F-007 · Prywatność i wsparcie](./features/F-007-prywatnosc-i-wsparcie/README.md) | Prywatność, warunki usługi/informacje prawne, dostępność i wsparcie | `ready` |
-| [F-008 · Jakość i operacje](./features/F-008-jakosc-i-operacje/README.md) | Dowody testów, diagnoza awarii i odtwarzanie usługi | `ready` |
+| [F-008 · Jakość i operacje](./features/F-008-jakosc-i-operacje/README.md) | Dowody testów, diagnoza awarii i odtwarzanie usługi | `in_progress` |
 
 ## Zależności i kolejność
 

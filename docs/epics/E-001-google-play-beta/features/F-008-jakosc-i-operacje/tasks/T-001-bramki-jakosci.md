@@ -1,6 +1,6 @@
 # T-001 · Automatyczne bramki jakości i gotowość operacyjna
 
-**ID:** `E-001/F-008/T-001` · **Status:** `ready` · **Priorytet / rozmiar:** P0/P1 / M.  
+**ID:** `E-001/F-008/T-001` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0/P1 / M.  
 **Feature:** [Jakość i operacje](../README.md). **Źródło:** B-13; F-16 i [A-01…A-24](../../../sources/analiza-2026-11-17.md#10-macierz-testów-akceptacyjnych).
 
 ## Cel i zakres
@@ -78,3 +78,19 @@ Wymagany gate blokuje FAIL/BLOCKED/skip, nie tylko exit code kompilacji. Wyjątk
 - [ ] Wybrano właściciela diagnostyki, alertów, kosztów AI i obsługi incydentu; P1 jawnie przypisane.
 
 Zakres B-13 rozdzielony na cztery wykonalne taski w indeksie feature'a; wspólne testy integrują ich wynik. **Poza zakresem:** pełny pentest, używanie bety jako testowej bazy i automatyczny deploy. **Wynik weryfikacji:** projekt oparty o aktualny workflow/conftest/build; nie uruchomiono CI/buildów ani nie zapisano fikcyjnych wyników.
+
+## Postęp
+
+### Etap 1 · PostgreSQL w CI bez zielonych skipów (18.11.2026)
+
+Wykonane punkty 1–2 planu CI powyżej:
+
+- [Workflow](../../../../../../.github/workflows/ci.yml) ma usługę `postgres:16` z healthcheckiem, syntetyczną bazą `vocabulario_ci_test` na localhost i `REQUIRE_PG_TESTS=1`. Hasło dotyczy wyłącznie jednorazowego kontenera jobu, nie bety.
+- [Conftest](../../../../../../backend/tests/conftest.py): w trybie wymaganym brak adresu/połączenia (kod 3), brak wybranych testów `pg` (kod 3) i każdy pominięty/xfail test `pg` (kod 1) przerywają job. Bez flagi lokalnie testy `pg` są pomijane jak dotąd, z ostrzeżeniem w podsumowaniu. Ochrona localhost/`_test` bez zmian.
+- [ci_check](../../../../../../scripts/ci_check.py) uruchamia kroki tym samym interpreterem (`sys.executable`); wcześniej na Windows z venv trafiał do globalnego Pythona bez zależności.
+- [Testy bramki](../../../../../../backend/tests/test_pg_requirement.py) uruchamiają osobny proces pytest z kopią conftest; 6 z 7 nie przechodzi na poprzedniej wersji (siódmy to kontrola pozytywna).
+- Pierwszy przebieg na prawdziwej bazie ujawnił ukryty dotąd błąd E-002: trafienie w cache dawało inną listę w ścieżce szybkiej (`local_membership=true`) i pełnej, wbrew [kontraktowi cache](../../../../E-002-szybka-nauka/features/F-002-wyszukiwanie/tasks/T-001-cache.md). Decyzja właściciela: obie ścieżki czyszczą i sortują wiersz jak szybka; `lookup_cached` bez `preserve_order` przy trafieniu. Gałąź bez cache bez zmian.
+
+**Dowód lokalny** (Windows, Python 3.12, tymczasowy PostgreSQL 16.2 poza repo): `ci_check` z `REQUIRE_PG_TESTS=1` — UI strings, LSP i pytest zielone, 570 passed / 0 failed / 0 pominiętych `pg`; dwa dodatkowe przebiegi `-m pg` po 35/35. Bez bazy i flagi: 535 passed, 37 skipped, kod 0.
+
+**Otwarte w tym tasku:** pierwszy przebieg na GitHub Actions (nic nie wypchnięto), job Android (punkt 4), upgrade schematu z syntetycznej starej bazy (punkt 6), macierz A-01…A-24 i urządzenia. Dwa pozostałe skipy nie są `pg`: placeholder [test_sync](../../../../../../backend/tests/test_sync.py) bez treści („Requires test DB + auth fixtures”) do zastąpienia prawdziwym testem przy F-003/T-003 oraz parametr manifestu LSP bez czasów. Lokalnie na Windows bez `PYTHONIOENCODING=utf-8` test LSP pada na kodowaniu konsoli `cp1252`; Linux w CI tego nie dotyczy.

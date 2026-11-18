@@ -6,7 +6,7 @@ Stały rejestr tematów produktu. **Epic → feature → opcjonalne taski.** Dok
 
 | ID | Epic / rezultat biznesowy | Status | Priorytet |
 |---|---|---|---|
-| E-001 | [Beta Google Play](./E-001-google-play-beta/README.md) — tester sam instaluje aplikację, zarządza kontem i nie traci danych | `ready` — 8 features / 24 taski; implementacja i dowody jeszcze przed nami | Teraz |
+| E-001 | [Beta Google Play](./E-001-google-play-beta/README.md) — tester sam instaluje aplikację, zarządza kontem i nie traci danych | `in_progress` — 8 features / 24 taski; trwa implementacja, dowody jeszcze przed nami | Teraz |
 | E-002 | [Szybkie wyszukiwanie i gotowość do nauki](./E-002-szybka-nauka/README.md) — krótsze oczekiwanie bez nadmiarowych żądań | `verification_required` — zachowane kontrakty, nie zlecenie ponownej implementacji | Chronić przy zmianach |
 | E-003 | [Paczki startowe](./E-003-paczki-startowe/README.md) — pierwsza wartość bez ręcznego budowania słownika | `parked` | Poza betą |
 | E-004 | [Skuteczność nauki i rozwój produktu](./E-004-rozwoj-nauki/README.md) — utrzymanie regularności i używanie poznanych słów | `parked` — hipotezy do discovery | Poza betą |

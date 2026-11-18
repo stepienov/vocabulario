@@ -98,7 +98,7 @@ W środowisku z zainstalowanymi zależnościami backendu:
 python scripts\ci_check.py
 ```
 
-Komenda sprawdza napisy UI, spójność LSP i testy backendu. Testy oznaczone `pg` wymagają **oddzielnej lokalnej bazy** z `TEST_DATABASE_URL`, o nazwie kończącej się na `_test`; fixture czyści jej tabele. Wynik z pominiętymi testami nie potwierdza pełnej integracji z bazą. Szczegóły: [kontrakt testów PostgreSQL](docs/epics/E-002-szybka-nauka/features/F-001-fundamenty/tasks/T-001-testy-postgresql.md).
+Komenda sprawdza napisy UI, spójność LSP i testy backendu. Testy oznaczone `pg` wymagają **oddzielnej lokalnej bazy** z `TEST_DATABASE_URL`, o nazwie kończącej się na `_test`; fixture czyści jej tabele. Lokalnie bez bazy są pomijane z ostrzeżeniem, a taki wynik nie potwierdza integracji z bazą. CI uruchamia PostgreSQL i ustawia `REQUIRE_PG_TESTS=1`: brak bazy albo pominięty test `pg` kończy się błędem. Tę samą flagę można ustawić lokalnie. Szczegóły: [kontrakt testów PostgreSQL](docs/epics/E-002-szybka-nauka/features/F-001-fundamenty/tasks/T-001-testy-postgresql.md) i [bramki jakości](docs/epics/E-001-google-play-beta/features/F-008-jakosc-i-operacje/tasks/T-001-bramki-jakosci.md).
 
 ## Struktura
 
