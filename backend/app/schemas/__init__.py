@@ -35,6 +35,8 @@ class LoginRequest(BaseModel):
 
 class GoogleAuthRequest(BaseModel):
     id_token: str
+    # Verification mail language when a new account's Google address is not proven.
+    locale: str | None = Field(default=None, max_length=16)
 
 
 class RefreshRequest(BaseModel):

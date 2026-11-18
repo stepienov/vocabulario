@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, get_current_user_id, lang_pair_key, normalize_text
+from app.core.deps import get_verified_user, get_verified_user_id, lang_pair_key, normalize_text
 from app.core.http_errors import api_error
 from app.db.session import get_db
 from app.models import CardCorrection, CardHistoryEvent, LanguageProfile, LearningCard, LexicalEntry, ReviewLog, SrsState, User, UserSettings, WordList
@@ -136,7 +136,7 @@ async def _owned_source_card(
 @router.post("/lookup", response_model=LookupResponse)
 async def lookup(
     body: LookupRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = LexicalService(db)
@@ -175,7 +175,7 @@ def _schedule_cached_history(user_id: UUID, body: LookupRequest, outcome: Lookup
 @router.post("/lookup/cached", response_model=LookupResponse)
 async def lookup_cached(
     body: LookupRequest,
-    user_id: UUID = Depends(get_current_user_id),
+    user_id: UUID = Depends(get_verified_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     service = LexicalService(db)
@@ -210,7 +210,7 @@ async def lookup_cached(
 @router.post("/lookup/expand", response_model=LookupResponse)
 async def lookup_expand(
     body: LookupRequest,
-    user_id: UUID = Depends(get_current_user_id),
+    user_id: UUID = Depends(get_verified_user_id),
 ):
     """Expand jest odpięty od HTTP — zabicie apki nie kasuje LLM ani cache."""
     from app.db import session as db_session
@@ -234,7 +234,7 @@ async def lookup_expand(
 @router.post("/lookup/category/cached", response_model=LookupResponse)
 async def lookup_category_cached(
     body: LookupRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = LexicalService(db)
@@ -259,7 +259,7 @@ async def lookup_category_cached(
 @router.post("/lookup/category/expand", response_model=LookupResponse)
 async def lookup_category_expand(
     body: LookupRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     from app.services.lexical import AssocRoundNotReady
@@ -344,7 +344,7 @@ def _import_validate_response(valid_raw: list[dict], invalid: list[str]) -> Impo
 @router.post("/imports/validate", response_model=ImportValidateResponse)
 async def validate_import_words(
     body: ImportValidateRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Exact L1/L2 headwords only — no typo tolerance / autocorrect."""
@@ -362,7 +362,7 @@ async def validate_import_words(
 @router.post("/imports/ingest")
 async def ingest_import_text(
     body: ImportIngestRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Wklejka: URL Quizlet/AnkiWeb albo tekst → karty Vocabulario (enrichment)."""
@@ -400,7 +400,7 @@ async def ingest_import_text(
 async def ingest_import_file(
     profile_id: UUID = Form(...),
     file: UploadFile = File(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Import z pliku → karty Vocabulario (enrichment)."""
@@ -427,7 +427,7 @@ async def ingest_import_file(
 @router.post("/cards", response_model=CardResponse, status_code=201)
 async def create_card(
     body: CardCreateRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Zapisuje kartę od razu; pełną treść dociąga zadanie w tle."""
@@ -505,7 +505,7 @@ async def create_card(
 @router.get("/cards", response_model=list[CardResponse])
 async def list_cards(
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -522,7 +522,7 @@ async def list_cards(
 async def get_card(
     card_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Pojedyncza karta — poll enrichment bez ściągania całej listy."""
@@ -563,7 +563,7 @@ def _resolve_direction(settings: UserSettings) -> str:
 @router.get("/srs/queue", response_model=SrsQueueResponse)
 async def srs_queue(
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     now = datetime.now(UTC)
@@ -666,7 +666,7 @@ async def srs_queue(
 @router.post("/srs/distractors", response_model=DistractorsResponse)
 async def srs_distractors(
     body: DistractorsRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -724,7 +724,7 @@ async def srs_distractors(
 @router.post("/srs/review", response_model=ReviewResponse)
 async def srs_review(
     body: ReviewRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -802,7 +802,7 @@ def _srs_state_to_sync(card_id: UUID, state: SrsState) -> SyncSrsState:
 @router.post("/srs/undo", response_model=SrsUndoResponse)
 async def srs_undo(
     body: SrsUndoRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     card_id = body.previous_srs.card_id
@@ -841,7 +841,7 @@ async def srs_undo(
 @router.post("/srs/check-answer", response_model=CheckAnswerResponse)
 async def check_typed_answer(
     body: CheckAnswerRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     card_id = UUID(body.card_id)
@@ -873,7 +873,7 @@ async def check_typed_answer(
 @router.get("/lists", response_model=list[WordListResponse])
 async def get_lists(
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     await _active_profile(db, user.id, profile_id)
@@ -895,7 +895,7 @@ async def get_lists(
 @router.post("/lists/pending-inbox/ensure", response_model=WordListResponse)
 async def ensure_pending_inbox(
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, profile_id)
@@ -925,7 +925,7 @@ async def ensure_pending_inbox(
 @router.post("/lists", response_model=WordListResponse, status_code=201)
 async def create_list(
     body: WordListCreate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, body.profile_id)
@@ -969,7 +969,7 @@ async def rename_list(
     list_id: UUID,
     body: WordListUpdate,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, profile_id)
@@ -1028,7 +1028,7 @@ async def rename_list(
 async def delete_list(
     list_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, profile_id)
@@ -1068,7 +1068,7 @@ async def delete_list(
 async def retry_card_enrichment(
     card_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Ręczne ponowienie enrichmentu (max 3×) gdy status=prep_problem."""
@@ -1106,7 +1106,7 @@ async def retry_card_enrichment(
 async def delete_card(
     card_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, profile_id)
@@ -1136,7 +1136,7 @@ async def delete_card(
 async def move_card(
     card_id: UUID,
     body: WordMoveRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, body.profile_id)
@@ -1209,7 +1209,7 @@ def _card_response(card: LearningCard, srs: SrsState | None = None) -> CardRespo
 async def list_words(
     list_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, profile_id)
@@ -1263,7 +1263,7 @@ async def list_words(
 async def add_word_to_list(
     list_id: UUID,
     body: WordListAddWordRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, body.profile_id)
@@ -1363,7 +1363,7 @@ async def add_word_to_list(
 async def dashboard_stats(
     profile_id: UUID = Query(...),
     days: int = Query(1, ge=1, le=90),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, profile_id)
@@ -1577,7 +1577,7 @@ async def _user_card(
 
 @router.get("/corrections/quota", response_model=CorrectionQuotaResponse)
 async def correction_quota(
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     used = await count_corrections_today(db, user.id)
@@ -1594,7 +1594,7 @@ async def create_card_correction(
     body: CardCorrectionCreate,
     background_tasks: BackgroundTasks,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     card = await _user_card(db, user.id, card_id, profile_id)
@@ -1639,7 +1639,7 @@ async def create_card_correction(
 async def latest_card_correction(
     card_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     await _user_card(db, user.id, card_id, profile_id)
@@ -1663,7 +1663,7 @@ async def escalate_card_correction(
     card_id: UUID,
     correction_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     card = await _user_card(db, user.id, card_id, profile_id)
@@ -1689,7 +1689,7 @@ async def escalate_card_correction(
 async def card_history(
     card_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     await _user_card(db, user.id, card_id, profile_id)

@@ -67,6 +67,9 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     # Separate Fernet key for queued mail payloads; never the JWT or refresh retry key.
     mail_outbox_key: str = ""
+    # Learning API refuses accounts without a proven address. Switch on only after the
+    # Android release with the verification screens is out (T-002, release order of F-003).
+    email_verification_gate: bool = False
 
     openai_api_key: str = ""
     llm_provider: str = "openai"

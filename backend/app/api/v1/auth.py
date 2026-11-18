@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_verified_user
 from app.core.http_errors import api_error
 from app.core.passwords import verify_current_password
 from app.core.security import hash_password, now_utc
@@ -141,6 +141,16 @@ async def login(body: LoginRequest, response: Response, db: AsyncSession = Depen
     return _token_response(issued, response)
 
 
+def _google_proves_address(token_data: dict, email: str) -> bool:
+    """F-005 trust rule: only Gmail or a Workspace (`hd`) address Google itself verified.
+
+    tokeninfo sends `email_verified` as the string "true"; google-auth sends a bool.
+    """
+    if token_data.get("email_verified") not in (True, "true"):
+        return False
+    return email.rpartition("@")[2] == "gmail.com" or bool(token_data.get("hd"))
+
+
 @router.post("/google", response_model=TokenResponse)
 async def google_auth(body: GoogleAuthRequest, response: Response, db: AsyncSession = Depends(get_db)):
     try:
@@ -150,15 +160,26 @@ async def google_auth(body: GoogleAuthRequest, response: Response, db: AsyncSess
 
     google_id = token_data["sub"]
     email = token_data["email"].lower()
+    proven = _google_proves_address(token_data, email)
+    queue_mail = False
 
     result = await db.execute(select(User).where(User.google_id == google_id))
     user = result.scalar_one_or_none()
+    trusted = user is not None
     if user is None:
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
         if user:
+            # Linking by e-mail is no proof: the address may have been pre-registered by someone else.
             user.google_id = google_id
         else:
+            trusted = True
+            queue_mail = not proven
+            if queue_mail:
+                try:
+                    ensure_mail_available()
+                except CredentialError as exc:
+                    raise api_error(exc.status_code, exc.code) from exc
             user = User(email=email, google_id=google_id)
             db.add(user)
             await db.flush()
@@ -166,8 +187,15 @@ async def google_auth(body: GoogleAuthRequest, response: Response, db: AsyncSess
 
     await db.flush()
     await lock_user(db, user.id)
+    now = now_utc()
+    if trusted and proven and user.email == email and user.email_verified_at is None:
+        user.email_verified_at = now
     issued = await create_session(db, user.id)
+    if queue_mail:
+        await queue_verification_mail(db, user, body.locale, now=now)
     await db.commit()
+    if queue_mail:
+        wake_mail_worker()
     return _token_response(issued, response)
 
 
@@ -359,7 +387,7 @@ profiles_router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 
 @profiles_router.get("", response_model=list[LanguageProfileResponse])
-async def list_profiles(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def list_profiles(user: User = Depends(get_verified_user), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(LanguageProfile).where(LanguageProfile.user_id == user.id))
     return list(result.scalars().all())
 
@@ -367,7 +395,7 @@ async def list_profiles(user: User = Depends(get_current_user), db: AsyncSession
 @profiles_router.post("", response_model=LanguageProfileResponse)
 async def create_profile(
     body: LanguageProfileCreate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -402,7 +430,7 @@ async def create_profile(
 async def update_profile(
     profile_id: str,
     body: LanguageProfileUpdate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     from uuid import UUID
@@ -431,7 +459,7 @@ async def update_profile(
 @profiles_router.put("/{profile_id}/activate", response_model=LanguageProfileResponse)
 async def activate_profile(
     profile_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     from uuid import UUID

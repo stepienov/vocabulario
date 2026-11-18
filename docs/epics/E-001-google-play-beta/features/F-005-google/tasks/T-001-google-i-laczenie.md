@@ -150,3 +150,8 @@ Brak nonce/pól u starego klienta nie może przełączać na słabszy walidator.
 - [ ] Końcowa macierz przeszła na rzeczywistym buildzie z Play, nie tylko debug.
 
 **Poza zakresem:** zastępowanie Credential Manager bez potrzeby, samodzielne odłączanie/podmiana metod, scalenie dwóch istniejących kont i zmiana istniejącego hasła dowodem Google. **Wynik weryfikacji:** przegląd kodu/dokumentacji i kompletny projekt wspólnych kontraktów; bez implementacji, runtime, konfiguracji OAuth i operacji na produkcji.
+
+## Postęp
+
+- Reguła zaufania do adresu Google (Gmail albo `hd`, `email_verified`, zgodny bieżący adres) działa już w `/auth/google` jako część bramki F-004/T-002 (krok 4). Ustawia weryfikację tylko dla nowego konta i powracającego `sub`; zewnętrzny adres dostaje mail weryfikacyjny.
+- Reszta tego taska jest nadal otwarta: `google-auth` zamiast tokeninfo, wymagane `aud`/nonce, 409 zamiast automatycznego łączenia po adresie.

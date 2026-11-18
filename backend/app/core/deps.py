@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.http_errors import api_error
 from app.core.security import TokenClaims
 from app.db.session import get_db
@@ -51,8 +52,17 @@ async def get_current_user_id(
     from app.db import session as db_session
 
     async with db_session.async_session_factory() as db:
-        session = await db.get(AuthSession, claims.session_id)
-    return _context(request, claims, session).user_id
+        row = (
+            await db.execute(
+                select(AuthSession, User.email_verified_at)
+                .join(User, User.id == AuthSession.user_id)
+                .where(AuthSession.id == claims.session_id)
+            )
+        ).first()
+    session, verified_at = row if row is not None else (None, None)
+    context = _context(request, claims, session)
+    request.state.email_verified = verified_at is not None
+    return context.user_id
 
 
 async def get_current_user(
@@ -71,10 +81,33 @@ async def get_current_user(
     ).first()
     session, user = row if row is not None else (None, None)
     _context(request, claims, session)
+    request.state.email_verified = user.email_verified_at is not None
     return user
 
 
-async def get_admin_user(user: User = Depends(get_current_user)) -> User:
+def _require_verified(request: Request) -> None:
+    if get_settings().email_verification_gate and not request.state.email_verified:
+        raise api_error(
+            status.HTTP_403_FORBIDDEN,
+            "email_verification_required",
+            "Confirm your e-mail address first",
+        )
+
+
+async def get_verified_user(request: Request, user: User = Depends(get_current_user)) -> User:
+    """Learning API: a live session and, while the gate is on, a proven address."""
+    _require_verified(request)
+    return user
+
+
+async def get_verified_user_id(
+    request: Request, user_id: UUID = Depends(get_current_user_id)
+) -> UUID:
+    _require_verified(request)
+    return user_id
+
+
+async def get_admin_user(user: User = Depends(get_verified_user)) -> User:
     if (user.role or "").strip().lower() != "admin":
         raise api_error(status.HTTP_403_FORBIDDEN, "forbidden", "Admin only")
     return user

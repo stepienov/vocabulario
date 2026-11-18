@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user
+from app.core.deps import get_verified_user
 from app.db.session import get_db
 from app.models import AppliedSyncMove, LearningCard, ReviewLog, SrsState, User, UserSettings, WordList
 from app.schemas import (
@@ -54,7 +54,7 @@ def _aware(dt: datetime) -> datetime:
 async def sync_pull(
     profile_id: UUID = Query(...),
     since: datetime | None = Query(default=None),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     settings_result = await db.execute(select(UserSettings).where(UserSettings.user_id == user.id))
@@ -253,7 +253,7 @@ async def _apply_moves(
 @router.post("/sync/push", response_model=SyncPushResponse)
 async def sync_push(
     body: SyncPushRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     moves_applied, moves_skipped, move_results = await _apply_moves(db, user, body)
