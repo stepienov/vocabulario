@@ -177,5 +177,8 @@ async def deletion_status_page(request: Request) -> HTMLResponse:
 
 
 def mount_public_web(app: FastAPI) -> None:
+    from app.public_web.site import site_router
+
     app.mount(ASSETS_PATH, StaticFiles(directory=str(HERE / "static")), name="account_assets")
     app.include_router(router)
+    app.include_router(site_router)

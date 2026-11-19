@@ -11,22 +11,28 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import delete, select, update
 
+from app.core.config import get_settings
 from app.core.security import now_utc
 from app.db import session as db_session
 from app.models import (
     AccountActionToken,
     AccountEmailChange,
+    AppLog,
     GoogleChallenge,
+    LlmCallPayload,
+    LlmUsage,
     MailOutbox,
     MailProviderEvent,
     RecentAuthProof,
 )
 from app.services.auth_limits import cleanup_expired
+from app.services.content_reports import purge_resolved_reports
 from app.services.sync_pull import purge_sync_tombstones
 
 logger = logging.getLogger(__name__)
 
 BATCH = 100
+DIAGNOSTICS_BATCH = 1000
 _TERMINAL = ("accepted", "failed", "cancelled")
 
 
@@ -97,4 +103,26 @@ async def purge_auth_records(*, now: datetime | None = None, limit: int = BATCH)
     )
     # Tombstones synchronizacji (30 dni) czyszczone tym samym przebiegiem workera.
     counts["sync_tombstones"] = await purge_sync_tombstones(now=now)
+    counts["content_reports"] = await purge_resolved_reports(now=now, limit=limit)
+    counts.update(await purge_diagnostics(now=now))
     return counts
+
+
+async def purge_diagnostics(*, now: datetime, limit: int = DIAGNOSTICS_BATCH) -> dict[str, int]:
+    """Technical logs 7 days, cost metrics 30 days (F-007/T-001); independent of AI traffic."""
+    settings = get_settings()
+    logs_cutoff = now - timedelta(days=max(1, settings.app_log_retention_days))
+    usage_cutoff = now - timedelta(days=max(1, settings.llm_usage_retention_days))
+    payload_cutoff = now - timedelta(days=max(1, settings.llm_payload_ttl_days))
+    return {
+        "app_logs": await _delete_ids(AppLog, AppLog.id, AppLog.created_at < logs_cutoff, limit),
+        "llm_payloads": await _delete_ids(
+            LlmCallPayload,
+            LlmCallPayload.llm_usage_id,
+            LlmCallPayload.created_at < payload_cutoff,
+            limit,
+        ),
+        "llm_usage": await _delete_ids(
+            LlmUsage, LlmUsage.id, LlmUsage.created_at < usage_cutoff, limit
+        ),
+    }

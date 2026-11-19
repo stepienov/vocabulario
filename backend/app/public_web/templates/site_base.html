@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="{{ locale }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>{{ title }} · {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ assets }}/account.css">
+  <link rel="stylesheet" href="{{ assets }}/site.css">
+</head>
+<body>
+  <main class="card site">
+    <p class="brand"><a href="/?lang={{ locale }}">{{ app_name }}</a></p>
+    <nav class="site-nav" aria-label="{{ app_name }}">
+      <a href="/privacy?lang={{ locale }}">{{ t.nav_privacy }}</a>
+      <a href="/terms?lang={{ locale }}">{{ t.nav_terms }}</a>
+      <a href="/support?lang={{ locale }}">{{ t.nav_support }}</a>
+    </nav>
+    <p class="site-lang">{{ t.language }}:
+      {% for code in languages %}
+        {% if code == locale %}<strong>{{ code|upper }}</strong>{% else %}<a href="{{ lang_links[code] }}" hreflang="{{ code }}">{{ code|upper }}</a>{% endif %}
+      {% endfor %}
+    </p>
+    {% if fallback %}<p class="status">{{ t.fallback_notice }}</p>{% endif %}
+
+    <h1>{{ title }}</h1>
+    {% block body %}{% endblock %}
+  </main>
+</body>
+</html>

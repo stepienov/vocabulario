@@ -72,6 +72,7 @@ import com.vocabulario.app.data.ApiBaseUrl
 import com.vocabulario.app.data.session.AuthNotice
 import com.vocabulario.app.data.session.AuthNoticeKind
 import com.vocabulario.app.data.session.RevocationSummary
+import com.vocabulario.app.ui.report.SupportHelpDialog
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppAlertDialog
 import com.vocabulario.app.ui.components.AppButtonShape
@@ -121,8 +122,23 @@ fun AuthScreen(
     val revocations by viewModel.revocations.collectAsState()
     val infoMessage by viewModel.infoMessage.collectAsState()
     var confirmSignOut by remember { mutableStateOf(false) }
+    var supportOpen by remember { mutableStateOf(false) }
+    if (supportOpen) SupportHelpDialog(onDismiss = { supportOpen = false })
     var confirmDiscard by remember { mutableStateOf(false) }
     val forgotPassword by viewModel.forgotPassword.collectAsState()
+    val consent by viewModel.consent.collectAsState()
+    val googleConsentNeeded by viewModel.googleConsentNeeded.collectAsState()
+    LaunchedEffect(isRegister) { if (isRegister) viewModel.loadLegal() }
+    if (googleConsentNeeded) {
+        GoogleConsentDialog(
+            consent = consent,
+            onTermsChange = viewModel::setTermsAccepted,
+            onAdultChange = viewModel::setAdultConfirmed,
+            onRetry = viewModel::loadLegal,
+            onDismiss = viewModel::dismissGoogleConsent,
+            onConfirm = { viewModel.confirmGoogleConsent(context, onAuthenticated) },
+        )
+    }
     forgotPassword?.let { state ->
         ForgotPasswordDialog(
             state = state,
@@ -363,7 +379,14 @@ fun AuthScreen(
                     ) { Text(stringResource(R.string.auth_forgot_password)) }
                     Spacer(Modifier.height(8.dp))
                 } else {
-                    Spacer(Modifier.height(22.dp))
+                    Spacer(Modifier.height(10.dp))
+                    LegalConsentFields(
+                        consent = consent,
+                        onTermsChange = { viewModel.setTermsAccepted(it); viewModel.clearError() },
+                        onAdultChange = { viewModel.setAdultConfirmed(it); viewModel.clearError() },
+                        onRetry = viewModel::loadLegal,
+                    )
+                    Spacer(Modifier.height(14.dp))
                 }
 
                 Button(
@@ -406,6 +429,10 @@ fun AuthScreen(
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
+                TextButton(
+                    onClick = { supportOpen = true },
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                ) { Text(stringResource(R.string.support_title)) }
 
                 errorMessage?.let {
                     Spacer(Modifier.height(12.dp))
@@ -556,6 +583,38 @@ private fun SessionNoticeCard(
             }
         }
     }
+}
+
+@Composable
+private fun GoogleConsentDialog(
+    consent: LegalConsentState,
+    onTermsChange: (Boolean) -> Unit,
+    onAdultChange: (Boolean) -> Unit,
+    onRetry: () -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AppAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.legal_google_title),
+        text = {
+            Column {
+                Text(stringResource(R.string.legal_google_body))
+                Spacer(Modifier.height(8.dp))
+                LegalConsentFields(consent, onTermsChange, onAdultChange, onRetry)
+            }
+        },
+        buttons = {
+            AppDialogButtonRow(
+                secondaryText = stringResource(R.string.action_cancel),
+                onSecondary = onDismiss,
+                secondaryKind = AppDialogAction.Neutral,
+                primaryText = stringResource(R.string.legal_continue),
+                onPrimary = onConfirm,
+                primaryEnabled = consent.manifest != null && consent.termsAccepted && consent.adultConfirmed,
+            )
+        },
+    )
 }
 
 @Composable

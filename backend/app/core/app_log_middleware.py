@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
 import time
-import traceback as tb_mod
 from uuid import UUID, uuid4
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -14,52 +12,11 @@ from app.services.app_log import (
     category_for_path,
     clear_request_context,
     log_event,
+    route_template,
     should_log_http,
 )
 from app.services.background import spawn_background
 from app.services.llm_usage import clear_llm_usage_context
-
-_BODY_KEYS = ("text", "lemma", "pos", "gloss", "profile_id", "lexical_entry_id")
-
-
-def should_capture_http_body(method: str, path: str) -> bool:
-    if method.upper() != "POST":
-        return False
-    p = path.rstrip("/")
-    if p == "/api/v1/lookup" or p.startswith("/api/v1/lookup/"):
-        return True
-    if p == "/api/v1/cards":
-        return True
-    if p.startswith("/api/v1/cards/") and p.endswith("/retry-enrichment"):
-        return True
-    return False
-
-
-def slim_debug_http_body(path: str, data: dict | None) -> dict:
-    out: dict = {}
-    for key in _BODY_KEYS:
-        if not data or key not in data or data[key] is None:
-            continue
-        value = data[key]
-        if isinstance(value, str):
-            out[key] = value[:200]
-        else:
-            out[key] = str(value)[:64]
-    if path.rstrip("/").endswith("/retry-enrichment"):
-        parts = path.strip("/").split("/")
-        if len(parts) >= 4:
-            out.setdefault("card_id", parts[3][:64])
-    return out
-
-
-def _parse_json_body(raw: bytes) -> dict | None:
-    if not raw:
-        return None
-    try:
-        data = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return None
-    return data if isinstance(data, dict) else None
 
 
 def _user_id_from_request(request: Request) -> UUID | None:
@@ -93,29 +50,13 @@ class AppLogMiddleware(BaseHTTPMiddleware):
         clear_llm_usage_context()
         path = request.url.path
         method = request.method
-        body_slim: dict | None = None
-        if should_capture_http_body(method, path):
-            try:
-                raw = await request.body()
-                body_slim = slim_debug_http_body(path, _parse_json_body(raw))
-
-                async def receive():
-                    return {"type": "http.request", "body": raw, "more_body": False}
-
-                request = Request(request.scope, receive)
-            except Exception:
-                body_slim = None
+        shape = route_template(path)
         started = time.perf_counter()
         try:
             response = await call_next(request)
         except Exception as exc:
             duration_ms = int((time.perf_counter() - started) * 1000)
-            # Wiążemy exc + traceback teraz — po wyjściu z except Python czyści nazwę,
-            # a format_exc() w tle daje NoneType: None.
-            captured = exc
-            captured_tb = "".join(
-                tb_mod.format_exception(type(exc), exc, exc.__traceback__)
-            )
+            captured = exc  # the name is cleared when the except block ends
             spawn_background(
                 lambda: log_event(
                     level="error",
@@ -123,11 +64,10 @@ class AppLogMiddleware(BaseHTTPMiddleware):
                     event="http_unhandled",
                     status="error",
                     http_method=method,
-                    http_path=path,
+                    http_path=shape,
                     duration_ms=duration_ms,
-                    message=f"{method} {path} crashed",
+                    message=f"{method} {shape} crashed",
                     exc=captured,
-                    traceback=captured_tb,
                 ),
                 name="app_log_http",
             )
@@ -137,9 +77,6 @@ class AppLogMiddleware(BaseHTTPMiddleware):
         status = response.status_code
         if should_log_http(method, path, status, duration_ms):
             level = "error" if status >= 500 else "warn" if status >= 400 else "info"
-            payload: dict = {"query": dict(request.query_params)}
-            if body_slim:
-                payload["body"] = body_slim
             spawn_background(
                 lambda: log_event(
                     level=level,
@@ -147,11 +84,10 @@ class AppLogMiddleware(BaseHTTPMiddleware):
                     event="http_request",
                     status="error" if status >= 400 else "ok",
                     http_method=method,
-                    http_path=path,
+                    http_path=shape,
                     http_status=status,
                     duration_ms=duration_ms,
-                    message=f"{method} {path} → {status}",
-                    payload=payload,
+                    message=f"{method} {shape} → {status}",
                 ),
                 name="app_log_http",
             )

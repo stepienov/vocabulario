@@ -2,6 +2,7 @@ package com.vocabulario.app.data
 
 import com.vocabulario.app.auth.GoogleIdTokenProvider
 import com.vocabulario.app.data.api.GoogleAuthRequest
+import com.vocabulario.app.data.api.LegalAcceptanceBody
 import com.vocabulario.app.data.api.LoginRequest
 import com.vocabulario.app.data.api.LogoutRequest
 import com.vocabulario.app.data.api.RegisterRequest
@@ -56,21 +57,24 @@ class AuthRepository @Inject constructor(
     private val revocationScheduler: RevocationScheduler,
     private val signOutCleanup: AccountSignOutCleanup,
 ) {
-    suspend fun register(email: String, password: String) = withCandidateSlot { slot ->
-        installCandidate(api.register(RegisterRequest(email, password, tokenStore.mailLocale())), slot)
+    suspend fun register(email: String, password: String, acceptance: LegalAcceptanceBody) = withCandidateSlot { slot ->
+        installCandidate(api.register(RegisterRequest(email, password, tokenStore.mailLocale(), acceptance)), slot)
     }
 
     suspend fun login(email: String, password: String) = withCandidateSlot { slot ->
         installCandidate(api.login(LoginRequest(email, password)), slot)
     }
 
-    /** Challenge i wybór konta poprzedzają rezerwację slotu; anulowanie selektora kończy bez żądania. */
-    suspend fun googleLogin(provider: GoogleIdTokenProvider) {
+    /**
+     * Challenge i wybór konta poprzedzają rezerwację slotu; anulowanie selektora kończy bez żądania.
+     * [acceptance] jest potrzebne tylko, gdy Google zakłada nowe konto.
+     */
+    suspend fun googleLogin(provider: GoogleIdTokenProvider, acceptance: LegalAcceptanceBody? = null) {
         val challenge = api.googleChallenge()
         val idToken = provider.idToken(challenge.nonce)
         withCandidateSlot { slot ->
             installCandidate(
-                api.googleAuth(GoogleAuthRequest(challenge.challenge_id, idToken, tokenStore.mailLocale())),
+                api.googleAuth(GoogleAuthRequest(challenge.challenge_id, idToken, tokenStore.mailLocale(), acceptance)),
                 slot,
             )
         }

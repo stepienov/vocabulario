@@ -2,7 +2,9 @@ package com.vocabulario.app.di
 
 import com.vocabulario.app.data.ApiBaseUrl
 import com.vocabulario.app.data.EmailVerificationGate
+import com.vocabulario.app.data.LegalGate
 import com.vocabulario.app.data.api.EMAIL_VERIFICATION_REQUIRED
+import com.vocabulario.app.data.api.TERMS_ACCEPTANCE_REQUIRED
 import com.vocabulario.app.data.api.TokenAuthenticator
 import com.vocabulario.app.data.api.VocabularioApi
 import com.vocabulario.app.data.api.isPublicAuthPath
@@ -41,6 +43,7 @@ object AppModule {
     authenticator: TokenAuthenticator,
     sessionCoordinator: SessionCoordinator,
     verificationGate: EmailVerificationGate,
+    legalGate: LegalGate,
   ): OkHttpClient {
     val authInterceptor = Interceptor { chain ->
       val path = chain.request().url.encodedPath
@@ -64,11 +67,17 @@ object AppModule {
       if (response.code == 403 && !token.isNullOrBlank()) {
         val body = runCatching { response.peekBody(2048).string() }.getOrNull().orEmpty()
         if (EMAIL_VERIFICATION_REQUIRED in body) verificationGate.onServerRequired()
+        if (TERMS_ACCEPTANCE_REQUIRED in body) legalGate.onServerRequired()
       }
       response
     }
+    // Release nie loguje adresów żądań (zapytania użytkownika bywają w ścieżce i query).
     val logging = HttpLoggingInterceptor().apply {
-      level = HttpLoggingInterceptor.Level.BASIC
+      level = if (com.vocabulario.app.BuildConfig.DEBUG) {
+        HttpLoggingInterceptor.Level.BASIC
+      } else {
+        HttpLoggingInterceptor.Level.NONE
+      }
     }
     return OkHttpClient.Builder()
       .addInterceptor(authInterceptor)

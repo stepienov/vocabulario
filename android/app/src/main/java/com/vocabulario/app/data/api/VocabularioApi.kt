@@ -92,6 +92,21 @@ interface VocabularioApi {
     @GET("me")
     suspend fun me(): UserResponse
 
+    @GET("legal/current")
+    suspend fun legalCurrent(
+        @Query("locale") locale: String,
+        @retrofit2.http.Header("If-None-Match") etag: String?,
+    ): retrofit2.Response<LegalManifest>
+
+    @POST("me/legal-acceptance")
+    suspend fun acceptLegal(@Body body: LegalAcceptanceBody): LegalStatus
+
+    @POST("content-reports")
+    suspend fun createContentReport(@Body body: ContentReportRequest): ContentReportReceipt
+
+    @GET("content-reports/{id}")
+    suspend fun contentReportStatus(@Path("id") id: String): ContentReportReceipt
+
     @GET("me/settings")
     suspend fun getSettings(): UserSettingsResponse
 

@@ -58,6 +58,7 @@ import com.vocabulario.app.data.sync.BlockedItem
 import com.vocabulario.app.data.sync.BlockedKind
 import com.vocabulario.app.data.sync.FailureKind
 import com.vocabulario.app.data.sync.OpAck
+import com.vocabulario.app.data.sync.OP_CONTENT_REPORT
 import com.vocabulario.app.data.sync.OP_PROFILE_ACTIVATE
 import com.vocabulario.app.data.sync.OP_PROFILE_UPDATE
 import com.vocabulario.app.data.sync.BaseResolution
@@ -129,6 +130,7 @@ class LearningRepository @Inject constructor(
     private val notificationScheduler: NotificationScheduler,
     private val dailyNewCounter: com.vocabulario.app.data.local.DailyNewCounter,
     private val sessionCoordinator: SessionCoordinator,
+    private val contentReports: ContentReportRepository,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val outboxMutex = Mutex()
@@ -255,6 +257,9 @@ class LearningRepository @Inject constructor(
     /** Sesja do pracy w tle i właściciel danych w fazie ACTIVE (przed powiadomieniem konta). */
     suspend fun hasActiveOwner(): Boolean =
         hasSyncableSession() && offlineStore.activeOwnerContext() != null
+
+    suspend fun activeOwnerId(): String? =
+        if (hasSyncableSession()) offlineStore.activeOwnerContext()?.ownerUserId else null
 
     /**
      * Praca w tle jako właściciel przechwycony na starcie; zapisy w Room po HTTP sprawdzają go
@@ -1378,6 +1383,7 @@ class LearningRepository @Inject constructor(
     }
 
     private suspend fun applyOutboxOp(op: com.vocabulario.app.data.local.db.OutboxOpEntity): OutboxStep {
+        if (op.type == OP_CONTENT_REPORT) return contentReports.deliverForOutbox(op.payloadJson)
         if (op.type == OP_PROFILE_UPDATE) return applyProfileUpdate(op)
         if (op.type == OP_PROFILE_ACTIVATE) return applyProfileActivate(op)
         if (op.type == OP_SETTINGS_UPDATE) {
@@ -1694,18 +1700,19 @@ class LearningRepository @Inject constructor(
         offlineStore.localUserSettings() ?: defaultSettings()
 
     /**
-     * Alarm przypomnienia tylko dla aktywnego właściciela z zapisanymi ustawieniami.
-     * Domyślne ustawienia mają przypomnienia włączone, więc bez konta nie wolno ich użyć.
-     * [onlyIfChanged] pomija ponowne ustawianie alarmu po każdym syncu.
+     * Alarm przypomnienia tylko dla aktywnego właściciela z zapisanymi ustawieniami i tylko wtedy,
+     * gdy przypomnienia są włączone. [onlyIfChanged] pomija ponowne ustawianie alarmu po każdym syncu.
      */
     suspend fun restoreStudyReminders(onlyIfChanged: Boolean = false) {
-        val settings = if (hasActiveOwner()) offlineStore.localUserSettings() else null
+        val owner = activeOwnerId()
+        val settings = if (owner != null) offlineStore.localUserSettings() else null
         val enabled = settings != null &&
             (settings.study_reminder_enabled || settings.cards_ready_push_enabled)
         val hour = settings?.reminder_hour ?: notificationScheduler.reminderHour()
         if (onlyIfChanged &&
             enabled == notificationScheduler.reminderEnabled() &&
-            (!enabled || hour == notificationScheduler.reminderHour())
+            (!enabled || (hour == notificationScheduler.reminderHour() &&
+                owner == notificationScheduler.boundOwner()))
         ) {
             return
         }
@@ -1713,7 +1720,13 @@ class LearningRepository @Inject constructor(
             hour = hour,
             enabled = enabled,
             minute = notificationScheduler.reminderMinute(),
+            owner = owner,
         )
+    }
+
+    /** Zmiana przypomnienia z ekranu ustawień: alarm zawsze przypisany do bieżącego właściciela. */
+    suspend fun applyStudyReminder(hour: Int, enabled: Boolean, minute: Int) {
+        notificationScheduler.scheduleStudyReminder(hour, enabled, minute, activeOwnerId())
     }
 
     /** Local-first: zapisuje ustawienia w Room + operacja outboxu; online drenuje od razu. */

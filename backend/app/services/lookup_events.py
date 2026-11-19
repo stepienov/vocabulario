@@ -152,7 +152,7 @@ def record_lookup_event_background(
         except LifecycleBlocked:
             return
         except Exception:
-            logger.exception("lookup_event background failed user=%s query=%r", user_id, query)
+            logger.exception("lookup_event background failed user=%s", user_id)
 
     spawn_background(_write, name="lookup_event")
 
@@ -203,5 +203,5 @@ async def record_lookup_event(
     except LifecycleBlocked:
         return None
     except Exception:
-        logger.exception("lookup_event write failed user=%s query=%r", user_id, query)
+        logger.exception("lookup_event write failed user=%s", user_id)
         return None

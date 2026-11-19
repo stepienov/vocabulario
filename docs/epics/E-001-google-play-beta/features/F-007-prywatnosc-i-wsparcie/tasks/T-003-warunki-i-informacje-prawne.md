@@ -1,6 +1,6 @@
 # T-003 · Warunki bety i informacje prawne
 
-**ID:** `E-001/F-007/T-003` · **Status:** `ready` · **Priorytet:** P0 przed pierwszą zewnętrzną betą.  
+**ID:** `E-001/F-007/T-003` · **Status:** `in_progress` · **Priorytet:** P0 przed pierwszą zewnętrzną betą.  
 **Feature:** [Prywatność i wsparcie](../README.md). **Źródło:** [decyzje startowe](../../F-001-prowadzenie-bety/tasks/T-001-decyzje-i-zakres.md).
 
 ## Cel i rozróżnienie obowiązków

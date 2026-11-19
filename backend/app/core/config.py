@@ -86,6 +86,16 @@ class Settings(BaseSettings):
     account_deletion_enabled: bool = False
     account_erasure_key: str = ""
     account_erasure_key_version: int = 1
+    # Terms/privacy (E-001/F-007/T-003). Off: register records an acceptance when sent but old
+    # clients still work; on: new accounts must send it and accounts without one get 403
+    # `terms_acceptance_required` on learning routes. Switch on with the Android release.
+    legal_acceptance_enforced: bool = False
+    # Public identity of the operator and the monitored support address shown on the public pages.
+    operator_name: str = ""
+    support_email: str = ""
+    # Digital Asset Links for the Android app (comma separated SHA-256 certificate fingerprints).
+    android_package: str = "com.vocabulario.app"
+    android_cert_sha256: str = ""
     openai_api_key: str = ""
     llm_provider: str = "openai"
     llm_lookup_model: str = "gpt-5.6-terra"
@@ -98,9 +108,11 @@ class Settings(BaseSettings):
     llm_mock: bool = False
     llm_rate_limit_per_minute: int = 20
     llm_max_retries: int = 2
-    # Surowy JSON request/response LLM do debugowania (osobna tabela, nie app_logs).
-    llm_store_payloads: bool = True
+    # Diagnostic copies of prompts/answers, query and lemma in telemetry: off for real beta data.
+    llm_store_payloads: bool = False
     llm_payload_ttl_days: int = 30
+    app_log_retention_days: int = 7
+    llm_usage_retention_days: int = 30
 
     # User-Agent wymagany przez Wikimedia (Wikisłownik).
     wikimedia_user_agent: str = (

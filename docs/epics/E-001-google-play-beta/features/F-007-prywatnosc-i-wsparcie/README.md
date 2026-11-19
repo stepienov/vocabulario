@@ -1,6 +1,6 @@
 # F-007 · Prywatność i wsparcie
 
-**ID:** `E-001/F-007` · **Status:** `ready` · **Epic:** [E-001](../../README.md).
+**ID:** `E-001/F-007` · **Status:** `in_progress` · **Epic:** [E-001](../../README.md).
 
 **Wartość:** tester rozumie przetwarzanie danych, może dostać pomoc i zgłosić treść, a interfejs nie wyklucza go przez uprawnienia lub dostępność.
 

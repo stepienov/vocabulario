@@ -11,9 +11,11 @@ from app.admin_ui.router import mount_admin
 from app.api.v1.account_deletion import router as account_deletion_router
 from app.api.v1.admin_logs import router as admin_logs_router
 from app.api.v1.auth import me_router, profiles_router, router as auth_router
+from app.api.v1.content_reports import router as content_reports_router
 from app.api.v1.devices import router as devices_router
 from app.api.v1.imports import router as imports_router
 from app.api.v1.learning import router as learning_router
+from app.api.v1.legal import router as legal_router
 from app.api.v1.meta import router as meta_router
 from app.api.v1.sync import router as sync_router
 from app.core.app_log_middleware import AppLogMiddleware
@@ -105,6 +107,8 @@ def create_app() -> FastAPI:
     prefix = "/api/v1"
     app.include_router(auth_router, prefix=prefix)
     app.include_router(account_deletion_router, prefix=prefix)
+    app.include_router(legal_router, prefix=prefix)
+    app.include_router(content_reports_router, prefix=prefix)
     app.include_router(me_router, prefix=prefix)
     app.include_router(profiles_router, prefix=prefix)
     app.include_router(learning_router, prefix=prefix)

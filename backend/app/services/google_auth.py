@@ -17,6 +17,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import now_utc
+from app.core.config import get_settings
+from app.services.legal_docs import (
+    CODE_ACCEPTANCE_MISSING,
+    Acceptance,
+    apply_acceptance,
+    check_acceptance,
+)
 from app.models import RecentAuthProof, User, UserSettings
 from app.services.account_errors import CredentialError
 from app.services.account_recovery import (
@@ -104,6 +111,7 @@ async def google_login(
     id_token: str,
     locale: str | None,
     *,
+    acceptance: Acceptance | None = None,
     now: datetime | None = None,
 ) -> GoogleLogin:
     now = now or now_utc()
@@ -114,6 +122,11 @@ async def google_login(
         return await _existing_login(db, known, identity, challenge_id, now)
     if not identity.email or len(identity.email) > MAX_EMAIL_CHARS:
         raise CredentialError(401, "invalid_google_token")
+    # A new account needs the terms; checked before the challenge is spent so the user can retry.
+    if acceptance is not None:
+        check_acceptance(acceptance)
+    elif get_settings().legal_acceptance_enforced:
+        raise CredentialError(422, CODE_ACCEPTANCE_MISSING)
     taken = (
         await db.execute(select(User.id).where(User.email == identity.email))
     ).scalar_one_or_none()
@@ -127,6 +140,8 @@ async def google_login(
         google_id=identity.sub,
         email_verified_at=now if proven else None,
     )
+    if acceptance is not None:
+        apply_acceptance(user, acceptance, now)
     _remember(user, identity, now)
     try:
         async with db.begin_nested():

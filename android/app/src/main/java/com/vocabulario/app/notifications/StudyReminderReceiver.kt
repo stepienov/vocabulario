@@ -23,13 +23,15 @@ class StudyReminderReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 when (intent.action) {
-                    ACTION_FIRE -> fireAndReschedule(app)
+                    ACTION_FIRE -> {
+                        val generation = intent.getLongExtra(EXTRA_GENERATION, -1L)
+                        if (scheduler.isCurrentGeneration(generation)) fireAndReschedule(app)
+                    }
                     Intent.ACTION_BOOT_COMPLETED,
                     Intent.ACTION_MY_PACKAGE_REPLACED,
                     Intent.ACTION_TIMEZONE_CHANGED,
                     Intent.ACTION_TIME_CHANGED,
-                    -> scheduler.rescheduleFromPrefs()
-                    else -> if (intent.action == null) fireAndReschedule(app)
+                    -> reconcile()
                 }
             } finally {
                 pending.finish()
@@ -37,22 +39,31 @@ class StudyReminderReceiver : BroadcastReceiver() {
         }
     }
 
+    /** Alarm należy do konta, które go zaplanowało; po zmianie lub wylogowaniu znika. */
+    private suspend fun reconcile() {
+        val owner = repository.activeOwnerId()
+        if (owner != null && owner == scheduler.boundOwner()) {
+            scheduler.rescheduleFromPrefs()
+        } else {
+            scheduler.scheduleStudyReminder(scheduler.reminderHour(), enabled = false)
+        }
+    }
+
     private suspend fun fireAndReschedule(app: Context) {
-        // Alarm sprzed wylogowania nie może pokazać przypomnienia ani się odnowić.
-        if (!repository.hasActiveOwner()) {
+        val owner = repository.activeOwnerId()
+        if (owner == null || owner != scheduler.boundOwner()) {
             scheduler.scheduleStudyReminder(scheduler.reminderHour(), enabled = false)
             return
         }
-        val settings = runCatching { repository.getSettings() }.getOrNull()
-        val enabled = settings?.study_reminder_enabled == true || scheduler.reminderEnabled()
-        if (enabled) {
-            val due = runCatching { repository.getQueue().due.size }.getOrDefault(0)
-            NotificationHelper.showStudyReminder(app, due)
+        if (scheduler.mayShowReminder(owner)) {
+            NotificationHelper.showStudyReminder(app)
+            if (NotificationHelper.canPost(app)) scheduler.markShownToday(owner)
         }
         scheduler.rescheduleFromPrefs()
     }
 
     companion object {
         const val ACTION_FIRE = "com.vocabulario.app.STUDY_REMINDER"
+        const val EXTRA_GENERATION = "generation"
     }
 }

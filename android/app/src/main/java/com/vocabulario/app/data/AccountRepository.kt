@@ -89,6 +89,7 @@ class AccountRepository @Inject constructor(
     private val tokenStore: TokenStore,
     private val sessionCoordinator: SessionCoordinator,
     private val gate: EmailVerificationGate,
+    private val legalGate: LegalGate,
 ) {
     @Volatile
     private var cache: CachedAccount? = null
@@ -96,6 +97,7 @@ class AccountRepository @Inject constructor(
     suspend fun refreshAccount(): UserResponse {
         val me = api.me()
         gate.apply(me)
+        legalGate.apply(me)
         val owner = (sessionCoordinator.state.value as? SessionState.Active)?.ownerUserId
         // Spóźniona odpowiedź poprzedniego właściciela nie może trafić do ekranu nowego konta.
         if (owner != null && owner != me.id) throw StaleAccountResponseException()

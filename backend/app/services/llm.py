@@ -90,15 +90,18 @@ ENRICH_CORE_SYSTEM = (
 
 
 def _log_import_llm(title: str, body: str) -> None:
-    """Widoczne w terminalu uvicorn — pełny prompt / response importu."""
-    sep = "=" * 72
-    block = f"\n{sep}\n{title}\n{sep}\n{body}\n{sep}\n"
-    logger.info(block)
-    try:
-        print(block, flush=True)
-    except UnicodeEncodeError:
-        # Windows cp1250 consoles can't print arrows / some Spanish diacritics
-        print(block.encode("utf-8", errors="replace").decode("ascii", errors="replace"), flush=True)
+    """Only the step title is logged: prompts and responses carry the user's own text."""
+    logger.info("%s (%d chars)", title, len(body))
+
+
+class ProviderRefusal(Exception):
+    """The provider declined the content. It is a result, not a transport error: never stored as
+    card content and never retried with another model to get around the refusal."""
+
+    code = "content_refused"
+
+    def __init__(self) -> None:
+        super().__init__(self.code)
 
 
 class LLMService:
@@ -209,12 +212,13 @@ class LLMService:
                 )
         except Exception as exc:
             duration_ms = int((time.perf_counter() - started) * 1000)
+            refused = isinstance(exc, ProviderRefusal)
             schedule_llm_meter(
                 {
                     "provider": use_provider,
                     "model": model,
                     "purpose": purpose,
-                    "status": "error",
+                    "status": "refused" if refused else "error",
                     "duration_ms": duration_ms,
                     "usage": usage,
                     "request_json": build_llm_request_json(
@@ -228,10 +232,10 @@ class LLMService:
                     ),
                 },
                 {
-                    "level": "error",
+                    "level": "warning" if refused else "error",
                     "category": "llm",
                     "event": "llm_call",
-                    "status": "error",
+                    "status": "refused" if refused else "error",
                     "duration_ms": duration_ms,
                     "message": f"{use_provider}:{model} {schema_name} failed",
                     "payload": {
@@ -358,7 +362,10 @@ class LLMService:
             kwargs["service_tier"] = service_tier
         response = await self.client.chat.completions.create(**kwargs)
         usage = parse_openai_usage(response)
-        content = response.choices[0].message.content or "{}"
+        choice = response.choices[0]
+        if getattr(choice.message, "refusal", None) or getattr(choice, "finish_reason", None) == "content_filter":
+            raise ProviderRefusal()
+        content = choice.message.content or "{}"
         return json.loads(content), usage
 
     async def _chat_json_anthropic(
@@ -385,6 +392,8 @@ class LLMService:
             system=system_content,
             messages=[{"role": "user", "content": prompt}],
         )
+        if getattr(msg, "stop_reason", None) == "refusal":
+            raise ProviderRefusal()
         text = "".join(
             block.text for block in msg.content if getattr(block, "type", "") == "text"
         )

@@ -92,4 +92,27 @@ class ApiErrorsTest {
         assertEquals("Email already registered", parsed?.message)
         assertNull(parsed?.code)
     }
+
+    @Test
+    fun parseVersionChangedCarriesCurrentManifest() {
+        val parsed = parseApiError(
+            """{"detail":{"code":"legal_version_changed","message":"x","legal":{"terms_version":"2026-06-01",
+            "privacy_version":"2026-06-01","locale":"pl","unknown":1,
+            "documents":[{"kind":"terms","version":"2026-06-01","locale":"pl","url":"https://x/t","sha256":"a"}]}}}""",
+        )
+        assertEquals("legal_version_changed", parsed?.code)
+        assertEquals("2026-06-01", parsed?.legal?.terms_version)
+        assertEquals("https://x/t", parsed?.legal?.urlOf("terms"))
+        assertNull(parsed?.legal?.urlOf("privacy"))
+    }
+
+    @Test
+    fun legalCodesHaveUserMessages() {
+        listOf(
+            "terms_acceptance_required",
+            "legal_acceptance_missing",
+            "adult_confirmation_required",
+            "legal_version_changed",
+        ).forEach { assertEquals(it, resolveErrorCode(apiCode = it)) }
+    }
 }

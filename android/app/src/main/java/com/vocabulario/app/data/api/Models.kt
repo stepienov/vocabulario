@@ -18,13 +18,49 @@ data class TokenResponse(
 )
 
 @Serializable
-data class RegisterRequest(val email: String, val password: String, val locale: String? = null)
+data class RegisterRequest(
+    val email: String,
+    val password: String,
+    val locale: String? = null,
+    val legal_acceptance: LegalAcceptanceBody? = null,
+)
+
+/** Dowód akceptacji dla wersji z manifestu: osobno warunki (wersja) i oświadczenie o wieku. */
+@Serializable
+data class LegalAcceptanceBody(val terms_version: String, val locale: String, val adult_confirmed: Boolean)
+
+@Serializable
+data class LegalDocumentRef(val kind: String, val version: String, val locale: String, val url: String)
+
+@Serializable
+data class LegalManifest(
+    val terms_version: String,
+    val privacy_version: String = "",
+    val locale: String = "en",
+    val documents: List<LegalDocumentRef> = emptyList(),
+    val support_email: String? = null,
+) {
+    fun urlOf(kind: String): String? = documents.firstOrNull { it.kind == kind }?.url
+}
+
+@Serializable
+data class LegalStatus(
+    val accepted_terms_version: String? = null,
+    val required_terms_version: String = "",
+    val adult_confirmed: Boolean = false,
+    val acceptance_required: Boolean = false,
+)
 
 @Serializable
 data class LoginRequest(val email: String, val password: String)
 
 @Serializable
-data class GoogleAuthRequest(val challenge_id: String, val id_token: String, val locale: String? = null)
+data class GoogleAuthRequest(
+    val challenge_id: String,
+    val id_token: String,
+    val locale: String? = null,
+    val legal_acceptance: LegalAcceptanceBody? = null,
+)
 
 @Serializable
 data class GoogleChallengeResponse(val challenge_id: String, val nonce: String, val expires_at: String)
@@ -63,6 +99,7 @@ data class UserResponse(
     val email_revision: Int = 1,
     val account_status: String = "active",
     val lifecycle_revision: Int = 1,
+    val legal_status: LegalStatus? = null,
 )
 
 @Serializable
@@ -177,8 +214,8 @@ data class UserSettingsResponse(
     val conjugation_expanded_default: Boolean = false,
     val show_example_sentences: Boolean = true,
     val related_words_expanded_default: Boolean = false,
-    val study_reminder_enabled: Boolean = true,
-    val cards_ready_push_enabled: Boolean = true,
+    val study_reminder_enabled: Boolean = false,
+    val cards_ready_push_enabled: Boolean = false,
     val reminder_hour: Int = 19,
 )
 

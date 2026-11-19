@@ -17,6 +17,20 @@ object TestTags {
     const val VERIFY_EMAIL_RESEND = "verify_email_resend"
     const val VERIFY_EMAIL_LOGOUT = "verify_email_logout"
 
+    const val LEGAL_ADULT = "legal_adult"
+    const val LEGAL_TERMS = "legal_terms"
+    const val LEGAL_ACCEPT = "legal_accept"
+    const val LEGAL_LOGOUT = "legal_logout"
+    const val SETTINGS_LEGAL = "settings_legal"
+    const val SETTINGS_SUPPORT = "settings_support"
+    const val SETTINGS_NOTIF_BLOCKED = "settings_notif_blocked"
+
+    const val REPORT_BUTTON = "report_button"
+    const val REPORT_NOTE = "report_note"
+    const val REPORT_SEND = "report_send"
+    const val REPORT_DISCARD = "report_discard"
+    const val SUPPORT_COPY = "support_copy"
+
     const val ONBOARDING_NATIVE = "onboarding_native_lang"
     const val ONBOARDING_CONTINUE = "onboarding_continue"
     const val ONBOARDING_LEARNING = "onboarding_learning_lang"

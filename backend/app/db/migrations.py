@@ -529,6 +529,13 @@ _STATEMENTS = (
     "'password_change', 'password_added', 'google_linked', 'email_changed', "
     "'refresh_reuse', 'account_deleted')); "
     "END IF; END $$",
+    # E-001/F-007/T-003: terms acceptance proof; old accounts stay NULL (never "accepted").
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS accepted_terms_version VARCHAR(32)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS accepted_privacy_version VARCHAR(32)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_locale VARCHAR(8)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS adult_statement_version VARCHAR(32)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS adult_confirmed_at TIMESTAMPTZ",
     # E-001/F-003/T-004: rewizja profilu i ostatnia mutacja (idempotentny retry edycji).
     "ALTER TABLE language_profiles ADD COLUMN IF NOT EXISTS revision BIGINT NOT NULL DEFAULT 1",
     "ALTER TABLE language_profiles ADD COLUMN IF NOT EXISTS last_mutation_id UUID",

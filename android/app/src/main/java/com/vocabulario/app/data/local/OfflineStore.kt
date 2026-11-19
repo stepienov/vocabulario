@@ -1258,6 +1258,12 @@ class OfflineStore @Inject constructor(
 
     suspend fun pendingOps(): List<OutboxOpEntity> = outboxDao.pending()
 
+    suspend fun opByClientId(clientOpId: String): OutboxOpEntity? =
+        outboxDao.all().firstOrNull { it.clientOpId == clientOpId }
+
+    suspend fun removeOpByClientId(clientOpId: String): Unit = guardedWrite {
+        outboxDao.deleteByClientOpId(clientOpId)
+    }
     // ---- Profil: edycje i wybór pary jako trwałe intenty (F-003/T-004) ----
 
     private fun profileOpView(op: OutboxOpEntity): ProfileOpView? {

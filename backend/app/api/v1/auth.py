@@ -38,6 +38,8 @@ from app.schemas import (
     LanguageProfileCreate,
     LanguageProfileResponse,
     LanguageProfileUpdate,
+    LegalAcceptanceIn,
+    LegalStatus,
     LoginRequest,
     LogoutRequest,
     MailAcceptedResponse,
@@ -110,10 +112,23 @@ from app.services.google_challenges import (
 )
 from app.services.mail_events import WebhookRejected, handle_webhook
 from app.services.mail_outbox import wake_mail_worker
+from app.services.legal_docs import (
+    CODE_ACCEPTANCE_MISSING,
+    Acceptance,
+    apply_acceptance,
+    check_acceptance,
+    legal_status,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _acceptance(body) -> Acceptance | None:
+    if body is None:
+        return None
+    return Acceptance(body.terms_version, body.locale, body.adult_confirmed)
 
 
 def _public(ip: str) -> Rule:
@@ -168,6 +183,11 @@ async def register(
     code = password_error(body.password, new=True)
     if code is not None:
         raise api_error(422, code.value)
+    acceptance = _acceptance(body.legal_acceptance)
+    if acceptance is not None:
+        check_acceptance(acceptance)
+    elif get_app_settings().legal_acceptance_enforced:
+        raise api_error(422, CODE_ACCEPTANCE_MISSING)
     try:
         await ensure_mail_available()
     except CredentialError as exc:
@@ -177,6 +197,9 @@ async def register(
         raise api_error(status.HTTP_409_CONFLICT, "email_taken", "Email already registered")
 
     user = User(email=body.email.lower(), password_hash=await hash_new_password(body.password))
+    now = now_utc()
+    if acceptance is not None:
+        apply_acceptance(user, acceptance, now)
     db.add(user)
     try:
         await db.flush()
@@ -191,7 +214,7 @@ async def register(
     await _ensure_settings(db, user.id)
     issued = await create_session(db, user.id)
     # Same transaction as the account: success means the first mail is durably queued.
-    await queue_verification_mail(db, user, body.locale, now=now_utc())
+    await queue_verification_mail(db, user, body.locale, now=now)
     await db.commit()
     wake_mail_worker()
     return _token_response(issued, response)
@@ -263,7 +286,9 @@ async def google_auth(
     ip = client_ip(request)
     await enforce(_public(ip), Rule("auth_login_ip", ip, 20, 15 * MIN))
     try:
-        login = await google_login(db, body.challenge_id, body.id_token, body.locale)
+        login = await google_login(
+            db, body.challenge_id, body.id_token, body.locale, acceptance=_acceptance(body.legal_acceptance)
+        )
     except CredentialError as exc:
         await db.rollback()
         raise _google_error(exc) from exc
@@ -771,7 +796,30 @@ async def get_me(user: User = Depends(get_current_user)) -> UserResponse:
         lifecycle_revision=user.lifecycle_revision,
         google_email=user.google_email if user.google_id else None,
         google_email_observed_at=user.google_email_observed_at if user.google_id else None,
+        legal_status=legal_status(user),
     )
+
+
+@me_router.post("/legal-acceptance", response_model=LegalStatus)
+async def accept_legal(
+    body: LegalAcceptanceIn,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> LegalStatus:
+    """Idempotent: a repeat of the accepted version keeps the original time."""
+    acceptance = Acceptance(body.terms_version, body.locale, body.adult_confirmed)
+    check_acceptance(acceptance)
+    locked = await lock_user(db, user.id)
+    if locked is None or locked.account_status != "active":
+        await db.rollback()
+        raise api_error(status.HTTP_403_FORBIDDEN, "account_deletion_pending")
+    changed = apply_acceptance(locked, acceptance, now_utc())
+    result = LegalStatus(**legal_status(locked))
+    if changed:
+        await db.commit()
+    else:
+        await db.rollback()
+    return result
 
 
 @me_router.get("/settings", response_model=UserSettingsResponse)

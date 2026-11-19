@@ -12,7 +12,13 @@ import com.vocabulario.app.data.OtherAccountDataException
 import com.vocabulario.app.data.UnclaimedLocalDataException
 import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.LearningRepository
+import com.vocabulario.app.data.LegalRepository
 import com.vocabulario.app.data.NEW_PASSWORD_MIN_CHARS
+import com.vocabulario.app.data.acceptanceFor
+import com.vocabulario.app.data.api.LegalAcceptanceBody
+import com.vocabulario.app.data.api.LegalManifest
+import com.vocabulario.app.data.api.isLegalAcceptanceMissing
+import com.vocabulario.app.data.api.legalManifestFromError
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.session.AuthNotice
 import com.vocabulario.app.data.session.LogoutConsent
@@ -33,8 +39,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+/** Zgody formularza: 18+ i warunki osobno, niezaznaczone domyślnie; manifest z serwera. */
+data class LegalConsentState(
+    val manifest: LegalManifest? = null,
+    val loading: Boolean = false,
+    val loadFailed: Boolean = false,
+    val termsAccepted: Boolean = false,
+    val adultConfirmed: Boolean = false,
+)
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
@@ -44,11 +60,19 @@ class AuthViewModel @Inject constructor(
     private val strings: UiStrings,
     private val blockingBusy: BlockingBusy,
     private val accountRepository: AccountRepository,
+    private val legalRepository: LegalRepository,
     sessionCoordinator: SessionCoordinator,
 ) : ViewModel() {
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    private val _consent = MutableStateFlow(LegalConsentState())
+    val consent: StateFlow<LegalConsentState> = _consent.asStateFlow()
+
+    /** Serwer założyłby nowe konto Google, a zgody jeszcze nie ma: pytamy w osobnym oknie. */
+    private val _googleConsentNeeded = MutableStateFlow(false)
+    val googleConsentNeeded: StateFlow<Boolean> = _googleConsentNeeded.asStateFlow()
 
     private val _debugLoginError = MutableStateFlow<String?>(null)
     val debugLoginError: StateFlow<String?> = _debugLoginError.asStateFlow()
@@ -371,29 +395,97 @@ class AuthViewModel @Inject constructor(
             _errorMessage.value = it
             return
         }
+        val acceptance = acceptanceOrError() ?: return
         viewModelScope.launch {
             blockingBusy.run {
                 _errorMessage.value = null
                 runCatching {
-                    authRepository.register(email.trim(), password)
+                    authRepository.register(email.trim(), password, acceptance)
                 }.onSuccess { onSuccess() }
                     .onFailure {
+                        onLegalVersionChanged(it)
                         _errorMessage.value = authFailureMessage(it, R.string.err_register)
                     }
             }
         }
     }
 
-    fun googleSignIn(activityContext: android.content.Context, onSuccess: suspend (needsOnboarding: Boolean) -> Unit) {
+    /** Dowód akceptacji tylko przy obu zaznaczonych zgodach i pobranym manifeście; inaczej komunikat. */
+    private fun acceptanceOrError(): LegalAcceptanceBody? {
+        val current = _consent.value
+        val manifest = current.manifest
+        val message = when {
+            manifest == null -> {
+                loadLegal()
+                R.string.err_legal_load
+            }
+            !current.adultConfirmed -> R.string.err_adult_required
+            !current.termsAccepted -> R.string.err_terms_required
+            else -> return acceptanceFor(manifest)
+        }
+        _errorMessage.value = strings.get(message)
+        return null
+    }
+
+    /** Wersja warunków zmieniła się w trakcie: pokaż aktualny manifest i wymagaj ponownej zgody na warunki. */
+    private fun onLegalVersionChanged(error: Throwable) {
+        val manifest = error.legalManifestFromError() ?: return
+        _consent.update { it.copy(manifest = manifest, termsAccepted = false) }
+    }
+
+    fun loadLegal() {
+        val current = _consent.value
+        if (current.loading || current.manifest != null) return
+        viewModelScope.launch {
+            _consent.update { it.copy(loading = true, loadFailed = false) }
+            try {
+                val manifest = legalRepository.manifest()
+                _consent.update { it.copy(manifest = manifest, loading = false) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _consent.update { it.copy(loading = false, loadFailed = true) }
+            }
+        }
+    }
+
+    fun setTermsAccepted(value: Boolean) = _consent.update { it.copy(termsAccepted = value) }
+
+    fun setAdultConfirmed(value: Boolean) = _consent.update { it.copy(adultConfirmed = value) }
+
+    fun dismissGoogleConsent() {
+        _googleConsentNeeded.value = false
+    }
+
+    /** Powtórka logowania Google z akceptacją, gdy serwer założyłby nowe konto. */
+    fun confirmGoogleConsent(activityContext: android.content.Context, onSuccess: suspend (needsOnboarding: Boolean) -> Unit) {
+        val acceptance = acceptanceOrError() ?: return
+        _googleConsentNeeded.value = false
+        googleSignIn(activityContext, onSuccess, acceptance)
+    }
+
+    fun googleSignIn(
+        activityContext: android.content.Context,
+        onSuccess: suspend (needsOnboarding: Boolean) -> Unit,
+        acceptance: LegalAcceptanceBody? = null,
+    ) {
         viewModelScope.launch {
             _errorMessage.value = null
             blockingBusy.run {
                 runCatching {
-                    authRepository.googleLogin(googleAuthHelper.provider(activityContext))
+                    val sent = acceptance ?: _consent.value.takeIf { it.termsAccepted && it.adultConfirmed }
+                        ?.manifest?.let(::acceptanceFor)
+                    authRepository.googleLogin(googleAuthHelper.provider(activityContext), sent)
                 }.onSuccess {
                     finishSignIn(onSuccess)
                 }.onFailure {
                     if (it is GoogleSignInCancelledException) return@onFailure
+                    if (it.isLegalAcceptanceMissing()) {
+                        loadLegal()
+                        _googleConsentNeeded.value = true
+                        return@onFailure
+                    }
+                    onLegalVersionChanged(it)
                     _errorMessage.value = authFailureMessage(it, R.string.err_google_login)
                 }
             }

@@ -57,7 +57,7 @@ object NotificationHelper {
         )
     }
 
-    fun showStudyReminder(context: Context, dueCount: Int) {
+    fun showStudyReminder(context: Context, dueCount: Int = 0) {
         val body = if (dueCount > 0) {
             context.getString(R.string.notif_study_body, dueCount)
         } else {

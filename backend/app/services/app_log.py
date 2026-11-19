@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import traceback as tb_mod
 from contextvars import ContextVar
 from typing import Any
@@ -19,18 +20,40 @@ profile_id_var: ContextVar[UUID | None] = ContextVar("app_log_profile_id", defau
 
 _MAX_MSG = 4000
 _MAX_TB = 20000
-_SECRET_KEYS = frozenset(
+_MAX_VALUE = 64
+# Technical fields only. Anything that can carry the user's text (lemma, note, query,
+# patch, error text...) is dropped by default, so new callers cannot leak by accident.
+_PAYLOAD_ALLOWED = frozenset(
     {
-        "authorization",
-        "password",
-        "refresh_token",
-        "access_token",
-        "id_token",
-        "openai_api_key",
-        "api_key",
-        "jwt",
-        "cookie",
+        "attempt",
+        "card_id",
+        "cards",
+        "code",
+        "correction_id",
+        "count",
+        "created",
+        "escalation_id",
+        "http_status",
+        "job_id",
+        "kind",
+        "mode",
+        "model",
+        "n",
+        "notes",
+        "phase",
+        "provider",
+        "purpose",
+        "reason",
+        "source_kind",
+        "state",
+        "status",
+        "total",
+        "unique",
+        "verdict",
     }
+)
+_UUID_SEGMENT = re.compile(
+    r"(?i)(?<=/)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=/|$)"
 )
 
 
@@ -72,17 +95,28 @@ def _clip(value: str | None, limit: int) -> str | None:
 
 
 def sanitize_payload(payload: dict | None) -> dict | None:
+    """Allowlist of flat technical fields; nested values and free text never get stored."""
     if not payload:
         return None
     out: dict[str, Any] = {}
     for key, value in payload.items():
-        if str(key).lower() in _SECRET_KEYS:
-            out[str(key)] = "[redacted]"
-        elif isinstance(value, str) and len(value) > 2000:
-            out[str(key)] = value[:2000] + "…"
-        else:
+        if str(key) not in _PAYLOAD_ALLOWED:
+            continue
+        if isinstance(value, bool) or isinstance(value, (int, float)):
             out[str(key)] = value
-    return out
+        elif isinstance(value, (str, UUID)):
+            out[str(key)] = str(value)[:_MAX_VALUE]
+    return out or None
+
+
+def route_template(path: str) -> str:
+    """IDs in the path identify a person's objects; the log keeps the route shape."""
+    return _UUID_SEGMENT.sub("{id}", path)[:512]
+
+
+def traceback_frames(exc: BaseException) -> str:
+    """Frames only: the exception text itself may contain user data."""
+    return "".join(tb_mod.format_tb(exc.__traceback__))
 
 
 def category_for_path(path: str) -> str:
@@ -165,15 +199,13 @@ async def log_event(
 ) -> None:
     if exc is not None:
         error_type = error_type or type(exc).__name__
-        error_message = error_message or str(exc)
-        # format_exc() poza blokiem except daje puste / "NoneType: None".
-        traceback = traceback or "".join(
-            tb_mod.format_exception(type(exc), exc, exc.__traceback__)
-        )
+        traceback = traceback_frames(exc)
         if status == "ok":
             status = "error"
         if level == "info":
             level = "error"
+    # The exception text can embed what the user typed: type and frames are enough.
+    error_message = None
     try:
         from app.db.session import async_session_factory
 
@@ -187,7 +219,7 @@ async def log_event(
             user_id=_as_uuid(user_id) or user_id_var.get(),
             profile_id=_as_uuid(profile_id) or profile_id_var.get(),
             http_method=(http_method or None) and http_method[:16],
-            http_path=_clip(http_path, 512),
+            http_path=route_template(http_path) if http_path else None,
             http_status=http_status,
             entity_type=(entity_type or None) and entity_type[:32],
             entity_id=None if entity_id is None else str(entity_id)[:64],

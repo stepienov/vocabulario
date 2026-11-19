@@ -1,6 +1,6 @@
 # T-004 · Publiczny serwis aplikacji
 
-**ID:** `E-001/F-007/T-004` · **Status:** `ready` · **Priorytet:** P0 przed zewnętrzną betą.  
+**ID:** `E-001/F-007/T-004` · **Status:** `in_progress` · **Priorytet:** P0 przed zewnętrzną betą.  
 **Feature:** [Prywatność i wsparcie](../README.md). **Źródło:** [decyzje z 17.11.2026](../../F-001-prowadzenie-bety/tasks/T-001-decyzje-i-zakres.md).
 
 ## Uzgodniony rezultat

@@ -4,13 +4,11 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.vocabulario.app.MainActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -31,55 +29,60 @@ class NotificationScheduler @Inject constructor(
 
     fun reminderEnabled(): Boolean = prefs.getBoolean(KEY_ENABLED, false)
 
-    fun scheduleStudyReminder(hour: Int, enabled: Boolean, minute: Int = reminderMinute()) {
+    /** Konto, dla którego zaplanowano jedyny alarm przypomnienia; null, gdy alarmu nie ma. */
+    fun boundOwner(): String? = prefs.getString(KEY_OWNER, null)
+
+    /**
+     * Jeden alarm na właściciela. Bez [owner] albo z [enabled] = false alarm jest anulowany;
+     * każde ustawienie podnosi generację, więc zaległy alarm poprzedniego harmonogramu jest ignorowany.
+     * Alarm niedokładny (setAndAllowWhileIdle) wystarcza do przypomnienia o nauce.
+     */
+    fun scheduleStudyReminder(hour: Int, enabled: Boolean, minute: Int = reminderMinute(), owner: String? = null) {
         val safeHour = hour.coerceIn(0, 23)
         val safeMinute = minute.coerceIn(0, 59)
+        val active = enabled && !owner.isNullOrBlank()
+        val generation = prefs.getLong(KEY_GENERATION, 0L) + 1
         prefs.edit()
             .putInt(KEY_HOUR, safeHour)
             .putInt(KEY_MINUTE, safeMinute)
-            .putBoolean(KEY_ENABLED, enabled)
+            .putBoolean(KEY_ENABLED, active)
+            .putString(KEY_OWNER, if (active) owner else null)
+            .putLong(KEY_GENERATION, generation)
             .apply()
-        workManager.cancelUniqueWork(STUDY_WORK)
-        val pending = reminderPendingIntent()
-        alarmManager.cancel(pending)
-        if (!enabled) return
-        val triggerAt = nextTriggerMillis(safeHour, safeMinute)
-        val showIntent = PendingIntent.getActivity(
-            context,
-            0,
-            Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        alarmManager.cancel(reminderPendingIntent(generation))
+        if (!active) return
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            nextTriggerMillis(safeHour, safeMinute),
+            reminderPendingIntent(generation),
         )
-        val exactScheduled = canScheduleExact() && try {
-            alarmManager.setAlarmClock(
-                AlarmManager.AlarmClockInfo(triggerAt, showIntent),
-                pending,
-            )
-            true
-        } catch (e: SecurityException) {
-            false
-        }
-        if (!exactScheduled) {
-            alarmManager.setAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerAt,
-                pending,
-            )
-        }
     }
 
-    private fun canScheduleExact(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
-
+    /** Alarm po restarcie, zmianie czasu lub aktualizacji: odnawia go tylko dla zapisanego właściciela. */
     fun rescheduleFromPrefs() {
-        scheduleStudyReminder(reminderHour(), reminderEnabled(), reminderMinute())
+        scheduleStudyReminder(reminderHour(), reminderEnabled(), reminderMinute(), boundOwner())
     }
+
+    fun isCurrentGeneration(generation: Long): Boolean = generation == prefs.getLong(KEY_GENERATION, 0L)
+
+    /** Przypomnienie pokazujemy raz dziennie na właściciela, także po restarcie i odnowieniu alarmu. */
+    fun markShownToday(owner: String, now: Calendar = Calendar.getInstance()) {
+        prefs.edit().putString(KEY_LAST_SHOWN, reminderDayKey(owner, now)).apply()
+    }
+
+    fun mayShowReminder(currentOwner: String?, now: Calendar = Calendar.getInstance()): Boolean =
+        shouldShowReminder(
+            enabled = reminderEnabled(),
+            boundOwner = boundOwner(),
+            currentOwner = currentOwner,
+            lastShownKey = prefs.getString(KEY_LAST_SHOWN, null),
+            todayKey = currentOwner?.let { reminderDayKey(it, now) },
+        )
 
     /** Wylogowanie: alarm przypomnienia i zaplanowane sprawdzenie kart nie należą już do nikogo. */
     fun silenceAccount() {
         scheduleStudyReminder(reminderHour(), enabled = false, minute = reminderMinute())
+        prefs.edit().remove(KEY_LAST_SHOWN).apply()
         workManager.cancelUniqueWork(ENRICHMENT_SOON)
     }
 
@@ -103,9 +106,10 @@ class NotificationScheduler @Inject constructor(
         )
     }
 
-    private fun reminderPendingIntent(): PendingIntent {
+    private fun reminderPendingIntent(generation: Long): PendingIntent {
         val intent = Intent(context, StudyReminderReceiver::class.java).apply {
             action = StudyReminderReceiver.ACTION_FIRE
+            putExtra(StudyReminderReceiver.EXTRA_GENERATION, generation)
         }
         return PendingIntent.getBroadcast(
             context,
@@ -116,13 +120,28 @@ class NotificationScheduler @Inject constructor(
     }
 
     companion object {
-        private const val STUDY_WORK = "vocabulario_study_reminder"
         private const val ENRICHMENT_WORK = "vocabulario_enrichment_check"
         private const val ENRICHMENT_SOON = "vocabulario_enrichment_soon"
         private const val REQUEST_STUDY = 4101
         private const val KEY_HOUR = "hour"
         private const val KEY_MINUTE = "minute"
         private const val KEY_ENABLED = "enabled"
+        private const val KEY_OWNER = "owner"
+        private const val KEY_GENERATION = "generation"
+        private const val KEY_LAST_SHOWN = "last_shown"
+
+        fun reminderDayKey(owner: String, now: Calendar): String =
+            "$owner|${now.get(Calendar.YEAR)}-${now.get(Calendar.DAY_OF_YEAR)}"
+
+        fun shouldShowReminder(
+            enabled: Boolean,
+            boundOwner: String?,
+            currentOwner: String?,
+            lastShownKey: String?,
+            todayKey: String?,
+        ): Boolean =
+            enabled && !currentOwner.isNullOrBlank() && boundOwner == currentOwner &&
+                todayKey != null && lastShownKey != todayKey
 
         fun nextTriggerMillis(hour: Int, minute: Int, now: Calendar = Calendar.getInstance()): Long {
             val target = now.clone() as Calendar

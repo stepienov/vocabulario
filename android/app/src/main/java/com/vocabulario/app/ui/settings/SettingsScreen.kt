@@ -1,7 +1,9 @@
 package com.vocabulario.app.ui.settings
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -39,8 +41,10 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -64,9 +69,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vocabulario.app.R
+import com.vocabulario.app.ui.report.SupportHelpDialog
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.data.CEFR_LEVELS
+import com.vocabulario.app.data.ApiBaseUrl
+import com.vocabulario.app.data.publicSiteUrl
 import com.vocabulario.app.data.LanguagePacks
 import com.vocabulario.app.data.SUPPORTED_LEARNING_LANGS
 import com.vocabulario.app.data.api.appLang
@@ -165,6 +176,16 @@ fun SettingsScreen(
     LaunchedEffect(Unit) {
         viewModel.load()
         accountViewModel.load()
+    }
+    var systemBlocked by remember { mutableStateOf(!NotificationHelper.canPost(context)) }
+    var supportOpen by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) systemBlocked = !NotificationHelper.canPost(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(state.expanded, state.notificationsEnabled) {
         if (state.expanded == SettingsSection.NOTIFICATIONS &&
@@ -404,6 +425,29 @@ fun SettingsScreen(
                     exit = shrinkVertically() + fadeOut(),
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
+                        if (systemBlocked) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .testTag(TestTags.SETTINGS_NOTIF_BLOCKED),
+                            ) {
+                                Text(
+                                    stringResource(R.string.notif_blocked_hint),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                TextButton(
+                                    onClick = {
+                                        context.startActivity(
+                                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                        )
+                                    },
+                                ) { Text(stringResource(R.string.notif_open_settings)) }
+                            }
+                        }
                         Text(
                             stringResource(R.string.settings_study_hour),
                             style = MaterialTheme.typography.titleMedium,
@@ -495,6 +539,19 @@ fun SettingsScreen(
             account.info?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 
             Spacer(Modifier.height(8.dp))
+            val uriHandler = LocalUriHandler.current
+            OutlinedButton(
+                onClick = { uriHandler.openUri(publicSiteUrl(ApiBaseUrl.resolve(), "/legal")) },
+                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_LEGAL),
+                shape = AppButtonShape,
+            ) { Text(stringResource(R.string.settings_legal)) }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { supportOpen = true },
+                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_SUPPORT),
+                shape = AppButtonShape,
+            ) { Text(stringResource(R.string.support_title)) }
+            Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = onLogout,
                 modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_LOGOUT),
@@ -503,6 +560,8 @@ fun SettingsScreen(
             Spacer(Modifier.height(80.dp))
         }
     }
+
+    if (supportOpen) SupportHelpDialog(onDismiss = { supportOpen = false })
 
     if (tenseModalOpen && tenseOptions.isNotEmpty()) {
         TensePickerDialog(

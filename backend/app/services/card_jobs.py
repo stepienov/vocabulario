@@ -28,6 +28,7 @@ from app.models import LanguageProfile, LearningCard, LexicalEntry, User
 from app.services.distractors import in_learning_lemma, lemma_keys
 from app.services.enrichment import enrich_adaptive_card_content, enrich_card_content
 from app.services.lexical import LexicalService
+from app.services.llm import ProviderRefusal
 from app.services.app_log import log_event
 from app.services.background import spawn_background
 from app.services.llm_usage import bind_llm_usage_context
@@ -70,7 +71,7 @@ async def _log_enrich_pipeline(
         profile_id=card.profile_id,
         entity_type="card",
         entity_id=str(card.id),
-        message=f"{event} {card.lemma_l2!r}",
+        message=event,
         payload={
             "lemma": card.lemma_l2,
             "pos": card.pos,
@@ -175,6 +176,19 @@ def _apply_enrich_retry(card: LearningCard, exc: BaseException) -> None:
     Learnable nie schodzi z kolejki — dociągamy tylko brakujące sekcje.
     """
     err = public_enrichment_error(exc)
+
+    if isinstance(exc, ProviderRefusal):
+        # A refusal is a result: no automatic or manual retry, never learnable-with-content.
+        card.enrichment_error = err
+        card.enrichment_retry_at = None
+        card.enrichment_manual_triggered = False
+        card.enrichment_auto_retry_used = True
+        if card.enrichment_status != STATUS_LEARNABLE:
+            card.enrichment_status = STATUS_FAILED
+        else:
+            card.enrichment_side_retries = _MAX_SIDE_RETRIES
+        logger.info("Enrichment karty %s odrzucony przez dostawcę (%s)", card.id, card.lemma_l2)
+        return
 
     if card.enrichment_status == STATUS_LEARNABLE:
         card.enrichment_error = err
@@ -489,14 +503,14 @@ async def find_ready_entry(
             )
             rows = [e for e in legacy_rows if _entry_has_paid_content(e)]
     if not rows:
-        logger.info("lexical cache MISS pair=%s keys=%s lemma=%r gloss=%r", lang_pair, keys, lemma, gloss)
+        logger.info("lexical cache MISS pair=%s", lang_pair)
         spawn_background(
             lambda: log_event(
                 level="info",
                 category="enrichment",
                 event="lexical_cache_miss",
                 status="ok",
-                message=f"cache miss {lemma!r}",
+                message="cache miss",
                 payload={
                     "lang_pair": lang_pair,
                     "keys": sorted(keys),
@@ -1041,8 +1055,7 @@ async def _enrich_card_unlocked(
                 profile_id=card.profile_id,
                 entity_type="card",
                 entity_id=str(card_id),
-                message=f"enrichment failed {card.lemma_l2!r}",
-                payload={"lemma": card.lemma_l2, "pos": card.pos},
+                message="enrichment failed",
                 exc=exc,
             )
             _apply_enrich_retry(card, exc)

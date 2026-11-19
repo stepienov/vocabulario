@@ -264,6 +264,76 @@ async def mark_escalation_done_page(
     return RedirectResponse("/admin/errors?tab=qa", status_code=303)
 
 
+@router.get("/reports", response_class=HTMLResponse)
+async def reports_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _admin: str = Depends(require_panel),
+    status: str = "",
+    page: int = 1,
+):
+    from app.core.security import now_utc
+    from app.services import content_reports as reports
+
+    rows, total = await reports.list_reports(db, status=status or None, page=_page(page))
+    now = now_utc()
+    items = [
+        {
+            "r": r,
+            "overdue": r.status != "resolved"
+            and reports.working_days_between(r.received_at, now)
+            > reports.RESPONSE_TARGET_WORKING_DAYS,
+        }
+        for r in rows
+    ]
+    return templates.TemplateResponse(
+        request,
+        "reports.html",
+        _ctx(
+            request,
+            "reports",
+            "Zgłoszenia treści",
+            items=items,
+            total=total,
+            page=_page(page),
+            status=status,
+            codes=reports.RESOLUTION_CODES,
+        ),
+    )
+
+
+@router.post("/reports/{report_id}/take")
+async def report_take(
+    report_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    admin: str = Depends(require_panel),
+):
+    from app.services import content_reports as reports
+
+    if not await reports.take_report(db, report_id, admin):
+        raise StarletteHTTPException(409, "Zgłoszenie nie jest w statusie „przyjęte”")
+    await db.commit()
+    return RedirectResponse("/admin/reports", status_code=303)
+
+
+@router.post("/reports/{report_id}/resolve")
+async def report_resolve(
+    report_id: UUID,
+    code: str = Form(...),
+    note: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+    admin: str = Depends(require_panel),
+):
+    from app.services import content_reports as reports
+
+    if code not in reports.RESOLUTION_CODES:
+        raise StarletteHTTPException(422, "Nieznany kod rozwiązania")
+    if not await reports.resolve_report(db, report_id, admin, code, note):
+        raise StarletteHTTPException(409, "Zgłoszenie nie jest w statusie „w analizie”")
+    await db.commit()
+    return RedirectResponse("/admin/reports", status_code=303)
+
+
 @router.get("/lookups", response_class=HTMLResponse)
 async def lookups_page(
     request: Request,

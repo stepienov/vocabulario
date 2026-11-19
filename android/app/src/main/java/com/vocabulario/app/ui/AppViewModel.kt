@@ -8,6 +8,7 @@ import com.vocabulario.app.data.AuthRepository
 import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.EmailVerificationGate
 import com.vocabulario.app.data.LearningRepository
+import com.vocabulario.app.data.LegalGate
 import com.vocabulario.app.data.deletion.AccountDeletionRepository
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.session.SessionCoordinator
@@ -35,6 +36,7 @@ private data class RouteInputs(
     val route: AppStartRoute,
     val state: SessionState,
     val required: Boolean,
+    val legalRequired: Boolean,
     val deletionPending: Boolean,
 )
 enum class AppStartRoute {
@@ -42,6 +44,8 @@ enum class AppStartRoute {
     AUTH,
     /** Bramka F-004: konto bez potwierdzonego adresu; nauka/import/sync zablokowane, dane zostają. */
     VERIFY_EMAIL,
+    /** Bramka F-007/T-003: aktualne warunki czekają na akceptację; dane lokalne zostają. */
+    LEGAL,
     /** Konto czeka na usunięcie (F-006/T-002): biblioteka ukryta, sesji nie ma, dane lokalne zostają. */
     DELETION_PENDING,
     ONBOARDING,
@@ -53,6 +57,7 @@ class AppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val accountRepository: AccountRepository,
     private val verificationGate: EmailVerificationGate,
+    private val legalGate: LegalGate,
     private val deletionRepository: AccountDeletionRepository,
     private val learningRepository: LearningRepository,
     private val tokenStore: TokenStore,
@@ -83,30 +88,42 @@ class AppViewModel @Inject constructor(
                 _startRoute,
                 sessionCoordinator.state,
                 verificationGate.required,
+                legalGate.required,
                 deletionRepository.receipt,
-            ) { route, state, required, receipt ->
-                RouteInputs(route, state, required, receipt?.deletion != null)
-            }.collect { (route, state, required, deletionPending) ->
+            ) { route, state, required, legalRequired, receipt ->
+                RouteInputs(route, state, required, legalRequired, receipt?.deletion != null)
+            }.collect { (route, state, required, legalRequired, deletionPending) ->
                 val signedInRoute = route == AppStartRoute.HOME ||
                     route == AppStartRoute.ONBOARDING ||
-                    route == AppStartRoute.VERIFY_EMAIL
+                    route == AppStartRoute.VERIFY_EMAIL ||
+                    route == AppStartRoute.LEGAL
                 when {
                     deletionPending && route != AppStartRoute.LOADING && route != AppStartRoute.DELETION_PENDING ->
                         _startRoute.value = AppStartRoute.DELETION_PENDING
                     !deletionPending && route == AppStartRoute.DELETION_PENDING ->
                         _startRoute.value = AppStartRoute.AUTH
                     signedInRoute && sessionLost(state) -> _startRoute.value = AppStartRoute.AUTH
-                    required && (route == AppStartRoute.HOME || route == AppStartRoute.ONBOARDING) ->
+                    required && (route == AppStartRoute.HOME || route == AppStartRoute.ONBOARDING ||
+                        route == AppStartRoute.LEGAL) ->
                         _startRoute.value = AppStartRoute.VERIFY_EMAIL
-                    !required && route == AppStartRoute.VERIFY_EMAIL && state is SessionState.Active ->
-                        resumeAfterVerification()
+                    legalRequired && !required && (route == AppStartRoute.HOME || route == AppStartRoute.ONBOARDING) ->
+                        _startRoute.value = AppStartRoute.LEGAL
+                    !required && route == AppStartRoute.VERIFY_EMAIL && state is SessionState.Active -> {
+                        if (legalRequired) {
+                            _startRoute.value = AppStartRoute.LEGAL
+                        } else {
+                            resumeAfterGate()
+                        }
+                    }
+                    !legalRequired && route == AppStartRoute.LEGAL && state is SessionState.Active ->
+                        resumeAfterGate()
                 }
             }
         }
     }
 
-    /** Adres potwierdzony: ta sama ścieżka co po loginie, bez ponownego logowania. */
-    private fun resumeAfterVerification() {
+    /** Bramka zdjęta (adres potwierdzony lub warunki przyjęte): ta sama ścieżka co po loginie. */
+    private fun resumeAfterGate() {
         if (resumeJob?.isActive == true) return
         resumeJob = viewModelScope.launch {
             val resolution = try {
@@ -119,7 +136,9 @@ class AppViewModel @Inject constructor(
             } catch (e: Exception) {
                 null
             }
-            if (_startRoute.value != AppStartRoute.VERIFY_EMAIL) return@launch
+            if (_startRoute.value != AppStartRoute.VERIFY_EMAIL && _startRoute.value != AppStartRoute.LEGAL) {
+                return@launch
+            }
             when (val route = routeFor(resolution)) {
                 null -> retryBootstrap()
                 AppStartRoute.HOME -> {
@@ -137,8 +156,8 @@ class AppViewModel @Inject constructor(
         ProfileResolution.ConfirmedEmpty -> AppStartRoute.ONBOARDING
         is ProfileResolution.AuthRequired, ProfileResolution.Superseded -> AppStartRoute.AUTH
         ProfileResolution.VerificationRequired -> AppStartRoute.VERIFY_EMAIL
-        // Zgody (F-007) nie mają jeszcze trasy; do tego czasu jak niedostępny serwer.
-        ProfileResolution.LegalAcceptanceRequired, is ProfileResolution.Unavailable, null -> null
+        ProfileResolution.LegalAcceptanceRequired -> AppStartRoute.LEGAL
+        is ProfileResolution.Unavailable, null -> null
     }
 
     private suspend fun refreshAccountQuietly() {
@@ -204,6 +223,11 @@ class AppViewModel @Inject constructor(
             refreshAccountQuietly()
             return
         }
+        if (legalGate.isRequired()) {
+            _startRoute.value = AppStartRoute.LEGAL
+            refreshAccountQuietly()
+            return
+        }
 
         if (learningRepository.hasCachedProfile()) {
             runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
@@ -263,6 +287,10 @@ class AppViewModel @Inject constructor(
         refreshAccountQuietly()
         if (verificationGate.isRequired()) {
             _startRoute.value = AppStartRoute.VERIFY_EMAIL
+            return
+        }
+        if (legalGate.isRequired()) {
+            _startRoute.value = AppStartRoute.LEGAL
             return
         }
         if (needsOnboarding) {

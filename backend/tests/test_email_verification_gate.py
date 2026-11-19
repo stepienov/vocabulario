@@ -21,6 +21,7 @@ UNGATED = {
     ("GET", "/api/v1/me"),
     ("GET", "/api/v1/me/settings"),
     ("PUT", "/api/v1/me/settings"),
+    ("POST", "/api/v1/me/legal-acceptance"),
     ("POST", "/api/v1/auth/password/change"),
     ("POST", "/api/v1/auth/password/add"),
     ("POST", "/api/v1/auth/recent-auth/password"),

@@ -60,6 +60,17 @@ class User(Base):
     lifecycle_revision: Mapped[int] = mapped_column(
         BigInteger, nullable=False, default=1, server_default=text("1")
     )
+    # E-001/F-007/T-003: proof of the accepted terms; NULL for accounts created before it.
+    accepted_terms_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    accepted_privacy_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    terms_locale: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    adult_statement_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    adult_confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -124,8 +135,8 @@ class UserSettings(Base):
     conjugation_expanded_default: Mapped[bool] = mapped_column(Boolean, default=False)
     show_example_sentences: Mapped[bool] = mapped_column(Boolean, default=True)
     related_words_expanded_default: Mapped[bool] = mapped_column(Boolean, default=False)
-    study_reminder_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
-    cards_ready_push_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    study_reminder_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    cards_ready_push_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     reminder_hour: Mapped[int] = mapped_column(Integer, default=19)
 
     user: Mapped["User"] = relationship(back_populates="settings")
@@ -413,6 +424,64 @@ class CardCorrection(Base):
     patch: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ContentReport(Base):
+    """User report about generated content (E-001/F-007/T-002); never touches learning state."""
+
+    __tablename__ = "content_reports"
+    __table_args__ = (
+        UniqueConstraint("user_id", "client_report_id", name="uq_content_reports_client"),
+        CheckConstraint(
+            "status IN ('received', 'in_review', 'resolved')", name="ck_content_reports_status"
+        ),
+        Index("ix_content_reports_status_received", "status", "received_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    client_report_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Plain ids on purpose: the claim of the user, not a reference that keeps rows alive.
+    profile_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    app_lang: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    learning_lang: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    target_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    target_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    field: Mapped[str] = mapped_column(String(16), nullable=False)
+    reason: Mapped[str] = mapped_column(String(16), nullable=False)
+    excerpt: Mapped[str] = mapped_column(String(4000), nullable=False)
+    note: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    app_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="received", server_default=text("'received'")
+    )
+    resolution_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # Internal; never returned to the reporting user.
+    operator_note: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    operator: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    in_review_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ContentReportReceipt(Base):
+    """What survives the report payload: proof of acceptance, so an old retry stays idempotent."""
+
+    __tablename__ = "content_report_receipts"
+    __table_args__ = (
+        UniqueConstraint("user_id", "client_report_id", name="uq_content_report_receipts_client"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    client_report_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    report_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class CardHistoryEvent(Base):

@@ -14,6 +14,7 @@ from app.db.lifecycle import pin_revision
 from app.db.session import get_db
 from app.models import AuthSession, User
 from app.services.account_lifecycle import lifecycle_override
+from app.services.legal_docs import CODE_ACCEPTANCE_REQUIRED, accepted_current, is_current
 from app.services.auth_sessions import (
     AccessContext,
     SessionAuthError,
@@ -56,12 +57,21 @@ async def get_current_user_id(
     async with db_session.async_session_factory() as db:
         row = (
             await db.execute(
-                select(AuthSession, User.email_verified_at, User.account_status)
+                select(
+                    AuthSession,
+                    User.email_verified_at,
+                    User.account_status,
+                    User.accepted_terms_version,
+                    User.adult_statement_version,
+                    User.adult_confirmed_at,
+                )
                 .join(User, User.id == AuthSession.user_id)
                 .where(AuthSession.id == claims.session_id)
             )
         ).first()
-        session, verified_at, account_status = row if row is not None else (None, None, None)
+        session, verified_at, account_status, terms, adult_version, adult_at = (
+            row if row is not None else (None,) * 6
+        )
         try:
             context = _context(request, claims, session)
         except HTTPException as exc:
@@ -70,6 +80,7 @@ async def get_current_user_id(
     if account_status != "active":
         raise api_error(status.HTTP_403_FORBIDDEN, "account_deletion_pending")
     request.state.email_verified = verified_at is not None
+    request.state.terms_accepted = accepted_current(terms, adult_version, adult_at)
     return context.user_id
 
 
@@ -106,6 +117,7 @@ async def get_current_user(
     if user.account_status != "active":
         raise api_error(status.HTTP_403_FORBIDDEN, "account_deletion_pending")
     request.state.email_verified = user.email_verified_at is not None
+    request.state.terms_accepted = is_current(user)
     pin_revision(user.id, user.lifecycle_revision)
     return user
 
@@ -116,6 +128,12 @@ def _require_verified(request: Request) -> None:
             status.HTTP_403_FORBIDDEN,
             "email_verification_required",
             "Confirm your e-mail address first",
+        )
+    if get_settings().legal_acceptance_enforced and not request.state.terms_accepted:
+        raise api_error(
+            status.HTTP_403_FORBIDDEN,
+            CODE_ACCEPTANCE_REQUIRED,
+            "Accept the current terms first",
         )
 
 

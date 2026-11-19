@@ -28,7 +28,7 @@ private val AUTH_CODES = setOf(
     "restore_recovery_required",
 )
 
-const val CODE_LEGAL_ACCEPTANCE_REQUIRED = "legal_acceptance_required"
+const val CODE_LEGAL_ACCEPTANCE_REQUIRED = "terms_acceptance_required"
 
 /** Zarezerwowany typ outboxu z F-007/T-002; liczony w QueueSnapshot, nigdy po cichu pomijany. */
 const val OP_CONTENT_REPORT = "content_report"

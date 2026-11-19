@@ -37,7 +37,7 @@ Progi to cele produktu, nie wymagania Google. Wymogi sklepu sprawdzamy ponownie 
 | [F-004 · E-mail i hasła](./features/F-004-email-i-hasla/README.md) | Rejestracja, odzyskanie dostępu i zmiana adresu e-mail | `in_progress` |
 | [F-005 · Google](./features/F-005-google/README.md) | Bezpieczny login i jawne łączenie metod | `ready` |
 | [F-006 · Zarządzanie kontem](./features/F-006-zarzadzanie-kontem/README.md) | Tożsamość konta, operacje i skuteczne usuwanie danych | `ready` |
-| [F-007 · Prywatność i wsparcie](./features/F-007-prywatnosc-i-wsparcie/README.md) | Prywatność, warunki usługi/informacje prawne, dostępność i wsparcie | `ready` |
+| [F-007 · Prywatność i wsparcie](./features/F-007-prywatnosc-i-wsparcie/README.md) | Prywatność, warunki usługi/informacje prawne, dostępność i wsparcie | `in_progress` |
 | [F-008 · Jakość i operacje](./features/F-008-jakosc-i-operacje/README.md) | Dowody testów, diagnoza awarii i odtwarzanie usługi | `in_progress` |
 
 ## Zależności i kolejność

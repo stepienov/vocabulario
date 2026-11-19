@@ -37,9 +37,12 @@ async def login_challenge(client) -> dict:
 async def google_login(client, sub: str | None = None, email: str | None = None, **claims):
     """Full login round trip; returns the raw response of `/auth/google`."""
     locale = claims.pop("locale", None)
+    legal = claims.pop("legal_acceptance", None)
     challenge = await login_challenge(client)
     token = google_token(challenge["nonce"], sub or str(uuid4()), email, **claims)
     body = {"challenge_id": challenge["challenge_id"], "id_token": token}
     if locale:
         body["locale"] = locale
+    if legal:
+        body["legal_acceptance"] = legal
     return await client.post("/api/v1/auth/google", json=body)

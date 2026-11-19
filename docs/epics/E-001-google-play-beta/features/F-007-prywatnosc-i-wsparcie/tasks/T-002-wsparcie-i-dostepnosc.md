@@ -1,6 +1,6 @@
 # T-002 · Wsparcie, dostępność i przewidywalne przypomnienia
 
-**ID:** `E-001/F-007/T-002` · **Status:** `ready` · **Priorytet / rozmiar:** P1 z wymaganymi kontrolami przed betą / M.  
+**ID:** `E-001/F-007/T-002` · **Status:** `in_progress` · **Priorytet / rozmiar:** P1 z wymaganymi kontrolami przed betą / M.  
 **Feature:** [Prywatność i wsparcie](../README.md). **Źródło:** B-12; F-10/F-12/F-15 w [analizie](../../../sources/analiza-2026-11-17.md).
 
 ## Cel i zakres

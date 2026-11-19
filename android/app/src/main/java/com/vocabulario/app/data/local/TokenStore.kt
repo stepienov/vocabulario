@@ -38,6 +38,8 @@ class TokenStore @Inject constructor(
     private val legacyUiLangKey = stringPreferencesKey("ui_lang")
     // Właściciel, dla którego serwer ostatnio wymagał potwierdzenia adresu (F-003: stan przy koncie).
     private val verificationOwnerKey = stringPreferencesKey("email_verification_required_owner")
+    // Właściciel, któremu serwer kazał zaakceptować aktualne warunki (F-007/T-003).
+    private val legalOwnerKey = stringPreferencesKey("legal_acceptance_required_owner")
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val cachedAppLang = AtomicReference<String?>(null)
@@ -54,6 +56,9 @@ class TokenStore @Inject constructor(
     private val _verificationRequiredOwner = MutableStateFlow<String?>(null)
     val verificationRequiredOwner: StateFlow<String?> = _verificationRequiredOwner.asStateFlow()
 
+    private val _legalRequiredOwner = MutableStateFlow<String?>(null)
+    val legalRequiredOwner: StateFlow<String?> = _legalRequiredOwner.asStateFlow()
+
     val theme: Flow<String> = context.dataStore.data.map { it[themeKey] ?: "system" }
     val appLang: Flow<String> = context.dataStore.data.map { readAppLang(it) }
 
@@ -63,6 +68,7 @@ class TokenStore @Inject constructor(
             val prefs = context.dataStore.data.first()
             _activeProfileId.value = prefs[profileKey]
             _verificationRequiredOwner.value = prefs[verificationOwnerKey]
+            _legalRequiredOwner.value = prefs[legalOwnerKey]
             cachedAppLang.set(readAppLang(prefs))
             _ready.value = true
         }
@@ -144,6 +150,18 @@ class TokenStore @Inject constructor(
         }
     }
 
+    /** null = brak wymogu; tak samo jak weryfikacja adresu: pamięć od razu, zapis w tle. */
+    fun setLegalRequiredOwner(ownerUserId: String?) {
+        if (_legalRequiredOwner.value == ownerUserId) return
+        _legalRequiredOwner.value = ownerUserId
+        scope.launch {
+            context.dataStore.edit { prefs ->
+                val newest = _legalRequiredOwner.value
+                if (newest == null) prefs.remove(legalOwnerKey) else prefs[legalOwnerKey] = newest
+            }
+        }
+    }
+
     fun markExpandLimits() {
         expandLimits.set(true)
     }
@@ -168,6 +186,7 @@ class TokenStore @Inject constructor(
     fun clearMemory() {
         _activeProfileId.value = null
         _verificationRequiredOwner.value = null
+        _legalRequiredOwner.value = null
         cachedAppLang.set(null)
     }
 }

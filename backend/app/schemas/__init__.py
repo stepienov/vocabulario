@@ -22,12 +22,26 @@ class TokenResponse(BaseModel):
     expires_in: int
 
 
+class LegalAcceptanceIn(BaseModel):
+    terms_version: str = Field(min_length=1, max_length=32)
+    locale: str = Field(min_length=2, max_length=16)
+    adult_confirmed: bool
+
+
+class LegalStatus(BaseModel):
+    accepted_terms_version: str | None = None
+    required_terms_version: str
+    adult_confirmed: bool = False
+    acceptance_required: bool = False
+
+
 class RegisterRequest(BaseModel):
     email: EmailStr
     # Password policy codes (422) come from the service; the schema only caps the body size.
     password: str = Field(max_length=4096)
     # UI language for the verification mail; the account has no profile yet.
     locale: str | None = Field(default=None, max_length=16)
+    legal_acceptance: LegalAcceptanceIn | None = None
 
 
 class LoginRequest(BaseModel):
@@ -40,6 +54,8 @@ class GoogleAuthRequest(BaseModel):
     id_token: str = Field(min_length=1, max_length=8192)
     # Verification mail language when a new account's Google address is not proven.
     locale: str | None = Field(default=None, max_length=16)
+    # Needed only when the sign-in creates a new account.
+    legal_acceptance: LegalAcceptanceIn | None = None
 
 
 class GoogleLinkChallengeRequest(BaseModel):
@@ -187,6 +203,7 @@ class UserResponse(BaseModel):
     # Last address Google reported for the linked identity; absent without a Google method.
     google_email: str | None = None
     google_email_observed_at: datetime | None = None
+    legal_status: LegalStatus | None = None
 
 
 class UserSettingsResponse(BaseModel):
@@ -207,8 +224,8 @@ class UserSettingsResponse(BaseModel):
     conjugation_expanded_default: bool = False
     show_example_sentences: bool = True
     related_words_expanded_default: bool = False
-    study_reminder_enabled: bool = True
-    cards_ready_push_enabled: bool = True
+    study_reminder_enabled: bool = False
+    cards_ready_push_enabled: bool = False
     reminder_hour: int = 19
 
     model_config = {"from_attributes": True}

@@ -6,6 +6,7 @@ import com.vocabulario.app.i18n.UiStrings
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import retrofit2.HttpException
@@ -17,6 +18,7 @@ private val json = Json { ignoreUnknownKeys = true }
 data class ParsedApiError(
     val code: String? = null,
     val message: String? = null,
+    val legal: LegalManifest? = null,
 )
 
 private val httpErrorCache: MutableMap<HttpException, ParsedApiError> =
@@ -109,6 +111,10 @@ private val CODE_TO_RES: Map<String, Int> = mapOf(
     "account_deletion_pending" to R.string.err_deletion_pending,
     "account_deleted" to R.string.err_account_deleted,
     "deletion_owner_mismatch" to R.string.err_deletion_owner_mismatch,
+    "terms_acceptance_required" to R.string.err_terms_required,
+    "legal_acceptance_missing" to R.string.err_terms_required,
+    "adult_confirmation_required" to R.string.err_adult_required,
+    "legal_version_changed" to R.string.err_legal_changed,
 )
 
 private val DETAIL_ALIASES: Map<String, String> = mapOf(
@@ -161,6 +167,18 @@ fun Throwable.isEmailVerificationRequired(): Boolean =
     (this as? HttpException)?.code() == 403 && apiErrorCode() == EMAIL_VERIFICATION_REQUIRED
 
 const val EMAIL_VERIFICATION_REQUIRED = "email_verification_required"
+
+/** Bramka F-007: nowa wersja warunków do zaakceptowania; nie kończy sesji ani nie odrzuca danych. */
+const val TERMS_ACCEPTANCE_REQUIRED = "terms_acceptance_required"
+const val LEGAL_ACCEPTANCE_MISSING = "legal_acceptance_missing"
+const val LEGAL_VERSION_CHANGED = "legal_version_changed"
+
+/** Manifest aktualnych dokumentów z odpowiedzi 409 `legal_version_changed`. */
+fun Throwable.legalManifestFromError(): LegalManifest? =
+    (this as? HttpException)?.takeIf { it.code() == 409 && apiErrorCode() == LEGAL_VERSION_CHANGED }
+        ?.readApiError()?.legal
+
+fun Throwable.isLegalAcceptanceMissing(): Boolean = apiErrorCode() == LEGAL_ACCEPTANCE_MISSING
 
 fun Throwable.mappedErrorRes(): Int? {
     val parsed = if (this is HttpException) readApiError() else null
@@ -232,6 +250,7 @@ internal fun parseApiError(body: String): ParsedApiError? {
                 code = detail["code"]?.jsonPrimitive?.content,
                 message = detail["message"]?.jsonPrimitive?.content
                     ?: detail["code"]?.jsonPrimitive?.content,
+                legal = detail["legal"]?.let { runCatching { json.decodeFromJsonElement<LegalManifest>(it) }.getOrNull() },
             )
             null -> null
             else -> ParsedApiError(message = detail.jsonPrimitive.content)

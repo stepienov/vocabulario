@@ -1,6 +1,6 @@
 # T-001 · Prywatność, retencja i deklaracje Play
 
-**ID:** `E-001/F-007/T-001` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / M.  
+**ID:** `E-001/F-007/T-001` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / M.  
 **Feature:** [Prywatność i wsparcie](../README.md). **Źródło:** B-11; F-15 i [wymogi Play](../../../sources/analiza-2026-11-17.md#9-google-play--co-przygotować-poza-kodem).
 
 ## Cel i zakres

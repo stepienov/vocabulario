@@ -159,6 +159,8 @@ import com.vocabulario.app.ui.card.CorrectionActivityColor
 import com.vocabulario.app.ui.card.cardActivityStatusLabel
 import com.vocabulario.app.ui.card.CardActivitySpinner
 import com.vocabulario.app.ui.practice.ListFlashcardSummary
+import com.vocabulario.app.ui.report.ReportContentButton
+import com.vocabulario.app.ui.report.ReportTarget
 
 private val ScreenPad = 20.dp
 private val TileRadius = RoundedCornerShape(28.dp)
@@ -1401,6 +1403,15 @@ private fun CandidateRow(
                         onClick = { onOpenWord(candidate) },
                     )
                 }
+                Spacer(Modifier.weight(1f))
+                ReportContentButton(
+                    ReportTarget(
+                        kind = "lookup",
+                        targetId = null,
+                        field = "meaning",
+                        excerpt = "${candidate.lemma} — ${candidate.gloss}",
+                    ),
+                )
             }
             if (candidate.isCreating && !candidate.membershipUnknown) {
                 Spacer(modifier = Modifier.height(8.dp))
