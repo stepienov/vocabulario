@@ -1,6 +1,6 @@
 # F-002 · Wydanie przez Google Play
 
-**ID:** `E-001/F-002` · **Status:** `ready` · **Epic:** [E-001](../../README.md).
+**ID:** `E-001/F-002` · **Status:** `in_progress` · **Epic:** [E-001](../../README.md).
 
 **Wartość:** użytkownik instaluje i aktualizuje właściwą aplikację przez Play bez ryzyka utraty niewysłanej pracy.
 
@@ -14,7 +14,7 @@
 
 | ID | Task | Status |
 |---|---|---|
-| E-001/F-002/T-001 | [Release i aktualizacja](./tasks/T-001-release-i-aktualizacja.md), B-01 | `ready` |
+| E-001/F-002/T-001 | [Release i aktualizacja](./tasks/T-001-release-i-aktualizacja.md), B-01 | `in_progress` — kod: konfiguracja release (jawny pakiet/wersja, https, podpis z env, bez backupu), bramka 426 z ekranem aktualizacji, kontrola 16 KB ([runbook](../../../../setup/wydanie-android.md)); zostaje klucz uploadu, ostateczny pakiet, SHA-256 i testy na urządzeniu |
 | E-001/F-002/T-002 | [Gotowość Play Console](./tasks/T-002-konfiguracja-play-console.md) | `ready` |
 
 **Zależności:** T-002 i decyzje ochrony danych przed dystrybucją; samo przygotowanie buildu T-001 może postępować niezależnie. Test bezpieczeństwa migracji razem z E-001/F-003/T-002.

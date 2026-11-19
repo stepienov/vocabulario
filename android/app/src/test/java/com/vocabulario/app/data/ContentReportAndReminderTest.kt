@@ -14,7 +14,7 @@ class ContentReportAndReminderTest {
     @Test
     fun permanentRejectionCoversClientErrorsExceptRetryableOnes() {
         listOf(400, 404, 409, 422).forEach { assertTrue("$it", isPermanentRejection(it)) }
-        listOf(401, 403, 408, 429, 500, 503).forEach { assertFalse("$it", isPermanentRejection(it)) }
+        listOf(401, 403, 408, 426, 429, 500, 503).forEach { assertFalse("$it", isPermanentRejection(it)) }
     }
 
     @Test

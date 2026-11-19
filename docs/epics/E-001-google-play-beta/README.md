@@ -31,8 +31,8 @@ Progi to cele produktu, nie wymagania Google. Wymogi sklepu sprawdzamy ponownie 
 
 | Feature | Rezultat | Status |
 |---|---|---|
-| [F-001 · Zakres i uruchomienie bety](./features/F-001-prowadzenie-bety/README.md) | Uzgodnione decyzje, świadome przejście internal → closed | `ready` |
-| [F-002 · Wydanie przez Play](./features/F-002-wydanie-play/README.md) | Powtarzalny, podpisany release i bezpieczna aktualizacja | `ready` |
+| [F-001 · Zakres i uruchomienie bety](./features/F-001-prowadzenie-bety/README.md) | Uzgodnione decyzje, świadome przejście internal → closed | `in_progress` |
+| [F-002 · Wydanie przez Play](./features/F-002-wydanie-play/README.md) | Powtarzalny, podpisany release i bezpieczna aktualizacja | `in_progress` |
 | [F-003 · Sesja i dane offline](./features/F-003-sesja-i-offline/README.md) | Wiarygodny stan konta/sync bez utraty outboxu | `in_progress` |
 | [F-004 · E-mail i hasła](./features/F-004-email-i-hasla/README.md) | Rejestracja, odzyskanie dostępu i zmiana adresu e-mail | `in_progress` |
 | [F-005 · Google](./features/F-005-google/README.md) | Bezpieczny login i jawne łączenie metod | `ready` |

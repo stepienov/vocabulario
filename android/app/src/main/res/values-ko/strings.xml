@@ -1144,4 +1144,7 @@
     <string name="notif_open_settings">시스템 설정 열기</string>
     <string name="err_ai_budget">새 콘텐츠 생성이 잠시 중단되었습니다. 저장한 단어는 안전합니다. 나중에 다시 시도해 주세요.</string>
     <string name="err_restore_recovery">보안을 위해 비밀번호를 재설정하거나 Google로 로그인한 뒤 계속하세요.</string>
+    <string name="update_required_title">업데이트 필요</string>
+    <string name="update_required_body">이 버전의 Vocabulario는 더 이상 지원되지 않습니다. 계속하려면 Google Play에서 앱을 업데이트하세요. 데이터는 이 기기에 그대로 남아 있습니다.</string>
+    <string name="update_required_action">업데이트</string>
 </resources>

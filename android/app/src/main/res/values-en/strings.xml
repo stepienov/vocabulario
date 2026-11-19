@@ -1078,5 +1078,8 @@
     <string name="notif_open_settings">Open system settings</string>
     <string name="err_ai_budget">Generating new content is paused for now. Your saved words are safe. Try again later.</string>
     <string name="err_restore_recovery">For security, reset your password or sign in with Google to continue.</string>
+    <string name="update_required_title">Update required</string>
+    <string name="update_required_body">This version of Vocabulario is no longer supported. Update the app from Google Play to continue. Your data stays on this device.</string>
+    <string name="update_required_action">Update</string>
 </resources>
 

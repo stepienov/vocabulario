@@ -1056,5 +1056,8 @@
     <string name="notif_open_settings">सिस्टम सेटिंग खोलें</string>
     <string name="err_ai_budget">नई सामग्री बनाना फ़िलहाल रुका हुआ है। आपके सहेजे गए शब्द सुरक्षित हैं। कृपया बाद में फिर कोशिश करें।</string>
     <string name="err_restore_recovery">सुरक्षा के लिए, आगे बढ़ने हेतु अपना पासवर्ड रीसेट करें या Google से साइन इन करें।</string>
+    <string name="update_required_title">अपडेट ज़रूरी है</string>
+    <string name="update_required_body">Vocabulario का यह संस्करण अब समर्थित नहीं है। जारी रखने के लिए Google Play से ऐप अपडेट करें। आपका डेटा इसी डिवाइस पर रहेगा।</string>
+    <string name="update_required_action">अपडेट करें</string>
 </resources>
 

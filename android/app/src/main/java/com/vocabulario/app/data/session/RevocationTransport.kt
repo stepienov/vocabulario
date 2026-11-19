@@ -1,6 +1,8 @@
 package com.vocabulario.app.data.session
 
+import com.vocabulario.app.BuildConfig
 import com.vocabulario.app.data.ApiBaseUrl
+import com.vocabulario.app.data.CLIENT_VERSION_HEADER
 import com.vocabulario.app.data.api.LogoutRequest
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -31,6 +33,7 @@ class OkHttpRevocationTransport @Inject constructor() : RevocationTransport {
         val body = json.encodeToString(LogoutRequest.serializer(), LogoutRequest(refreshToken))
         val request = Request.Builder()
             .url(url)
+            .header(CLIENT_VERSION_HEADER, BuildConfig.VERSION_CODE.toString())
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
         return try {

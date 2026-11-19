@@ -20,7 +20,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SessionOwnerEntity::class,
     ],
     version = 12,
-    exportSchema = false,
+    exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun cachedCardDao(): CachedCardDao

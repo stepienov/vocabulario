@@ -1078,5 +1078,8 @@
     <string name="notif_open_settings">Otwórz ustawienia systemu</string>
     <string name="err_ai_budget">Tworzenie nowych treści jest chwilowo wstrzymane. Twoje zapisane słowa są bezpieczne. Spróbuj ponownie później.</string>
     <string name="err_restore_recovery">Ze względów bezpieczeństwa zresetuj hasło albo zaloguj się przez Google, aby kontynuować.</string>
+    <string name="update_required_title">Wymagana aktualizacja</string>
+    <string name="update_required_body">Ta wersja Vocabulario nie jest już obsługiwana. Zaktualizuj aplikację w Google Play, aby kontynuować. Twoje dane zostają na tym urządzeniu.</string>
+    <string name="update_required_action">Zaktualizuj</string>
 </resources>
 

@@ -9,6 +9,7 @@ import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.EmailVerificationGate
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.LegalGate
+import com.vocabulario.app.data.UpdateGate
 import com.vocabulario.app.data.deletion.AccountDeletionRepository
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.session.SessionCoordinator
@@ -58,6 +59,7 @@ class AppViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val verificationGate: EmailVerificationGate,
     private val legalGate: LegalGate,
+    private val updateGate: UpdateGate,
     private val deletionRepository: AccountDeletionRepository,
     private val learningRepository: LearningRepository,
     private val tokenStore: TokenStore,
@@ -79,6 +81,11 @@ class AppViewModel @Inject constructor(
 
     private var bootstrapJob: Job? = null
     private var resumeJob: Job? = null
+
+    /** 426: ta wersja aplikacji nie jest już obsługiwana; ekran blokuje UI, dane i sesja zostają. */
+    val updateRequired: StateFlow<Boolean> = updateGate.required
+
+    fun recheckUpdate() = updateGate.clear()
 
     init {
         // Utrata sesji w trakcie pracy prowadzi na logowanie; dane lokalne zostają.

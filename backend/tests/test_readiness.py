@@ -46,6 +46,11 @@ def test_valid_deployed_settings_have_no_errors():
     assert _settings().deployment_errors() == []
 
 
+def test_enabled_version_gate_needs_this_apps_play_listing():
+    url = "https://play.google.com/store/apps/details?id=com.vocabulario.app"
+    assert _settings(min_app_version_code=5, app_update_url=url).deployment_errors() == []
+
+
 def test_local_environments_accept_dev_defaults():
     for env in ("development", "test"):
         assert Settings(_env_file=None, environment=env).deployment_errors() == []
@@ -102,6 +107,16 @@ def test_unknown_environment_is_an_error():
         ({"ai_monthly_warn_usd": "0"}, "ai_monthly_budget"),
         ({"ai_monthly_warn_usd": "120"}, "ai_monthly_budget"),
         ({"llm_light_model": "unpriced-model"}, "llm_model_pricing"),
+        ({"min_app_version_code": -1}, "app_update"),
+        ({"min_app_version_code": 5}, "app_update"),
+        ({"min_app_version_code": 5, "app_update_url": "https://example.com/app"}, "app_update"),
+        (
+            {
+                "min_app_version_code": 5,
+                "app_update_url": "http://play.google.com/store/apps/details?id=com.vocabulario.app",
+            },
+            "app_update",
+        ),
     ],
 )
 def test_each_invalid_deployed_setting_is_named(overrides, field):

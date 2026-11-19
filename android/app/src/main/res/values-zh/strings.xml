@@ -1056,5 +1056,8 @@
     <string name="notif_open_settings">打开系统设置</string>
     <string name="err_ai_budget">新内容的生成暂时暂停。你保存的单词是安全的。请稍后再试。</string>
     <string name="err_restore_recovery">为了安全，请重置密码或使用 Google 登录后继续。</string>
+    <string name="update_required_title">需要更新</string>
+    <string name="update_required_body">此版本的 Vocabulario 已不再受支持。请从 Google Play 更新应用后继续。你的数据仍保留在此设备上。</string>
+    <string name="update_required_action">更新</string>
 </resources>
 

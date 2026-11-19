@@ -1055,5 +1055,8 @@
     <string name="notif_open_settings">Ouvrir les paramètres du système</string>
     <string name="err_ai_budget">La création de nouveaux contenus est suspendue pour le moment. Tes mots enregistrés sont en sécurité. Réessaie plus tard.</string>
     <string name="err_restore_recovery">Par sécurité, réinitialise ton mot de passe ou connecte-toi avec Google pour continuer.</string>
+    <string name="update_required_title">Mise à jour requise</string>
+    <string name="update_required_body">Cette version de Vocabulario n\'est plus prise en charge. Mets l\'application à jour depuis Google Play pour continuer. Tes données restent sur cet appareil.</string>
+    <string name="update_required_action">Mettre à jour</string>
 </resources>
 

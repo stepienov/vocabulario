@@ -114,7 +114,7 @@ class ContentReportRepository @Inject constructor(
 
 /** 4xx poza bramkami i limitami (401/403/408/429) nie zmieni się przy ponowieniu: brak celu, konflikt, błędne dane. */
 internal fun isPermanentRejection(status: Int): Boolean =
-    status in 400..499 && status != 401 && status != 403 && status != 408 && status != 429
+    status in 400..499 && status != 401 && status != 403 && status != 408 && status != 426 && status != 429
 
 internal fun requestFor(draft: ContentReportDraft, reportId: String): ContentReportRequest =
     ContentReportRequest(

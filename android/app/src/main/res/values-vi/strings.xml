@@ -1135,4 +1135,7 @@
     <string name="notif_open_settings">Mở cài đặt hệ thống</string>
     <string name="err_ai_budget">Việc tạo nội dung mới đang tạm dừng. Các từ bạn đã lưu vẫn an toàn. Hãy thử lại sau.</string>
     <string name="err_restore_recovery">Để bảo mật, hãy đặt lại mật khẩu hoặc đăng nhập bằng Google để tiếp tục.</string>
+    <string name="update_required_title">Cần cập nhật</string>
+    <string name="update_required_body">Phiên bản Vocabulario này không còn được hỗ trợ. Hãy cập nhật ứng dụng từ Google Play để tiếp tục. Dữ liệu của bạn vẫn ở trên thiết bị này.</string>
+    <string name="update_required_action">Cập nhật</string>
 </resources>

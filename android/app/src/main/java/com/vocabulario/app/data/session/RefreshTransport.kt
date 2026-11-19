@@ -1,6 +1,8 @@
 package com.vocabulario.app.data.session
 
+import com.vocabulario.app.BuildConfig
 import com.vocabulario.app.data.ApiBaseUrl
+import com.vocabulario.app.data.CLIENT_VERSION_HEADER
 import com.vocabulario.app.data.api.RefreshRequest
 import com.vocabulario.app.data.api.TokenResponse
 import com.vocabulario.app.data.api.parseApiError
@@ -69,6 +71,7 @@ class OkHttpRefreshTransport @Inject constructor() : RefreshTransport {
         )
         val request = Request.Builder()
             .url(url)
+            .header(CLIENT_VERSION_HEADER, BuildConfig.VERSION_CODE.toString())
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
         return try {

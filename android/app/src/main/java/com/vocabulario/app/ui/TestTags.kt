@@ -21,6 +21,7 @@ object TestTags {
     const val LEGAL_TERMS = "legal_terms"
     const val LEGAL_ACCEPT = "legal_accept"
     const val LEGAL_LOGOUT = "legal_logout"
+    const val UPDATE_REQUIRED_ACTION = "update_required_action"
     const val SETTINGS_LEGAL = "settings_legal"
     const val SETTINGS_SUPPORT = "settings_support"
     const val SETTINGS_NOTIF_BLOCKED = "settings_notif_blocked"

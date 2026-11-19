@@ -1,6 +1,6 @@
 # T-001 · Release AAB i bezpieczna aktualizacja
 
-**ID:** `E-001/F-002/T-001` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / L.  
+**ID:** `E-001/F-002/T-001` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / L.  
 **Feature:** [Wydanie Play](../README.md). **Źródło:** B-01; F-13/F-14 i [wymogi Play](../../../sources/analiza-2026-11-17.md#9-google-play--co-przygotować-poza-kodem).
 
 ## Cel i zakres

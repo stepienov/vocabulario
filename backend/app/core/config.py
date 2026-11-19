@@ -81,6 +81,12 @@ class Settings(BaseSettings):
     # PUT /profiles/{id} bez expected_revision (legacy) jest dozwolony do przełączenia minimalnej
     # wersji klienta (E-001/F-002/T-001); potem brak pola to 422, nie zapis w ciemno.
     profile_update_requires_revision: bool = False
+    # Minimal Android versionCode (E-001/F-002/T-001). 0 = no gate. Above 0 every /api/v1 call except
+    # the public legal/deletion/link-confirmation routes must send a sufficient `X-App-Version-Code`,
+    # otherwise 426 `app_update_required`. Raise it only after the newer Play release is out.
+    min_app_version_code: int = 0
+    # Play listing opened by the "update" button; required while the gate is on.
+    app_update_url: str = ""
     # Account deletion (E-001/F-006/T-002). Requests are refused until the flag is on; the
     # HMAC key (>= 32 chars) pseudonymises the user id in the kept process record and must
     # outlive ordinary deploys, so it is never rotated casually or reused as another secret.
@@ -215,11 +221,19 @@ class Settings(BaseSettings):
             errors.append("support_email")
         if self.operator_alert_email.strip() and not is_mail_address(self.operator_alert_email):
             errors.append("operator_alert_email")
+        if self.min_app_version_code < 0 or (
+            self.min_app_version_code > 0 and not self._update_url_valid()
+        ):
+            errors.append("app_update")
         if not (0 < self.ai_monthly_warn_usd <= self.ai_monthly_hard_usd):
             errors.append("ai_monthly_budget")
         elif not self._models_priced():
             errors.append("llm_model_pricing")
         return errors
+
+    def _update_url_valid(self) -> bool:
+        """Only this app's own Play listing; the client never opens any other address."""
+        return self.app_update_url == f"https://play.google.com/store/apps/details?id={self.android_package}"
 
     def _models_priced(self) -> bool:
         """Every configured model needs a price, or the cap cannot reserve for its calls."""

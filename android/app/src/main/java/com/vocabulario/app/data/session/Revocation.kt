@@ -1,5 +1,6 @@
 package com.vocabulario.app.data.session
 
+import com.vocabulario.app.data.UPDATE_REQUIRED_STATUS
 import com.vocabulario.app.data.api.parseApiError
 import kotlinx.serialization.Serializable
 
@@ -117,7 +118,7 @@ sealed interface LogoutHttpResult {
 internal fun classifyLogoutResponse(httpStatus: Int, body: String, retryAfter: String?): LogoutHttpResult = when {
     httpStatus == 204 || httpStatus == 200 -> LogoutHttpResult.Revoked
     httpStatus == 429 -> LogoutHttpResult.RetryAfter(parseRetryAfterMs(retryAfter))
-    httpStatus == 408 -> LogoutHttpResult.Transient("http_408")
+    httpStatus == 408 || httpStatus == UPDATE_REQUIRED_STATUS -> LogoutHttpResult.Transient("http_$httpStatus")
     httpStatus in 400..499 ->
         LogoutHttpResult.Invalid(parseApiError(body)?.code?.trim()?.lowercase() ?: "http_$httpStatus")
     else -> LogoutHttpResult.Transient("http_$httpStatus")

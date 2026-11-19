@@ -103,6 +103,22 @@ class SyncModelsTest {
     }
 
     @Test
+    fun updateRequiredKeepsTheQueueUntouchedAndIsNeverRetried() {
+        val failure = classifyFailure(426, "app_update_required")
+        assertEquals(FailureKind.UPDATE_REQUIRED, failure.kind)
+        assertFalse(failure.retryable)
+        val result = evaluateSyncResult(
+            report(
+                pulls = mapOf("p1" to failed(FailureKind.UPDATE_REQUIRED, "app_update_required", false)),
+                queue = QueueSnapshot(reviews = 3),
+            ),
+        )
+        assertTrue(result is SyncResult.UpdateRequired)
+        assertFalse(result.shouldRetry)
+        assertEquals(WorkerDecision.SUCCESS, result.workerDecision(runAttemptCount = 0))
+    }
+
+    @Test
     fun failureAfterProgressIsPartialAndKeepsRetryAfter() {
         val phases = allPhases(ok) + (SyncPhase.PUSH to failed(FailureKind.RATE_LIMITED, "rate_limited", true, 45))
         val result = evaluateSyncResult(report(phases = phases, confirmed = 2))

@@ -1056,5 +1056,8 @@
     <string name="notif_open_settings">Systemeinstellungen öffnen</string>
     <string name="err_ai_budget">Das Erstellen neuer Inhalte ist vorübergehend pausiert. Deine gespeicherten Wörter sind sicher. Versuche es später erneut.</string>
     <string name="err_restore_recovery">Aus Sicherheitsgründen: Setze dein Passwort zurück oder melde dich mit Google an, um fortzufahren.</string>
+    <string name="update_required_title">Update erforderlich</string>
+    <string name="update_required_body">Diese Version von Vocabulario wird nicht mehr unterstützt. Aktualisiere die App über Google Play, um fortzufahren. Deine Daten bleiben auf diesem Gerät.</string>
+    <string name="update_required_action">Aktualisieren</string>
 </resources>
 

@@ -8,7 +8,7 @@ enum class SyncScope { ACTIVE_PROFILE, ALL_PENDING_PROFILES }
 
 enum class SyncPhase { LOOKUPS, OUTBOX, PUSH, PROFILES, PULL }
 
-enum class FailureKind { OFFLINE, AUTH, VERIFICATION, LEGAL, RATE_LIMITED, SERVER, CLIENT, PROTOCOL, CURSOR_EXPIRED }
+enum class FailureKind { OFFLINE, AUTH, VERIFICATION, LEGAL, UPDATE_REQUIRED, RATE_LIMITED, SERVER, CLIENT, PROTOCOL, CURSOR_EXPIRED }
 
 /** Przyczyna bez treści użytkownika; [code] to kod API albo techniczny kod klienta. */
 data class SyncFailure(
@@ -48,6 +48,8 @@ fun classifyFailure(
     if (transport) return SyncFailure(FailureKind.OFFLINE, code ?: "network", retryable = true)
     return when {
         status == null -> SyncFailure(FailureKind.CLIENT, code ?: "unexpected", retryable = false)
+        // 426 nie jest błędem pracy: nic nie blokujemy ani nie ponawiamy, kolejka czeka na aktualizację.
+        status == 426 -> SyncFailure(FailureKind.UPDATE_REQUIRED, code ?: "app_update_required", retryable = false)
         status == 401 || code in AUTH_CODES ->
             SyncFailure(FailureKind.AUTH, code ?: "unauthorized", retryable = false)
         status == 403 && code == "email_verification_required" ->
@@ -139,6 +141,9 @@ sealed interface SyncResult {
 
     data class LegalAcceptanceRequired(val report: SyncReport) : SyncResult
 
+    /** Serwer wymaga nowszej wersji aplikacji; praca i sesja zostają bez zmian. */
+    data class UpdateRequired(val report: SyncReport) : SyncResult
+
     data class Failed(
         val report: SyncReport,
         val code: String,
@@ -185,6 +190,7 @@ fun evaluateSyncResult(report: SyncReport): SyncResult {
     failures.firstOrNull { it.kind == FailureKind.AUTH }?.let { return SyncResult.AuthRequired(report) }
     failures.firstOrNull { it.kind == FailureKind.VERIFICATION }?.let { return SyncResult.VerificationRequired(report) }
     failures.firstOrNull { it.kind == FailureKind.LEGAL }?.let { return SyncResult.LegalAcceptanceRequired(report) }
+    failures.firstOrNull { it.kind == FailureKind.UPDATE_REQUIRED }?.let { return SyncResult.UpdateRequired(report) }
 
     val allRan = outcomes.none { it is PhaseOutcome.NotRun }
     val pullOk = report.pullByProfile.isNotEmpty() &&

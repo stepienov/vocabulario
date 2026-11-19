@@ -1,6 +1,9 @@
 package com.vocabulario.app.di
 
 import com.vocabulario.app.data.ApiBaseUrl
+import com.vocabulario.app.data.CLIENT_VERSION_HEADER
+import com.vocabulario.app.data.UPDATE_REQUIRED_STATUS
+import com.vocabulario.app.data.UpdateGate
 import com.vocabulario.app.data.EmailVerificationGate
 import com.vocabulario.app.data.LegalGate
 import com.vocabulario.app.data.api.EMAIL_VERIFICATION_REQUIRED
@@ -44,17 +47,15 @@ object AppModule {
     sessionCoordinator: SessionCoordinator,
     verificationGate: EmailVerificationGate,
     legalGate: LegalGate,
+    updateGate: UpdateGate,
   ): OkHttpClient {
     val authInterceptor = Interceptor { chain ->
       val path = chain.request().url.encodedPath
       val token = if (isPublicAuthPath(path)) null else sessionCoordinator.accessTokenForRequest()
-      val request = if (!token.isNullOrBlank()) {
-        chain.request().newBuilder()
-          .header("Authorization", "Bearer $token")
-          .build()
-      } else {
-        chain.request()
-      }
+      val builder = chain.request().newBuilder()
+        .header(CLIENT_VERSION_HEADER, com.vocabulario.app.BuildConfig.VERSION_CODE.toString())
+      if (!token.isNullOrBlank()) builder.header("Authorization", "Bearer $token")
+      val request = builder.build()
       // Auth calls fail fast; the long timeouts below are for imports and enrichment.
       val timed = if ("/auth/" in path) {
         chain.withConnectTimeout(5, TimeUnit.SECONDS)
@@ -64,6 +65,7 @@ object AppModule {
         chain
       }
       val response = timed.proceed(request)
+      if (response.code == UPDATE_REQUIRED_STATUS) updateGate.onServerRequired()
       if (response.code == 403 && !token.isNullOrBlank()) {
         val body = runCatching { response.peekBody(2048).string() }.getOrNull().orEmpty()
         if (EMAIL_VERIFICATION_REQUIRED in body) verificationGate.onServerRequired()

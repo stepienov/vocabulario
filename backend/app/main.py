@@ -19,6 +19,7 @@ from app.api.v1.legal import router as legal_router
 from app.api.v1.meta import router as meta_router
 from app.api.v1.sync import router as sync_router
 from app.core.app_log_middleware import AppLogMiddleware
+from app.core.client_version import HEADER, update_required, update_required_response
 from app.core.config import get_settings
 from app.core.readiness import check_ready, mark_schema_ready
 from app.db.base import Base
@@ -82,6 +83,17 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="Vocabulario API", version="0.1.0", lifespan=lifespan)
+
+    @app.middleware("http")
+    async def client_version_gate(request: Request, call_next):
+        if request.method != "OPTIONS" and update_required(
+            request.url.path,
+            request.headers.get(HEADER),
+            get_settings().min_app_version_code,
+        ):
+            return update_required_response(get_settings())
+        return await call_next(request)
+
     app.add_middleware(AppLogMiddleware)
     app.add_middleware(
         CORSMiddleware,

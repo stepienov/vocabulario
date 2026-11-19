@@ -134,6 +134,10 @@ async def google_login(
         await db.execute(select(User.id).where(User.email == identity.email))
     ).scalar_one_or_none()
     if taken is not None:
+        # The same subject may have just created this account in a parallel request.
+        winner = await _owner_of(db, identity.sub)
+        if winner is not None:
+            return await _existing_login(db, winner, identity, challenge_id, now)
         raise _conflict()
     proven = identity.proves_address()
     if not proven:
@@ -152,12 +156,12 @@ async def google_login(
             await db.flush()
     except IntegrityError as exc:
         # A parallel request won: decide again on the concrete conflict, not on "any error".
-        detail = str(exc.orig)
-        if "google_id" in detail:
-            winner = await _owner_of(db, identity.sub)
-            if winner is not None:
-                return await _existing_login(db, winner, identity, challenge_id, now)
-        if "email" in detail:
+        # Postgres may report the email index first even when the same Google subject won,
+        # so the subject owner is always checked before an address conflict is declared.
+        winner = await _owner_of(db, identity.sub)
+        if winner is not None:
+            return await _existing_login(db, winner, identity, challenge_id, now)
+        if "email" in str(exc.orig):
             raise _conflict() from exc
         raise
     db.add(UserSettings(user_id=user.id))

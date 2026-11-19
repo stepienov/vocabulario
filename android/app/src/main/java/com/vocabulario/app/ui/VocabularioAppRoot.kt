@@ -39,6 +39,7 @@ import com.vocabulario.app.ui.auth.AuthScreen
 import com.vocabulario.app.ui.auth.AuthViewModel
 import com.vocabulario.app.ui.auth.LegalGateScreen
 import com.vocabulario.app.ui.auth.LogoutUnsentDialog
+import com.vocabulario.app.ui.auth.UpdateRequiredScreen
 import com.vocabulario.app.ui.auth.VerifyEmailScreen
 import com.vocabulario.app.ui.deletion.DeletionPendingScreen
 import com.vocabulario.app.ui.components.AppButtonShape
@@ -97,6 +98,7 @@ fun VocabularioAppRoot(
     authViewModel: AuthViewModel = hiltViewModel(),
 ) {
     val startRoute by appViewModel.startRoute.collectAsState()
+    val updateRequired by appViewModel.updateRequired.collectAsState()
     val pairSession = rememberPairSession()
     val blockingBusy = rememberBlockingBusy()
     rememberImportController()
@@ -107,6 +109,10 @@ fun VocabularioAppRoot(
     LaunchedEffect(Unit) { appViewModel.bootstrap() }
 
     if (startRoute == AppStartRoute.LOADING) {
+        if (updateRequired) {
+            UpdateRequiredScreen(onCheckAgain = appViewModel::recheckUpdate)
+            return
+        }
         val loadingSlow by appViewModel.loadingSlow.collectAsState()
         Box(
             Modifier
@@ -249,6 +255,10 @@ fun VocabularioAppRoot(
                     }
                 }
             }
+        }
+        // Nad nawigacją, żeby stan ekranów i kolejki przetrwały blokadę.
+        if (updateRequired) {
+            UpdateRequiredScreen(onCheckAgain = appViewModel::recheckUpdate)
         }
     }
 }

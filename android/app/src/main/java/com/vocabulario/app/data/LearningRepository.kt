@@ -976,6 +976,7 @@ class LearningRepository @Inject constructor(
     private fun SyncFailure.stopsSync(): Boolean = kind == FailureKind.AUTH ||
         kind == FailureKind.VERIFICATION ||
         kind == FailureKind.LEGAL ||
+        kind == FailureKind.UPDATE_REQUIRED ||
         kind == FailureKind.OFFLINE ||
         kind == FailureKind.RATE_LIMITED
 

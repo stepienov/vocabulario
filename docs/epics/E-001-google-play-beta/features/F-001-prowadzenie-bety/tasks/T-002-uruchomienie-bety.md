@@ -1,6 +1,6 @@
 # T-002 · Internal → zamknięta beta
 
-**ID:** `E-001/F-001/T-002` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / M.  
+**ID:** `E-001/F-001/T-002` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / M.  
 **Feature:** [Prowadzenie bety](../README.md). **Źródło:** B-14, [bramki analizy](../../../sources/analiza-2026-11-17.md#11-bramki-wejścia-i-wyjścia-z-bety).
 
 ## Cel i zakres

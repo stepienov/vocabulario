@@ -1129,4 +1129,7 @@
     <string name="notif_open_settings">Apri le impostazioni di sistema</string>
     <string name="err_ai_budget">La creazione di nuovi contenuti è sospesa per ora. Le tue parole salvate sono al sicuro. Riprova più tardi.</string>
     <string name="err_restore_recovery">Per sicurezza, reimposta la password o accedi con Google per continuare.</string>
+    <string name="update_required_title">Aggiornamento necessario</string>
+    <string name="update_required_body">Questa versione di Vocabulario non è più supportata. Aggiorna l\'app da Google Play per continuare. I tuoi dati restano su questo dispositivo.</string>
+    <string name="update_required_action">Aggiorna</string>
 </resources>

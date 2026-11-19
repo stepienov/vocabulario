@@ -21,6 +21,8 @@ Nowy temat opisujemy jako epic z założeniami biznesowymi, dzielimy na features
 | Narzędzia | [Katalog skryptów](../scripts/README.md) | Zastosowania i ryzyka |
 | Operacje | [Railway CLI](./setup/railway-cli.md) | Bezpieczna diagnostyka, nie aktualny stan deployu |
 | Operacje bety | [Alerty, limit AI, odtworzenie](./setup/operacje-beta.md) | Runbook operatora bez sekretów |
+| Wydanie Androida | [AAB, podpis, wymuszenie aktualizacji](./setup/wydanie-android.md) | Parametry release i procedura podniesienia minimum |
+| Bramki bety | [Internal → closed → rozszerzenie](./setup/beta-bramki.md) | Lista kontrolna i szablon wyniku |
 | Lookup | [Zasady wyszukiwania](./reference/lookup-zasady.md) | Utrzymywana referencja |
 | Karty | [Schemat wzbogacania](./reference/wzbogacanie-karty-schemat.md) | Kontrakt etapów, historyczne czasy nie są SLA |
 | Języki | [Szablon LSP](./reference/lsp-manifest-template.yaml) | Szablon manifestu |

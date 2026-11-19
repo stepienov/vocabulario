@@ -1144,4 +1144,7 @@
     <string name="notif_open_settings">システム設定を開く</string>
     <string name="err_ai_budget">新しいコンテンツの作成は一時的に停止しています。保存した単語は安全です。しばらくしてからもう一度お試しください。</string>
     <string name="err_restore_recovery">安全のため、パスワードをリセットするか Google でログインして続行してください。</string>
+    <string name="update_required_title">アップデートが必要です</string>
+    <string name="update_required_body">このバージョンの Vocabulario はサポートが終了しました。続けるには Google Play でアプリを更新してください。データはこの端末に残ります。</string>
+    <string name="update_required_action">更新</string>
 </resources>

@@ -9,6 +9,7 @@ Krótka instrukcja dla operatora. Nie zawiera sekretów ani adresów; wartości 
 | `AI_MONTHLY_WARN_USD`, `AI_MONTHLY_HARD_USD` | Miesięczny próg ostrzeżenia i twardy limit wydatków AI (UTC). Wymagane `0 < WARN ≤ HARD`. |
 | `OPERATOR_NAME`, `SUPPORT_EMAIL` | Dane operatora i monitorowany adres wsparcia (też w dokumentach prawnych). |
 | `OPERATOR_ALERT_EMAIL` | Adres alertów; bez niego alerty idą na `SUPPORT_EMAIL`. |
+| `ANDROID_PACKAGE`, `MIN_APP_VERSION_CODE`, `APP_UPDATE_URL` | Pakiet release i wymuszenie aktualizacji (HTTP 426); `0` = bramka wyłączona. Procedura: [wydanie Androida](./wydanie-android.md#wymuszenie-aktualizacji-http-426). |
 
 Bez tych zmiennych `/health/ready` zwraca 503 (w logu tylko nazwy pól). Monitor zewnętrzny (UptimeRobot Free) powinien odpytywać `/health/ready` co 5 minut.
 

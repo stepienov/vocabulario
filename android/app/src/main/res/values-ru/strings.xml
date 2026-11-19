@@ -1056,5 +1056,8 @@
     <string name="notif_open_settings">Открыть настройки системы</string>
     <string name="err_ai_budget">Создание нового контента временно приостановлено. Ваши сохранённые слова в безопасности. Попробуйте позже.</string>
     <string name="err_restore_recovery">В целях безопасности сбросьте пароль или войдите через Google, чтобы продолжить.</string>
+    <string name="update_required_title">Требуется обновление</string>
+    <string name="update_required_body">Эта версия Vocabulario больше не поддерживается. Обновите приложение в Google Play, чтобы продолжить. Ваши данные остаются на этом устройстве.</string>
+    <string name="update_required_action">Обновить</string>
 </resources>
 

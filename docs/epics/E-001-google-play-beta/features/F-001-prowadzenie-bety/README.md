@@ -1,6 +1,6 @@
 # F-001 · Zakres i uruchomienie bety
 
-**ID:** `E-001/F-001` · **Status:** `ready` — decyzje zapisane, uruchomienie po implementacji i dowodach · **Epic:** [E-001](../../README.md).
+**ID:** `E-001/F-001` · **Status:** `in_progress` — decyzje zapisane, uruchomienie po implementacji i dowodach · **Epic:** [E-001](../../README.md).
 
 **Wartość:** tester otrzymuje świadomie przygotowaną betę z jasnymi ograniczeniami i działającym wsparciem, zamiast przypadkowego debug APK.
 
@@ -16,7 +16,7 @@
 | ID | Zadanie | Status |
 |---|---|---|
 | E-001/F-001/T-001 | [Decyzje i zakres](./tasks/T-001-decyzje-i-zakres.md), dawniej B-00 | `done` — specyfikacja |
-| E-001/F-001/T-002 | [Internal i zamknięta beta](./tasks/T-002-uruchomienie-bety.md), dawniej B-14 | `ready` |
+| E-001/F-001/T-002 | [Internal i zamknięta beta](./tasks/T-002-uruchomienie-bety.md), dawniej B-14 | `in_progress` — przygotowany [runbook bramek A/B/C](../../../../setup/beta-bramki.md); uruchomienie wymaga działań właściciela |
 
 **Zależności:** decyzje bez zależności technicznych; uruchomienie po wymaganych P0 i końcowej bramce E-001/F-008/T-001. Szczegóły w taskach.
 

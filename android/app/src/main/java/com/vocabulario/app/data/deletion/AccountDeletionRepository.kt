@@ -51,7 +51,7 @@ internal fun newSecret32(random: SecureRandom = SecureRandom()): String {
 /** Odrzucenie, po którym ponowienie z tym samym `request_id` nie ma sensu. */
 internal fun isDefinitiveRejection(e: Throwable): Boolean {
     val code = (e as? HttpException)?.code() ?: return false
-    return code in 400..499 && code != 408 && code != 429
+    return code in 400..499 && code != 408 && code != 426 && code != 429
 }
 
 /**

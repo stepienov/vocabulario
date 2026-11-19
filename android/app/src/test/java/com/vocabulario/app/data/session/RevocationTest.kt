@@ -63,6 +63,7 @@ class RevocationTest {
         assertEquals(LogoutHttpResult.RetryAfter(DEFAULT_RETRY_AFTER_MS), classifyLogoutResponse(429, "", "Wed, 21 Oct"))
         assertTrue(classifyLogoutResponse(503, "", null) is LogoutHttpResult.Transient)
         assertTrue(classifyLogoutResponse(408, "", null) is LogoutHttpResult.Transient)
+        assertTrue(classifyLogoutResponse(426, "", null) is LogoutHttpResult.Transient)
     }
 
     @Test
