@@ -10,6 +10,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4
 
+from app.core.config import get_settings
 from app.services.llm_pricing import TokenUsage
 from app.services.llm_usage import (
     bind_llm_usage_context,
@@ -111,7 +112,8 @@ def test_bind_lookup_event_id():
     clear_llm_usage_context()
 
 
-def test_record_llm_usage_stores_payload_row():
+def test_record_llm_usage_stores_payload_row(monkeypatch):
+    monkeypatch.setattr(get_settings(), "llm_store_payloads", True)
     added: list[object] = []
 
     class FakeSession:

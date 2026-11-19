@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import select
 
+from app.core.config import get_settings
 from app.models import AppLog, LlmCallPayload, LlmUsage
 from app.services import background
 from app.services.app_log import clear_request_context, log_event, request_id_var
@@ -146,7 +147,8 @@ async def test_http_response_returns_before_the_log_write(pg, pg_client, monkeyp
 
 
 @pytest.mark.pg
-async def test_record_llm_usage_writes_metric_and_payload_in_one_transaction(pg):
+async def test_record_llm_usage_writes_metric_and_payload_in_one_transaction(pg, monkeypatch):
+    monkeypatch.setattr(get_settings(), "llm_store_payloads", True)
     usage_id = await record_llm_usage(
         provider="mock",
         model="gpt-5.6-terra",
