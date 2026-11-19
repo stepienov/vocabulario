@@ -25,6 +25,7 @@ from app.db.base import Base
 from app.db.lifecycle import LifecycleBlocked
 from app.db.migrations import apply_schema
 from app.db.session import engine
+from app.services.ai_budget import AiBudgetExhausted, AiBudgetUnavailable
 from app.public_web.router import mount_public_web
 from app import models  # noqa: F401
 
@@ -49,7 +50,7 @@ async def lifespan(app: FastAPI):
     from app.services.import_jobs import resume_unfinished_jobs, start_heartbeat_watchdog
     from app.services.llm_usage import purge_expired_llm_payloads
     from app.services.mail_outbox import run_mail_worker
-
+    from app.services.maintenance import run_maintenance_worker
     await purge_expired_llm_payloads(force=True)
 
     await resume_unfinished_jobs()
@@ -57,16 +58,23 @@ async def lifespan(app: FastAPI):
     enrich_resume = asyncio.create_task(resume_pending_enrichment())
     mail_worker = asyncio.create_task(run_mail_worker())
     purge_worker = asyncio.create_task(run_purge_worker())
+    maintenance_worker = asyncio.create_task(run_maintenance_worker())
     yield
     from app.services.background import drain_background
 
     await drain_background(5)
+    maintenance_worker.cancel()
     purge_worker.cancel()
     mail_worker.cancel()
     enrich_resume.cancel()
     watchdog.cancel()
     await asyncio.gather(
-        purge_worker, mail_worker, enrich_resume, watchdog, return_exceptions=True
+        maintenance_worker,
+        purge_worker,
+        mail_worker,
+        enrich_resume,
+        watchdog,
+        return_exceptions=True,
     )
     await engine.dispose()
 
@@ -100,6 +108,21 @@ def create_app() -> FastAPI:
                 "detail": {
                     "code": "account_deletion_pending",
                     "message": "account_deletion_pending",
+                }
+            },
+        )
+
+    @app.exception_handler(AiBudgetExhausted)
+    @app.exception_handler(AiBudgetUnavailable)
+    async def ai_budget_stop(request: Request, exc: Exception) -> JSONResponse:
+        # Always the exhausted code: the client treats both causes as "generation paused".
+        return JSONResponse(
+            status_code=503,
+            headers={"Retry-After": "3600"},
+            content={
+                "detail": {
+                    "code": "ai_budget_exhausted",
+                    "message": "ai_budget_exhausted",
                 }
             },
         )

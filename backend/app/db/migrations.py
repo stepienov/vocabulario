@@ -529,6 +529,18 @@ _STATEMENTS = (
     "'password_change', 'password_added', 'google_linked', 'email_changed', "
     "'refresh_reuse', 'account_deleted')); "
     "END IF; END $$",
+    # E-001/F-008/T-003: restore reason and the post-restore recovery flag (old accounts: false).
+    "DO $$ BEGIN "
+    "IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_auth_sessions_revocation_reason' "
+    "AND pg_get_constraintdef(oid) NOT LIKE '%''restore''%') THEN "
+    "ALTER TABLE auth_sessions DROP CONSTRAINT ck_auth_sessions_revocation_reason; "
+    "ALTER TABLE auth_sessions ADD CONSTRAINT ck_auth_sessions_revocation_reason "
+    "CHECK (revocation_reason IS NULL OR revocation_reason IN ('logout', 'password_reset', "
+    "'password_change', 'password_added', 'google_linked', 'email_changed', "
+    "'refresh_reuse', 'account_deleted', 'restore')); "
+    "END IF; END $$",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+    "restore_recovery_required BOOLEAN NOT NULL DEFAULT false",
     # E-001/F-007/T-003: terms acceptance proof; old accounts stay NULL (never "accepted").
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS accepted_terms_version VARCHAR(32)",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS accepted_privacy_version VARCHAR(32)",

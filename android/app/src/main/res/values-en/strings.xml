@@ -1076,5 +1076,7 @@
     <string name="support_no_email">The support address is not available yet.</string>
     <string name="notif_blocked_hint">Notifications are blocked in system settings, so reminders won’t appear.</string>
     <string name="notif_open_settings">Open system settings</string>
+    <string name="err_ai_budget">Generating new content is paused for now. Your saved words are safe. Try again later.</string>
+    <string name="err_restore_recovery">For security, reset your password or sign in with Google to continue.</string>
 </resources>
 

@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import now_utc
 from app.models import AccountActionToken, AccountEmailChange, MailOutbox, User
+from app.services import account_journal
 from app.services.account_recovery import (
     NOTICE_TTL,
     CredentialError,
@@ -352,6 +353,7 @@ async def confirm_email_change(
         raise ActionTokenError(409, "email_unavailable") from None
     user.email_revision += 1
     user.email_verified_at = now
+    account_journal.record(db, "email_changed", user=user, now=now)
     change.state = "confirmed"
     change.finished_at = now
     if change.mode == "change":

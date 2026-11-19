@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import re
@@ -7,6 +8,7 @@ from typing import Any
 import httpx
 from openai import AsyncOpenAI
 
+from app.services import ai_budget
 from app.ai.prompts.v1 import (
     IMPORT_ADAPTIVE_PROMPT_V1,
     IMPORT_ADAPTIVE_SYSTEM_V1,
@@ -92,6 +94,23 @@ ENRICH_CORE_SYSTEM = (
 def _log_import_llm(title: str, body: str) -> None:
     """Only the step title is logged: prompts and responses carry the user's own text."""
     logger.info("%s (%d chars)", title, len(body))
+
+
+def _is_insufficient_quota(exc: BaseException) -> bool:
+    """The provider account (not our cap) is out of balance."""
+    return getattr(exc, "code", None) == "insufficient_quota"
+
+
+async def _settle_failed_call(reservation, model: str, exc: BaseException, usage) -> None:
+    """Charge, release or keep unresolved depending on what the provider is known to have done."""
+    if reservation is None:
+        return
+    if usage is not None:
+        await ai_budget.settle(reservation, model, usage)
+    elif isinstance(getattr(exc, "status_code", None), int):
+        await ai_budget.release(reservation)
+    else:
+        await ai_budget.leave_unresolved(reservation)
 
 
 class ProviderRefusal(Exception):
@@ -185,6 +204,9 @@ class LLMService:
             prompt_len = len(prompt_static) + len(prompt_dynamic)
         started = time.perf_counter()
         usage = None
+        reservation = await ai_budget.reserve(
+            model, purpose, prompt_len + len(system or ""), max_tokens
+        )
         try:
             if use_provider == "anthropic" and self._anthropic is not None:
                 data, usage = await self._chat_json_anthropic(
@@ -210,7 +232,12 @@ class LLMService:
                     reasoning_effort=reasoning_effort,
                     service_tier=service_tier,
                 )
+        except asyncio.CancelledError:
+            await ai_budget.leave_unresolved(reservation)
+            raise
         except Exception as exc:
+            usage = getattr(exc, "llm_usage", None)
+            await _settle_failed_call(reservation, model, exc, usage)
             duration_ms = int((time.perf_counter() - started) * 1000)
             refused = isinstance(exc, ProviderRefusal)
             schedule_llm_meter(
@@ -249,8 +276,11 @@ class LLMService:
                     "exc": exc,
                 },
             )
+            if _is_insufficient_quota(exc):
+                raise ai_budget.AiBudgetExhausted(provider_side=True) from exc
             raise
 
+        await ai_budget.settle(reservation, model, usage)
         duration_ms = int((time.perf_counter() - started) * 1000)
         schedule_llm_meter(
             {
@@ -362,11 +392,15 @@ class LLMService:
             kwargs["service_tier"] = service_tier
         response = await self.client.chat.completions.create(**kwargs)
         usage = parse_openai_usage(response)
-        choice = response.choices[0]
-        if getattr(choice.message, "refusal", None) or getattr(choice, "finish_reason", None) == "content_filter":
-            raise ProviderRefusal()
-        content = choice.message.content or "{}"
-        return json.loads(content), usage
+        try:
+            choice = response.choices[0]
+            if getattr(choice.message, "refusal", None) or getattr(choice, "finish_reason", None) == "content_filter":
+                raise ProviderRefusal()
+            content = choice.message.content or "{}"
+            return json.loads(content), usage
+        except Exception as exc:
+            exc.llm_usage = usage  # the call is billed even when its answer is unusable
+            raise
 
     async def _chat_json_anthropic(
         self,
@@ -392,16 +426,21 @@ class LLMService:
             system=system_content,
             messages=[{"role": "user", "content": prompt}],
         )
-        if getattr(msg, "stop_reason", None) == "refusal":
-            raise ProviderRefusal()
-        text = "".join(
-            block.text for block in msg.content if getattr(block, "type", "") == "text"
-        )
-        text = text.strip()
-        if text.startswith("```"):
-            text = re.sub(r"^```(?:json)?\s*", "", text)
-            text = re.sub(r"\s*```$", "", text)
-        return json.loads(text or "{}"), parse_anthropic_usage(msg)
+        usage = parse_anthropic_usage(msg)
+        try:
+            if getattr(msg, "stop_reason", None) == "refusal":
+                raise ProviderRefusal()
+            text = "".join(
+                block.text for block in msg.content if getattr(block, "type", "") == "text"
+            )
+            text = text.strip()
+            if text.startswith("```"):
+                text = re.sub(r"^```(?:json)?\s*", "", text)
+                text = re.sub(r"\s*```$", "", text)
+            return json.loads(text or "{}"), usage
+        except Exception as exc:
+            exc.llm_usage = usage
+            raise
 
     def _mock_similar_words(self, lemma: str, pos: str = "verb") -> list[dict[str, str]]:
         """Dystraktory — inne hasła, nie odmiany lematu."""

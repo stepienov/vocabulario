@@ -1,6 +1,6 @@
 # T-004 · Monitoring, kontrola kosztów i incydenty
 
-**ID:** `E-001/F-008/T-004` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / M.  
+**ID:** `E-001/F-008/T-004` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / M.  
 **Feature:** [Jakość i operacje](../README.md). **Źródło:** B-13 i decyzje z 17.11.2026.
 
 ## Rezultat i zależności

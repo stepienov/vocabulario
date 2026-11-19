@@ -6,7 +6,7 @@ Never calls AI, mail or Google. Failure reasons are logged by category, never va
 
 import asyncio
 import logging
-
+from datetime import UTC, datetime
 from sqlalchemy import text
 
 from app.core.config import get_settings
@@ -32,14 +32,25 @@ async def _ping_db() -> None:
         await conn.execute(text("SELECT 1"))
 
 
+async def _heartbeat_stale() -> bool:
+    """Deployed only: the maintenance loop (alerts, wake of parked work) must be alive."""
+    from app.services.maintenance import HEARTBEAT_MAX_AGE, last_heartbeat
+
+    beat = await last_heartbeat()
+    return beat is None or datetime.now(UTC) - beat > HEARTBEAT_MAX_AGE
+
+
 async def _failure() -> str | None:
-    errors = get_settings().deployment_errors()
+    settings = get_settings()
+    errors = settings.deployment_errors()
     if errors:
         return "config: " + ", ".join(errors)
     if not _schema_ready:
         return "schema not applied"
     try:
         await asyncio.wait_for(_ping_db(), DB_TIMEOUT_SECONDS)
+        if settings.is_deployed and await asyncio.wait_for(_heartbeat_stale(), DB_TIMEOUT_SECONDS):
+            return "maintenance heartbeat stale"
     except TimeoutError:
         return "database timeout"
     except Exception as exc:  # noqa: BLE001 - any driver error means not ready

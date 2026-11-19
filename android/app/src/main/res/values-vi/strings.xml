@@ -1133,4 +1133,6 @@
     <string name="support_no_email">Địa chỉ hỗ trợ hiện chưa có.</string>
     <string name="notif_blocked_hint">Thông báo bị chặn trong cài đặt hệ thống nên lời nhắc sẽ không hiển thị.</string>
     <string name="notif_open_settings">Mở cài đặt hệ thống</string>
+    <string name="err_ai_budget">Việc tạo nội dung mới đang tạm dừng. Các từ bạn đã lưu vẫn an toàn. Hãy thử lại sau.</string>
+    <string name="err_restore_recovery">Để bảo mật, hãy đặt lại mật khẩu hoặc đăng nhập bằng Google để tiếp tục.</string>
 </resources>

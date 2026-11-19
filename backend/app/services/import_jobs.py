@@ -52,6 +52,7 @@ from app.services.import_package import (
     load_text_import,
 )
 from app.services.import_urls import ImportUrlError, detect_import_url, fetch_words_from_url
+from app.services.ai_budget import AiBudgetExhausted, AiBudgetUnavailable
 from app.services.llm import LLMService
 from app.services.word_lists import select_live_card_for_lemma
 
@@ -69,6 +70,13 @@ _running: set[UUID] = set()
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+def _llm_error_code(exc: BaseException) -> str:
+    """A cap stop is reported as such, so the app can tell it from a broken word list."""
+    if isinstance(exc, (AiBudgetExhausted, AiBudgetUnavailable)):
+        return "ai_budget_exhausted"
+    return "llm_fail"
 
 
 def _note_label(note: list[Any]) -> str:
@@ -784,7 +792,7 @@ async def _run_analyze(db: AsyncSession, job: ImportJob) -> None:
             exc=exc,
         )
         await _touch(
-            db, job, status="failed", error_code="llm_fail",
+            db, job, status="failed", error_code=_llm_error_code(exc),
             error_message=str(exc)[:2000], finished_at=_now(),
         )
         await _add_event(db, job.id, "llm_fail", level="error", payload={"phase": "format"})
@@ -822,7 +830,7 @@ async def _run_analyze(db: AsyncSession, job: ImportJob) -> None:
             exc=exc,
         )
         await _touch(
-            db, job, status="failed", error_code="llm_fail",
+            db, job, status="failed", error_code=_llm_error_code(exc),
             error_message=str(exc)[:2000], finished_at=_now(),
         )
         await _add_event(db, job.id, "llm_fail", level="error", payload={"err": str(exc)[:500]})

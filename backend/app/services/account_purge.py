@@ -31,6 +31,7 @@ from app.models import (
     User,
     WordList,
 )
+from app.services import account_journal
 
 logger = logging.getLogger(__name__)
 
@@ -177,6 +178,7 @@ async def start_due_processes(now: datetime, *, limit: int = CYCLE_PROCESSES) ->
             deletion.stage = STAGES[0]
             deletion.purge_started_at = now
             deletion.next_attempt_at = now
+            account_journal.record(db, "purge_required", user=user, deletion=deletion, now=now)
             await db.commit()
             started += 1
     return started
@@ -245,6 +247,7 @@ async def _step(deletion_id: uuid.UUID, token: uuid.UUID, now: datetime) -> bool
             deletion.last_error_code = None
             await db.flush()
             await db.execute(delete(User).where(User.id == user_id))
+            account_journal.record(db, "purge_completed", deletion=deletion, now=now)
             await db.commit()
             return False
         affected = await _stage_batch(db, deletion.stage, user_id)

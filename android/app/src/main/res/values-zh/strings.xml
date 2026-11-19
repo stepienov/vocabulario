@@ -1054,5 +1054,7 @@
     <string name="support_no_email">支持邮箱暂不可用。</string>
     <string name="notif_blocked_hint">通知在系统设置中已被屏蔽，因此不会显示提醒。</string>
     <string name="notif_open_settings">打开系统设置</string>
+    <string name="err_ai_budget">新内容的生成暂时暂停。你保存的单词是安全的。请稍后再试。</string>
+    <string name="err_restore_recovery">为了安全，请重置密码或使用 Google 登录后继续。</string>
 </resources>
 

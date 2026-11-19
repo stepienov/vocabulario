@@ -1054,5 +1054,7 @@
     <string name="support_no_email">Die Support-Adresse ist noch nicht verfügbar.</string>
     <string name="notif_blocked_hint">Benachrichtigungen sind in den Systemeinstellungen blockiert, daher erscheinen keine Erinnerungen.</string>
     <string name="notif_open_settings">Systemeinstellungen öffnen</string>
+    <string name="err_ai_budget">Das Erstellen neuer Inhalte ist vorübergehend pausiert. Deine gespeicherten Wörter sind sicher. Versuche es später erneut.</string>
+    <string name="err_restore_recovery">Aus Sicherheitsgründen: Setze dein Passwort zurück oder melde dich mit Google an, um fortzufahren.</string>
 </resources>
 

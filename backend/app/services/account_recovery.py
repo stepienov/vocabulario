@@ -19,6 +19,7 @@ from app.core.passwords import hash_new_password, password_error, verify_current
 from app.core.security import now_utc
 from app.models import AccountActionToken, LanguageProfile, MailOutbox, User
 from app.services.account_errors import CredentialError, MailRateLimited
+from app.services import account_journal
 from app.services.action_tokens import (
     RESET_PASSWORD,
     TOKEN_TTL,
@@ -220,6 +221,9 @@ async def confirm_password_reset(
     await consume_action_token(db, user, token, RESET_PASSWORD, now=now)
     user.password_hash = new_hash
     user.credentials_revision += 1
+    # A reset proves the mailbox, which also settles a post-restore re-check of this account.
+    user.restore_recovery_required = False
+    account_journal.record(db, "password_reset", user=user, now=now)
     if user.email_verified_at is None:
         # The link reached the current address, which proves the mailbox.
         user.email_verified_at = now
@@ -255,6 +259,7 @@ async def change_password(
     issued = await renew_session(db, locked.id, session_id, now=now)
     locked.password_hash = new_hash
     locked.credentials_revision += 1
+    account_journal.record(db, "password_change", user=locked, now=now)
     await _queue_password_changed(db, locked, now)
     await db.flush()
     return issued
@@ -291,6 +296,7 @@ async def add_password(
     issued = await renew_session(db, locked.id, ctx.session_id, now=now)
     locked.password_hash = new_hash
     locked.credentials_revision += 1
+    account_journal.record(db, "password_added", user=locked, now=now)
     rendered = render_password_added(await profile_locale(db, locked.id) or "")
     await queue_account_mail(
         db, locked, PASSWORD_ADDED, rendered, expires_at=now + NOTICE_TTL, now=now

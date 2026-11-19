@@ -1142,4 +1142,6 @@
     <string name="support_no_email">지원 주소를 아직 사용할 수 없습니다.</string>
     <string name="notif_blocked_hint">시스템 설정에서 알림이 차단되어 있어 알림이 표시되지 않습니다.</string>
     <string name="notif_open_settings">시스템 설정 열기</string>
+    <string name="err_ai_budget">새 콘텐츠 생성이 잠시 중단되었습니다. 저장한 단어는 안전합니다. 나중에 다시 시도해 주세요.</string>
+    <string name="err_restore_recovery">보안을 위해 비밀번호를 재설정하거나 Google로 로그인한 뒤 계속하세요.</string>
 </resources>

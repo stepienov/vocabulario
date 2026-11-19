@@ -31,6 +31,10 @@ GOOD_DEPLOYED = {
     "mail_outbox_key": MAIL_KEY,
     "auth_rate_limit_key": "L" * 40,
     "trusted_proxy_hops": 1,
+    "operator_name": "Example Operator",
+    "support_email": "help@vocabulario.example",
+    "ai_monthly_warn_usd": "70",
+    "ai_monthly_hard_usd": "100",
 }
 
 
@@ -90,6 +94,14 @@ def test_unknown_environment_is_an_error():
         ({"auth_rate_limit_key": ""}, "auth_rate_limit_key"),
         ({"auth_rate_limit_key": SECRET}, "auth_rate_limit_key"),
         ({"trusted_proxy_hops": 0}, "trusted_proxy_hops"),
+        ({"operator_name": " "}, "operator_name"),
+        ({"support_email": ""}, "support_email"),
+        ({"support_email": "help@localhost"}, "support_email"),
+        ({"operator_alert_email": "not-an-address"}, "operator_alert_email"),
+        ({"ai_monthly_hard_usd": "0"}, "ai_monthly_budget"),
+        ({"ai_monthly_warn_usd": "0"}, "ai_monthly_budget"),
+        ({"ai_monthly_warn_usd": "120"}, "ai_monthly_budget"),
+        ({"llm_light_model": "unpriced-model"}, "llm_model_pricing"),
     ],
 )
 def test_each_invalid_deployed_setting_is_named(overrides, field):
@@ -163,3 +175,27 @@ async def test_ready_is_ok_with_database_and_schema(pg, monkeypatch):
     response = await _get_ready(Settings(_env_file=None), monkeypatch)
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+@pytest.mark.parametrize(
+    ("age_minutes", "failure"),
+    [(None, "maintenance heartbeat stale"), (45, "maintenance heartbeat stale"), (5, None)],
+)
+async def test_deployed_readiness_needs_a_fresh_maintenance_heartbeat(
+    monkeypatch, age_minutes, failure
+):
+    from datetime import UTC, datetime, timedelta
+
+    from app.services import maintenance
+
+    async def heartbeat():
+        return None if age_minutes is None else datetime.now(UTC) - timedelta(minutes=age_minutes)
+
+    async def ping():
+        return None
+
+    monkeypatch.setattr(readiness, "get_settings", lambda: _settings())
+    monkeypatch.setattr(readiness, "_schema_ready", True)
+    monkeypatch.setattr(readiness, "_ping_db", ping)
+    monkeypatch.setattr(maintenance, "last_heartbeat", heartbeat)
+    assert await readiness._failure() == failure

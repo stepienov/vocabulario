@@ -1142,4 +1142,6 @@
     <string name="support_no_email">サポート用アドレスはまだ利用できません。</string>
     <string name="notif_blocked_hint">システム設定で通知がブロックされているため、リマインダーは表示されません。</string>
     <string name="notif_open_settings">システム設定を開く</string>
+    <string name="err_ai_budget">新しいコンテンツの作成は一時的に停止しています。保存した単語は安全です。しばらくしてからもう一度お試しください。</string>
+    <string name="err_restore_recovery">安全のため、パスワードをリセットするか Google でログインして続行してください。</string>
 </resources>

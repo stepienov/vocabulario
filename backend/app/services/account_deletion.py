@@ -27,6 +27,7 @@ from app.models import (
     User,
 )
 from app.services.account_errors import CredentialError
+from app.services import account_journal
 from app.services.account_recovery import (
     NOTICE_TTL,
     account_link,
@@ -374,6 +375,7 @@ async def request_deletion(
     user.account_status = "deletion_pending"
     user.lifecycle_revision = user.lifecycle_revision + 1
     await db.flush()
+    account_journal.record(db, "deletion_requested", user=user, deletion=deletion, now=now)
     await revoke_user_sessions(db, user.id, "account_deleted", now=now)
     await _invalidate_user_proofs(db, user.id, now)
     if user.email_verified_at is not None:
@@ -437,6 +439,7 @@ async def cancel_deletion(
     user.account_status = "active"
     user.lifecycle_revision = user.lifecycle_revision + 1
     await db.flush()
+    account_journal.record(db, "deletion_cancelled", user=user, deletion=deletion, now=now)
     await _invalidate_user_proofs(db, user.id, now)
     if user.email_verified_at is not None:
         locale = normalize_locale(await profile_locale(db, user.id))

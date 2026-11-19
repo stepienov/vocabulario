@@ -1,6 +1,6 @@
 # T-003 · Backup, dziennik konta i bezpieczne odtwarzanie
 
-**ID:** `E-001/F-008/T-003` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / M.  
+**ID:** `E-001/F-008/T-003` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / M.  
 **Feature:** [Jakość i operacje](../README.md). **Źródło:** B-13, usuwanie F-006, decyzje z 17.11.2026 i **18.11.2026** (backup wyłącznie w Railway, retencja do około 30 dni).
 
 ## Rezultat i zależności

@@ -1127,4 +1127,6 @@
     <string name="support_no_email">L’indirizzo di supporto non è ancora disponibile.</string>
     <string name="notif_blocked_hint">Le notifiche sono bloccate nelle impostazioni di sistema, quindi i promemoria non compariranno.</string>
     <string name="notif_open_settings">Apri le impostazioni di sistema</string>
+    <string name="err_ai_budget">La creazione di nuovi contenuti è sospesa per ora. Le tue parole salvate sono al sicuro. Riprova più tardi.</string>
+    <string name="err_restore_recovery">Per sicurezza, reimposta la password o accedi con Google per continuare.</string>
 </resources>

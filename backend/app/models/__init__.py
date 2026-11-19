@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     BigInteger,
@@ -70,6 +71,11 @@ class User(Base):
     adult_statement_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
     adult_confirmed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+    # E-001/F-008/T-003: set after a restore when a security change may have been lost; a correct
+    # password then answers 403 `restore_recovery_required` until the owner proves the mailbox.
+    restore_recovery_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -551,6 +557,7 @@ SESSION_REVOCATION_REASONS = (
     "email_changed",
     "refresh_reuse",
     "account_deleted",
+    "restore",
 )
 
 
@@ -1125,3 +1132,88 @@ class LookupEvent(Base):
     request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     candidates: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     ai_complete: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+
+class AccountJournal(Base):
+    """Append-only lifecycle/security events (E-001/F-008/T-003).
+
+    No foreign key to users: after the purge only the keyed pseudonym of the subject remains.
+    Never holds an e-mail, Google subject, password hash, token or learning content.
+    """
+
+    __tablename__ = "account_journal"
+    __table_args__ = (
+        Index("ix_account_journal_subject", "subject_hmac", "occurred_at"),
+        Index("ix_account_journal_occurred", "occurred_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    process_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    subject_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    subject_key_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    lifecycle_revision: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    credentials_revision: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    email_revision: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AiBudgetPeriod(Base):
+    """Monthly (UTC) AI spend counters shared by every replica (E-001/F-008/T-004)."""
+
+    __tablename__ = "ai_budget_periods"
+
+    period: Mapped[str] = mapped_column(String(7), primary_key=True)
+    spent_usd: Mapped[Decimal] = mapped_column(Numeric(14, 8), nullable=False, default=0)
+    reserved_usd: Mapped[Decimal] = mapped_column(Numeric(14, 8), nullable=False, default=0)
+    unresolved_usd: Mapped[Decimal] = mapped_column(Numeric(14, 8), nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AiBudgetReservation(Base):
+    """One paid call: reserved before the HTTP request, settled or left unresolved after it."""
+
+    __tablename__ = "ai_budget_reservations"
+    __table_args__ = (
+        Index("ix_ai_budget_reservations_state", "state", "created_at"),
+        CheckConstraint(
+            "state IN ('reserved', 'settled', 'unresolved', 'released')",
+            name="ck_ai_budget_reservations_state",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    period: Mapped[str] = mapped_column(
+        ForeignKey("ai_budget_periods.period", ondelete="RESTRICT"), nullable=False
+    )
+    model: Mapped[str] = mapped_column(String(64), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(32), nullable=False)
+    reserved_usd: Mapped[Decimal] = mapped_column(Numeric(14, 8), nullable=False)
+    actual_usd: Mapped[Decimal | None] = mapped_column(Numeric(14, 8), nullable=True)
+    state: Mapped[str] = mapped_column(String(12), nullable=False, default="reserved")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class OpsState(Base):
+    """Small key/value state of the operator tooling (maintenance heartbeat, budget alerts)."""
+
+    __tablename__ = "ops_state"
+
+    key: Mapped[str] = mapped_column(String(48), primary_key=True)
+    value_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    value_text: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class OpsAlert(Base):
+    """Deduplicated operator alert per (environment, kind): never a payload or account data."""
+
+    __tablename__ = "ops_alerts"
+
+    environment: Mapped[str] = mapped_column(String(16), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(32), primary_key=True)
+    severity: Mapped[str] = mapped_column(String(8), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

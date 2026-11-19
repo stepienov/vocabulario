@@ -1135,4 +1135,6 @@
     <string name="support_no_email">Destek adresi henüz mevcut değil.</string>
     <string name="notif_blocked_hint">Bildirimler sistem ayarlarında engellenmiş, bu yüzden hatırlatmalar görünmez.</string>
     <string name="notif_open_settings">Sistem ayarlarını aç</string>
+    <string name="err_ai_budget">Yeni içerik oluşturma şu anda duraklatıldı. Kaydettiğin kelimeler güvende. Daha sonra tekrar dene.</string>
+    <string name="err_restore_recovery">Güvenlik için devam etmek üzere şifreni sıfırla veya Google ile giriş yap.</string>
 </resources>

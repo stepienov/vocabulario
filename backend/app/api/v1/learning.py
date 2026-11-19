@@ -46,6 +46,7 @@ from app.schemas import (
 )
 from app.schemas.practice import CheckAnswerRequest, CheckAnswerResponse, ChoiceOption, DistractorsRequest, DistractorsResponse
 from app.services.answer_check import check_answer, collect_acceptable_answers
+from app.services.ai_budget import AiBudgetExhausted, AiBudgetUnavailable
 from app.services.card_corrections import (
     CORRECTION_DAILY_LIMIT,
     count_corrections_today,
@@ -443,6 +444,8 @@ async def create_card(
             entry = await service.get_or_create_entry(
                 user, profile, body.lemma, body.pos, body.lexical_entry_id
             )
+        except (AiBudgetExhausted, AiBudgetUnavailable):
+            raise
         except Exception as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         return CardResponse(

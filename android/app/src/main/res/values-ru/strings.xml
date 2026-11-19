@@ -1054,5 +1054,7 @@
     <string name="support_no_email">Адрес поддержки пока недоступен.</string>
     <string name="notif_blocked_hint">Уведомления заблокированы в настройках системы, поэтому напоминания не появятся.</string>
     <string name="notif_open_settings">Открыть настройки системы</string>
+    <string name="err_ai_budget">Создание нового контента временно приостановлено. Ваши сохранённые слова в безопасности. Попробуйте позже.</string>
+    <string name="err_restore_recovery">В целях безопасности сбросьте пароль или войдите через Google, чтобы продолжить.</string>
 </resources>
 

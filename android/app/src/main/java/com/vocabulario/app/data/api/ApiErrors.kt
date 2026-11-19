@@ -115,6 +115,8 @@ private val CODE_TO_RES: Map<String, Int> = mapOf(
     "legal_acceptance_missing" to R.string.err_terms_required,
     "adult_confirmation_required" to R.string.err_adult_required,
     "legal_version_changed" to R.string.err_legal_changed,
+    "ai_budget_exhausted" to R.string.err_ai_budget,
+    "restore_recovery_required" to R.string.err_restore_recovery,
 )
 
 private val DETAIL_ALIASES: Map<String, String> = mapOf(

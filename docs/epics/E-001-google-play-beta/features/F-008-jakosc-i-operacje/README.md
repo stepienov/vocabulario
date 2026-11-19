@@ -17,10 +17,10 @@ Minimalny koszt, infrastruktura dodatkowa do 50 EUR/miesiąc, RPO 1 h i RTO 24 h
 
 | ID | Task | Status |
 |---|---|---|
-| E-001/F-008/T-001 | [Bramki CI, PostgreSQL, Android i akceptacja](./tasks/T-001-bramki-jakosci.md), zachowany punkt wejścia B-13 | `in_progress` — etapy 1–2: PostgreSQL i Android w CI |
-| E-001/F-008/T-002 | [Środowiska i konfiguracja](./tasks/T-002-srodowiska-i-konfiguracja.md) | `in_progress` — etap 1: walidacja ustawień i `/health/ready` |
-| E-001/F-008/T-003 | [Backup, rejestr i odtwarzanie](./tasks/T-003-backup-rejestr-i-odtwarzanie.md) | `ready` |
-| E-001/F-008/T-004 | [Monitoring, koszty i incydenty](./tasks/T-004-monitoring-koszty-i-incydenty.md) | `ready` |
+| E-001/F-008/T-001 | [Bramki CI, PostgreSQL, Android i akceptacja](./tasks/T-001-bramki-jakosci.md), zachowany punkt wejścia B-13 | `in_progress` — etapy 1–3: PostgreSQL, Android w CI, test upgrade schematu; zostają macierz A-01…A-24 i urządzenia |
+| E-001/F-008/T-002 | [Środowiska i konfiguracja](./tasks/T-002-srodowiska-i-konfiguracja.md) | `in_progress` — kod: walidacja ustawień, `/health/ready` z heartbeat; zostaje staging/ingress u operatora |
+| E-001/F-008/T-003 | [Backup, rejestr i odtwarzanie](./tasks/T-003-backup-rejestr-i-odtwarzanie.md) | `in_progress` — kod: dziennik konta i narzędzie restore; zostaje próba odtworzenia na osobnym środowisku |
+| E-001/F-008/T-004 | [Monitoring, koszty i incydenty](./tasks/T-004-monitoring-koszty-i-incydenty.md) | `in_progress` — kod: limit AI, `waiting_budget`, alerty; zostaje UptimeRobot, WARN/HARD i ćwiczenie incydentu ([runbook](../../../../setup/operacje-beta.md)) |
 
 Numerów i ścieżek nie zmieniono; dawny duży zakres B-13 ma teraz osobnych właścicieli kontraktów. `ready` oznacza gotowy zakres implementacji po zleceniu, nie istniejące środowisko, opłacone usługi albo osiągnięte RPO.
 

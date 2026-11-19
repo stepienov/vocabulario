@@ -1054,5 +1054,7 @@
     <string name="support_no_email">O endereço de suporte ainda não está disponível.</string>
     <string name="notif_blocked_hint">As notificações estão bloqueadas nas configurações do sistema, então os lembretes não aparecerão.</string>
     <string name="notif_open_settings">Abrir configurações do sistema</string>
+    <string name="err_ai_budget">A criação de novos conteúdos está pausada por enquanto. Suas palavras salvas estão seguras. Tente de novo mais tarde.</string>
+    <string name="err_restore_recovery">Por segurança, redefina sua senha ou entre com o Google para continuar.</string>
 </resources>
 

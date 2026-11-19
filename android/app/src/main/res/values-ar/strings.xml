@@ -1054,5 +1054,7 @@
     <string name="support_no_email">عنوان الدعم غير متاح بعد.</string>
     <string name="notif_blocked_hint">الإشعارات محظورة في إعدادات النظام، لذلك لن تظهر التذكيرات.</string>
     <string name="notif_open_settings">فتح إعدادات النظام</string>
+    <string name="err_ai_budget">إنشاء محتوى جديد متوقف مؤقتًا الآن. كلماتك المحفوظة في أمان. حاول مرة أخرى لاحقًا.</string>
+    <string name="err_restore_recovery">للأمان، أعد تعيين كلمة المرور أو سجّل الدخول عبر Google للمتابعة.</string>
 </resources>
 

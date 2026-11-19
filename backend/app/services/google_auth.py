@@ -26,6 +26,7 @@ from app.services.legal_docs import (
 )
 from app.models import RecentAuthProof, User, UserSettings
 from app.services.account_errors import CredentialError
+from app.services import account_journal
 from app.services.account_recovery import (
     NOTICE_TTL,
     ensure_mail_available,
@@ -101,6 +102,8 @@ async def _existing_login(
     await claim_challenge(db, challenge_id, now=now)
     _remember(locked, identity, now)
     _confirm_address(locked, identity, now)
+    # A fresh Google proof settles a post-restore re-check of the account.
+    locked.restore_recovery_required = False
     issued = await create_session(db, locked.id, now=now)
     return GoogleLogin(issued, False)
 
@@ -211,6 +214,7 @@ async def link_google(
         if "google_id" in str(exc.orig):
             raise CredentialError(409, "google_link_unavailable") from exc
         raise
+    account_journal.record(db, "google_linked", user=locked, now=now)
     rendered = render_google_linked(await profile_locale(db, locked.id) or "")
     await queue_account_mail(
         db, locked, GOOGLE_LINKED, rendered, expires_at=now + NOTICE_TTL, now=now

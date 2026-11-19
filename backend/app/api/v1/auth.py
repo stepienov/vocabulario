@@ -251,6 +251,11 @@ async def login(
     if locked.account_status != "active":
         await db.rollback()
         raise api_error(status.HTTP_403_FORBIDDEN, "account_deletion_pending")
+    if locked.restore_recovery_required:
+        # After a restore the stored credentials may predate the user's last change; only a
+        # fresh reset or Google proof reopens the account. Reached with a matching password only.
+        await db.rollback()
+        raise api_error(status.HTTP_403_FORBIDDEN, "restore_recovery_required")
     issued = await create_session(db, user.id)
     await db.commit()
     return _token_response(issued, response)

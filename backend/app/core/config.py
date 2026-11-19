@@ -1,3 +1,4 @@
+from decimal import Decimal
 from functools import lru_cache
 from urllib.parse import urlsplit
 
@@ -133,6 +134,18 @@ class Settings(BaseSettings):
     admin_password: str = ""
     admin_cookie_secret: str = ""
 
+    # AI spend cap (E-001/F-008/T-004), USD per UTC month. WARN raises alerts only; HARD stops new
+    # paid calls. Deployed environments must set both (HARD >= WARN > 0): 0/empty never means
+    # "unlimited" there. Local environments with both at 0 skip the counter.
+    ai_monthly_warn_usd: Decimal = Decimal("0")
+    ai_monthly_hard_usd: Decimal = Decimal("0")
+    # Where operator alerts go; falls back to the public support address. Plain e-mail transport
+    # of the app is only one channel: an external monitor stays the independent one.
+    operator_alert_email: str = ""
+
+    @property
+    def ai_budget_enforced(self) -> bool:
+        return self.ai_monthly_hard_usd > 0
     @property
     def panel_enabled(self) -> bool:
         return bool((self.admin_username or "").strip() and (self.admin_password or "").strip())
@@ -196,7 +209,32 @@ class Settings(BaseSettings):
         import_provider = (self.llm_import_provider or "openai").strip().lower()
         if import_provider == "anthropic" and not self.anthropic_api_key.strip():
             errors.append("anthropic_api_key")
+        if not self.operator_name.strip():
+            errors.append("operator_name")
+        if not is_mail_address(self.support_email):
+            errors.append("support_email")
+        if self.operator_alert_email.strip() and not is_mail_address(self.operator_alert_email):
+            errors.append("operator_alert_email")
+        if not (0 < self.ai_monthly_warn_usd <= self.ai_monthly_hard_usd):
+            errors.append("ai_monthly_budget")
+        elif not self._models_priced():
+            errors.append("llm_model_pricing")
         return errors
+
+    def _models_priced(self) -> bool:
+        """Every configured model needs a price, or the cap cannot reserve for its calls."""
+        from app.ai.prompts.v1 import LOOKUP_DRAFT_MODEL, LOOKUP_EXPAND_MODEL
+        from app.services.llm_pricing import has_pricing
+
+        models = {
+            self.llm_lookup_model,
+            self.llm_enrichment_model,
+            self.llm_light_model,
+            self.llm_import_layout_model.strip() or self.llm_lookup_model,
+            LOOKUP_DRAFT_MODEL,
+            LOOKUP_EXPAND_MODEL,
+        }
+        return all(has_pricing(m) for m in models)
 
     def _token_periods_valid(self) -> bool:
         access = self.access_token_expire_minutes

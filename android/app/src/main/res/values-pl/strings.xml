@@ -1076,5 +1076,7 @@
     <string name="support_no_email">Adres wsparcia nie jest jeszcze dostępny.</string>
     <string name="notif_blocked_hint">Powiadomienia są zablokowane w ustawieniach systemu, więc przypomnienia się nie pojawią.</string>
     <string name="notif_open_settings">Otwórz ustawienia systemu</string>
+    <string name="err_ai_budget">Tworzenie nowych treści jest chwilowo wstrzymane. Twoje zapisane słowa są bezpieczne. Spróbuj ponownie później.</string>
+    <string name="err_restore_recovery">Ze względów bezpieczeństwa zresetuj hasło albo zaloguj się przez Google, aby kontynuować.</string>
 </resources>
 
