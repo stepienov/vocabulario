@@ -345,6 +345,16 @@ class SessionCoordinatorTest {
         assertFalse(isPublicAuthPath("/api/v1/auth/password/change"))
         assertTrue(isPublicAuthPath("/api/v1/account-deletion/status"))
         assertTrue(isPublicAuthPath("/api/v1/account-deletion/proof/password"))
+        assertTrue(isPublicAuthPath("/api/v1/auth/google"))
+        assertTrue(isPublicAuthPath("/api/v1/auth/google/challenge"))
+        assertTrue(isPublicAuthPath("/api/v1/account-deletion/google/challenge"))
+        assertTrue(isPublicAuthPath("/api/v1/account-deletion/proof/google"))
+        // Link i recent-auth to operacje zalogowanej sesji: Bearer i odświeżenie po 401 zostają.
+        assertFalse(isPublicAuthPath("/api/v1/auth/google/link"))
+        assertFalse(isPublicAuthPath("/api/v1/auth/google/link/challenge"))
+        assertFalse(isPublicAuthPath("/api/v1/auth/recent-auth/google"))
+        assertFalse(isPublicAuthPath("/api/v1/auth/recent-auth/google/challenge"))
+        assertFalse(isPublicAuthPath("/api/v1/auth/password/add"))
         assertFalse(isPublicAuthPath("/api/v1/me"))
     }
 

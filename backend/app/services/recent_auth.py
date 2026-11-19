@@ -86,17 +86,15 @@ async def issue_password_proof(
     return await issue_recent_auth(db, locked, ctx, action, now=now)
 
 
-async def consume_recent_auth(
+async def _valid_proof(
     db: AsyncSession,
     user: User,
     ctx: AccessContext,
     token: str,
     action: str,
-    *,
-    now: datetime | None = None,
-) -> None:
-    """Spend the proof in the caller's transaction; any mismatch changes nothing."""
-    now = now or now_utc()
+    now: datetime,
+) -> RecentAuthProof:
+    """Locked proof row that belongs to this owner, session, action and account state."""
     if not token or len(token) > _MAX_TOKEN_CHARS:
         raise _required()
     row = (
@@ -126,6 +124,34 @@ async def consume_recent_auth(
     session = await _live_session(db, ctx.session_id)
     if session is None or session.version != ctx.session_version:
         raise _required()
+    return row
+
+
+async def check_recent_auth(
+    db: AsyncSession,
+    user: User,
+    ctx: AccessContext,
+    token: str,
+    action: str,
+    *,
+    now: datetime | None = None,
+) -> RecentAuthProof:
+    """Same checks as `consume_recent_auth`, but the proof stays usable."""
+    return await _valid_proof(db, user, ctx, token, action, now or now_utc())
+
+
+async def consume_recent_auth(
+    db: AsyncSession,
+    user: User,
+    ctx: AccessContext,
+    token: str,
+    action: str,
+    *,
+    now: datetime | None = None,
+) -> None:
+    """Spend the proof in the caller's transaction; any mismatch changes nothing."""
+    now = now or now_utc()
+    row = await _valid_proof(db, user, ctx, token, action, now)
     row.consumed_at = now
     await db.flush()
 

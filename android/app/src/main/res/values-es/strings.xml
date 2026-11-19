@@ -976,5 +976,21 @@
     <string name="account_method_password_set">Contraseña: establecida</string>
     <string name="account_method_password_none">Contraseña: no establecida</string>
     <string name="account_method_google_none">Google: no vinculado</string>
+    <string name="err_google_challenge">El inicio de sesión con Google caducó. Inténtalo de nuevo.</string>
+    <string name="err_google_account_mismatch">Esa no es la cuenta de Google vinculada aquí. Elige la correcta.</string>
+    <string name="err_google_already_linked">Google ya está vinculado a esta cuenta.</string>
+    <string name="err_google_link_unavailable">Esta cuenta de Google no se puede vincular a esta cuenta.</string>
+    <string name="err_google_not_linked">Google no está vinculado a esta cuenta.</string>
+    <string name="err_google_sign_in_conflict">Ya existe una cuenta con este correo. Inicia sesión con tu contraseña y vincula Google en Ajustes.</string>
+    <string name="err_google_unavailable">La verificación de Google no está disponible temporalmente. Inténtalo de nuevo en un momento.</string>
+    <string name="err_password_already_set">Esta cuenta ya tiene contraseña.</string>
+    <string name="account_google_linked_email">Inicias sesión con Google (%1$s)</string>
+    <string name="account_link_google">Vincular Google</string>
+    <string name="account_link_google_hint">Añade Google como segundo método de inicio de sesión de %1$s. Tu correo no cambia y las cuentas no se fusionan. Se cerrará la sesión en los demás dispositivos. Confirma tu contraseña actual y elige una cuenta de Google.</string>
+    <string name="account_link_google_done">Google vinculado. Se cerró la sesión en los demás dispositivos.</string>
+    <string name="account_add_password">Añadir contraseña</string>
+    <string name="account_add_password_hint">Al menos 15 caracteres. Primero confirmarás con tu cuenta de Google. Se cerrará la sesión en los demás dispositivos.</string>
+    <string name="account_password_added">Contraseña añadida. Se cerró la sesión en los demás dispositivos.</string>
+    <string name="account_google_confirm_hint">Se te pedirá confirmar con tu cuenta de Google.</string>
 </resources>
 

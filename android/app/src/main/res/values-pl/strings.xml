@@ -984,5 +984,21 @@
     <string name="account_method_password_set">Hasło: ustawione</string>
     <string name="account_method_password_none">Hasło: nieustawione</string>
     <string name="account_method_google_none">Google: niepodłączone</string>
+    <string name="err_google_challenge">Logowanie przez Google wygasło. Spróbuj ponownie.</string>
+    <string name="err_google_account_mismatch">To nie jest konto Google powiązane z tym kontem. Wybierz właściwe.</string>
+    <string name="err_google_already_linked">Google jest już połączone z tym kontem.</string>
+    <string name="err_google_link_unavailable">To konto Google nie może zostać połączone z tym kontem.</string>
+    <string name="err_google_not_linked">Google nie jest połączone z tym kontem.</string>
+    <string name="err_google_sign_in_conflict">Konto z tym adresem e-mail już istnieje. Zaloguj się hasłem, a potem połącz Google w Ustawieniach.</string>
+    <string name="err_google_unavailable">Weryfikacja Google jest chwilowo niedostępna. Spróbuj za chwilę.</string>
+    <string name="err_password_already_set">To konto ma już hasło.</string>
+    <string name="account_google_linked_email">Logujesz się przez Google (%1$s)</string>
+    <string name="account_link_google">Połącz z Google</string>
+    <string name="account_link_google_hint">Dodaje Google jako drugi sposób logowania do konta %1$s. Adres e-mail się nie zmienia, a konta nie są scalane. Pozostałe urządzenia zostaną wylogowane. Potwierdź obecne hasło, a potem wybierz konto Google.</string>
+    <string name="account_link_google_done">Google połączone. Pozostałe urządzenia zostały wylogowane.</string>
+    <string name="account_add_password">Dodaj hasło</string>
+    <string name="account_add_password_hint">Co najmniej 15 znaków. Najpierw potwierdzisz kontem Google. Pozostałe urządzenia zostaną wylogowane.</string>
+    <string name="account_password_added">Hasło dodane. Pozostałe urządzenia zostały wylogowane.</string>
+    <string name="account_google_confirm_hint">Poprosimy o potwierdzenie kontem Google.</string>
 </resources>
 

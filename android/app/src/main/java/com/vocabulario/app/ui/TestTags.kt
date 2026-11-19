@@ -135,6 +135,8 @@ object TestTags {
     const val SETTINGS_LOGOUT = "settings_logout"
     const val SETTINGS_SECTION_ACCOUNT = "settings_section_account"
     const val SETTINGS_CHANGE_PASSWORD = "settings_change_password"
+    const val SETTINGS_LINK_GOOGLE = "settings_link_google"
+    const val SETTINGS_ADD_PASSWORD = "settings_add_password"
     const val SETTINGS_CHANGE_EMAIL = "settings_change_email"
     const val SETTINGS_DELETE_ACCOUNT = "settings_delete_account"
     const val DELETE_ACCOUNT_CONFIRM = "delete_account_confirm"

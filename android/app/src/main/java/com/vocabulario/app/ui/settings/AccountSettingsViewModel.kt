@@ -1,8 +1,11 @@
 package com.vocabulario.app.ui.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
+import com.vocabulario.app.auth.GoogleAuthHelper
+import com.vocabulario.app.auth.GoogleSignInCancelledException
 import com.vocabulario.app.data.AccountRepository
 import com.vocabulario.app.data.NEW_PASSWORD_MIN_CHARS
 import com.vocabulario.app.data.PASSWORD_MAX_CHARS
@@ -26,6 +29,7 @@ data class AccountUiState(
     val emailVerified: Boolean = true,
     val hasPassword: Boolean = false,
     val hasGoogle: Boolean = false,
+    val googleEmail: String? = null,
     /** Stary format hasła: zmiana wymaga starego hasła, więc prowadzimy do resetu. */
     val passwordUpgradeRequired: Boolean = false,
     val resetSending: Boolean = false,
@@ -45,6 +49,7 @@ internal fun AccountUiState.withAccount(me: UserResponse, stale: Boolean) = copy
     emailVerified = me.email_verified,
     hasPassword = "password" in me.login_methods,
     hasGoogle = "google" in me.login_methods,
+    googleEmail = me.google_email,
     passwordUpgradeRequired = me.password_upgrade_required,
     unavailable = false,
     stale = stale,
@@ -61,10 +66,14 @@ data class ChangePasswordUiState(
 
 internal enum class NewPasswordProblem { CURRENT_EMPTY, TOO_SHORT, TOO_LONG, MISMATCH }
 
-/** Hasło tylko w pamięci; `requestId` zmienia się razem z adresem, więc ponowienie jest idempotentne. */
+/**
+ * Hasło tylko w pamięci; konto bez hasła potwierdza zmianę kontem Google ([usesGoogle]).
+ * `requestId` zmienia się razem z adresem, więc ponowienie jest idempotentne.
+ */
 data class ChangeEmailUiState(
     val newEmail: String = "",
     val password: String = "",
+    val usesGoogle: Boolean = false,
     val requestId: String = UUID.randomUUID().toString(),
     val busy: Boolean = false,
     val error: String? = null,
@@ -72,31 +81,54 @@ data class ChangeEmailUiState(
 
 internal enum class NewEmailProblem { EMPTY, INVALID, UNCHANGED, PASSWORD_EMPTY }
 
+/** Dołączenie Google wymaga bieżącego hasła; ono i błędy żyją tylko w pamięci ViewModelu. */
+data class LinkGoogleUiState(
+    val password: String = "",
+    val busy: Boolean = false,
+    val error: String? = null,
+)
+
+/** Hasło dla konta Google-only; zatwierdzenie poprzedza wybór konta Google. */
+data class AddPasswordUiState(
+    val new: String = "",
+    val repeat: String = "",
+    val busy: Boolean = false,
+    val error: String? = null,
+)
+
 /** Hasło tylko w pamięci; [unsentCount] to niewysłane zmiany z tego urządzenia (inne urządzenia nie są znane). */
 data class DeleteAccountUiState(
     val password: String = "",
+    val usesGoogle: Boolean = false,
     val confirmed: Boolean = false,
     val unsentCount: Int = 0,
     val busy: Boolean = false,
     val error: String? = null,
 )
 
-internal fun validateNewEmail(current: String?, new: String, password: String): NewEmailProblem? {
+internal fun validateNewEmail(
+    current: String?,
+    new: String,
+    password: String,
+    passwordRequired: Boolean = true,
+): NewEmailProblem? {
     val email = new.trim()
     return when {
         email.isEmpty() -> NewEmailProblem.EMPTY
         !email.contains('@') || email.startsWith('@') || email.endsWith('@') || email.any { it.isWhitespace() } ->
             NewEmailProblem.INVALID
         current != null && email.equals(current.trim(), ignoreCase = true) -> NewEmailProblem.UNCHANGED
-        password.isEmpty() -> NewEmailProblem.PASSWORD_EMPTY
+        passwordRequired && password.isEmpty() -> NewEmailProblem.PASSWORD_EMPTY
         else -> null
     }
 }
 
-internal fun validateNewPassword(current: String, new: String, repeat: String): NewPasswordProblem? {
+internal fun validateNewPassword(current: String, new: String, repeat: String): NewPasswordProblem? =
+    if (current.isEmpty()) NewPasswordProblem.CURRENT_EMPTY else validatePasswordPair(new, repeat)
+
+internal fun validatePasswordPair(new: String, repeat: String): NewPasswordProblem? {
     val length = new.codePointCount(0, new.length)
     return when {
-        current.isEmpty() -> NewPasswordProblem.CURRENT_EMPTY
         length < NEW_PASSWORD_MIN_CHARS -> NewPasswordProblem.TOO_SHORT
         length > PASSWORD_MAX_CHARS -> NewPasswordProblem.TOO_LONG
         new != repeat -> NewPasswordProblem.MISMATCH
@@ -109,8 +141,15 @@ internal fun validateNewPassword(current: String, new: String, repeat: String): 
 class AccountSettingsViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val deletionRepository: AccountDeletionRepository,
+    private val googleAuthHelper: GoogleAuthHelper,
     private val strings: UiStrings,
 ) : ViewModel() {
+
+    private val _linkGoogle = MutableStateFlow<LinkGoogleUiState?>(null)
+    val linkGoogle: StateFlow<LinkGoogleUiState?> = _linkGoogle.asStateFlow()
+
+    private val _addPassword = MutableStateFlow<AddPasswordUiState?>(null)
+    val addPassword: StateFlow<AddPasswordUiState?> = _addPassword.asStateFlow()
 
     private val _deleteAccount = MutableStateFlow<DeleteAccountUiState?>(null)
     val deleteAccount: StateFlow<DeleteAccountUiState?> = _deleteAccount.asStateFlow()
@@ -216,9 +255,10 @@ class AccountSettingsViewModel @Inject constructor(
 
     fun openDeleteAccount() {
         _account.update { it.copy(info = null) }
+        val googleOnly = !_account.value.hasPassword && _account.value.hasGoogle
         viewModelScope.launch {
             val unsent = runCatching { deletionRepository.unsentLocalCount() }.getOrDefault(0)
-            _deleteAccount.value = DeleteAccountUiState(unsentCount = unsent)
+            _deleteAccount.value = DeleteAccountUiState(unsentCount = unsent, usesGoogle = googleOnly)
         }
     }
 
@@ -237,23 +277,112 @@ class AccountSettingsViewModel @Inject constructor(
         }
     }
 
-    fun submitDeleteAccount() {
+    fun submitDeleteAccount(activityContext: Context) {
         val form = _deleteAccount.value ?: return
         val email = _account.value.email ?: return
         if (form.busy || !form.confirmed) return
-        if (form.password.isEmpty()) {
+        if (!form.usesGoogle && form.password.isEmpty()) {
             _deleteAccount.value = form.copy(error = strings.get(R.string.err_password_required))
             return
         }
         viewModelScope.launch {
             _deleteAccount.value = form.copy(busy = true, error = null)
             try {
-                deletionRepository.request(email, form.password)
+                if (form.usesGoogle) {
+                    deletionRepository.requestWithGoogle(email, googleAuthHelper.provider(activityContext))
+                } else {
+                    deletionRepository.request(email, form.password)
+                }
                 _deleteAccount.value = null
             } catch (e: CancellationException) {
                 throw e
+            } catch (_: GoogleSignInCancelledException) {
+                _deleteAccount.update { it?.copy(busy = false) }
             } catch (e: Exception) {
                 _deleteAccount.update {
+                    it?.copy(busy = false, error = e.userMessage(strings, R.string.err_account_request_failed))
+                }
+            }
+        }
+    }
+
+    fun openLinkGoogle() {
+        _account.update { it.copy(info = null) }
+        _linkGoogle.value = LinkGoogleUiState()
+    }
+
+    fun closeLinkGoogle() {
+        if (_linkGoogle.value?.busy == true) return
+        _linkGoogle.value = null
+    }
+
+    fun updateLinkGoogle(password: String) {
+        _linkGoogle.update { it?.copy(password = password, error = null) }
+    }
+
+    fun submitLinkGoogle(activityContext: Context) {
+        val form = _linkGoogle.value ?: return
+        if (form.busy) return
+        if (form.password.isEmpty()) {
+            _linkGoogle.value = form.copy(error = strings.get(R.string.err_password_required))
+            return
+        }
+        viewModelScope.launch {
+            _linkGoogle.value = form.copy(busy = true, error = null)
+            try {
+                accountRepository.linkGoogle(form.password, googleAuthHelper.provider(activityContext))
+                _linkGoogle.value = null
+                _account.update { it.copy(info = strings.get(R.string.account_link_google_done)) }
+                load()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: GoogleSignInCancelledException) {
+                _linkGoogle.update { it?.copy(busy = false) }
+            } catch (e: Exception) {
+                _linkGoogle.update {
+                    it?.copy(busy = false, error = e.userMessage(strings, R.string.err_account_request_failed))
+                }
+            }
+        }
+    }
+
+    fun openAddPassword() {
+        _account.update { it.copy(info = null) }
+        _addPassword.value = AddPasswordUiState()
+    }
+
+    fun closeAddPassword() {
+        if (_addPassword.value?.busy == true) return
+        _addPassword.value = null
+    }
+
+    fun updateAddPassword(new: String? = null, repeat: String? = null) {
+        _addPassword.update { state ->
+            state?.copy(new = new ?: state.new, repeat = repeat ?: state.repeat, error = null)
+        }
+    }
+
+    fun submitAddPassword(activityContext: Context) {
+        val form = _addPassword.value ?: return
+        if (form.busy) return
+        val problem = validatePasswordPair(form.new, form.repeat)
+        if (problem != null) {
+            _addPassword.value = form.copy(error = problemMessage(problem))
+            return
+        }
+        viewModelScope.launch {
+            _addPassword.value = form.copy(busy = true, error = null)
+            try {
+                accountRepository.addPassword(form.new, googleAuthHelper.provider(activityContext))
+                _addPassword.value = null
+                _account.update { it.copy(info = strings.get(R.string.account_password_added)) }
+                load()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: GoogleSignInCancelledException) {
+                _addPassword.update { it?.copy(busy = false) }
+            } catch (e: Exception) {
+                _addPassword.update {
                     it?.copy(busy = false, error = e.userMessage(strings, R.string.err_account_request_failed))
                 }
             }
@@ -273,7 +402,7 @@ class AccountSettingsViewModel @Inject constructor(
 
     fun openChangeEmail() {
         _account.update { it.copy(info = null) }
-        _changeEmail.value = ChangeEmailUiState()
+        _changeEmail.value = ChangeEmailUiState(usesGoogle = !_account.value.hasPassword && _account.value.hasGoogle)
     }
 
     fun closeChangeEmail() {
@@ -296,10 +425,10 @@ class AccountSettingsViewModel @Inject constructor(
         }
     }
 
-    fun submitChangeEmail() {
+    fun submitChangeEmail(activityContext: Context) {
         val form = _changeEmail.value ?: return
         if (form.busy) return
-        val problem = validateNewEmail(_account.value.email, form.newEmail, form.password)
+        val problem = validateNewEmail(_account.value.email, form.newEmail, form.password, !form.usesGoogle)
         if (problem != null) {
             _changeEmail.value = form.copy(error = emailProblemMessage(problem))
             return
@@ -307,7 +436,13 @@ class AccountSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _changeEmail.value = form.copy(busy = true, error = null)
             try {
-                val created = accountRepository.requestEmailChange(form.newEmail, form.password, form.requestId)
+                val created = if (form.usesGoogle) {
+                    accountRepository.requestEmailChangeWithGoogle(
+                        form.newEmail, form.requestId, googleAuthHelper.provider(activityContext),
+                    )
+                } else {
+                    accountRepository.requestEmailChange(form.newEmail, form.password, form.requestId)
+                }
                 _changeEmail.value = null
                 _account.update {
                     it.copy(
@@ -317,6 +452,8 @@ class AccountSettingsViewModel @Inject constructor(
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (_: GoogleSignInCancelledException) {
+                _changeEmail.update { it?.copy(busy = false) }
             } catch (e: Exception) {
                 _changeEmail.update {
                     it?.copy(busy = false, error = e.userMessage(strings, R.string.err_account_request_failed))

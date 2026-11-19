@@ -20,8 +20,26 @@ interface VocabularioApi {
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): TokenResponse
 
+    @POST("auth/google/challenge")
+    suspend fun googleChallenge(): GoogleChallengeResponse
+
     @POST("auth/google")
     suspend fun googleAuth(@Body body: GoogleAuthRequest): TokenResponse
+
+    @POST("auth/google/link/challenge")
+    suspend fun googleLinkChallenge(@Body body: GoogleLinkChallengeRequest): GoogleChallengeResponse
+
+    @POST("auth/google/link")
+    suspend fun googleLink(@Body body: GoogleLinkRequest): TokenResponse
+
+    @POST("auth/recent-auth/google/challenge")
+    suspend fun recentAuthGoogleChallenge(@Body body: RecentAuthGoogleChallengeRequest): GoogleChallengeResponse
+
+    @POST("auth/recent-auth/google")
+    suspend fun recentAuthGoogle(@Body body: RecentAuthGoogleRequest): RecentAuthResponse
+
+    @POST("auth/password/add")
+    suspend fun passwordAdd(@Body body: AddPasswordRequest): TokenResponse
 
     @POST("auth/logout")
     suspend fun logout(@Body body: LogoutRequest): retrofit2.Response<Unit>
@@ -55,6 +73,12 @@ interface VocabularioApi {
 
     @POST("account-deletion/proof/password")
     suspend fun deletionProofPassword(@Body body: DeletionProofRequest): DeletionProofResponse
+
+    @POST("account-deletion/google/challenge")
+    suspend fun deletionGoogleChallenge(@Body body: DeletionGoogleChallengeRequest): GoogleChallengeResponse
+
+    @POST("account-deletion/proof/google")
+    suspend fun deletionProofGoogle(@Body body: DeletionGoogleProofRequest): DeletionProofResponse
 
     @POST("account-deletion/request")
     suspend fun deletionRequest(@Body body: DeletionRequestBody): DeletionView

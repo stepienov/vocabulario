@@ -1,6 +1,6 @@
 # T-001 · Google i bezpieczne łączenie kont
 
-**ID:** `E-001/F-005/T-001` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / M.  
+**ID:** `E-001/F-005/T-001` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / M.  
 **Feature:** [Google](../README.md). **Źródło:** B-06; F-07 w [analizie](../../../sources/analiza-2026-11-17.md).
 
 ## Cel i zakres

@@ -1050,4 +1050,20 @@
     <string name="account_method_password_set">パスワード：設定済み</string>
     <string name="account_method_password_none">パスワード：未設定</string>
     <string name="account_method_google_none">Google：未連携</string>
+    <string name="err_google_challenge">Google ログインの有効期限が切れました。もう一度お試しください。</string>
+    <string name="err_google_account_mismatch">ここに連携されている Google アカウントではありません。正しいアカウントを選んでください。</string>
+    <string name="err_google_already_linked">このアカウントはすでに Google と連携しています。</string>
+    <string name="err_google_link_unavailable">この Google アカウントはこのアカウントと連携できません。</string>
+    <string name="err_google_not_linked">このアカウントは Google と連携していません。</string>
+    <string name="err_google_sign_in_conflict">このメールアドレスのアカウントはすでに存在します。パスワードでログインし、設定で Google を連携してください。</string>
+    <string name="err_google_unavailable">Google の確認が一時的に利用できません。しばらくしてからもう一度お試しください。</string>
+    <string name="err_password_already_set">このアカウントにはすでにパスワードがあります。</string>
+    <string name="account_google_linked_email">Google でログインしています（%1$s）</string>
+    <string name="account_link_google">Google を連携</string>
+    <string name="account_link_google_hint">%1$s に 2 つ目のログイン方法として Google を追加します。メールアドレスは変わらず、アカウントも統合されません。他の端末はログアウトされます。現在のパスワードを確認してから、Google アカウントを選んでください。</string>
+    <string name="account_link_google_done">Google を連携しました。他の端末はログアウトされました。</string>
+    <string name="account_add_password">パスワードを追加</string>
+    <string name="account_add_password_hint">15 文字以上。先に Google アカウントで確認します。他の端末はログアウトされます。</string>
+    <string name="account_password_added">パスワードを追加しました。他の端末はログアウトされました。</string>
+    <string name="account_google_confirm_hint">Google アカウントでの確認が求められます。</string>
 </resources>

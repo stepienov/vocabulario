@@ -6,12 +6,12 @@ import pytest
 from fastapi.routing import APIRoute
 from sqlalchemy import select
 
-from app.api.v1 import auth as auth_api
 from app.core import deps
 from app.core.config import get_settings
 from app.core.security import now_utc
 from app.models import MailOutbox, User
 from app.services.mail_outbox import _decrypt
+from tests.google_fakes import google_login, install_fake_google
 from tests.pg_factories import auth_headers, create_user
 
 pytestmark = pytest.mark.pg
@@ -24,6 +24,10 @@ UNGATED = {
     ("POST", "/api/v1/auth/password/change"),
     ("POST", "/api/v1/auth/password/add"),
     ("POST", "/api/v1/auth/recent-auth/password"),
+    ("POST", "/api/v1/auth/recent-auth/google/challenge"),
+    ("POST", "/api/v1/auth/recent-auth/google"),
+    ("POST", "/api/v1/auth/google/link/challenge"),
+    ("POST", "/api/v1/auth/google/link"),
     ("POST", "/api/v1/auth/email-change/request"),
     ("GET", "/api/v1/auth/email-change"),
     ("POST", "/api/v1/auth/email-change/{change_id}/resend"),
@@ -134,16 +138,9 @@ async def test_gate_blocks_unverified_until_link_confirmed(pg, pg_client, gate_o
     assert me.json()["email_verification_required"] is False
 
 
-def _fake_google(monkeypatch, **claims):
-    async def verify(_token: str) -> dict:
-        return claims
-
-    monkeypatch.setattr(auth_api, "verify_google_id_token", verify)
-
-
-async def _google_login(client, monkeypatch, **claims) -> User:
-    _fake_google(monkeypatch, **claims)
-    response = await client.post("/api/v1/auth/google", json={"id_token": "t", "locale": "pl"})
+async def _google_login(client, monkeypatch, **claims) -> dict:
+    install_fake_google(monkeypatch)
+    response = await google_login(client, locale="pl", **claims)
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -160,13 +157,13 @@ async def _account(pg, email: str) -> tuple[User, list[MailOutbox]]:
 @pytest.mark.parametrize(
     ("email", "extra", "proven"),
     [
-        ("anna@gmail.com", {"email_verified": "true"}, True),
-        ("anna@firma.es", {"email_verified": "true", "hd": "firma.es"}, True),
         ("anna@gmail.com", {"email_verified": True}, True),
-        ("anna@gmail.com", {"email_verified": "false"}, False),
-        ("anna@outlook.com", {"email_verified": "true"}, False),
-        ("anna@googlemail.com", {"email_verified": "true"}, False),
-        ("anna@firma.es", {"email_verified": "true", "hd": ""}, False),
+        ("anna@firma.es", {"email_verified": True, "hd": "firma.es"}, True),
+        ("anna@gmail.com", {"email_verified": "true"}, False),
+        ("anna@gmail.com", {"email_verified": False}, False),
+        ("anna@outlook.com", {"email_verified": True}, False),
+        ("anna@googlemail.com", {"email_verified": True}, False),
+        ("anna@firma.es", {"email_verified": True, "hd": ""}, False),
     ],
 )
 async def test_new_google_account_trusts_only_proven_addresses(
@@ -181,32 +178,32 @@ async def test_new_google_account_trusts_only_proven_addresses(
         assert _decrypt(mails[0]).locale == "pl"
 
 
-async def test_google_link_by_email_is_not_proof_but_returning_sub_is(pg, pg_client, monkeypatch):
+async def test_google_never_links_by_email_and_returning_sub_is_the_identity(
+    pg, pg_client, monkeypatch
+):
     email = f"owner-{uuid4().hex[:8]}@gmail.com"
     async with pg() as db:
         await create_user(db, email=email)
         await db.commit()
+    install_fake_google(monkeypatch)
     sub = str(uuid4())
-    claims = {"sub": sub, "email": email, "email_verified": "true"}
 
-    await _google_login(pg_client, monkeypatch, **claims)
+    clash = await google_login(pg_client, sub=sub, email=email, email_verified=True)
+    assert (clash.status_code, clash.json()["detail"]["code"]) == (409, "google_sign_in_conflict")
     user, mails = await _account(pg, email)
-    assert (user.google_id, user.email_verified_at, mails) == (sub, None, [])
-
-    await _google_login(pg_client, monkeypatch, **claims)
-    assert (await _account(pg, email))[0].email_verified_at is not None
+    assert (user.google_id, user.email_verified_at, mails) == (None, None, [])
 
 
 async def test_returning_sub_with_other_address_does_not_verify(pg, pg_client, monkeypatch):
     sub = str(uuid4())
     email = f"first-{uuid4().hex[:8]}@outlook.com"
-    await _google_login(pg_client, monkeypatch, sub=sub, email=email, email_verified="true")
+    await _google_login(pg_client, monkeypatch, sub=sub, email=email, email_verified=True)
     await _google_login(
         pg_client,
         monkeypatch,
         sub=sub,
         email=f"x-{uuid4().hex[:8]}@gmail.com",
-        email_verified="true",
+        email_verified=True,
     )
     user, mails = await _account(pg, email)
     assert user.email_verified_at is None

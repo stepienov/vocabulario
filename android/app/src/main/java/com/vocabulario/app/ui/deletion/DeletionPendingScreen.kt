@@ -47,6 +47,7 @@ import java.util.Locale
 @Composable
 fun DeletionPendingScreen(viewModel: DeletionPendingViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val view = state.view
 
@@ -145,7 +146,9 @@ fun DeletionPendingScreen(viewModel: DeletionPendingViewModel = hiltViewModel())
             if (!purging) {
                 Spacer(Modifier.height(10.dp))
                 OutlinedButton(
-                    onClick = viewModel::openCancel,
+                    onClick = {
+                        if (state.cancelWithGoogle) viewModel.cancelWithGoogle(context) else viewModel.openCancel()
+                    },
                     enabled = !state.busy,
                     modifier = Modifier
                         .fillMaxWidth()

@@ -41,12 +41,16 @@ KEYS = (
     "emaildone_body",
     "pwadded_subject",
     "pwadded_body",
+    "gladded_subject",
+    "gladded_body",
 )
 
 TEXTS: dict[str, dict[str, str]] = {
     "en": {
         "pwadded_subject": "A password was added to your account",
         "pwadded_body": "A password was added to your {app} account. You can now sign in with it or with Google, and your other devices were signed out.",
+        "gladded_subject": "Google sign-in was added to your account",
+        "gladded_body": "Google sign-in was added to your {app} account. You can now use it next to your other sign-in methods, and your other devices were signed out.",
         "emailchange_subject": "Confirm your new email address",
         "emailchange_intro": "Confirm that this will be the new email address of your {app} account. The address changes only after you open the link, and you will need to sign in again on every device.",
         "emailchange_action": "Confirm new address",
@@ -77,6 +81,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "es": {
         "pwadded_subject": "Se ha añadido una contraseña a tu cuenta",
         "pwadded_body": "Se ha añadido una contraseña a tu cuenta de {app}. Ahora puedes iniciar sesión con ella o con Google, y se ha cerrado la sesión en tus otros dispositivos.",
+        "gladded_subject": "Se ha añadido el inicio de sesión con Google a tu cuenta",
+        "gladded_body": "Se ha añadido el inicio de sesión con Google a tu cuenta de {app}. Ahora puedes usarlo junto con tus otros métodos, y se ha cerrado la sesión en tus otros dispositivos.",
         "emailchange_subject": "Confirma tu nueva dirección de correo",
         "emailchange_intro": "Confirma que esta será la nueva dirección de correo de tu cuenta de {app}. La dirección solo cambia cuando abras el enlace y tendrás que volver a iniciar sesión en todos tus dispositivos.",
         "emailchange_action": "Confirmar nueva dirección",
@@ -112,6 +118,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "pl": {
         "pwadded_subject": "Do Twojego konta dodano hasło",
         "pwadded_body": "Do Twojego konta {app} dodano hasło. Możesz teraz logować się nim albo przez Google, a pozostałe urządzenia zostały wylogowane.",
+        "gladded_subject": "Do Twojego konta dodano logowanie przez Google",
+        "gladded_body": "Do Twojego konta {app} dodano logowanie przez Google. Możesz go teraz używać obok innych metod logowania, a pozostałe urządzenia zostały wylogowane.",
         "emailchange_subject": "Potwierdź nowy adres e-mail",
         "emailchange_intro": "Potwierdź, że to będzie nowy adres e-mail Twojego konta {app}. Adres zmieni się dopiero po otwarciu linku, a na każdym urządzeniu trzeba będzie zalogować się ponownie.",
         "emailchange_action": "Potwierdź nowy adres",
@@ -143,6 +151,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "de": {
         "pwadded_subject": "Deinem Konto wurde ein Passwort hinzugefügt",
         "pwadded_body": "Deinem {app}-Konto wurde ein Passwort hinzugefügt. Du kannst dich jetzt damit oder mit Google anmelden, und deine anderen Geräte wurden abgemeldet.",
+        "gladded_subject": "Deinem Konto wurde die Google-Anmeldung hinzugefügt",
+        "gladded_body": "Deinem {app}-Konto wurde die Anmeldung mit Google hinzugefügt. Du kannst sie jetzt neben deinen anderen Anmeldemethoden nutzen, und deine anderen Geräte wurden abgemeldet.",
         "emailchange_subject": "Bestätige deine neue E-Mail-Adresse",
         "emailchange_intro": "Bestätige, dass dies die neue E-Mail-Adresse deines {app}-Kontos wird. Die Adresse ändert sich erst, wenn du den Link öffnest, und du musst dich auf jedem Gerät neu anmelden.",
         "emailchange_action": "Neue Adresse bestätigen",
@@ -178,6 +188,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "fr": {
         "pwadded_subject": "Un mot de passe a été ajouté à votre compte",
         "pwadded_body": "Un mot de passe a été ajouté à votre compte {app}. Vous pouvez désormais vous connecter avec lui ou avec Google, et vos autres appareils ont été déconnectés.",
+        "gladded_subject": "La connexion Google a été ajoutée à votre compte",
+        "gladded_body": "La connexion avec Google a été ajoutée à votre compte {app}. Vous pouvez désormais l’utiliser avec vos autres méthodes, et vos autres appareils ont été déconnectés.",
         "emailchange_subject": "Confirmez votre nouvelle adresse e-mail",
         "emailchange_intro": "Confirmez que ce sera la nouvelle adresse e-mail de votre compte {app}. L'adresse ne change qu'après l'ouverture du lien et vous devrez vous reconnecter sur chaque appareil.",
         "emailchange_action": "Confirmer la nouvelle adresse",
@@ -215,6 +227,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "it": {
         "pwadded_subject": "È stata aggiunta una password al tuo account",
         "pwadded_body": "È stata aggiunta una password al tuo account {app}. Ora puoi accedere con essa o con Google e gli altri dispositivi sono stati disconnessi.",
+        "gladded_subject": "L’accesso con Google è stato aggiunto al tuo account",
+        "gladded_body": "L’accesso con Google è stato aggiunto al tuo account {app}. Ora puoi usarlo insieme agli altri metodi e gli altri dispositivi sono stati disconnessi.",
         "emailchange_subject": "Conferma il tuo nuovo indirizzo e-mail",
         "emailchange_intro": "Conferma che questo sarà il nuovo indirizzo e-mail del tuo account {app}. L'indirizzo cambia solo dopo aver aperto il link e dovrai accedere di nuovo su ogni dispositivo.",
         "emailchange_action": "Conferma il nuovo indirizzo",
@@ -249,6 +263,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "pt-BR": {
         "pwadded_subject": "Uma senha foi adicionada à sua conta",
         "pwadded_body": "Uma senha foi adicionada à sua conta {app}. Agora você pode entrar com ela ou com o Google, e seus outros dispositivos foram desconectados.",
+        "gladded_subject": "O login com Google foi adicionado à sua conta",
+        "gladded_body": "O login com o Google foi adicionado à sua conta {app}. Agora você pode usá-lo junto com os outros métodos, e seus outros dispositivos foram desconectados.",
         "emailchange_subject": "Confirme seu novo endereço de e-mail",
         "emailchange_intro": "Confirme que este será o novo endereço de e-mail da sua conta {app}. O endereço só muda depois que você abrir o link e será preciso entrar de novo em todos os dispositivos.",
         "emailchange_action": "Confirmar novo endereço",
@@ -279,6 +295,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "pt-PT": {
         "pwadded_subject": "Foi adicionada uma palavra-passe à sua conta",
         "pwadded_body": "Foi adicionada uma palavra-passe à sua conta {app}. Agora pode iniciar sessão com ela ou com o Google, e os seus outros dispositivos foram desligados.",
+        "gladded_subject": "O início de sessão com Google foi adicionado à sua conta",
+        "gladded_body": "O início de sessão com o Google foi adicionado à sua conta {app}. Agora pode usá-lo junto com os outros métodos, e os seus outros dispositivos foram desligados.",
         "emailchange_subject": "Confirme o seu novo endereço de e-mail",
         "emailchange_intro": "Confirme que este será o novo endereço de e-mail da sua conta {app}. O endereço só muda depois de abrir a ligação e terá de iniciar sessão de novo em todos os dispositivos.",
         "emailchange_action": "Confirmar novo endereço",
@@ -312,6 +330,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "ru": {
         "pwadded_subject": "К вашему аккаунту добавлен пароль",
         "pwadded_body": "К вашему аккаунту {app} добавлен пароль. Теперь вы можете входить с ним или через Google, а на других устройствах выполнен выход.",
+        "gladded_subject": "К вашему аккаунту добавлен вход через Google",
+        "gladded_body": "К вашему аккаунту {app} добавлен вход через Google. Теперь его можно использовать вместе с другими способами входа, а на других устройствах выполнен выход.",
         "emailchange_subject": "Подтвердите новый адрес электронной почты",
         "emailchange_intro": "Подтвердите, что это будет новый адрес электронной почты вашего аккаунта {app}. Адрес изменится только после перехода по ссылке, и на каждом устройстве придётся войти заново.",
         "emailchange_action": "Подтвердить новый адрес",
@@ -344,6 +364,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "tr": {
         "pwadded_subject": "Hesabına bir parola eklendi",
         "pwadded_body": "{app} hesabına bir parola eklendi. Artık bununla ya da Google ile giriş yapabilirsin; diğer cihazlardaki oturumlar kapatıldı.",
+        "gladded_subject": "Hesabına Google ile giriş eklendi",
+        "gladded_body": "{app} hesabına Google ile giriş eklendi. Artık diğer giriş yöntemlerinle birlikte kullanabilirsin; diğer cihazlardaki oturumlar kapatıldı.",
         "emailchange_subject": "Yeni e-posta adresini onayla",
         "emailchange_intro": "Bunun {app} hesabının yeni e-posta adresi olacağını onayla. Adres yalnızca bağlantıyı açtıktan sonra değişir ve her cihazda yeniden giriş yapman gerekir.",
         "emailchange_action": "Yeni adresi onayla",
@@ -376,6 +398,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "vi": {
         "pwadded_subject": "Đã thêm mật khẩu vào tài khoản của bạn",
         "pwadded_body": "Đã thêm một mật khẩu vào tài khoản {app} của bạn. Giờ bạn có thể đăng nhập bằng mật khẩu hoặc Google, và các thiết bị khác đã bị đăng xuất.",
+        "gladded_subject": "Đã thêm đăng nhập Google vào tài khoản của bạn",
+        "gladded_body": "Đã thêm đăng nhập bằng Google vào tài khoản {app} của bạn. Giờ bạn có thể dùng nó cùng các cách đăng nhập khác, và các thiết bị khác đã bị đăng xuất.",
         "emailchange_subject": "Xác nhận địa chỉ email mới",
         "emailchange_intro": "Hãy xác nhận đây sẽ là địa chỉ email mới của tài khoản {app}. Địa chỉ chỉ đổi sau khi bạn mở liên kết và bạn sẽ phải đăng nhập lại trên mọi thiết bị.",
         "emailchange_action": "Xác nhận địa chỉ mới",
@@ -408,6 +432,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "zh": {
         "pwadded_subject": "你的账号已添加密码",
         "pwadded_body": "你的 {app} 账号已添加密码。现在可以使用密码或 Google 登录，其他设备已退出登录。",
+        "gladded_subject": "你的账号已添加 Google 登录",
+        "gladded_body": "你的 {app} 账号已添加 Google 登录。现在可以与其他登录方式一起使用，其他设备已退出登录。",
         "emailchange_subject": "确认你的新邮箱地址",
         "emailchange_intro": "请确认这将成为你的 {app} 账号的新邮箱地址。只有打开链接后地址才会更改，并且所有设备都需要重新登录。",
         "emailchange_action": "确认新地址",
@@ -433,6 +459,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "ja": {
         "pwadded_subject": "アカウントにパスワードが追加されました",
         "pwadded_body": "{app} アカウントにパスワードが追加されました。今後はパスワードまたは Google でログインでき、他の端末はログアウトされました。",
+        "gladded_subject": "アカウントに Google ログインが追加されました",
+        "gladded_body": "{app} アカウントに Google ログインが追加されました。他のログイン方法と併用でき、他の端末はログアウトされました。",
         "emailchange_subject": "新しいメールアドレスの確認",
         "emailchange_intro": "これが {app} アカウントの新しいメールアドレスであることを確認してください。リンクを開くまでアドレスは変わらず、すべての端末で再ログインが必要になります。",
         "emailchange_action": "新しいアドレスを確認",
@@ -464,6 +492,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "ko": {
         "pwadded_subject": "계정에 비밀번호가 추가되었습니다",
         "pwadded_body": "{app} 계정에 비밀번호가 추가되었습니다. 이제 비밀번호 또는 Google로 로그인할 수 있으며, 다른 기기는 로그아웃되었습니다.",
+        "gladded_subject": "계정에 Google 로그인이 추가되었습니다",
+        "gladded_body": "{app} 계정에 Google 로그인이 추가되었습니다. 이제 다른 로그인 방법과 함께 사용할 수 있으며, 다른 기기는 로그아웃되었습니다.",
         "emailchange_subject": "새 이메일 주소 확인",
         "emailchange_intro": "이 주소가 {app} 계정의 새 이메일 주소가 맞는지 확인해 주세요. 링크를 열어야 주소가 바뀌며, 모든 기기에서 다시 로그인해야 합니다.",
         "emailchange_action": "새 주소 확인",
@@ -494,6 +524,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "ar": {
         "pwadded_subject": "تمت إضافة كلمة مرور إلى حسابك",
         "pwadded_body": "تمت إضافة كلمة مرور إلى حسابك في {app}. يمكنك الآن تسجيل الدخول بها أو عبر Google، وتم تسجيل الخروج من أجهزتك الأخرى.",
+        "gladded_subject": "تمت إضافة تسجيل الدخول عبر Google إلى حسابك",
+        "gladded_body": "تمت إضافة تسجيل الدخول عبر Google إلى حسابك في {app}. يمكنك الآن استخدامه مع طرق الدخول الأخرى، وتم تسجيل الخروج من أجهزتك الأخرى.",
         "emailchange_subject": "أكّد عنوان بريدك الإلكتروني الجديد",
         "emailchange_intro": "أكّد أن هذا سيكون عنوان البريد الإلكتروني الجديد لحسابك في {app}. لن يتغير العنوان إلا بعد فتح الرابط، وستحتاج إلى تسجيل الدخول من جديد على كل جهاز.",
         "emailchange_action": "تأكيد العنوان الجديد",
@@ -525,6 +557,8 @@ TEXTS: dict[str, dict[str, str]] = {
     "hi": {
         "pwadded_subject": "आपके खाते में पासवर्ड जोड़ा गया",
         "pwadded_body": "आपके {app} खाते में पासवर्ड जोड़ा गया। अब आप उससे या Google से साइन इन कर सकते हैं, और आपके अन्य डिवाइस साइन आउट कर दिए गए हैं।",
+        "gladded_subject": "आपके खाते में Google साइन-इन जोड़ा गया",
+        "gladded_body": "आपके {app} खाते में Google साइन-इन जोड़ा गया। अब आप इसे अपने अन्य साइन-इन तरीकों के साथ इस्तेमाल कर सकते हैं, और आपके अन्य डिवाइस साइन आउट कर दिए गए हैं।",
         "emailchange_subject": "अपना नया ईमेल पता पुष्टि करें",
         "emailchange_intro": "पुष्टि करें कि यह आपके {app} खाते का नया ईमेल पता होगा। पता तभी बदलेगा जब आप लिंक खोलेंगे, और हर डिवाइस पर आपको फिर से साइन इन करना होगा।",
         "emailchange_action": "नया पता पुष्टि करें",
@@ -735,6 +769,10 @@ def render_email_change_done(locale: str) -> RenderedMail:
 
 def render_password_added(locale: str) -> RenderedMail:
     return _notice(locale, "pwadded", "password_added")
+
+
+def render_google_linked(locale: str) -> RenderedMail:
+    return _notice(locale, "gladded", "google_linked")
 
 
 def render_password_changed(locale: str) -> RenderedMail:

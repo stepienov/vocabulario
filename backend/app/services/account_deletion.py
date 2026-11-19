@@ -45,6 +45,7 @@ from app.services.action_tokens import (
     peek_action_token,
 )
 from app.services.auth_sessions import lock_user, revoke_user_sessions
+from app.services.google_challenges import claim_challenge, load_challenge, verify_for_challenge
 from app.services.mail_templates import (
     normalize_locale,
     render_cancel_account_deletion,
@@ -197,6 +198,33 @@ async def password_proof(
     if locked is None or locked.password_hash != stored:
         raise CredentialError(401, "invalid_credentials")
     proof, _ = await _issue_proof(db, locked, action, "password", ttl=PROOF_TTL, now=now)
+    return proof
+
+
+async def google_proof(
+    db: AsyncSession,
+    challenge_id: UUID,
+    id_token: str,
+    action: str,
+    *,
+    now: datetime | None = None,
+) -> DeletionProof:
+    """Google ownership proof: the subject picks the account, an address never does."""
+    now = now or now_utc()
+    challenge = await load_challenge(db, challenge_id, "account_deletion", now=now)
+    if challenge.action != action:
+        raise CredentialError(400, "auth_challenge_invalid")
+    identity = await verify_for_challenge(id_token, challenge)
+    user = (
+        await db.execute(select(User).where(User.google_id == identity.sub))
+    ).scalar_one_or_none()
+    if user is None:
+        raise CredentialError(401, "invalid_google_token")
+    locked = await lock_user(db, user.id)
+    if locked is None or locked.google_id != identity.sub:
+        raise CredentialError(401, "invalid_google_token")
+    await claim_challenge(db, challenge_id, now=now)
+    proof, _ = await _issue_proof(db, locked, action, "google", ttl=PROOF_TTL, now=now)
     return proof
 
 

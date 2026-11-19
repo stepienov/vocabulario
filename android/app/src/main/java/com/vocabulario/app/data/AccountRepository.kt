@@ -1,9 +1,17 @@
 package com.vocabulario.app.data
 
+import com.vocabulario.app.auth.GoogleIdTokenProvider
+import com.vocabulario.app.data.api.AddPasswordRequest
 import com.vocabulario.app.data.api.EmailChangeRequestBody
 import com.vocabulario.app.data.api.EmailChangeResponse
 import com.vocabulario.app.data.api.EmailVerificationStatusResponse
+import com.vocabulario.app.data.api.GoogleLinkChallengeRequest
+import com.vocabulario.app.data.api.GoogleLinkRequest
+import com.vocabulario.app.data.api.RecentAuthGoogleChallengeRequest
+import com.vocabulario.app.data.api.RecentAuthGoogleRequest
 import com.vocabulario.app.data.api.RecentAuthPasswordRequest
+import com.vocabulario.app.data.api.RecentAuthResponse
+import com.vocabulario.app.data.api.TokenResponse
 import com.vocabulario.app.data.api.MailStatusResponse
 import com.vocabulario.app.data.api.PasswordChangeRequest
 import com.vocabulario.app.data.api.PasswordResetRequestBody
@@ -110,9 +118,51 @@ class AccountRepository @Inject constructor(
         api.passwordResetRequest(PasswordResetRequestBody(email.trim(), mailLocale()))
 
     /** Hasło jako świeży dowód, potem prośba; ten sam `requestId` przy powtórzeniu tych samych danych. */
-    suspend fun requestEmailChange(newEmail: String, password: String, requestId: String): EmailChangeResponse {
-        val proof = api.recentAuthPassword(RecentAuthPasswordRequest(password, "change_email"))
-        return api.emailChangeRequest(EmailChangeRequestBody(newEmail.trim(), proof.recent_auth_token, requestId))
+    suspend fun requestEmailChange(newEmail: String, password: String, requestId: String): EmailChangeResponse =
+        submitEmailChange(newEmail, requestId, api.recentAuthPassword(RecentAuthPasswordRequest(password, "change_email")))
+
+    /** Konto bez hasła potwierdza zmianę adresu wyborem tego samego konta Google. */
+    suspend fun requestEmailChangeWithGoogle(
+        newEmail: String,
+        requestId: String,
+        provider: GoogleIdTokenProvider,
+    ): EmailChangeResponse = submitEmailChange(newEmail, requestId, recentAuthGoogle("change_email", provider))
+
+    private suspend fun submitEmailChange(
+        newEmail: String,
+        requestId: String,
+        proof: RecentAuthResponse,
+    ): EmailChangeResponse =
+        api.emailChangeRequest(EmailChangeRequestBody(newEmail.trim(), proof.recent_auth_token, requestId))
+
+    /** Nonce od serwera trafia do selektora; anulowanie selektora kończy bez żądania końcowego. */
+    private suspend fun recentAuthGoogle(action: String, provider: GoogleIdTokenProvider): RecentAuthResponse {
+        val challenge = api.recentAuthGoogleChallenge(RecentAuthGoogleChallengeRequest(action))
+        val idToken = provider.idToken(challenge.nonce)
+        return api.recentAuthGoogle(RecentAuthGoogleRequest(challenge.challenge_id, idToken, action))
+    }
+
+    /**
+     * Dołączenie Google do konta z hasłem: bez zmiany adresu, bez scalania i bez czyszczenia danych.
+     * Serwer odwołuje inne sesje i zwraca nową parę tokenów tej sesji.
+     */
+    suspend fun linkGoogle(password: String, provider: GoogleIdTokenProvider) {
+        val proof = api.recentAuthPassword(RecentAuthPasswordRequest(password, "link_google"))
+        val challenge = api.googleLinkChallenge(GoogleLinkChallengeRequest(proof.recent_auth_token))
+        val idToken = provider.idToken(challenge.nonce)
+        val tokens = api.googleLink(GoogleLinkRequest(challenge.challenge_id, idToken, proof.recent_auth_token))
+        installRenewedPair(tokens)
+    }
+
+    /** Konto Google-only dodaje hasło po potwierdzeniu tym samym kontem Google. */
+    suspend fun addPassword(newPassword: String, provider: GoogleIdTokenProvider) {
+        val proof = recentAuthGoogle("add_password", provider)
+        installRenewedPair(api.passwordAdd(AddPasswordRequest(newPassword, proof.recent_auth_token)))
+    }
+
+    private suspend fun installRenewedPair(tokens: TokenResponse) {
+        if (!sessionCoordinator.installRenewed(tokens)) throw SessionInstallException("renewed pair not stored")
+        runCatching { refreshAccount() }
     }
 
     suspend fun currentEmailChange(): EmailChangeResponse? =
@@ -126,8 +176,6 @@ class AccountRepository @Inject constructor(
 
     /** Inne sesje kończą się na serwerze; ta dostaje nową parę tokenów tej samej sesji. */
     suspend fun changePassword(current: String, new: String) {
-        val tokens = api.passwordChange(PasswordChangeRequest(current, new))
-        if (!sessionCoordinator.installRenewed(tokens)) throw SessionInstallException("renewed pair not stored")
-        runCatching { refreshAccount() }
+        installRenewedPair(api.passwordChange(PasswordChangeRequest(current, new)))
     }
 }

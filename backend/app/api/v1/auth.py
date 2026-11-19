@@ -30,6 +30,9 @@ from app.schemas import (
     EmailVerificationConfirm,
     EmailVerificationStatusResponse,
     GoogleAuthRequest,
+    GoogleChallengeResponse,
+    GoogleLinkChallengeRequest,
+    GoogleLinkRequest,
     LanguageProfileCreate,
     LanguageProfileResponse,
     LanguageProfileUpdate,
@@ -40,6 +43,8 @@ from app.schemas import (
     PasswordResetConfirm,
     PasswordResetRequest,
     PasswordResetResponse,
+    RecentAuthGoogleChallengeRequest,
+    RecentAuthGoogleRequest,
     RecentAuthPasswordRequest,
     RecentAuthResponse,
     RefreshRequest,
@@ -95,7 +100,12 @@ from app.services.auth_sessions import (
     logout_session,
     refresh_session,
 )
-from app.services.llm import verify_google_id_token
+from app.services.google_auth import google_login, link_google, recent_auth_google
+from app.services.google_challenges import (
+    issue_link_challenge,
+    issue_login_challenge,
+    issue_recent_auth_challenge,
+)
 from app.services.mail_events import WebhookRejected, handle_webhook
 from app.services.mail_outbox import wake_mail_worker
 
@@ -221,14 +231,24 @@ async def login(
     return _token_response(issued, response)
 
 
-def _google_proves_address(token_data: dict, email: str) -> bool:
-    """F-005 trust rule: only Gmail or a Workspace (`hd`) address Google itself verified.
+def _google_error(exc: CredentialError) -> HTTPException:
+    return api_error(exc.status_code, exc.code)
 
-    tokeninfo sends `email_verified` as the string "true"; google-auth sends a bool.
-    """
-    if token_data.get("email_verified") not in (True, "true"):
-        return False
-    return email.rpartition("@")[2] == "gmail.com" or bool(token_data.get("hd"))
+
+@router.post("/google/challenge", response_model=GoogleChallengeResponse)
+async def google_challenge(
+    request: Request, response: Response, db: AsyncSession = Depends(get_db)
+) -> GoogleChallengeResponse:
+    """Public: a nonce for one Google sign-in; nothing about any account is revealed."""
+    ip = client_ip(request)
+    await enforce(_public(ip), Rule("auth_google_challenge_ip", ip, 30, 15 * MIN))
+    issued = await issue_login_challenge(db)
+    result = GoogleChallengeResponse(
+        challenge_id=issued.id, nonce=issued.nonce, expires_at=issued.expires_at
+    )
+    await db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return result
 
 
 @router.post("/google", response_model=TokenResponse)
@@ -241,59 +261,113 @@ async def google_auth(
     ip = client_ip(request)
     await enforce(_public(ip), Rule("auth_login_ip", ip, 20, 15 * MIN))
     try:
-        token_data = await verify_google_id_token(body.id_token)
-    except Exception as exc:
-        raise api_error(status.HTTP_401_UNAUTHORIZED, "invalid_google_token", "Invalid Google token") from exc
-
-    google_id = token_data["sub"]
-    email = token_data["email"].lower()
-    proven = _google_proves_address(token_data, email)
-    queue_mail = False
-
-    result = await db.execute(select(User).where(User.google_id == google_id))
-    user = result.scalar_one_or_none()
-    trusted = user is not None
-    if user is None:
-        result = await db.execute(select(User).where(User.email == email))
-        user = result.scalar_one_or_none()
-        if user:
-            if user.account_status != "active":
-                # An e-mail match is no proof of ownership; say nothing about the account.
-                raise api_error(
-                    status.HTTP_401_UNAUTHORIZED, "invalid_google_token", "Invalid Google token"
-                )
-            # Linking by e-mail is no proof: the address may have been pre-registered by someone else.
-            user.google_id = google_id
-        else:
-            trusted = True
-            queue_mail = not proven
-            if queue_mail:
-                try:
-                    await ensure_mail_available()
-                except CredentialError as exc:
-                    raise api_error(exc.status_code, exc.code) from exc
-            user = User(email=email, google_id=google_id)
-            db.add(user)
-            await db.flush()
-            await _ensure_settings(db, user.id)
-
-    await db.flush()
-    locked = await lock_user(db, user.id)
-    if locked is not None and locked.account_status != "active":
+        login = await google_login(db, body.challenge_id, body.id_token, body.locale)
+    except CredentialError as exc:
         await db.rollback()
-        if trusted:
-            raise api_error(status.HTTP_403_FORBIDDEN, "account_deletion_pending")
-        raise api_error(status.HTTP_401_UNAUTHORIZED, "invalid_google_token", "Invalid Google token")
-    now = now_utc()
-    if trusted and proven and user.email == email and user.email_verified_at is None:
-        user.email_verified_at = now
-    issued = await create_session(db, user.id)
-    if queue_mail:
-        await queue_verification_mail(db, user, body.locale, now=now)
+        raise _google_error(exc) from exc
     await db.commit()
-    if queue_mail:
+    if login.mail_queued:
         wake_mail_worker()
+    return _token_response(login.issued, response)
+
+
+@router.post("/google/link/challenge", response_model=GoogleChallengeResponse)
+async def google_link_challenge(
+    body: GoogleLinkChallengeRequest,
+    request: Request,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> GoogleChallengeResponse:
+    ctx = request.state.auth_context
+    await enforce(Rule("auth_google_link_session", str(ctx.session_id), 10, 15 * MIN))
+    try:
+        issued = await issue_link_challenge(db, user, ctx, body.recent_auth_token)
+    except CredentialError as exc:
+        raise await _rollback_error(db, exc) from exc
+    result = GoogleChallengeResponse(
+        challenge_id=issued.id, nonce=issued.nonce, expires_at=issued.expires_at
+    )
+    await db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
+@router.post("/google/link", response_model=TokenResponse)
+async def google_link(
+    body: GoogleLinkRequest,
+    request: Request,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    ctx = request.state.auth_context
+    await enforce(Rule("auth_google_link_user", str(user.id), 10, 60 * MIN))
+    try:
+        issued = await link_google(
+            db, user, ctx, body.challenge_id, body.id_token, body.recent_auth_token
+        )
+    except CredentialError as exc:
+        raise await _rollback_error(db, exc) from exc
+    except SessionAuthError as exc:
+        raise await _session_error(db, exc) from exc
+    await db.commit()
+    wake_mail_worker()
     return _token_response(issued, response)
+
+
+@router.post("/recent-auth/google/challenge", response_model=GoogleChallengeResponse)
+async def recent_auth_google_challenge(
+    body: RecentAuthGoogleChallengeRequest,
+    request: Request,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> GoogleChallengeResponse:
+    ctx = request.state.auth_context
+    await enforce(
+        Rule("auth_recent_session", str(ctx.session_id), 5, 5 * MIN),
+        Rule("auth_recent_ip", client_ip(request), 20, 15 * MIN),
+    )
+    try:
+        issued = await issue_recent_auth_challenge(db, user, ctx, body.action)
+    except CredentialError as exc:
+        raise await _rollback_error(db, exc) from exc
+    result = GoogleChallengeResponse(
+        challenge_id=issued.id, nonce=issued.nonce, expires_at=issued.expires_at
+    )
+    await db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
+@router.post("/recent-auth/google", response_model=RecentAuthResponse)
+async def recent_auth_google_proof(
+    body: RecentAuthGoogleRequest,
+    request: Request,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> RecentAuthResponse:
+    ctx = request.state.auth_context
+    await enforce(
+        Rule("auth_recent_session", str(ctx.session_id), 5, 5 * MIN),
+        Rule("auth_recent_ip", client_ip(request), 20, 15 * MIN),
+    )
+    try:
+        token, proof = await recent_auth_google(
+            db, user, ctx, body.challenge_id, body.id_token, body.action
+        )
+    except CredentialError as exc:
+        raise await _rollback_error(db, exc) from exc
+    except SessionAuthError as exc:
+        raise await _session_error(db, exc) from exc
+    result = RecentAuthResponse(
+        recent_auth_token=token, action=proof.action, expires_at=proof.expires_at
+    )
+    await db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return result
 
 
 async def _lifecycle_refresh_error(db: AsyncSession, refresh_token: str) -> None:
@@ -693,6 +767,8 @@ async def get_me(user: User = Depends(get_current_user)) -> UserResponse:
         email_revision=user.email_revision,
         account_status=user.account_status,
         lifecycle_revision=user.lifecycle_revision,
+        google_email=user.google_email if user.google_id else None,
+        google_email_observed_at=user.google_email_observed_at if user.google_id else None,
     )
 
 

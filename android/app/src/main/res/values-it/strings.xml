@@ -1035,4 +1035,20 @@
     <string name="account_method_password_set">Password: impostata</string>
     <string name="account_method_password_none">Password: non impostata</string>
     <string name="account_method_google_none">Google: non collegato</string>
+    <string name="err_google_challenge">L’accesso con Google è scaduto. Riprova.</string>
+    <string name="err_google_account_mismatch">Questo non è l’account Google collegato qui. Scegli quello giusto.</string>
+    <string name="err_google_already_linked">Google è già collegato a questo account.</string>
+    <string name="err_google_link_unavailable">Questo account Google non può essere collegato a questo account.</string>
+    <string name="err_google_not_linked">Google non è collegato a questo account.</string>
+    <string name="err_google_sign_in_conflict">Esiste già un account con questa e-mail. Accedi con la password, poi collega Google nelle Impostazioni.</string>
+    <string name="err_google_unavailable">La verifica Google non è temporaneamente disponibile. Riprova tra poco.</string>
+    <string name="err_password_already_set">Questo account ha già una password.</string>
+    <string name="account_google_linked_email">Accedi con Google (%1$s)</string>
+    <string name="account_link_google">Collega Google</string>
+    <string name="account_link_google_hint">Aggiunge Google come secondo metodo di accesso a %1$s. L’indirizzo e-mail non cambia e gli account non vengono uniti. Gli altri dispositivi verranno disconnessi. Conferma la password attuale, poi scegli un account Google.</string>
+    <string name="account_link_google_done">Google collegato. Gli altri dispositivi sono stati disconnessi.</string>
+    <string name="account_add_password">Aggiungi password</string>
+    <string name="account_add_password_hint">Almeno 15 caratteri. Prima confermerai con il tuo account Google. Gli altri dispositivi verranno disconnessi.</string>
+    <string name="account_password_added">Password aggiunta. Gli altri dispositivi sono stati disconnessi.</string>
+    <string name="account_google_confirm_hint">Ti verrà chiesto di confermare con il tuo account Google.</string>
 </resources>

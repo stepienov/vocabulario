@@ -40,6 +40,8 @@ internal fun AccountSectionBody(
     onResendChange: () -> Unit,
     onCancelChange: () -> Unit,
     onDeleteAccount: () -> Unit,
+    onLinkGoogle: () -> Unit,
+    onAddPassword: () -> Unit,
     onRetry: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -99,10 +101,32 @@ internal fun AccountSectionBody(
             color = scheme.onSurfaceVariant,
         )
         Text(
-            stringResource(if (account.hasGoogle) R.string.account_google_linked else R.string.account_method_google_none),
+            if (account.hasGoogle && account.googleEmail != null) {
+                stringResource(R.string.account_google_linked_email, account.googleEmail)
+            } else {
+                stringResource(if (account.hasGoogle) R.string.account_google_linked else R.string.account_method_google_none)
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = scheme.onSurfaceVariant,
         )
+        if (account.hasPassword && !account.hasGoogle && !account.passwordUpgradeRequired) {
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onLinkGoogle,
+                enabled = !account.stale,
+                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_LINK_GOOGLE),
+                shape = AppButtonShape,
+            ) { Text(stringResource(R.string.account_link_google)) }
+        }
+        if (account.hasGoogle && !account.hasPassword) {
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onAddPassword,
+                enabled = !account.stale,
+                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_ADD_PASSWORD),
+                shape = AppButtonShape,
+            ) { Text(stringResource(R.string.account_add_password)) }
+        }
         if (account.hasPassword && account.passwordUpgradeRequired) {
             Spacer(Modifier.height(12.dp))
             Text(
@@ -126,8 +150,9 @@ internal fun AccountSectionBody(
                 shape = AppButtonShape,
             ) { Text(stringResource(R.string.account_change_password)) }
         }
-        // Konta tylko z Google dostaną zmianę adresu razem z logowaniem Google jako ponownym uwierzytelnieniem.
-        if (account.hasPassword && !account.passwordUpgradeRequired) {
+        // Konto z Google potwierdza zmianę adresu i usunięcie wyborem swojego konta Google.
+        val canManage = (account.hasPassword || account.hasGoogle) && !account.passwordUpgradeRequired
+        if (canManage) {
             val pending = account.pendingChange
             Spacer(Modifier.height(8.dp))
             if (pending == null) {
@@ -159,8 +184,7 @@ internal fun AccountSectionBody(
                 ) { Text(stringResource(R.string.account_email_change_cancel)) }
             }
         }
-        // Konta tylko z Google dostaną usuwanie razem z dowodem Google (F-005).
-        if (account.hasPassword && !account.passwordUpgradeRequired) {
+        if (canManage) {
             Spacer(Modifier.height(16.dp))
             OutlinedButton(
                 onClick = onDeleteAccount,
@@ -203,13 +227,21 @@ internal fun DeleteAccountDialog(
                     )
                 }
                 Spacer(Modifier.height(12.dp))
-                AppGrayField(
-                    value = form.password,
-                    onValueChange = onPasswordChange,
-                    placeholder = stringResource(R.string.auth_password),
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                )
+                if (form.usesGoogle) {
+                    Text(
+                        stringResource(R.string.account_google_confirm_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    AppGrayField(
+                        value = form.password,
+                        onValueChange = onPasswordChange,
+                        placeholder = stringResource(R.string.auth_password),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                    )
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = form.confirmed,
@@ -262,16 +294,18 @@ internal fun ChangeEmailDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                 )
                 Spacer(Modifier.height(10.dp))
-                AppGrayField(
-                    value = form.password,
-                    onValueChange = onPasswordChange,
-                    placeholder = stringResource(R.string.account_current_password),
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                )
-                Spacer(Modifier.height(8.dp))
+                if (!form.usesGoogle) {
+                    AppGrayField(
+                        value = form.password,
+                        onValueChange = onPasswordChange,
+                        placeholder = stringResource(R.string.account_current_password),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
                 Text(
-                    stringResource(R.string.account_change_email_hint),
+                    stringResource(if (form.usesGoogle) R.string.account_google_confirm_hint else R.string.account_change_email_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -287,6 +321,106 @@ internal fun ChangeEmailDialog(
                 onSecondary = onDismiss,
                 secondaryKind = AppDialogAction.Neutral,
                 primaryText = stringResource(R.string.account_email_change_send),
+                onPrimary = onSubmit,
+                primaryEnabled = !form.busy,
+            )
+        },
+    )
+}
+
+@Composable
+internal fun LinkGoogleDialog(
+    form: LinkGoogleUiState,
+    accountEmail: String?,
+    onPasswordChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AppAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.account_link_google),
+        dismissOnClickOutside = !form.busy,
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    stringResource(R.string.account_link_google_hint, accountEmail.orEmpty()),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(12.dp))
+                AppGrayField(
+                    value = form.password,
+                    onValueChange = onPasswordChange,
+                    placeholder = stringResource(R.string.account_current_password),
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                )
+                form.error?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        buttons = {
+            AppDialogButtonRow(
+                secondaryText = stringResource(R.string.action_cancel),
+                onSecondary = onDismiss,
+                secondaryKind = AppDialogAction.Neutral,
+                primaryText = stringResource(R.string.auth_google),
+                onPrimary = onSubmit,
+                primaryEnabled = !form.busy,
+            )
+        },
+    )
+}
+
+@Composable
+internal fun AddPasswordDialog(
+    form: AddPasswordUiState,
+    onNewChange: (String) -> Unit,
+    onRepeatChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val passwordKeyboard = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next)
+    AppAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.account_add_password),
+        dismissOnClickOutside = !form.busy,
+        text = {
+            Column {
+                AppGrayField(
+                    value = form.new,
+                    onValueChange = onNewChange,
+                    placeholder = stringResource(R.string.account_new_password),
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = passwordKeyboard,
+                )
+                Spacer(Modifier.height(10.dp))
+                AppGrayField(
+                    value = form.repeat,
+                    onValueChange = onRepeatChange,
+                    placeholder = stringResource(R.string.account_repeat_password),
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = passwordKeyboard.copy(imeAction = ImeAction.Done),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.account_add_password_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                form.error?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        buttons = {
+            AppDialogButtonRow(
+                secondaryText = stringResource(R.string.action_cancel),
+                onSecondary = onDismiss,
+                secondaryKind = AppDialogAction.Neutral,
+                primaryText = stringResource(R.string.auth_google),
                 onPrimary = onSubmit,
                 primaryEnabled = !form.busy,
             )

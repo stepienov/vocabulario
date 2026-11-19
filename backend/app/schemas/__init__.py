@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import (
@@ -35,9 +36,36 @@ class LoginRequest(BaseModel):
 
 
 class GoogleAuthRequest(BaseModel):
-    id_token: str
+    challenge_id: UUID4
+    id_token: str = Field(min_length=1, max_length=8192)
     # Verification mail language when a new account's Google address is not proven.
     locale: str | None = Field(default=None, max_length=16)
+
+
+class GoogleLinkChallengeRequest(BaseModel):
+    recent_auth_token: str = Field(min_length=1, max_length=128)
+
+
+class RecentAuthGoogleChallengeRequest(BaseModel):
+    action: Literal["change_email", "add_password"]
+
+
+class GoogleChallengeResponse(BaseModel):
+    challenge_id: UUID
+    nonce: str
+    expires_at: datetime
+
+
+class GoogleLinkRequest(BaseModel):
+    challenge_id: UUID4
+    id_token: str = Field(min_length=1, max_length=8192)
+    recent_auth_token: str = Field(min_length=1, max_length=128)
+
+
+class RecentAuthGoogleRequest(BaseModel):
+    challenge_id: UUID4
+    id_token: str = Field(min_length=1, max_length=8192)
+    action: Literal["change_email", "add_password"]
 
 
 class RefreshRequest(BaseModel):
@@ -156,6 +184,9 @@ class UserResponse(BaseModel):
     email_revision: int = 1
     account_status: str = "active"
     lifecycle_revision: int = 1
+    # Last address Google reported for the linked identity; absent without a Google method.
+    google_email: str | None = None
+    google_email_observed_at: datetime | None = None
 
 
 class UserSettingsResponse(BaseModel):

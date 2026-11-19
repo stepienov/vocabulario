@@ -41,6 +41,14 @@ class AccountDeletionTest {
     }
 
     @Test
+    fun receiptRemembersGoogleMethodAndDefaultsToPassword() {
+        val codec = DeletionReceiptCodec(XorCipher)
+        val google = DeletionReceipt("r", "s", "a@b.c", "u", method = DELETION_METHOD_GOOGLE)
+        assertEquals(DELETION_METHOD_GOOGLE, codec.decode(codec.encode(google))?.method)
+        assertEquals(DELETION_METHOD_PASSWORD, DeletionReceipt("r", "s", "a@b.c", "u").method)
+    }
+
+    @Test
     fun corruptedReceiptDecodesToNull() {
         assertNull(DeletionReceiptCodec(XorCipher).decode("not-base64!!"))
     }

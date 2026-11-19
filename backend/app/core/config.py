@@ -131,14 +131,6 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
     @property
-    def google_client_ids(self) -> list[str]:
-        ids = []
-        for value in (self.google_oauth_client_id, self.google_oauth_client_id_android):
-            if value:
-                ids.append(value)
-        return ids
-
-    @property
     def is_deployed(self) -> bool:
         return self.environment in DEPLOYED_ENVIRONMENTS
 
@@ -180,7 +172,7 @@ class Settings(BaseSettings):
             errors.append("database_url")
         if not all(_is_public_https_origin(origin) for origin in self.cors_origins):
             errors.append("allowed_origins")
-        if not self.google_client_ids:
+        if not self.google_oauth_client_id.strip():
             errors.append("google_oauth_client_id")
         if self.llm_mock:
             errors.append("llm_mock")

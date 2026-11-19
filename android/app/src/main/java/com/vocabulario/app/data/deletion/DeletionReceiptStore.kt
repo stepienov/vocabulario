@@ -31,6 +31,8 @@ data class DeletionReceipt(
     val statusSecret: String,
     val email: String,
     val userId: String,
+    /** `password` albo `google`: tym samym sposobem cofamy wniosek. */
+    val method: String = "password",
     /** Stały identyfikator cofnięcia: powtórzenie po utracie odpowiedzi jest idempotentne. */
     val cancelRequestId: String? = null,
     val deletion: DeletionView? = null,

@@ -13,11 +13,13 @@ from app.core.http_errors import api_error
 from app.core.security import now_utc
 from app.db.session import get_db
 from app.models import AccountDeletion
-from app.schemas import MailAcceptedResponse
+from app.schemas import GoogleChallengeResponse, MailAcceptedResponse
 from app.schemas.account_deletion import (
     DeletionCancelBody,
     DeletionCancelResponse,
     DeletionEmailRequest,
+    DeletionGoogleChallengeRequest,
+    DeletionGoogleProofRequest,
     DeletionPasswordProofRequest,
     DeletionProofResponse,
     DeletionRequestBody,
@@ -28,6 +30,7 @@ from app.services.account_deletion import (
     can_cancel,
     cancel_deletion,
     deletion_status,
+    google_proof,
     password_proof,
     request_deletion,
     request_email_proof,
@@ -51,6 +54,7 @@ from app.services.auth_limits import (
     reserve,
 )
 from app.services.mail_outbox import wake_mail_worker
+from app.services.google_challenges import issue_deletion_challenge
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +114,51 @@ async def proof_password(
     )
     try:
         proof = await password_proof(db, email, body.password, body.action)
+    except CredentialError as exc:
+        raise await _fail(db, exc) from exc
+    result = DeletionProofResponse(
+        action_token=proof.token,
+        action=proof.action,
+        method=proof.method,
+        expires_at=proof.expires_at,
+        user_id=proof.user_id,
+        deletion_id=proof.deletion_id,
+        state=proof.state,
+    )
+    await db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
+@router.post("/google/challenge", response_model=GoogleChallengeResponse)
+async def google_challenge(
+    body: DeletionGoogleChallengeRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> GoogleChallengeResponse:
+    ip = client_ip(request)
+    await enforce(_public(ip), Rule("account_deletion_google_challenge_ip", ip, 20, 15 * MIN))
+    issued = await issue_deletion_challenge(db, body.action)
+    result = GoogleChallengeResponse(
+        challenge_id=issued.id, nonce=issued.nonce, expires_at=issued.expires_at
+    )
+    await db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
+@router.post("/proof/google", response_model=DeletionProofResponse)
+async def proof_google(
+    body: DeletionGoogleProofRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> DeletionProofResponse:
+    ip = client_ip(request)
+    await enforce(_public(ip), Rule("account_deletion_proof_ip", ip, 20, 15 * MIN))
+    try:
+        proof = await google_proof(db, body.challenge_id, body.id_token, body.action)
     except CredentialError as exc:
         raise await _fail(db, exc) from exc
     result = DeletionProofResponse(

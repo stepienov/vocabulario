@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
 import com.vocabulario.app.auth.GoogleAuthHelper
+import com.vocabulario.app.auth.GoogleSignInCancelledException
 import androidx.annotation.StringRes
 import com.vocabulario.app.data.AccountRepository
 import com.vocabulario.app.data.AuthRepository
@@ -95,6 +96,8 @@ class AuthViewModel @Inject constructor(
             awaitingServerSignOut = false
             throw e
         }
+        // Dopiero po zakończonym logout; awaria czyszczenia nie cofa wylogowania.
+        googleAuthHelper.clearCredentialState()
     }
 
     /** Ostrzeżenie o niewysłanych zmianach przy logout z ustawień; null = brak dialogu. */
@@ -371,17 +374,13 @@ class AuthViewModel @Inject constructor(
     fun googleSignIn(activityContext: android.content.Context, onSuccess: suspend (needsOnboarding: Boolean) -> Unit) {
         viewModelScope.launch {
             _errorMessage.value = null
-            val idToken = runCatching { googleAuthHelper.signIn(activityContext) }
-                .onFailure {
-                    _errorMessage.value = it.userMessage(strings, R.string.err_google_login)
-                }
-                .getOrNull() ?: return@launch
             blockingBusy.run {
                 runCatching {
-                    authRepository.googleLogin(idToken)
+                    authRepository.googleLogin(googleAuthHelper.provider(activityContext))
                 }.onSuccess {
                     finishSignIn(onSuccess)
                 }.onFailure {
+                    if (it is GoogleSignInCancelledException) return@onFailure
                     _errorMessage.value = authFailureMessage(it, R.string.err_google_login)
                 }
             }

@@ -962,5 +962,21 @@
     <string name="account_method_password_set">पासवर्ड: सेट है</string>
     <string name="account_method_password_none">पासवर्ड: सेट नहीं है</string>
     <string name="account_method_google_none">Google: जुड़ा नहीं है</string>
+    <string name="err_google_challenge">Google साइन-इन की समय-सीमा समाप्त हो गई। कृपया फिर से कोशिश करें।</string>
+    <string name="err_google_account_mismatch">यह वह Google खाता नहीं है जो यहाँ जुड़ा है। सही खाता चुनें।</string>
+    <string name="err_google_already_linked">इस खाते से Google पहले से जुड़ा है।</string>
+    <string name="err_google_link_unavailable">यह Google खाता इस खाते से नहीं जोड़ा जा सकता।</string>
+    <string name="err_google_not_linked">इस खाते से Google नहीं जुड़ा है।</string>
+    <string name="err_google_sign_in_conflict">इस ईमेल से खाता पहले से मौजूद है। पासवर्ड से साइन इन करें, फिर सेटिंग में Google जोड़ें।</string>
+    <string name="err_google_unavailable">Google सत्यापन अभी उपलब्ध नहीं है। थोड़ी देर बाद फिर कोशिश करें।</string>
+    <string name="err_password_already_set">इस खाते में पहले से पासवर्ड है।</string>
+    <string name="account_google_linked_email">आप Google से साइन इन करते हैं (%1$s)</string>
+    <string name="account_link_google">Google जोड़ें</string>
+    <string name="account_link_google_hint">%1$s में साइन इन करने का दूसरा तरीका जोड़ने के लिए Google जोड़ता है। आपका ईमेल पता नहीं बदलेगा और खाते मर्ज नहीं होंगे। दूसरे डिवाइस साइन आउट हो जाएँगे। अपना मौजूदा पासवर्ड पुष्ट करें, फिर Google खाता चुनें।</string>
+    <string name="account_link_google_done">Google जुड़ गया। दूसरे डिवाइस साइन आउट कर दिए गए।</string>
+    <string name="account_add_password">पासवर्ड जोड़ें</string>
+    <string name="account_add_password_hint">कम से कम 15 अक्षर। पहले आप अपने Google खाते से पुष्टि करेंगे। दूसरे डिवाइस साइन आउट हो जाएँगे।</string>
+    <string name="account_password_added">पासवर्ड जुड़ गया। दूसरे डिवाइस साइन आउट कर दिए गए।</string>
+    <string name="account_google_confirm_hint">आपसे अपने Google खाते से पुष्टि करने को कहा जाएगा।</string>
 </resources>
 

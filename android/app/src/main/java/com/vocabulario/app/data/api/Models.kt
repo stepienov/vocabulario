@@ -23,7 +23,25 @@ data class RegisterRequest(val email: String, val password: String, val locale: 
 data class LoginRequest(val email: String, val password: String)
 
 @Serializable
-data class GoogleAuthRequest(val id_token: String, val locale: String? = null)
+data class GoogleAuthRequest(val challenge_id: String, val id_token: String, val locale: String? = null)
+
+@Serializable
+data class GoogleChallengeResponse(val challenge_id: String, val nonce: String, val expires_at: String)
+
+@Serializable
+data class GoogleLinkChallengeRequest(val recent_auth_token: String)
+
+@Serializable
+data class GoogleLinkRequest(val challenge_id: String, val id_token: String, val recent_auth_token: String)
+
+@Serializable
+data class RecentAuthGoogleChallengeRequest(val action: String)
+
+@Serializable
+data class RecentAuthGoogleRequest(val challenge_id: String, val id_token: String, val action: String)
+
+@Serializable
+data class AddPasswordRequest(val new_password: String, val recent_auth_token: String)
 
 @Serializable
 data class RefreshRequest(val refresh_token: String, val request_id: String)
@@ -39,6 +57,7 @@ data class UserResponse(
     val email_verified: Boolean = true,
     val email_verification_required: Boolean = false,
     val login_methods: List<String> = emptyList(),
+    val google_email: String? = null,
     val password_upgrade_required: Boolean = false,
     val email_revision: Int = 1,
     val account_status: String = "active",
@@ -93,9 +112,16 @@ data class EmailChangeCurrentResponse(val change: EmailChangeResponse? = null)
 data class DeletionProofRequest(val email: String, val password: String, val action: String)
 
 @Serializable
+data class DeletionGoogleChallengeRequest(val action: String)
+
+@Serializable
+data class DeletionGoogleProofRequest(val challenge_id: String, val id_token: String, val action: String)
+
+@Serializable
 data class DeletionProofResponse(
     val action_token: String,
     val user_id: String,
+    val method: String? = null,
     val deletion_id: String? = null,
     val state: String? = null,
 )

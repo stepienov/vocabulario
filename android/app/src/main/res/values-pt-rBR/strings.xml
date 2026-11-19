@@ -962,5 +962,21 @@
     <string name="account_method_password_set">Senha: definida</string>
     <string name="account_method_password_none">Senha: não definida</string>
     <string name="account_method_google_none">Google: não vinculado</string>
+    <string name="err_google_challenge">O login com o Google expirou. Tente novamente.</string>
+    <string name="err_google_account_mismatch">Essa não é a conta Google vinculada aqui. Escolha a correta.</string>
+    <string name="err_google_already_linked">O Google já está vinculado a esta conta.</string>
+    <string name="err_google_link_unavailable">Esta conta Google não pode ser vinculada a esta conta.</string>
+    <string name="err_google_not_linked">O Google não está vinculado a esta conta.</string>
+    <string name="err_google_sign_in_conflict">Já existe uma conta com este e-mail. Entre com sua senha e depois vincule o Google em Configurações.</string>
+    <string name="err_google_unavailable">A verificação do Google está temporariamente indisponível. Tente novamente em instantes.</string>
+    <string name="err_password_already_set">Esta conta já tem uma senha.</string>
+    <string name="account_google_linked_email">Você entra com o Google (%1$s)</string>
+    <string name="account_link_google">Vincular Google</string>
+    <string name="account_link_google_hint">Adiciona o Google como segunda forma de entrar em %1$s. Seu e-mail não muda e as contas não são mescladas. Os outros dispositivos serão desconectados. Confirme sua senha atual e escolha uma conta Google.</string>
+    <string name="account_link_google_done">Google vinculado. Os outros dispositivos foram desconectados.</string>
+    <string name="account_add_password">Adicionar senha</string>
+    <string name="account_add_password_hint">Pelo menos 15 caracteres. Primeiro você confirma com sua conta Google. Os outros dispositivos serão desconectados.</string>
+    <string name="account_password_added">Senha adicionada. Os outros dispositivos foram desconectados.</string>
+    <string name="account_google_confirm_hint">Você precisará confirmar com sua conta Google.</string>
 </resources>
 

@@ -1,8 +1,12 @@
 package com.vocabulario.app.data.deletion
 
+import com.vocabulario.app.auth.GoogleIdTokenProvider
 import com.vocabulario.app.data.AuthRepository
 import com.vocabulario.app.data.api.DeletionCancelBody
+import com.vocabulario.app.data.api.DeletionGoogleChallengeRequest
+import com.vocabulario.app.data.api.DeletionGoogleProofRequest
 import com.vocabulario.app.data.api.DeletionProofRequest
+import com.vocabulario.app.data.api.DeletionProofResponse
 import com.vocabulario.app.data.api.DeletionRequestBody
 import com.vocabulario.app.data.api.DeletionStatusRequest
 import com.vocabulario.app.data.api.DeletionView
@@ -34,6 +38,8 @@ sealed interface DeletionOutcome {
 
 internal const val DELETION_STATE_COMPLETED = "completed"
 internal const val DELETION_STATE_CANCELLED = "cancelled"
+internal const val DELETION_METHOD_PASSWORD = "password"
+internal const val DELETION_METHOD_GOOGLE = "google"
 
 /** 32 losowe bajty jako base64url bez dopełnienia (43 znaki), jak wymaga serwer. */
 internal fun newSecret32(random: SecureRandom = SecureRandom()): String {
@@ -66,14 +72,33 @@ class AccountDeletionRepository @Inject constructor(
 
     suspend fun load(): DeletionReceipt? = store.load()
 
-    suspend fun request(email: String, password: String): DeletionView {
+    suspend fun request(email: String, password: String): DeletionView =
+        submitRequest(email, DELETION_METHOD_PASSWORD) {
+            api.deletionProofPassword(DeletionProofRequest(email.trim(), password, "request"))
+        }
+
+    /** Konto bez hasła potwierdza wniosek kontem Google; adres trafia tylko do lokalnego pokwitowania. */
+    suspend fun requestWithGoogle(email: String, provider: GoogleIdTokenProvider): DeletionView =
+        submitRequest(email, DELETION_METHOD_GOOGLE) { googleProof("request", provider) }
+
+    private suspend fun googleProof(action: String, provider: GoogleIdTokenProvider): DeletionProofResponse {
+        val challenge = api.deletionGoogleChallenge(DeletionGoogleChallengeRequest(action))
+        val idToken = provider.idToken(challenge.nonce)
+        return api.deletionProofGoogle(DeletionGoogleProofRequest(challenge.challenge_id, idToken, action))
+    }
+
+    private suspend fun submitRequest(
+        email: String,
+        method: String,
+        obtainProof: suspend () -> DeletionProofResponse,
+    ): DeletionView {
         val owner = (sessionCoordinator.state.value as? SessionState.Active)?.ownerUserId
-        val proof = api.deletionProofPassword(DeletionProofRequest(email.trim(), password, "request"))
+        val proof = obtainProof()
         if (owner == null || !proof.user_id.equals(owner, ignoreCase = true)) throw DeletionOwnerMismatchException()
 
         // Ponowienie po utracie odpowiedzi używa tego samego `request_id` i sekretu statusu.
-        val receipt = store.load()?.takeIf { it.userId == proof.user_id && it.deletion == null }
-            ?: DeletionReceipt(UUID.randomUUID().toString(), newSecret32(), email.trim(), proof.user_id)
+        val receipt = store.load()?.takeIf { it.userId == proof.user_id && it.deletion == null }?.copy(method = method)
+            ?: DeletionReceipt(UUID.randomUUID().toString(), newSecret32(), email.trim(), proof.user_id, method = method)
         store.save(receipt)
         val view = try {
             api.deletionRequest(DeletionRequestBody(receipt.requestId, proof.action_token, receipt.statusSecret))
@@ -124,7 +149,15 @@ class AccountDeletionRepository @Inject constructor(
 
     suspend fun cancel(password: String) {
         val receipt = store.load() ?: return
-        val proof = api.deletionProofPassword(DeletionProofRequest(receipt.email, password, "cancel"))
+        finishCancel(receipt, api.deletionProofPassword(DeletionProofRequest(receipt.email, password, "cancel")))
+    }
+
+    suspend fun cancelWithGoogle(provider: GoogleIdTokenProvider) {
+        val receipt = store.load() ?: return
+        finishCancel(receipt, googleProof("cancel", provider))
+    }
+
+    private suspend fun finishCancel(receipt: DeletionReceipt, proof: DeletionProofResponse) {
         if (!proof.user_id.equals(receipt.userId, ignoreCase = true)) throw DeletionOwnerMismatchException()
         val deletionId = proof.deletion_id ?: receipt.deletion?.deletion_id ?: throw DeletionOwnerMismatchException()
         val withCancelId = receipt.cancelRequestId?.let { receipt }

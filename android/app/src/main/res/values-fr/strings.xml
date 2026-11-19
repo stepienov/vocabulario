@@ -961,5 +961,21 @@
     <string name="account_method_password_set">Mot de passe : défini</string>
     <string name="account_method_password_none">Mot de passe : non défini</string>
     <string name="account_method_google_none">Google : non associé</string>
+    <string name="err_google_challenge">La connexion avec Google a expiré. Réessayez.</string>
+    <string name="err_google_account_mismatch">Ce n’est pas le compte Google associé ici. Choisissez le bon.</string>
+    <string name="err_google_already_linked">Google est déjà associé à ce compte.</string>
+    <string name="err_google_link_unavailable">Ce compte Google ne peut pas être associé à ce compte.</string>
+    <string name="err_google_not_linked">Google n’est pas associé à ce compte.</string>
+    <string name="err_google_sign_in_conflict">Un compte avec cette adresse e-mail existe déjà. Connectez-vous avec votre mot de passe, puis associez Google dans les Paramètres.</string>
+    <string name="err_google_unavailable">La vérification Google est temporairement indisponible. Réessayez dans un instant.</string>
+    <string name="err_password_already_set">Ce compte a déjà un mot de passe.</string>
+    <string name="account_google_linked_email">Vous vous connectez avec Google (%1$s)</string>
+    <string name="account_link_google">Associer Google</string>
+    <string name="account_link_google_hint">Ajoute Google comme second moyen de connexion à %1$s. Votre adresse e-mail ne change pas et les comptes ne sont pas fusionnés. Les autres appareils seront déconnectés. Confirmez votre mot de passe actuel, puis choisissez un compte Google.</string>
+    <string name="account_link_google_done">Google associé. Les autres appareils ont été déconnectés.</string>
+    <string name="account_add_password">Ajouter un mot de passe</string>
+    <string name="account_add_password_hint">Au moins 15 caractères. Vous confirmerez d’abord avec votre compte Google. Les autres appareils seront déconnectés.</string>
+    <string name="account_password_added">Mot de passe ajouté. Les autres appareils ont été déconnectés.</string>
+    <string name="account_google_confirm_hint">Il vous sera demandé de confirmer avec votre compte Google.</string>
 </resources>
 

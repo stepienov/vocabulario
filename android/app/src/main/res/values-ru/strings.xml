@@ -962,5 +962,21 @@
     <string name="account_method_password_set">Пароль: задан</string>
     <string name="account_method_password_none">Пароль: не задан</string>
     <string name="account_method_google_none">Google: не подключён</string>
+    <string name="err_google_challenge">Вход через Google истёк. Попробуйте ещё раз.</string>
+    <string name="err_google_account_mismatch">Это не тот аккаунт Google, который привязан здесь. Выберите нужный.</string>
+    <string name="err_google_already_linked">Google уже привязан к этому аккаунту.</string>
+    <string name="err_google_link_unavailable">Этот аккаунт Google нельзя привязать к этому аккаунту.</string>
+    <string name="err_google_not_linked">Google не привязан к этому аккаунту.</string>
+    <string name="err_google_sign_in_conflict">Аккаунт с таким адресом уже существует. Войдите с паролем, а затем привяжите Google в настройках.</string>
+    <string name="err_google_unavailable">Проверка Google временно недоступна. Повторите попытку чуть позже.</string>
+    <string name="err_password_already_set">У этого аккаунта уже есть пароль.</string>
+    <string name="account_google_linked_email">Вы входите через Google (%1$s)</string>
+    <string name="account_link_google">Привязать Google</string>
+    <string name="account_link_google_hint">Добавляет Google как второй способ входа в %1$s. Адрес e-mail не меняется, аккаунты не объединяются. На других устройствах будет выполнен выход. Подтвердите текущий пароль и выберите аккаунт Google.</string>
+    <string name="account_link_google_done">Google привязан. На других устройствах выполнен выход.</string>
+    <string name="account_add_password">Добавить пароль</string>
+    <string name="account_add_password_hint">Не менее 15 символов. Сначала вы подтвердите действие аккаунтом Google. На других устройствах будет выполнен выход.</string>
+    <string name="account_password_added">Пароль добавлен. На других устройствах выполнен выход.</string>
+    <string name="account_google_confirm_hint">Потребуется подтверждение аккаунтом Google.</string>
 </resources>
 

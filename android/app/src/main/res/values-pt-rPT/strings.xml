@@ -962,5 +962,21 @@
     <string name="account_method_password_set">Palavra-passe: definida</string>
     <string name="account_method_password_none">Palavra-passe: não definida</string>
     <string name="account_method_google_none">Google: não associado</string>
+    <string name="err_google_challenge">O início de sessão com o Google expirou. Tente novamente.</string>
+    <string name="err_google_account_mismatch">Essa não é a conta Google associada aqui. Escolha a correta.</string>
+    <string name="err_google_already_linked">O Google já está associado a esta conta.</string>
+    <string name="err_google_link_unavailable">Esta conta Google não pode ser associada a esta conta.</string>
+    <string name="err_google_not_linked">O Google não está associado a esta conta.</string>
+    <string name="err_google_sign_in_conflict">Já existe uma conta com este e-mail. Inicie sessão com a palavra-passe e depois associe o Google nas Definições.</string>
+    <string name="err_google_unavailable">A verificação do Google está temporariamente indisponível. Tente novamente dentro de instantes.</string>
+    <string name="err_password_already_set">Esta conta já tem palavra-passe.</string>
+    <string name="account_google_linked_email">Inicia sessão com o Google (%1$s)</string>
+    <string name="account_link_google">Associar Google</string>
+    <string name="account_link_google_hint">Adiciona o Google como segunda forma de iniciar sessão em %1$s. O seu e-mail não muda e as contas não são fundidas. Os outros dispositivos terminarão a sessão. Confirme a palavra-passe atual e escolha uma conta Google.</string>
+    <string name="account_link_google_done">Google associado. Os outros dispositivos terminaram a sessão.</string>
+    <string name="account_add_password">Adicionar palavra-passe</string>
+    <string name="account_add_password_hint">Pelo menos 15 caracteres. Primeiro confirma com a sua conta Google. Os outros dispositivos terminarão a sessão.</string>
+    <string name="account_password_added">Palavra-passe adicionada. Os outros dispositivos terminaram a sessão.</string>
+    <string name="account_google_confirm_hint">Ser-lhe-á pedido que confirme com a sua conta Google.</string>
 </resources>
 

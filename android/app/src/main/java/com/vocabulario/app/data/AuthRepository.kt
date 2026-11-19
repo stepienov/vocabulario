@@ -1,5 +1,6 @@
 package com.vocabulario.app.data
 
+import com.vocabulario.app.auth.GoogleIdTokenProvider
 import com.vocabulario.app.data.api.GoogleAuthRequest
 import com.vocabulario.app.data.api.LoginRequest
 import com.vocabulario.app.data.api.LogoutRequest
@@ -59,8 +60,16 @@ class AuthRepository @Inject constructor(
         installCandidate(api.login(LoginRequest(email, password)), slot)
     }
 
-    suspend fun googleLogin(idToken: String) = withCandidateSlot { slot ->
-        installCandidate(api.googleAuth(GoogleAuthRequest(idToken, tokenStore.mailLocale())), slot)
+    /** Challenge i wybór konta poprzedzają rezerwację slotu; anulowanie selektora kończy bez żądania. */
+    suspend fun googleLogin(provider: GoogleIdTokenProvider) {
+        val challenge = api.googleChallenge()
+        val idToken = provider.idToken(challenge.nonce)
+        withCandidateSlot { slot ->
+            installCandidate(
+                api.googleAuth(GoogleAuthRequest(challenge.challenge_id, idToken, tokenStore.mailLocale())),
+                slot,
+            )
+        }
     }
 
     /** Miejsce na ewentualne odwołanie kandydata rezerwujemy przed HTTP (T-002 §5). */

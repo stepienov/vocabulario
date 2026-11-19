@@ -962,5 +962,21 @@
     <string name="account_method_password_set">كلمة المرور: معيّنة</string>
     <string name="account_method_password_none">كلمة المرور: غير معيّنة</string>
     <string name="account_method_google_none">Google: غير مرتبط</string>
+    <string name="err_google_challenge">انتهت صلاحية تسجيل الدخول عبر Google. حاول مرة أخرى.</string>
+    <string name="err_google_account_mismatch">هذا ليس حساب Google المرتبط هنا. اختر الحساب الصحيح.</string>
+    <string name="err_google_already_linked">حساب Google مرتبط بهذا الحساب بالفعل.</string>
+    <string name="err_google_link_unavailable">لا يمكن ربط حساب Google هذا بهذا الحساب.</string>
+    <string name="err_google_not_linked">حساب Google غير مرتبط بهذا الحساب.</string>
+    <string name="err_google_sign_in_conflict">يوجد حساب بهذا البريد الإلكتروني بالفعل. سجّل الدخول بكلمة المرور ثم اربط Google من الإعدادات.</string>
+    <string name="err_google_unavailable">التحقق عبر Google غير متاح مؤقتًا. حاول مرة أخرى بعد قليل.</string>
+    <string name="err_password_already_set">هذا الحساب لديه كلمة مرور بالفعل.</string>
+    <string name="account_google_linked_email">تسجّل الدخول عبر Google (%1$s)</string>
+    <string name="account_link_google">ربط Google</string>
+    <string name="account_link_google_hint">يضيف Google كطريقة ثانية لتسجيل الدخول إلى %1$s. لا يتغير بريدك الإلكتروني ولا تُدمج الحسابات. سيتم تسجيل الخروج على الأجهزة الأخرى. أكّد كلمة المرور الحالية ثم اختر حساب Google.</string>
+    <string name="account_link_google_done">تم ربط Google. تم تسجيل الخروج على الأجهزة الأخرى.</string>
+    <string name="account_add_password">إضافة كلمة مرور</string>
+    <string name="account_add_password_hint">15 حرفًا على الأقل. ستؤكد أولًا باستخدام حساب Google. سيتم تسجيل الخروج على الأجهزة الأخرى.</string>
+    <string name="account_password_added">تمت إضافة كلمة المرور. تم تسجيل الخروج على الأجهزة الأخرى.</string>
+    <string name="account_google_confirm_hint">سيُطلب منك التأكيد باستخدام حساب Google.</string>
 </resources>
 

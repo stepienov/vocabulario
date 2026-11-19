@@ -1041,4 +1041,20 @@
     <string name="account_method_password_set">Mật khẩu: đã đặt</string>
     <string name="account_method_password_none">Mật khẩu: chưa đặt</string>
     <string name="account_method_google_none">Google: chưa liên kết</string>
+    <string name="err_google_challenge">Phiên đăng nhập Google đã hết hạn. Vui lòng thử lại.</string>
+    <string name="err_google_account_mismatch">Đây không phải tài khoản Google đã liên kết ở đây. Hãy chọn đúng tài khoản.</string>
+    <string name="err_google_already_linked">Google đã được liên kết với tài khoản này.</string>
+    <string name="err_google_link_unavailable">Không thể liên kết tài khoản Google này với tài khoản này.</string>
+    <string name="err_google_not_linked">Google chưa được liên kết với tài khoản này.</string>
+    <string name="err_google_sign_in_conflict">Đã có tài khoản dùng email này. Hãy đăng nhập bằng mật khẩu rồi liên kết Google trong Cài đặt.</string>
+    <string name="err_google_unavailable">Xác minh Google tạm thời không khả dụng. Hãy thử lại sau giây lát.</string>
+    <string name="err_password_already_set">Tài khoản này đã có mật khẩu.</string>
+    <string name="account_google_linked_email">Bạn đăng nhập bằng Google (%1$s)</string>
+    <string name="account_link_google">Liên kết Google</string>
+    <string name="account_link_google_hint">Thêm Google làm cách đăng nhập thứ hai cho %1$s. Địa chỉ email không đổi và các tài khoản không bị gộp. Các thiết bị khác sẽ bị đăng xuất. Hãy xác nhận mật khẩu hiện tại rồi chọn tài khoản Google.</string>
+    <string name="account_link_google_done">Đã liên kết Google. Các thiết bị khác đã bị đăng xuất.</string>
+    <string name="account_add_password">Thêm mật khẩu</string>
+    <string name="account_add_password_hint">Ít nhất 15 ký tự. Trước tiên bạn xác nhận bằng tài khoản Google. Các thiết bị khác sẽ bị đăng xuất.</string>
+    <string name="account_password_added">Đã thêm mật khẩu. Các thiết bị khác đã bị đăng xuất.</string>
+    <string name="account_google_confirm_hint">Bạn sẽ được yêu cầu xác nhận bằng tài khoản Google.</string>
 </resources>

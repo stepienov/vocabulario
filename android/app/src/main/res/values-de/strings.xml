@@ -962,5 +962,21 @@
     <string name="account_method_password_set">Passwort: festgelegt</string>
     <string name="account_method_password_none">Passwort: nicht festgelegt</string>
     <string name="account_method_google_none">Google: nicht verknüpft</string>
+    <string name="err_google_challenge">Die Anmeldung über Google ist abgelaufen. Bitte versuche es erneut.</string>
+    <string name="err_google_account_mismatch">Das ist nicht das hier verknüpfte Google-Konto. Wähle das richtige.</string>
+    <string name="err_google_already_linked">Google ist bereits mit diesem Konto verknüpft.</string>
+    <string name="err_google_link_unavailable">Dieses Google-Konto kann nicht mit diesem Konto verknüpft werden.</string>
+    <string name="err_google_not_linked">Google ist nicht mit diesem Konto verknüpft.</string>
+    <string name="err_google_sign_in_conflict">Ein Konto mit dieser E-Mail-Adresse existiert bereits. Melde dich mit deinem Passwort an und verknüpfe Google dann in den Einstellungen.</string>
+    <string name="err_google_unavailable">Die Google-Bestätigung ist vorübergehend nicht verfügbar. Versuche es gleich noch einmal.</string>
+    <string name="err_password_already_set">Dieses Konto hat bereits ein Passwort.</string>
+    <string name="account_google_linked_email">Du meldest dich mit Google an (%1$s)</string>
+    <string name="account_link_google">Google verknüpfen</string>
+    <string name="account_link_google_hint">Fügt Google als zweite Anmeldemethode für %1$s hinzu. Deine E-Mail-Adresse bleibt gleich, Konten werden nicht zusammengeführt. Andere Geräte werden abgemeldet. Bestätige dein aktuelles Passwort und wähle dann ein Google-Konto.</string>
+    <string name="account_link_google_done">Google verknüpft. Andere Geräte wurden abgemeldet.</string>
+    <string name="account_add_password">Passwort hinzufügen</string>
+    <string name="account_add_password_hint">Mindestens 15 Zeichen. Zuerst bestätigst du mit deinem Google-Konto. Andere Geräte werden abgemeldet.</string>
+    <string name="account_password_added">Passwort hinzugefügt. Andere Geräte wurden abgemeldet.</string>
+    <string name="account_google_confirm_hint">Du wirst gebeten, dies mit deinem Google-Konto zu bestätigen.</string>
 </resources>
 

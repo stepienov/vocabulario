@@ -1562,22 +1562,3 @@ class LLMService:
             "reason_detail": data.get("reason_detail") or data.get("reason"),
             "patch": data.get("patch") if isinstance(data.get("patch"), dict) else None,
         }
-
-
-async def verify_google_id_token(id_token: str) -> dict[str, Any]:
-    settings = get_settings()
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            "https://oauth2.googleapis.com/tokeninfo",
-            params={"id_token": id_token},
-            timeout=10.0,
-        )
-        response.raise_for_status()
-        data = response.json()
-
-    aud = data.get("aud")
-    if settings.google_client_ids and aud not in settings.google_client_ids:
-        raise ValueError("Invalid Google token audience")
-    if not data.get("email"):
-        raise ValueError("Google token missing email")
-    return data

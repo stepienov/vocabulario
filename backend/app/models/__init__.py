@@ -36,6 +36,11 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     google_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    # Last address reported by Google for the linked `sub`; a display hint, never an app address.
+    google_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    google_email_observed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     role: Mapped[str] = mapped_column(String(32), default="user")
     # Only proof for the current app address; NULL until a verification or reset link is used.
     email_verified_at: Mapped[datetime | None] = mapped_column(
@@ -437,6 +442,7 @@ SESSION_REVOCATION_REASONS = (
     "password_reset",
     "password_change",
     "password_added",
+    "google_linked",
     "email_changed",
     "refresh_reuse",
     "account_deleted",
@@ -566,6 +572,41 @@ class RecentAuthProof(Base):
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     email_revision: Mapped[int] = mapped_column(BigInteger, nullable=False)
     credentials_revision: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+GOOGLE_CHALLENGE_PURPOSES = ("login", "link", "recent_auth", "account_deletion")
+
+
+class GoogleChallenge(Base):
+    """One-use nonce for a single Google sign-in step (E-001/F-005/T-001 section 2)."""
+
+    __tablename__ = "auth_google_challenges"
+    __table_args__ = (
+        CheckConstraint(
+            "purpose IN (" + ", ".join(f"'{p}'" for p in GOOGLE_CHALLENGE_PURPOSES) + ")",
+            name="ck_auth_google_challenges_purpose",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    nonce_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    purpose: Mapped[str] = mapped_column(String(16), nullable=False)
+    action: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    session_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("auth_sessions.id", ondelete="CASCADE"), nullable=True
+    )
+    session_version: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    email_revision: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    credentials_revision: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # recent_auth: the Google subject that must answer; link: the password proof it rides on.
+    expected_google_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    proof_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

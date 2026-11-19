@@ -984,5 +984,21 @@
     <string name="account_method_password_set">Password: set</string>
     <string name="account_method_password_none">Password: not set</string>
     <string name="account_method_google_none">Google: not linked</string>
+    <string name="err_google_challenge">Google sign-in expired. Please try again.</string>
+    <string name="err_google_account_mismatch">That isn’t the Google account linked here. Choose the right one.</string>
+    <string name="err_google_already_linked">Google is already linked to this account.</string>
+    <string name="err_google_link_unavailable">This Google account can’t be linked to this account.</string>
+    <string name="err_google_not_linked">Google isn’t linked to this account.</string>
+    <string name="err_google_sign_in_conflict">An account with this email already exists. Sign in with your password, then link Google in Settings.</string>
+    <string name="err_google_unavailable">Google verification is temporarily unavailable. Try again in a moment.</string>
+    <string name="err_password_already_set">This account already has a password.</string>
+    <string name="account_google_linked_email">You sign in with Google (%1$s)</string>
+    <string name="account_link_google">Link Google</string>
+    <string name="account_link_google_hint">Adds Google as a second way to sign in to %1$s. Your email address stays the same and accounts aren’t merged. Other devices will be signed out. Confirm your current password, then choose a Google account.</string>
+    <string name="account_link_google_done">Google linked. Other devices have been signed out.</string>
+    <string name="account_add_password">Add password</string>
+    <string name="account_add_password_hint">At least 15 characters. First you’ll confirm with your Google account. Other devices will be signed out.</string>
+    <string name="account_password_added">Password added. Other devices have been signed out.</string>
+    <string name="account_google_confirm_hint">You’ll be asked to confirm with your Google account.</string>
 </resources>
 

@@ -517,6 +517,18 @@ _STATEMENTS = (
     "CHECK ((purpose IN ('request_account_deletion', 'cancel_account_deletion')) "
     "= (proof_method IS NOT NULL)); "
     "END IF; END $$",
+    # E-001/F-005/T-001: Google snapshot of the linked identity and the new revocation reason.
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_email VARCHAR(320)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_email_observed_at TIMESTAMPTZ",
+    "DO $$ BEGIN "
+    "IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_auth_sessions_revocation_reason' "
+    "AND pg_get_constraintdef(oid) NOT LIKE '%google_linked%') THEN "
+    "ALTER TABLE auth_sessions DROP CONSTRAINT ck_auth_sessions_revocation_reason; "
+    "ALTER TABLE auth_sessions ADD CONSTRAINT ck_auth_sessions_revocation_reason "
+    "CHECK (revocation_reason IS NULL OR revocation_reason IN ('logout', 'password_reset', "
+    "'password_change', 'password_added', 'google_linked', 'email_changed', "
+    "'refresh_reuse', 'account_deleted')); "
+    "END IF; END $$",
 )
 
 

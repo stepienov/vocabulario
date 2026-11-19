@@ -16,6 +16,7 @@ from app.db import session as db_session
 from app.models import (
     AccountActionToken,
     AccountEmailChange,
+    GoogleChallenge,
     MailOutbox,
     MailProviderEvent,
     RecentAuthProof,
@@ -85,6 +86,12 @@ async def purge_auth_records(*, now: datetime | None = None, limit: int = BATCH)
         RecentAuthProof,
         RecentAuthProof.id,
         RecentAuthProof.expires_at < now - timedelta(days=1),
+        limit,
+    )
+    counts["google_challenges"] = await _delete_ids(
+        GoogleChallenge,
+        GoogleChallenge.id,
+        GoogleChallenge.expires_at < now - timedelta(days=1),
         limit,
     )
     return counts

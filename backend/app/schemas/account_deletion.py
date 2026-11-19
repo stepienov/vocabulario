@@ -23,6 +23,16 @@ class DeletionEmailRequest(BaseModel):
     action: DeletionAction
 
 
+class DeletionGoogleChallengeRequest(BaseModel):
+    action: DeletionAction
+
+
+class DeletionGoogleProofRequest(BaseModel):
+    challenge_id: UUID4
+    id_token: str = Field(min_length=1, max_length=8192)
+    action: DeletionAction
+
+
 class DeletionProofResponse(BaseModel):
     action_token: str
     action: DeletionAction

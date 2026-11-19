@@ -1043,4 +1043,20 @@
     <string name="account_method_password_set">Şifre: belirlendi</string>
     <string name="account_method_password_none">Şifre: belirlenmedi</string>
     <string name="account_method_google_none">Google: bağlı değil</string>
+    <string name="err_google_challenge">Google ile giriş süresi doldu. Lütfen tekrar deneyin.</string>
+    <string name="err_google_account_mismatch">Bu, burada bağlı olan Google hesabı değil. Doğru hesabı seçin.</string>
+    <string name="err_google_already_linked">Google zaten bu hesaba bağlı.</string>
+    <string name="err_google_link_unavailable">Bu Google hesabı bu hesaba bağlanamaz.</string>
+    <string name="err_google_not_linked">Google bu hesaba bağlı değil.</string>
+    <string name="err_google_sign_in_conflict">Bu e-posta ile bir hesap zaten var. Şifrenizle giriş yapın, ardından Ayarlar’dan Google’ı bağlayın.</string>
+    <string name="err_google_unavailable">Google doğrulaması geçici olarak kullanılamıyor. Biraz sonra tekrar deneyin.</string>
+    <string name="err_password_already_set">Bu hesabın zaten bir şifresi var.</string>
+    <string name="account_google_linked_email">Google ile giriş yapıyorsunuz (%1$s)</string>
+    <string name="account_link_google">Google’ı bağla</string>
+    <string name="account_link_google_hint">%1$s hesabına ikinci bir giriş yöntemi olarak Google’ı ekler. E-posta adresiniz değişmez ve hesaplar birleştirilmez. Diğer cihazların oturumu kapatılır. Mevcut şifrenizi onaylayın, ardından bir Google hesabı seçin.</string>
+    <string name="account_link_google_done">Google bağlandı. Diğer cihazların oturumu kapatıldı.</string>
+    <string name="account_add_password">Şifre ekle</string>
+    <string name="account_add_password_hint">En az 15 karakter. Önce Google hesabınızla onaylayacaksınız. Diğer cihazların oturumu kapatılır.</string>
+    <string name="account_password_added">Şifre eklendi. Diğer cihazların oturumu kapatıldı.</string>
+    <string name="account_google_confirm_hint">Google hesabınızla onaylamanız istenecek.</string>
 </resources>

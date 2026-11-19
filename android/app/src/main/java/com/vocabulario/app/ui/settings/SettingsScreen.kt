@@ -100,13 +100,34 @@ fun SettingsScreen(
     val changePassword by accountViewModel.changePassword.collectAsState()
     val changeEmail by accountViewModel.changeEmail.collectAsState()
     val deleteAccount by accountViewModel.deleteAccount.collectAsState()
+    val linkGoogle by accountViewModel.linkGoogle.collectAsState()
+    val addPassword by accountViewModel.addPassword.collectAsState()
+    val context = LocalContext.current
     deleteAccount?.let { form ->
         DeleteAccountDialog(
             form = form,
             onPasswordChange = { accountViewModel.updateDeleteAccount(password = it) },
             onConfirmedChange = { accountViewModel.updateDeleteAccount(confirmed = it) },
-            onSubmit = accountViewModel::submitDeleteAccount,
+            onSubmit = { accountViewModel.submitDeleteAccount(context) },
             onDismiss = accountViewModel::closeDeleteAccount,
+        )
+    }
+    linkGoogle?.let { form ->
+        LinkGoogleDialog(
+            form = form,
+            accountEmail = account.email,
+            onPasswordChange = accountViewModel::updateLinkGoogle,
+            onSubmit = { accountViewModel.submitLinkGoogle(context) },
+            onDismiss = accountViewModel::closeLinkGoogle,
+        )
+    }
+    addPassword?.let { form ->
+        AddPasswordDialog(
+            form = form,
+            onNewChange = { accountViewModel.updateAddPassword(new = it) },
+            onRepeatChange = { accountViewModel.updateAddPassword(repeat = it) },
+            onSubmit = { accountViewModel.submitAddPassword(context) },
+            onDismiss = accountViewModel::closeAddPassword,
         )
     }
     changeEmail?.let { form ->
@@ -114,7 +135,7 @@ fun SettingsScreen(
             form = form,
             onEmailChange = { accountViewModel.updateChangeEmail(newEmail = it) },
             onPasswordChange = { accountViewModel.updateChangeEmail(password = it) },
-            onSubmit = accountViewModel::submitChangeEmail,
+            onSubmit = { accountViewModel.submitChangeEmail(context) },
             onDismiss = accountViewModel::closeChangeEmail,
         )
     }
@@ -128,7 +149,6 @@ fun SettingsScreen(
             onDismiss = accountViewModel::closeChangePassword,
         )
     }
-    val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
@@ -463,6 +483,8 @@ fun SettingsScreen(
                     onResendChange = accountViewModel::resendEmailChange,
                     onCancelChange = accountViewModel::cancelEmailChange,
                     onDeleteAccount = accountViewModel::openDeleteAccount,
+                    onLinkGoogle = accountViewModel::openLinkGoogle,
+                    onAddPassword = accountViewModel::openAddPassword,
                     onRetry = accountViewModel::load,
                 )
             }

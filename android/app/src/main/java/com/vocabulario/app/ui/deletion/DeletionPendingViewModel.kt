@@ -1,11 +1,15 @@
 package com.vocabulario.app.ui.deletion
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
+import com.vocabulario.app.auth.GoogleAuthHelper
+import com.vocabulario.app.auth.GoogleSignInCancelledException
 import com.vocabulario.app.data.api.DeletionView
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.deletion.AccountDeletionRepository
+import com.vocabulario.app.data.deletion.DELETION_METHOD_GOOGLE
 import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -27,6 +31,8 @@ data class DeletionPendingUiState(
     val busy: Boolean = false,
     val error: String? = null,
     val cancelPassword: String? = null,
+    /** Wniosek złożony przez Google cofamy też przez Google (bez pola hasła). */
+    val cancelWithGoogle: Boolean = false,
 )
 
 /** Data z serwera (ISO-8601) w strefie i języku urządzenia; przy błędzie parsowania oryginał. */
@@ -39,6 +45,7 @@ internal fun formatDeletionInstant(iso: String, zone: ZoneId, locale: Locale): S
 @HiltViewModel
 class DeletionPendingViewModel @Inject constructor(
     private val repository: AccountDeletionRepository,
+    private val googleAuthHelper: GoogleAuthHelper,
     private val strings: UiStrings,
 ) : ViewModel() {
 
@@ -47,7 +54,11 @@ class DeletionPendingViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            repository.receipt.collect { receipt -> _state.update { it.copy(view = receipt?.deletion) } }
+            repository.receipt.collect { receipt ->
+                _state.update {
+                    it.copy(view = receipt?.deletion, cancelWithGoogle = receipt?.method == DELETION_METHOD_GOOGLE)
+                }
+            }
         }
         refresh()
     }
@@ -55,6 +66,17 @@ class DeletionPendingViewModel @Inject constructor(
     fun refresh() {
         if (_state.value.busy) return
         run { repository.refreshStatus() }
+    }
+
+    fun cancelWithGoogle(activityContext: Context) {
+        if (_state.value.busy) return
+        run(afterError = { repository.refreshStatus() }) {
+            try {
+                repository.cancelWithGoogle(googleAuthHelper.provider(activityContext))
+            } catch (_: GoogleSignInCancelledException) {
+                // Anulowanie selektora nie jest błędem i nie wysyła żądania.
+            }
+        }
     }
 
     fun openCancel() {
