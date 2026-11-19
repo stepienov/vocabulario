@@ -1,6 +1,7 @@
 package com.vocabulario.app.data.api
 
 import com.vocabulario.app.data.EnrichmentStatus
+import com.vocabulario.app.data.sync.ProfileFields
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.JsonElement
@@ -227,6 +228,10 @@ data class LanguageProfileResponse(
     val tense_label_lang: String = "app_lang",
     val is_active: Boolean,
     val last_used_at: String? = null,
+    /** Rewizja ostatniej zatwierdzonej edycji na serwerze; null u starego serwera lub w starym cache. */
+    val revision: Long? = null,
+    /** Tylko lokalnie: wartości potwierdzone przez serwer, pod nakładką niewysłanych zmian. */
+    val confirmed: ProfileFields? = null,
 )
 
 @Serializable
@@ -235,6 +240,8 @@ data class LanguageProfileUpdate(
     val selected_tenses: List<String>? = null,
     val app_lang: String? = null,
     val tense_label_lang: String? = null,
+    val expected_revision: Long? = null,
+    val client_op_id: String? = null,
 )
 
 @Serializable

@@ -107,6 +107,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vocabulario.app.ui.sync.SyncStatusLine
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -200,6 +201,7 @@ fun HomeScreen(
         HomeHeader(
             onSettings = onSettings,
         )
+        SyncStatusLine(onOpen = onSettings)
         HomeTabs(
             selected = state.tab,
             onSelect = viewModel::selectTab,

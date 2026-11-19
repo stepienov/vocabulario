@@ -239,6 +239,17 @@ interface OutboxOpDao {
     @Query("SELECT * FROM outbox_ops ORDER BY seq ASC")
     suspend fun all(): List<OutboxOpEntity>
 
+    @Query("SELECT * FROM outbox_ops WHERE seq = :seq LIMIT 1")
+    suspend fun bySeq(seq: Long): OutboxOpEntity?
+
+    /** Wartość nieistotna: Room emituje przy każdej zmianie któregokolwiek z tabel kolejek. */
+    @Query(
+        "SELECT (SELECT COUNT(*) FROM outbox_ops) + (SELECT COUNT(*) FROM pending_reviews) + " +
+            "(SELECT COUNT(*) FROM pending_moves) + (SELECT COUNT(*) FROM pending_undos) + " +
+            "(SELECT COUNT(*) FROM pending_lookups)",
+    )
+    fun observeQueueTouch(): Flow<Int>
+
     @Update
     suspend fun update(op: OutboxOpEntity)
 

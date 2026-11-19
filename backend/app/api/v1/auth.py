@@ -1,3 +1,5 @@
+import hashlib
+import json
 import logging
 import math
 from uuid import UUID
@@ -796,6 +798,13 @@ async def update_settings(
 profiles_router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 
+def _profile_mutation_fingerprint(fields: dict, expected_revision: int | None) -> str:
+    canonical = json.dumps(
+        {"fields": fields, "expected_revision": expected_revision}, sort_keys=True, ensure_ascii=True
+    )
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
 @profiles_router.get("", response_model=list[LanguageProfileResponse])
 async def list_profiles(user: User = Depends(get_verified_user), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(LanguageProfile).where(LanguageProfile.user_id == user.id))
@@ -847,16 +856,51 @@ async def update_profile(
 
     pid = UUID(profile_id)
     result = await db.execute(
-        select(LanguageProfile).where(
-            LanguageProfile.id == pid,
-            LanguageProfile.user_id == user.id,
-        )
+        select(LanguageProfile)
+        .where(LanguageProfile.id == pid, LanguageProfile.user_id == user.id)
+        .with_for_update()
     )
     profile = result.scalar_one_or_none()
     if profile is None:
         raise api_error(404, "profile_not_found", "Profile not found")
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(profile, field, value)
+
+    fields = {
+        key: value
+        for key, value in body.model_dump(
+            exclude_unset=True, exclude={"expected_revision", "client_op_id"}
+        ).items()
+        if value is not None
+    }
+    fingerprint = _profile_mutation_fingerprint(fields, body.expected_revision)
+    op_id = body.client_op_id
+    if op_id is not None and profile.last_mutation_id == op_id:
+        if profile.last_mutation_fingerprint != fingerprint:
+            raise api_error(
+                status.HTTP_409_CONFLICT,
+                "operation_id_conflict",
+                "This operation id was already used with different content",
+            )
+        return profile
+    if body.expected_revision is None:
+        if get_app_settings().profile_update_requires_revision:
+            raise api_error(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "expected_revision_required",
+                "expected_revision is required",
+            )
+    elif body.expected_revision != profile.revision:
+        raise api_error(
+            status.HTTP_409_CONFLICT,
+            "profile_conflict",
+            "The profile was changed on another device",
+        )
+
+    if fields:
+        for field, value in fields.items():
+            setattr(profile, field, value)
+        profile.revision = profile.revision + 1
+        profile.last_mutation_id = op_id
+        profile.last_mutation_fingerprint = fingerprint if op_id is not None else None
     try:
         await db.commit()
     except IntegrityError:

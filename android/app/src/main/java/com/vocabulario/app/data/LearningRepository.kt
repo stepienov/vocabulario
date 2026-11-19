@@ -58,6 +58,15 @@ import com.vocabulario.app.data.sync.BlockedItem
 import com.vocabulario.app.data.sync.BlockedKind
 import com.vocabulario.app.data.sync.FailureKind
 import com.vocabulario.app.data.sync.OpAck
+import com.vocabulario.app.data.sync.OP_PROFILE_ACTIVATE
+import com.vocabulario.app.data.sync.OP_PROFILE_UPDATE
+import com.vocabulario.app.data.sync.BaseResolution
+import com.vocabulario.app.data.sync.ProfileBlock
+import com.vocabulario.app.data.sync.ProfileFields
+import com.vocabulario.app.data.sync.ProfileUpdatePayload
+import com.vocabulario.app.data.sync.profileUpdateBlockReason
+import com.vocabulario.app.data.sync.resolveDraftBase
+import com.vocabulario.app.data.sync.validateProfileFields
 import com.vocabulario.app.data.sync.OutboxStep
 import com.vocabulario.app.data.sync.PhaseOutcome
 import com.vocabulario.app.data.sync.QueueSnapshot
@@ -66,6 +75,7 @@ import com.vocabulario.app.data.sync.SyncPhase
 import com.vocabulario.app.data.sync.SyncReport
 import com.vocabulario.app.data.sync.SyncResult
 import com.vocabulario.app.data.sync.SyncScope
+import com.vocabulario.app.data.sync.SyncStatus
 import com.vocabulario.app.data.sync.classifyFailure
 import com.vocabulario.app.data.sync.evaluateSyncResult
 import com.vocabulario.app.data.sync.interpretAck
@@ -88,6 +98,10 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -929,6 +943,10 @@ class LearningRepository @Inject constructor(
      * Flush jest osobno i **pierwszy** — zatruty outbox nie może blokować opróżniania Oczekujących.
      */
     private val syncMutex = Mutex()
+    private val _syncStatus = MutableStateFlow(SyncStatus())
+
+    /** Stan ostatniego syncu dla UI; nie zawiera tekstów ani odpowiedzi backendu. */
+    val syncStatus: StateFlow<SyncStatus> = _syncStatus.asStateFlow()
 
     private class SyncTally {
         var sent = 0
@@ -967,18 +985,47 @@ class LearningRepository @Inject constructor(
     ): SyncResult {
         if (awaitLock) syncMutex.lock() else if (!syncMutex.tryLock()) return SyncResult.Busy
         try {
-            val startedAt = System.currentTimeMillis()
-            val owner = offlineStore.activeOwnerContext() ?: return SyncResult.Superseded
-            if (!networkMonitor.isCurrentlyOnline()) {
-                val phases = SyncPhase.values().associateWith<SyncPhase, PhaseOutcome> { PhaseOutcome.NotRun("offline") }
-                return SyncResult.Offline(
-                    SyncReport(owner, scope, startedAt, System.currentTimeMillis(), phases, emptyMap(), 0, 0, offlineStore.queueSnapshot()),
-                )
-            }
-            return asCurrentOwner { syncAsOwner(owner, fullReplace, scope, startedAt) } ?: SyncResult.Superseded
+            _syncStatus.update { it.copy(running = true) }
+            val result = runLockedSync(fullReplace, scope)
+            recordSyncResult(result)
+            return result
         } finally {
+            _syncStatus.update { it.copy(running = false) }
             syncMutex.unlock()
         }
+    }
+
+    private fun recordSyncResult(result: SyncResult) {
+        if (result === SyncResult.Busy || result === SyncResult.Superseded) return
+        val now = System.currentTimeMillis()
+        _syncStatus.update {
+            it.copy(
+                last = result,
+                lastAttemptAt = now,
+                lastCompleteAt = if (result is SyncResult.Complete) now else it.lastCompleteAt,
+            )
+        }
+    }
+
+    /** Ostatnia pełna synchronizacja aktywnego profilu zapisana na urządzeniu (przeżywa restart). */
+    suspend fun loadLastCompleteSyncAt() {
+        val profileId = tokenStore.activeProfileId.value ?: return
+        val stored = offlineStore.lastCompleteSyncAt(profileId) ?: return
+        _syncStatus.update { if (it.lastCompleteAt == null) it.copy(lastCompleteAt = stored) else it }
+    }
+
+    fun observeQueue(): Flow<QueueSnapshot> = offlineStore.observeQueueSnapshot()
+
+    private suspend fun runLockedSync(fullReplace: Boolean, scope: SyncScope): SyncResult {
+        val startedAt = System.currentTimeMillis()
+        val owner = offlineStore.activeOwnerContext() ?: return SyncResult.Superseded
+        if (!networkMonitor.isCurrentlyOnline()) {
+            val phases = SyncPhase.values().associateWith<SyncPhase, PhaseOutcome> { PhaseOutcome.NotRun("offline") }
+            return SyncResult.Offline(
+                SyncReport(owner, scope, startedAt, System.currentTimeMillis(), phases, emptyMap(), 0, 0, offlineStore.queueSnapshot()),
+            )
+        }
+        return asCurrentOwner { syncAsOwner(owner, fullReplace, scope, startedAt) } ?: SyncResult.Superseded
     }
 
     /** Kroki syncu jednego właściciela; zmiana właściciela lub generacji kończy go przed kolejnym HTTP. */
@@ -1261,7 +1308,8 @@ class LearningRepository @Inject constructor(
                 }
                 when (val outcome = step.getOrThrow()) {
                     OutboxStep.Applied, OutboxStep.AlreadyApplied -> {
-                        offlineStore.removeOp(op)
+                        // Edycję profilu zdejmuje ACK po porównaniu clientOpId (mogła zostać scalona w locie).
+                        if (op.type != OP_PROFILE_UPDATE) offlineStore.removeOp(op)
                         tally?.let { it.confirmed++ }
                     }
                     is OutboxStep.Deferred -> Unit
@@ -1278,7 +1326,60 @@ class LearningRepository @Inject constructor(
         }
     }
 
+    private suspend fun applyProfileActivate(op: com.vocabulario.app.data.local.db.OutboxOpEntity): OutboxStep {
+        val profileId = runCatching { json.parseToJsonElement(op.payloadJson).jsonObject["profileId"]?.jsonPrimitive?.content }
+            .getOrNull() ?: return OutboxStep.Blocked("invalid_payload")
+        try {
+            // Echo jest ignorowane: widoczny wybór profilu jest lokalny, serwer tylko go dogania.
+            api.activateProfile(profileId)
+        } catch (e: HttpException) {
+            if (e.code() == 404) return OutboxStep.Blocked(ProfileBlock.NOT_FOUND)
+            throw e
+        }
+        return OutboxStep.Applied
+    }
+
+    private suspend fun applyProfileUpdate(op: com.vocabulario.app.data.local.db.OutboxOpEntity): OutboxStep {
+        val profileId = runCatching { json.decodeFromString(ProfileUpdatePayload.serializer(), op.payloadJson).profileId }
+            .getOrNull() ?: return OutboxStep.Blocked("invalid_payload")
+        if (offlineStore.hasEarlierUnresolvedProfileOp(op.seq, profileId)) return OutboxStep.Deferred(OP_PROFILE_UPDATE)
+        val fresh = offlineStore.markProfileOpSending(op.seq) ?: return OutboxStep.Deferred(OP_PROFILE_UPDATE)
+        val payload = runCatching { json.decodeFromString(ProfileUpdatePayload.serializer(), fresh.payloadJson) }
+            .getOrNull() ?: return OutboxStep.Blocked("invalid_payload")
+        var base = payload.baseRevision
+        if (base == null) {
+            val server = api.listProfiles().firstOrNull { it.id == payload.profileId }
+                ?: return OutboxStep.Blocked(ProfileBlock.NOT_FOUND)
+            when (val resolution = resolveDraftBase(payload, server)) {
+                BaseResolution.AlreadyApplied -> {
+                    offlineStore.confirmProfileUpdate(fresh.seq, fresh.clientOpId, server)
+                    return OutboxStep.AlreadyApplied
+                }
+                is BaseResolution.Use -> base = resolution.revision
+                BaseResolution.Conflict -> return OutboxStep.Blocked(ProfileBlock.CONFLICT)
+            }
+        }
+        val body = LanguageProfileUpdate(
+            cefr_level = payload.fields.cefr_level,
+            selected_tenses = payload.fields.selected_tenses,
+            app_lang = payload.fields.app_lang,
+            tense_label_lang = payload.fields.tense_label_lang,
+            expected_revision = base,
+            client_op_id = fresh.clientOpId,
+        )
+        val updated = try {
+            api.updateProfile(payload.profileId, body)
+        } catch (e: HttpException) {
+            profileUpdateBlockReason(e.code(), e.apiErrorCode())?.let { return OutboxStep.Blocked(it) }
+            throw e
+        }
+        offlineStore.confirmProfileUpdate(fresh.seq, fresh.clientOpId, updated)
+        return OutboxStep.Applied
+    }
+
     private suspend fun applyOutboxOp(op: com.vocabulario.app.data.local.db.OutboxOpEntity): OutboxStep {
+        if (op.type == OP_PROFILE_UPDATE) return applyProfileUpdate(op)
+        if (op.type == OP_PROFILE_ACTIVATE) return applyProfileActivate(op)
         if (op.type == OP_SETTINGS_UPDATE) {
             val update = runCatching { json.decodeFromString(UserSettingsUpdate.serializer(), op.payloadJson) }
                 .getOrNull() ?: return OutboxStep.Blocked("invalid_payload")
@@ -1682,7 +1783,7 @@ class LearningRepository @Inject constructor(
 
     suspend fun cardCountsByProfile(): Map<String, Int> = offlineStore.cardCountsByProfile()
 
-    /** Przełącza parę języków w Room. PUT /activate dogania PG, gdy jest sieć. */
+    /** Przełącza parę języków w Room i zapisuje trwały intent; PUT /activate wysyła outbox. */
     suspend fun activateLocalProfile(profileId: String): LanguageProfileResponse {
         val profiles = offlineStore.cachedProfiles()
         val target = profiles.firstOrNull { it.id == profileId }
@@ -1690,12 +1791,12 @@ class LearningRepository @Inject constructor(
             ?: error("no_profile")
         val updated = profiles.map { it.copy(is_active = it.id == profileId) }
             .ifEmpty { listOf(target.copy(is_active = true)) }
-        offlineStore.cacheProfiles(updated)
+        offlineStore.atomically {
+            offlineStore.cacheProfiles(updated)
+            offlineStore.enqueueProfileActivate(profileId)
+        }
         val active = target.copy(is_active = true)
         syncActiveProfileToLocal(active)
-        if (networkMonitor.isCurrentlyOnline()) {
-            runCatching { api.activateProfile(profileId) }
-        }
         requestBackgroundSync()
         return active
     }
@@ -1708,12 +1809,20 @@ class LearningRepository @Inject constructor(
     }
 
     private suspend fun applyRemoteProfiles(profiles: List<LanguageProfileResponse>): Unit = offlineStore.guardedWrite {
-        val localActive = offlineStore.cachedActiveProfile()
-        val chosenId = tokenStore.activeProfileId.value ?: localActive?.id
-        val merged = mergeRemoteProfiles(profiles, localActive, chosenId)
-        offlineStore.cacheProfiles(merged)
-        val chosen = merged.firstOrNull { it.is_active } ?: return@guardedWrite
-        syncActiveProfileToLocal(chosen.copy(is_active = true))
+        offlineStore.atomically {
+            val localActive = offlineStore.cachedActiveProfile()
+            val chosenId = tokenStore.activeProfileId.value ?: localActive?.id
+            val merged = mergeRemoteProfiles(
+                remote = profiles,
+                local = offlineStore.cachedProfiles(),
+                drafts = offlineStore.profileDrafts(),
+                protectedIds = offlineStore.profilesWithPendingWork(),
+                chosenId = chosenId,
+            )
+            offlineStore.cacheProfiles(merged)
+            val chosen = merged.firstOrNull { it.is_active } ?: return@atomically
+            syncActiveProfileToLocal(chosen.copy(is_active = true))
+        }
     }
 
     suspend fun getActiveProfile(): LanguageProfileResponse? =
@@ -1762,6 +1871,10 @@ class LearningRepository @Inject constructor(
     suspend fun activateProfile(profileId: String): LanguageProfileResponse =
         activateLocalProfile(profileId)
 
+    /**
+     * Zapis lokalny (Room) razem z trwałym intentem; sieć nie jest potrzebna ani czekana.
+     * Zwraca profil z nową wartością. Brak zmian względem obecnych wartości nic nie kolejkuje.
+     */
     suspend fun updateProfile(
         cefr: String? = null,
         tenses: List<String>? = null,
@@ -1769,29 +1882,46 @@ class LearningRepository @Inject constructor(
         appLang: String? = null,
     ): LanguageProfileResponse {
         val current = offlineStore.cachedActiveProfile() ?: error("no_active_profile")
-        val optimistic = current.copy(
-            cefr_level = cefr ?: current.cefr_level,
-            selected_tenses = tenses ?: current.selected_tenses,
-            tense_label_lang = tenseLabelLang ?: current.tense_label_lang,
-            app_lang = appLang ?: current.app_lang,
-            native_lang = appLang ?: current.native_lang,
-        )
-        syncActiveProfileToLocal(optimistic)
-        val body = LanguageProfileUpdate(
-            cefr_level = cefr,
+        val requested = ProfileFields(
+            cefr_level = cefr?.trim(),
             selected_tenses = tenses,
+            app_lang = appLang?.trim(),
             tense_label_lang = tenseLabelLang,
-            app_lang = appLang,
         )
-        val profile = try {
-            api.updateProfile(activeProfileId(), body)
-        } catch (e: HttpException) {
-            if (e.code() != 404) return optimistic
-            applyRemoteProfiles(api.listProfiles())
-            api.updateProfile(activeProfileId(), body)
+        require(validateProfileFields(requested)) { "profile_invalid" }
+        val saved = offlineStore.editProfileLocally(current.id, requested)
+        tokenStore.saveActiveProfile(saved.id)
+        tokenStore.saveAppLang(saved.app_lang)
+        requestBackgroundSync()
+        return saved
+    }
+
+    /** „Przyjmij ustawienia z serwera": lokalna edycja znika, widoczne wartości wracają do snapshotu. */
+    suspend fun acceptServerProfile(blockedSeq: Long) {
+        val profileId = offlineStore.outboxOp(blockedSeq)?.let { op ->
+            runCatching { json.decodeFromString(ProfileUpdatePayload.serializer(), op.payloadJson).profileId }.getOrNull()
         }
-        syncActiveProfileToLocal(profile)
-        return profile
+        offlineStore.discardBlocked(BlockedKind.OUTBOX, blockedSeq.toString())
+        if (profileId != null && networkMonitor.isCurrentlyOnline()) {
+            apiTry { api.listProfiles() }.onSuccess { applyRemoteProfiles(it) }
+        }
+    }
+
+    /**
+     * „Zastosuj moje zmiany" po konflikcie: wymaga sieci (jedno pobranie profili), potem edycja wraca
+     * do kolejki na świeżej rewizji z nowym identyfikatorem operacji.
+     */
+    suspend fun applyMyProfileChanges(blockedSeq: Long): Boolean {
+        val op = offlineStore.outboxOp(blockedSeq) ?: return false
+        val payload = runCatching { json.decodeFromString(ProfileUpdatePayload.serializer(), op.payloadJson) }
+            .getOrNull() ?: return false
+        if (!networkMonitor.isCurrentlyOnline()) return false
+        val remote = apiTry { api.listProfiles() }.getOrNull() ?: return false
+        val server = remote.firstOrNull { it.id == payload.profileId } ?: return false
+        applyRemoteProfiles(remote)
+        val reopened = offlineStore.reopenProfileOp(blockedSeq, server.revision)
+        if (reopened) requestBackgroundSync()
+        return reopened
     }
 
     suspend fun switchToLangPair(

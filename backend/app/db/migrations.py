@@ -529,6 +529,10 @@ _STATEMENTS = (
     "'password_change', 'password_added', 'google_linked', 'email_changed', "
     "'refresh_reuse', 'account_deleted')); "
     "END IF; END $$",
+    # E-001/F-003/T-004: rewizja profilu i ostatnia mutacja (idempotentny retry edycji).
+    "ALTER TABLE language_profiles ADD COLUMN IF NOT EXISTS revision BIGINT NOT NULL DEFAULT 1",
+    "ALTER TABLE language_profiles ADD COLUMN IF NOT EXISTS last_mutation_id UUID",
+    "ALTER TABLE language_profiles ADD COLUMN IF NOT EXISTS last_mutation_fingerprint VARCHAR(64)",
     # E-001/F-003/T-003: ACK push, undo markers, list-create receipts, revision SRS.
     "ALTER TABLE srs_state ADD COLUMN IF NOT EXISTS review_revision BIGINT NOT NULL DEFAULT 0",
     "ALTER TABLE review_logs ADD COLUMN IF NOT EXISTS applied_revision BIGINT",

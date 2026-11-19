@@ -279,7 +279,13 @@ class AuthRepository @Inject constructor(
         val storedId = tokenStore.activeProfileId.value ?: localActive?.id
         val profiles = runCatching { api.listProfiles() }.getOrNull()
         if (profiles != null) {
-            val merged = mergeRemoteProfiles(profiles, localActive, storedId)
+            val merged = mergeRemoteProfiles(
+                remote = profiles,
+                local = offlineStore.cachedProfiles(),
+                drafts = offlineStore.profileDrafts(),
+                protectedIds = offlineStore.profilesWithPendingWork(),
+                chosenId = storedId,
+            )
             offlineStore.cacheProfiles(merged)
             val chosen = merged.firstOrNull { it.is_active } ?: return
             tokenStore.saveActiveProfile(chosen.id)

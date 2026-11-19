@@ -1,6 +1,6 @@
 # T-004 · Widoczna kolejka i trwała zmiana profilu
 
-**ID:** `E-001/F-003/T-004` · **Status:** `ready` · **Priorytet / rozmiar:** P1 / M.  
+**ID:** `E-001/F-003/T-004` · **Status:** `in_progress` · **Priorytet / rozmiar:** P1 / M.  
 **Feature:** [Sesja i offline](../README.md). **Źródło:** B-09b; F-11 w [analizie](../../../sources/analiza-2026-11-17.md).
 
 ## Cel, decyzja i zależności

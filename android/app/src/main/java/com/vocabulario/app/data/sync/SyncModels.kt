@@ -33,6 +33,10 @@ const val CODE_LEGAL_ACCEPTANCE_REQUIRED = "legal_acceptance_required"
 /** Zarezerwowany typ outboxu z F-007/T-002; liczony w QueueSnapshot, nigdy po cichu pomijany. */
 const val OP_CONTENT_REPORT = "content_report"
 
+/** Trwałe intenty profilu (F-003/T-004): edycja pól i wybór aktywnej pary; payload zawiera `profileId`. */
+const val OP_PROFILE_UPDATE = "profile_update"
+const val OP_PROFILE_ACTIVATE = "profile_activate"
+
 /** Czysta klasyfikacja; [transport] oznacza błąd sieci/timeout, nie pewność braku Internetu. */
 fun classifyFailure(
     status: Int?,
@@ -292,4 +296,11 @@ sealed interface OutboxStep {
 enum class BlockedKind { REVIEW, MOVE, UNDO, OUTBOX }
 
 /** Zablokowana operacja kolejki (id to clientId, a dla outboxu numer seq) z kodem przyczyny. */
-data class BlockedItem(val kind: BlockedKind, val id: String, val reason: String)
+data class BlockedItem(
+    val kind: BlockedKind,
+    val id: String,
+    val reason: String,
+    /** Dla outboxu: typ operacji i profil, żeby UI dobrało etykietę i dostępne akcje. */
+    val type: String? = null,
+    val profileId: String? = null,
+)

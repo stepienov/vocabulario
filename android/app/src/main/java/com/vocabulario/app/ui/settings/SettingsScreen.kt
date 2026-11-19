@@ -85,6 +85,7 @@ import com.vocabulario.app.ui.components.SettingsCheckRow
 import com.vocabulario.app.ui.components.SettingsRadioRow
 import com.vocabulario.app.ui.components.SettingsValueSlider
 import com.vocabulario.app.ui.components.WheelTimePicker
+import com.vocabulario.app.ui.sync.SyncStatusCard
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -465,6 +466,9 @@ fun SettingsScreen(
             }
 
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+
+            SettingsGroupLabel(stringResource(R.string.sync_title))
+            SyncStatusCard()
 
             SettingsGroupLabel(stringResource(R.string.settings_group_account))
             AccordionSection(

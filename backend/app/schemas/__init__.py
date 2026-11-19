@@ -280,6 +280,7 @@ class LanguageProfileResponse(BaseModel):
     tense_label_lang: str = "app_lang"
     is_active: bool
     last_used_at: datetime | None
+    revision: int = 1
 
     model_config = {"from_attributes": True}
 
@@ -312,6 +313,9 @@ class LanguageProfileUpdate(BaseModel):
     selected_tenses: list[str] | None = None
     app_lang: str | None = Field(default=None, min_length=2, max_length=8)
     tense_label_lang: str | None = None
+    # Kontrakt T-004: rewizja bazowa i stabilny ID mutacji; legacy klient je pomija.
+    expected_revision: int | None = Field(default=None, ge=1)
+    client_op_id: UUID | None = None
 
     @field_validator("selected_tenses")
     @classmethod

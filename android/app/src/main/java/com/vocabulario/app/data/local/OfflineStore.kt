@@ -41,6 +41,16 @@ import com.vocabulario.app.data.session.decideLogin
 import com.vocabulario.app.data.sync.BlockedItem
 import com.vocabulario.app.data.sync.BlockedKind
 import com.vocabulario.app.data.sync.OP_CONTENT_REPORT
+import com.vocabulario.app.data.sync.OP_PROFILE_ACTIVATE
+import com.vocabulario.app.data.sync.OP_PROFILE_UPDATE
+import com.vocabulario.app.data.sync.PROFILE_OP_SENT
+import com.vocabulario.app.data.sync.ProfileEditPlan
+import com.vocabulario.app.data.sync.ProfileFields
+import com.vocabulario.app.data.sync.ProfileOpView
+import com.vocabulario.app.data.sync.ProfileUpdatePayload
+import com.vocabulario.app.data.sync.overlayDrafts
+import com.vocabulario.app.data.sync.planProfileEdit
+import com.vocabulario.app.data.sync.withFields
 import com.vocabulario.app.data.sync.QueueSnapshot
 import com.vocabulario.app.data.session.logoutCovered
 import com.vocabulario.app.data.session.unsentFingerprint
@@ -53,6 +63,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import java.time.Instant
 import java.util.UUID
@@ -232,6 +243,13 @@ class OfflineStore @Inject constructor(
 
     suspend fun lastPulledAt(profileId: String): String? =
         syncMetaDao.get(profileId)?.lastPulledAt
+
+    suspend fun lastCompleteSyncAt(profileId: String): Long? =
+        syncMetaDao.get(profileId)?.lastSuccessAt
+
+    /** Każda zmiana kolejek (także status wiersza) daje nowy, spójny snapshot. */
+    fun observeQueueSnapshot(): Flow<QueueSnapshot> =
+        outboxDao.observeQueueTouch().map { queueSnapshot() }
 
     suspend fun pullCursor(profileId: String): String? =
         syncMetaDao.get(profileId)?.cursor
@@ -1000,7 +1018,14 @@ class OfflineStore @Inject constructor(
                 BlockedKind.REVIEW -> reviewDao.delete(id)
                 BlockedKind.MOVE -> moveDao.deleteIds(listOf(id))
                 BlockedKind.UNDO -> undoDao.delete(id)
-                BlockedKind.OUTBOX -> id.toLongOrNull()?.let { outboxDao.deleteBySeq(it) }
+                BlockedKind.OUTBOX -> id.toLongOrNull()?.let { seq ->
+                    outboxDao.bySeq(seq)?.let { op ->
+                        profileOpView(op)?.payload?.profileId?.let { pid ->
+                            outboxDao.deleteBySeq(seq)
+                            cachedProfiles().firstOrNull { it.id == pid }?.let { cacheEffectiveProfile(it) }
+                        } ?: outboxDao.deleteBySeq(seq)
+                    }
+                }
             }
             val resets = profileIds.ifEmpty { syncMetaDao.all().map { it.profileId } }
             resets.toSet().forEach { syncMetaDao.clearCursor(it) }
@@ -1016,7 +1041,17 @@ class OfflineStore @Inject constructor(
             undoDao.all().filter { it.blockedReason != null }
                 .forEach { add(BlockedItem(BlockedKind.UNDO, it.clientId, it.blockedReason.orEmpty())) }
             outboxDao.all().filter { it.status == "blocked" }
-                .forEach { add(BlockedItem(BlockedKind.OUTBOX, it.seq.toString(), it.lastError.orEmpty())) }
+                .forEach {
+                    add(
+                        BlockedItem(
+                            BlockedKind.OUTBOX,
+                            it.seq.toString(),
+                            it.lastError.orEmpty(),
+                            type = it.type,
+                            profileId = outboxProfileId(it),
+                        ),
+                    )
+                }
         }
     }
 
@@ -1223,12 +1258,163 @@ class OfflineStore @Inject constructor(
 
     suspend fun pendingOps(): List<OutboxOpEntity> = outboxDao.pending()
 
+    // ---- Profil: edycje i wybór pary jako trwałe intenty (F-003/T-004) ----
+
+    private fun profileOpView(op: OutboxOpEntity): ProfileOpView? {
+        if (op.type != OP_PROFILE_UPDATE) return null
+        val payload = runCatching { json.decodeFromString(ProfileUpdatePayload.serializer(), op.payloadJson) }
+            .getOrNull() ?: return null
+        return ProfileOpView(op.seq, op.status, op.attempts, op.lastError, payload)
+    }
+
+    private suspend fun profileOps(profileId: String): List<ProfileOpView> =
+        outboxDao.all().mapNotNull(::profileOpView).filter { it.payload.profileId == profileId }
+
+    /** Widoczne wartości = potwierdzony snapshot + nakładka wszystkich niepotwierdzonych edycji. */
+    suspend fun profileDrafts(): Map<String, ProfileFields> =
+        outboxDao.all().mapNotNull(::profileOpView).groupBy { it.payload.profileId }
+            .mapValues { overlayDrafts(it.value) }
+
+    private suspend fun cacheEffectiveProfile(profile: LanguageProfileResponse) {
+        val confirmed = profile.confirmed ?: ProfileFields.of(profile)
+        val draft = overlayDrafts(profileOps(profile.id))
+        cacheProfile(profile.copy(confirmed = confirmed).withFields(draft))
+    }
+
+    /**
+     * Lokalna edycja: cache widocznych wartości i intent w jednej transakcji, bez sieci.
+     * Brak zmian względem obecnych wartości nie tworzy intentu.
+     */
+    suspend fun editProfileLocally(profileId: String, requested: ProfileFields): LanguageProfileResponse =
+        guardedWrite {
+            db.withTransaction {
+                val current = cachedProfiles().firstOrNull { it.id == profileId } ?: error("no_profile")
+                val currentFields = ProfileFields.of(current)
+                val changed = requested.changedAgainst(currentFields)
+                if (changed.isEmpty) return@withTransaction current
+                val prev = changed.valuesFrom(current.confirmed ?: currentFields)
+                val existing = profileOps(profileId)
+                when (val plan = planProfileEdit(profileId, changed, prev, current.revision, existing)) {
+                    is ProfileEditPlan.Append -> enqueueOp(
+                        OP_PROFILE_UPDATE,
+                        json.encodeToString(ProfileUpdatePayload.serializer(), plan.payload),
+                    )
+                    is ProfileEditPlan.MergeInto -> outboxDao.bySeq(plan.seq)?.let { row ->
+                        outboxDao.update(
+                            row.copy(
+                                clientOpId = UUID.randomUUID().toString(),
+                                payloadJson = json.encodeToString(ProfileUpdatePayload.serializer(), plan.payload),
+                                status = if (plan.newPending) "pending" else row.status,
+                                attempts = if (plan.newPending) 0 else row.attempts,
+                                lastError = if (plan.newPending) null else row.lastError,
+                            ),
+                        )
+                    }
+                }
+                val shown = current.withFields(changed).copy(confirmed = current.confirmed ?: currentFields)
+                cacheProfile(shown)
+                shown
+            }
+        }
+
+    /** Zaczyna wysyłkę: oznacza op jako wysłany i zwraca najświeższą treść (scalenia w locie nie giną). */
+    suspend fun markProfileOpSending(seq: Long): OutboxOpEntity? = guardedWrite {
+        db.withTransaction {
+            val row = outboxDao.bySeq(seq) ?: return@withTransaction null
+            if (row.status != "pending") return@withTransaction null
+            val marked = if (row.lastError == null) row.copy(lastError = PROFILE_OP_SENT) else row
+            if (marked !== row) outboxDao.update(marked)
+            marked
+        }
+    }
+
+    /** Wcześniejsza zablokowana lub zaparkowana edycja tego profilu wstrzymuje kolejne. */
+    suspend fun hasEarlierUnresolvedProfileOp(seq: Long, profileId: String): Boolean =
+        outboxDao.all().any { row ->
+            row.seq < seq && row.status != "pending" && profileOpView(row)?.payload?.profileId == profileId
+        }
+
+    /**
+     * ACK serwera. Op znika tylko, gdy wysłany `clientOpId` nadal jest aktualny; inaczej w międzyczasie
+     * scalono nowszą edycję i zostaje do wysłania na nowej rewizji. Cache dostaje snapshot serwera
+     * z nakładką pozostałych edycji, a lokalny wybór aktywnego profilu zostaje.
+     */
+    suspend fun confirmProfileUpdate(seq: Long, sentClientOpId: String, server: LanguageProfileResponse): Unit =
+        guardedWrite {
+            db.withTransaction {
+                val row = outboxDao.bySeq(seq)
+                val profileId = server.id
+                if (row != null && row.clientOpId == sentClientOpId) outboxDao.deleteBySeq(seq)
+                for (other in outboxDao.all()) {
+                    val view = profileOpView(other) ?: continue
+                    if (view.payload.profileId != profileId || other.status == "blocked") continue
+                    val rebased = view.payload.copy(baseRevision = server.revision)
+                    outboxDao.update(
+                        other.copy(payloadJson = json.encodeToString(ProfileUpdatePayload.serializer(), rebased)),
+                    )
+                }
+                val local = cachedProfiles().firstOrNull { it.id == profileId }
+                cacheEffectiveProfile(
+                    server.copy(
+                        is_active = local?.is_active ?: server.is_active,
+                        confirmed = ProfileFields.of(server),
+                    ),
+                )
+            }
+        }
+
+    /** Przelicza widoczny profil po usunięciu/odrzuceniu edycji (np. „przyjmij serwer", „odrzuć"). */
+    suspend fun rebuildProfileCache(profileId: String): Unit = guardedWrite {
+        db.withTransaction {
+            cachedProfiles().firstOrNull { it.id == profileId }?.let { cacheEffectiveProfile(it) }
+        }
+    }
+
+    /** Kolejny wybór zastępuje jeszcze nie wysłany; wysłane zostają, ostatni wygrywa na serwerze. */
+    suspend fun enqueueProfileActivate(profileId: String) {
+        for (row in outboxDao.all()) {
+            if (row.type == OP_PROFILE_ACTIVATE && row.status == "pending" && row.attempts == 0 && row.lastError == null) {
+                outboxDao.deleteBySeq(row.seq)
+            }
+        }
+        enqueueOp(OP_PROFILE_ACTIVATE, buildJsonObject { put("profileId", JsonPrimitive(profileId)) }.toString())
+    }
+
+    /** „Zastosuj moje zmiany" po konflikcie: nowa baza z serwera, nowy clientOpId, z powrotem do kolejki. */
+    suspend fun reopenProfileOp(seq: Long, serverRevision: Long?): Boolean = guardedWrite {
+        db.withTransaction {
+            val row = outboxDao.bySeq(seq) ?: return@withTransaction false
+            val view = profileOpView(row) ?: return@withTransaction false
+            val payload = view.payload.copy(baseRevision = serverRevision)
+            outboxDao.update(
+                row.copy(
+                    clientOpId = UUID.randomUUID().toString(),
+                    payloadJson = json.encodeToString(ProfileUpdatePayload.serializer(), payload),
+                    status = "pending",
+                    attempts = 0,
+                    lastError = null,
+                ),
+            )
+            true
+        }
+    }
+
+    private fun outboxProfileId(op: OutboxOpEntity): String? = runCatching {
+        (json.parseToJsonElement(op.payloadJson) as? JsonObject)?.get("profileId").asContent()
+    }.getOrNull()
+
+    suspend fun outboxOp(seq: Long): OutboxOpEntity? = outboxDao.bySeq(seq)
+
     /** Lokalna zmiana i jej intent (outbox) zatwierdzane razem lub wcale. */
     suspend fun <T> atomically(block: suspend () -> T): T = db.withTransaction { block() }
 
     /** Operacja wymaga decyzji użytkownika: nie jest wysyłana ponownie ani uznawana za wykonaną. */
     suspend fun markOpBlocked(op: OutboxOpEntity, code: String): Unit = guardedWrite {
-        outboxDao.update(op.copy(status = "blocked", lastError = code))
+        // Świeży odczyt: scalenie profilu w trakcie wysyłki nie może zostać nadpisane starą kopią.
+        db.withTransaction {
+            val row = outboxDao.bySeq(op.seq) ?: return@withTransaction
+            outboxDao.update(row.copy(status = "blocked", lastError = code))
+        }
     }
 
     /**
@@ -1269,14 +1455,17 @@ class OfflineStore @Inject constructor(
 
     /** Zwiększa licznik prób; parkuje po [MAX_OP_ATTEMPTS], żeby poison-pill nie blokował reszty. */
     suspend fun markOpFailed(op: OutboxOpEntity, error: String?): Unit = guardedWrite {
-        val attempts = op.attempts + 1
-        outboxDao.update(
-            op.copy(
-                attempts = attempts,
-                lastError = error,
-                status = if (attempts >= MAX_OP_ATTEMPTS) "parked" else "pending",
-            ),
-        )
+        db.withTransaction {
+            val row = outboxDao.bySeq(op.seq) ?: return@withTransaction
+            val attempts = row.attempts + 1
+            outboxDao.update(
+                row.copy(
+                    attempts = attempts,
+                    lastError = error,
+                    status = if (attempts >= MAX_OP_ATTEMPTS) "parked" else "pending",
+                ),
+            )
+        }
     }
 
     /** Remap ID listy lokalnej → server ID w cache, kartach, ruchach i payloadach operacji. */

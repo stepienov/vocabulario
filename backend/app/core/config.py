@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     # Learning API refuses accounts without a proven address. Switch on only after the
     # Android release with the verification screens is out (T-002, release order of F-003).
     email_verification_gate: bool = False
+    # PUT /profiles/{id} bez expected_revision (legacy) jest dozwolony do przełączenia minimalnej
+    # wersji klienta (E-001/F-002/T-001); potem brak pola to 422, nie zapis w ciemno.
+    profile_update_requires_revision: bool = False
     # Account deletion (E-001/F-006/T-002). Requests are refused until the flag is on; the
     # HMAC key (>= 32 chars) pseudonymises the user id in the kept process record and must
     # outlive ordinary deploys, so it is never rotated casually or reused as another secret.
