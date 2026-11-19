@@ -38,6 +38,10 @@ import com.vocabulario.app.data.session.UnsentChangesException
 import com.vocabulario.app.data.session.consentCovers
 import com.vocabulario.app.data.session.ownerContextOf
 import com.vocabulario.app.data.session.decideLogin
+import com.vocabulario.app.data.sync.BlockedItem
+import com.vocabulario.app.data.sync.BlockedKind
+import com.vocabulario.app.data.sync.OP_CONTENT_REPORT
+import com.vocabulario.app.data.sync.QueueSnapshot
 import com.vocabulario.app.data.session.logoutCovered
 import com.vocabulario.app.data.session.unsentFingerprint
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -66,6 +70,7 @@ class OfflineStore @Inject constructor(
             AppDatabase.MIGRATION_8_9,
             AppDatabase.MIGRATION_9_10,
             AppDatabase.MIGRATION_10_11,
+            AppDatabase.MIGRATION_11_12,
         )
         // Zachowaj dane (w tym niewysłany outbox) przy aktualizacji z v6.
         // Twardy reset tylko dla prehistorycznych wersji, których w praktyce nie ma w terenie.
@@ -107,6 +112,45 @@ class OfflineStore @Inject constructor(
         }
     }
 
+    /** Lokalna praca, której serwer jeszcze nie widział; pull nie może jej cofnąć ani wskrzesić usuniętego. */
+    private class PullOverlay(
+        val srsCards: Map<String, CachedCardEntity>,
+        val movedCards: Map<String, CachedCardEntity>,
+        val deletedCardIds: Set<String>,
+        val deletedListIds: Set<String>,
+        val renamedLists: Map<String, String>,
+    )
+
+    private suspend fun capturePullOverlay(): PullOverlay {
+        val srsIds = reviewDao.all().map { it.cardId }.toMutableSet()
+        undoDao.all().forEach { undo ->
+            runCatching { json.decodeFromString(SyncSrsState.serializer(), undo.srsJson).card_id }
+                .getOrNull()?.let { srsIds += it }
+        }
+        val moveIds = moveDao.all().map { it.cardId }.toSet()
+        val deletedCards = mutableSetOf<String>()
+        val deletedLists = mutableSetOf<String>()
+        val renames = mutableMapOf<String, String>()
+        for (op in outboxDao.all()) {
+            val p = runCatching { json.parseToJsonElement(op.payloadJson) as? JsonObject }.getOrNull() ?: continue
+            when (op.type) {
+                "card_delete" -> p["cardId"].asContent()?.let { deletedCards += it }
+                "list_delete" -> p["listId"].asContent()?.let { deletedLists += it }
+                "list_rename" -> {
+                    val id = p["listId"].asContent()
+                    val name = p["name"].asContent()
+                    if (id != null && name != null) renames[id] = name
+                }
+            }
+        }
+        suspend fun locals(ids: Collection<String>) =
+            ids.mapNotNull { id -> cardDao.byId(id)?.let { id to it } }.toMap()
+        return PullOverlay(locals(srsIds), locals(moveIds), deletedCards, deletedLists, renames)
+    }
+
+    private fun kotlinx.serialization.json.JsonElement?.asContent(): String? =
+        (this as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
+
     private suspend fun applyPullLocked(profileId: String, pull: SyncPullResponse, fullReplace: Boolean) {
         // Settings: telefon jest źródłem prawdy. Pull wkleja je tylko gdy Room jest pusty
         // (pierwszy login / reinstall). Inkrementalny sync i fullReplace przy zmianie
@@ -118,6 +162,7 @@ class OfflineStore @Inject constructor(
         val localInbox = listDao.pendingInbox(profileId)
         // Preserve offline-created lists (local:<uuid>) that haven't been pushed/remapped yet.
         val localOnlyLists = listDao.forProfile(profileId).filter { it.isLocalOnly }
+        val overlay = capturePullOverlay()
         if (fullReplace) {
             cardDao.clearProfile(profileId)
             listDao.clearProfile(profileId)
@@ -133,7 +178,13 @@ class OfflineStore @Inject constructor(
             }
             listDao.deleteById(deletedListId)
         }
-        val listEntities = pull.lists.map { it.toEntity(profileId) }
+        val listEntities = pull.lists
+            .filter { it.id !in overlay.deletedListIds }
+            .map { item ->
+                item.toEntity(profileId).let { entity ->
+                    overlay.renamedLists[item.id]?.let { entity.copy(name = it) } ?: entity
+                }
+            }
         if (listEntities.isNotEmpty()) {
             listDao.upsertAll(listEntities)
         }
@@ -144,26 +195,101 @@ class OfflineStore @Inject constructor(
         ) {
             listDao.upsertAll(listOf(localInbox))
         }
-        val entities = pull.cards.map { it.toEntity() }
+        val entities = pull.cards
+            .filter { it.id !in overlay.deletedCardIds && it.deck_id !in overlay.deletedListIds }
+            .map { it.toEntity() }
         if (entities.isNotEmpty()) {
             cardDao.upsertAll(entities)
         }
+        applyOverlayToCards(overlay)
         if (fullReplace && localOnlyLists.isNotEmpty()) {
             val present = listDao.forProfile(profileId).map { it.id }.toSet()
             val restore = localOnlyLists.filter { it.id !in present }
             if (restore.isNotEmpty()) listDao.upsertAll(restore)
         }
+        val now = System.currentTimeMillis()
+        val previous = syncMetaDao.get(profileId)
         syncMetaDao.upsert(
-            SyncMetaEntity(
-                profileId = profileId,
+            (previous ?: SyncMetaEntity(profileId = profileId)).copy(
                 lastPulledAt = pull.server_time,
-                lastSyncedAt = System.currentTimeMillis(),
+                lastSyncedAt = now,
+                cursor = pull.cursor,
             ),
         )
     }
 
+    /** Stan serwera jako baza, lokalne nowsze oceny i ruchy odtworzone na wierzchu; usuniętej karty nie wskrzesza. */
+    private suspend fun applyOverlayToCards(overlay: PullOverlay) {
+        for ((id, local) in overlay.srsCards) {
+            val pulled = cardDao.byId(id) ?: continue
+            cardDao.update(pulled.withSrs(local.toSyncSrsState()).copy(updatedAt = pulled.updatedAt))
+        }
+        for ((id, local) in overlay.movedCards) {
+            val pulled = cardDao.byId(id) ?: continue
+            if (pulled.deckId != local.deckId) cardDao.update(pulled.copy(deckId = local.deckId))
+        }
+    }
+
     suspend fun lastPulledAt(profileId: String): String? =
         syncMetaDao.get(profileId)?.lastPulledAt
+
+    suspend fun pullCursor(profileId: String): String? =
+        syncMetaDao.get(profileId)?.cursor
+
+    /** Kursor odrzucony przez serwer (410/422): następny pull jest pełny, kolejki i overlaye zostają. */
+    suspend fun resetPullCursor(profileId: String): Unit = guardedWrite {
+        syncMetaDao.clearCursor(profileId)
+    }
+
+    suspend fun recordSyncAttempt(profileId: String, success: Boolean, error: String?): Unit = guardedWrite {
+        val now = System.currentTimeMillis()
+        val previous = syncMetaDao.get(profileId) ?: SyncMetaEntity(profileId = profileId)
+        syncMetaDao.upsert(
+            previous.copy(
+                lastAttemptAt = now,
+                lastSuccessAt = if (success) now else previous.lastSuccessAt,
+                lastError = if (success) null else error,
+            ),
+        )
+    }
+
+    /** Spójny odczyt wszystkich kolejek wszystkich profili; operację liczymy raz. */
+    suspend fun queueSnapshot(): QueueSnapshot = db.withTransaction {
+        val reviews = reviewDao.all()
+        val moves = moveDao.all()
+        val undos = undoDao.all()
+        val lookups = lookupDao.all()
+        val ops = outboxDao.all()
+        val (reports, rest) = ops.partition { it.type == OP_CONTENT_REPORT }
+        QueueSnapshot(
+            reviews = reviews.size,
+            moves = moves.size,
+            undos = undos.size,
+            lookupsQueued = lookups.count { it.status != "needs_review" },
+            lookupsNeedsReview = lookups.count { it.status == "needs_review" },
+            outboxPending = rest.count { it.status == "pending" },
+            outboxParked = rest.count { it.status == "parked" },
+            outboxBlocked = rest.count { it.status == "blocked" },
+            contentReports = reports.size,
+            blockedReviews = reviews.count { it.blockedReason != null },
+            blockedMoves = moves.count { it.blockedReason != null },
+            blockedUndos = undos.count { it.blockedReason != null },
+        )
+    }
+
+    /** Profile z niewysłaną pracą: stuby lookupów, karty ocen/ruchów i operacje outboxu z `profileId`. */
+    suspend fun profilesWithPendingWork(): Set<String> = db.withTransaction {
+        val ids = mutableSetOf<String>()
+        lookupDao.all().forEach { ids += it.profileId }
+        (reviewDao.all().map { it.cardId } + moveDao.all().map { it.cardId }).forEach { cardId ->
+            cardDao.byId(cardId)?.let { ids += it.profileId }
+        }
+        for (op in outboxDao.all()) {
+            val p = runCatching { json.parseToJsonElement(op.payloadJson) as? JsonObject }.getOrNull() ?: continue
+            p["profileId"].asContent()?.let { ids += it }
+        }
+        ids
+    }
 
     fun observeMembershipRows(profileId: String) = cardDao.observeMembershipRows(profileId)
 
@@ -800,14 +926,97 @@ class OfflineStore @Inject constructor(
         return updated
     }
 
+    /** Ocena i jej trwały intent w jednej transakcji: śmierć procesu nie zostawia postępu bez kolejki ani odwrotnie. */
+    suspend fun recordReviewLocally(review: PendingReviewEntity): CachedCardEntity? = db.withTransaction {
+        val updated = applyReviewLocally(review.cardId, review.grade, review.correct, review.createdAt)
+        reviewDao.insert(review)
+        updated
+    }
+
+    suspend fun recordUndoLocally(clientId: String, srs: SyncSrsState): Unit = db.withTransaction {
+        undoReviewLocally(clientId, srs)
+        enqueuePendingUndo(clientId, srs)
+    }
+
     suspend fun restoreCard(card: CachedCardEntity) {
         cardDao.update(card)
     }
 
-    suspend fun applyServerSrs(states: List<SyncSrsState>): Unit = guardedWrite {
-        for (srs in states) {
-            val card = cardDao.byId(srs.card_id) ?: continue
-            cardDao.update(card.withSrs(srs))
+    /**
+     * Zastosowanie ACK push w jednej transakcji z kontrolą właściciela: zdejmuje tylko potwierdzone ID,
+     * blokuje not_found/conflict, a serwerowy SRS nakłada wyłącznie na karty bez lokalnych niewysłanych
+     * ocen/undo (nowsza lokalna ocena z lotu nie wraca do starego stanu).
+     */
+    suspend fun applyPushAck(
+        confirmedReviews: List<String>,
+        blockedReviews: Map<String, String>,
+        confirmedMoves: List<String>,
+        blockedMoves: Map<String, String>,
+        srs: List<SyncSrsState>,
+    ): Unit = guardedWrite {
+        db.withTransaction {
+            if (confirmedReviews.isNotEmpty()) reviewDao.deleteIds(confirmedReviews)
+            blockedReviews.forEach { (id, reason) -> reviewDao.block(id, reason) }
+            if (confirmedMoves.isNotEmpty()) moveDao.deleteIds(confirmedMoves)
+            blockedMoves.forEach { (id, reason) -> moveDao.block(id, reason) }
+            if (srs.isNotEmpty()) {
+                val protectedIds = reviewDao.all().map { it.cardId }.toMutableSet()
+                undoDao.all().forEach { undo ->
+                    runCatching { json.decodeFromString(SyncSrsState.serializer(), undo.srsJson).card_id }
+                        .getOrNull()?.let { protectedIds += it }
+                }
+                for (state in srs) {
+                    if (state.card_id in protectedIds) continue
+                    val card = cardDao.byId(state.card_id) ?: continue
+                    cardDao.update(card.withSrs(state))
+                }
+            }
+        }
+    }
+
+    suspend fun blockPendingUndo(clientId: String, reason: String): Unit = guardedWrite {
+        undoDao.block(clientId, reason)
+    }
+
+    /**
+     * Świadome „Odrzuć" zablokowanej operacji. Cursor profilu jest zerowany, więc następny pull
+     * przywróci stan serwera dla odrzuconej lokalnej zmiany (z zachowaniem pozostałych overlayów).
+     */
+    suspend fun discardBlocked(kind: BlockedKind, id: String): Unit = guardedWrite {
+        db.withTransaction {
+            val profileIds = when (kind) {
+                BlockedKind.REVIEW -> reviewDao.all().filter { it.clientId == id }
+                    .mapNotNull { cardDao.byId(it.cardId)?.profileId }
+                BlockedKind.MOVE -> moveDao.all().filter { it.clientId == id }
+                    .mapNotNull { cardDao.byId(it.cardId)?.profileId }
+                BlockedKind.UNDO -> undoDao.all().filter { it.clientId == id }
+                    .mapNotNull { undo ->
+                        runCatching { json.decodeFromString(SyncSrsState.serializer(), undo.srsJson).card_id }
+                            .getOrNull()?.let { cardDao.byId(it)?.profileId }
+                    }
+                BlockedKind.OUTBOX -> emptyList()
+            }
+            when (kind) {
+                BlockedKind.REVIEW -> reviewDao.delete(id)
+                BlockedKind.MOVE -> moveDao.deleteIds(listOf(id))
+                BlockedKind.UNDO -> undoDao.delete(id)
+                BlockedKind.OUTBOX -> id.toLongOrNull()?.let { outboxDao.deleteBySeq(it) }
+            }
+            val resets = profileIds.ifEmpty { syncMetaDao.all().map { it.profileId } }
+            resets.toSet().forEach { syncMetaDao.clearCursor(it) }
+        }
+    }
+
+    suspend fun blockedItems(): List<BlockedItem> = db.withTransaction {
+        buildList {
+            reviewDao.all().filter { it.blockedReason != null }
+                .forEach { add(BlockedItem(BlockedKind.REVIEW, it.clientId, it.blockedReason.orEmpty())) }
+            moveDao.all().filter { it.blockedReason != null }
+                .forEach { add(BlockedItem(BlockedKind.MOVE, it.clientId, it.blockedReason.orEmpty())) }
+            undoDao.all().filter { it.blockedReason != null }
+                .forEach { add(BlockedItem(BlockedKind.UNDO, it.clientId, it.blockedReason.orEmpty())) }
+            outboxDao.all().filter { it.status == "blocked" }
+                .forEach { add(BlockedItem(BlockedKind.OUTBOX, it.seq.toString(), it.lastError.orEmpty())) }
         }
     }
 
@@ -851,6 +1060,13 @@ class OfflineStore @Inject constructor(
 
     suspend fun pendingReviews(): List<PendingReviewEntity> = reviewDao.all()
 
+    /** Tylko niezablokowane wpisy; zablokowane czekają na decyzję użytkownika, nie na sieć. */
+    suspend fun sendableReviews(): List<PendingReviewEntity> = reviewDao.sendable()
+
+    suspend fun sendableMoves(): List<PendingMoveEntity> = moveDao.sendable()
+
+    suspend fun sendableUndos(): List<PendingUndoEntity> = undoDao.sendable()
+
     suspend fun removePendingReviews(clientIds: List<String>): Unit = guardedWrite {
         if (clientIds.isNotEmpty()) reviewDao.deleteIds(clientIds)
     }
@@ -864,8 +1080,6 @@ class OfflineStore @Inject constructor(
     suspend fun removePendingMoves(clientIds: List<String>): Unit = guardedWrite {
         if (clientIds.isNotEmpty()) moveDao.deleteIds(clientIds)
     }
-
-    suspend fun pendingCount(): Int = reviewDao.count()
 
     suspend fun enqueueOfflineLookup(profileId: String, lemma: String): PendingLookupEntity? {
         val trimmed = lemma.trim()
@@ -1009,7 +1223,31 @@ class OfflineStore @Inject constructor(
 
     suspend fun pendingOps(): List<OutboxOpEntity> = outboxDao.pending()
 
-    suspend fun outboxPendingCount(): Int = outboxDao.pendingCount()
+    /** Lokalna zmiana i jej intent (outbox) zatwierdzane razem lub wcale. */
+    suspend fun <T> atomically(block: suspend () -> T): T = db.withTransaction { block() }
+
+    /** Operacja wymaga decyzji użytkownika: nie jest wysyłana ponownie ani uznawana za wykonaną. */
+    suspend fun markOpBlocked(op: OutboxOpEntity, code: String): Unit = guardedWrite {
+        outboxDao.update(op.copy(status = "blocked", lastError = code))
+    }
+
+    /**
+     * Create listy został już wykonany i lista usunięta (receipt): zależne operacje i ruchy do lokalnego
+     * ID dostają `target_unavailable`, a lokalny wiersz znika z kartami z powrotem na liście „Uczę się".
+     */
+    suspend fun blockDependentsOfLocalList(localId: String): Unit = guardedWrite {
+        db.withTransaction {
+            for (op in outboxDao.pending()) {
+                if (op.payloadJson.contains(localId)) {
+                    outboxDao.update(op.copy(status = "blocked", lastError = "target_unavailable"))
+                }
+            }
+            moveDao.all().filter { it.targetListId == localId && it.blockedReason == null }
+                .forEach { moveDao.block(it.clientId, "target_unavailable") }
+            cardDao.cardsByDeckId(localId).forEach { cardDao.update(it.copy(deckId = null)) }
+            listDao.deleteById(localId)
+        }
+    }
 
     /**
      * 401 na wygasłym tokenie parkowało settings_update i zmiana nigdy nie wylatywała.

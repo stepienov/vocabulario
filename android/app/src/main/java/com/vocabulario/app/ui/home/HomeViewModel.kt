@@ -1023,9 +1023,7 @@ class HomeViewModel @Inject constructor(
                 }.onFailure {
                     revertCreating(candidate)
                     if (it.isWordAlreadyOnList()) {
-                        viewModelScope.launch {
-                            runCatching { repository.syncNow(fullReplace = false) }
-                        }
+                        viewModelScope.launch { repository.syncNow(fullReplace = false) }
                     }
                     _state.value = _state.value.copy(
                         error = it.userMessage(strings, R.string.err_add),
@@ -1099,9 +1097,7 @@ class HomeViewModel @Inject constructor(
             }.onFailure {
                 revertCreating(candidate)
                 if (it.isWordAlreadyOnList()) {
-                    viewModelScope.launch {
-                        runCatching { repository.syncNow(fullReplace = false) }
-                    }
+                    viewModelScope.launch { repository.syncNow(fullReplace = false) }
                 }
                 _state.value = _state.value.copy(
                     error = it.userMessage(strings, R.string.err_create_list),
@@ -1144,9 +1140,7 @@ class HomeViewModel @Inject constructor(
             }.onFailure {
                 revertCreating(candidate)
                 if (it.isWordAlreadyOnList()) {
-                    viewModelScope.launch {
-                        runCatching { repository.syncNow(fullReplace = false) }
-                    }
+                    viewModelScope.launch { repository.syncNow(fullReplace = false) }
                 }
                 _state.value = _state.value.copy(
                     error = it.userMessage(strings, R.string.err_add_to_list),

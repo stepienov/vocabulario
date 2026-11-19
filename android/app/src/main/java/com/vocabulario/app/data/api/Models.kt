@@ -375,6 +375,8 @@ data class ImportJobProgressResponse(
 data class WordListCreate(
     val name: String,
     val profile_id: String,
+    /** Stabilny klucz z lokalnego intentu; retry po utraconej odpowiedzi nie tworzy drugiej listy. */
+    val client_op_id: String? = null,
 )
 
 @Serializable
@@ -569,6 +571,14 @@ data class SyncPullResponse(
     val lists: List<SyncListItem> = emptyList(),
     val deleted_card_ids: List<String> = emptyList(),
     val deleted_list_ids: List<String> = emptyList(),
+    /** Nieprzezroczysty kursor następnego pull; brak oznacza serwer bez nowego kontraktu. */
+    val cursor: String? = null,
+)
+
+@Serializable
+data class SyncPullRequest(
+    val profile_id: String,
+    val cursor: String? = null,
 )
 
 @Serializable
@@ -605,6 +615,14 @@ data class SyncMoveResult(
 )
 
 @Serializable
+data class SyncOperationResult(
+    val client_id: String,
+    val card_id: String? = null,
+    val outcome: String,
+    val reason: String? = null,
+)
+
+@Serializable
 data class SyncPushResponse(
     val applied: Int = 0,
     val skipped: Int = 0,
@@ -612,6 +630,9 @@ data class SyncPushResponse(
     val moves_applied: Int = 0,
     val moves_skipped: Int = 0,
     val moves: List<SyncMoveResult> = emptyList(),
+    // null = stary serwer bez ACK per operacja; nic nie jest wtedy potwierdzone.
+    val review_results: List<SyncOperationResult>? = null,
+    val move_results: List<SyncOperationResult>? = null,
 )
 
 @Serializable

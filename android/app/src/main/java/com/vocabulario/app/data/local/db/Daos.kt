@@ -119,6 +119,12 @@ interface PendingReviewDao {
     @Query("SELECT * FROM pending_reviews ORDER BY createdAt ASC")
     suspend fun all(): List<PendingReviewEntity>
 
+    @Query("SELECT * FROM pending_reviews WHERE blockedReason IS NULL ORDER BY createdAt ASC")
+    suspend fun sendable(): List<PendingReviewEntity>
+
+    @Query("UPDATE pending_reviews SET blockedReason = :reason WHERE clientId = :clientId")
+    suspend fun block(clientId: String, reason: String)
+
     @Query("DELETE FROM pending_reviews WHERE clientId = :clientId")
     suspend fun delete(clientId: String)
 
@@ -136,6 +142,12 @@ interface PendingMoveDao {
 
     @Query("SELECT * FROM pending_moves ORDER BY movedAt ASC")
     suspend fun all(): List<PendingMoveEntity>
+
+    @Query("SELECT * FROM pending_moves WHERE blockedReason IS NULL ORDER BY movedAt ASC")
+    suspend fun sendable(): List<PendingMoveEntity>
+
+    @Query("UPDATE pending_moves SET blockedReason = :reason WHERE clientId = :clientId")
+    suspend fun block(clientId: String, reason: String)
 
     @Query("DELETE FROM pending_moves WHERE clientId IN (:ids)")
     suspend fun deleteIds(ids: List<String>)
@@ -194,6 +206,12 @@ interface PendingUndoDao {
     @Query("SELECT * FROM pending_undos ORDER BY clientId ASC")
     suspend fun all(): List<PendingUndoEntity>
 
+    @Query("SELECT * FROM pending_undos WHERE blockedReason IS NULL ORDER BY clientId ASC")
+    suspend fun sendable(): List<PendingUndoEntity>
+
+    @Query("UPDATE pending_undos SET blockedReason = :reason WHERE clientId = :clientId")
+    suspend fun block(clientId: String, reason: String)
+
     @Query("DELETE FROM pending_undos WHERE clientId = :clientId")
     suspend fun delete(clientId: String)
 }
@@ -229,9 +247,6 @@ interface OutboxOpDao {
 
     @Query("DELETE FROM outbox_ops WHERE clientOpId = :clientOpId")
     suspend fun deleteByClientOpId(clientOpId: String)
-
-    @Query("SELECT COUNT(*) FROM outbox_ops WHERE status = 'pending'")
-    suspend fun pendingCount(): Int
 }
 
 @Dao
@@ -244,6 +259,12 @@ interface SyncMetaDao {
 
     @Query("SELECT lastPulledAt FROM sync_meta WHERE profileId = :profileId LIMIT 1")
     fun observeLastPulledAt(profileId: String): Flow<String?>
+
+    @Query("UPDATE sync_meta SET cursor = NULL WHERE profileId = :profileId")
+    suspend fun clearCursor(profileId: String)
+
+    @Query("SELECT * FROM sync_meta")
+    suspend fun all(): List<SyncMetaEntity>
 }
 
 @Dao
@@ -286,6 +307,7 @@ interface SessionOwnerDao {
         "SELECT 'r:' || clientId FROM pending_reviews UNION ALL " +
             "SELECT 'm:' || clientId FROM pending_moves UNION ALL " +
             "SELECT 'l:' || clientId FROM pending_lookups UNION ALL " +
+            "SELECT 'u:' || clientId FROM pending_undos UNION ALL " +
             "SELECT 'o:' || seq FROM outbox_ops",
     )
     suspend fun unsentIds(): List<String>

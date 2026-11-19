@@ -1,3 +1,4 @@
+import hashlib
 import random
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -10,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_verified_user, get_verified_user_id, lang_pair_key, normalize_text
 from app.core.http_errors import api_error
 from app.db.session import get_db
-from app.models import CardCorrection, CardHistoryEvent, LanguageProfile, LearningCard, LexicalEntry, ReviewLog, SrsState, User, UserSettings, WordList
+from app.models import AppliedReviewUndo, CardCorrection, CardHistoryEvent, LanguageProfile, LearningCard, LexicalEntry, ListCreationReceipt, ReviewLog, SrsState, User, UserSettings, WordList
 from app.schemas import (
     CardCreateRequest,
     CardCorrectionCreate,
@@ -733,8 +734,10 @@ async def srs_review(
         .where(
             LearningCard.id == body.card_id,
             LearningCard.user_id == user.id,
+            LearningCard.deleted_at.is_(None),
             SrsState.scope == "main",
         )
+        .with_for_update(of=(LearningCard, SrsState))
     )
     row = result.one_or_none()
     if row is None:
@@ -749,6 +752,8 @@ async def srs_review(
         correct, _, _, _ = check_answer(body.answer, answers, tolerance)
 
     state = apply_review(state, body.grade, correct)
+    await db.flush()
+    await db.refresh(state, ["review_revision"])
     log = ReviewLog(
         card_id=card.id,
         user_id=user.id,
@@ -756,6 +761,7 @@ async def srs_review(
         mode=body.mode,
         direction=body.direction,
         correct=correct,
+        applied_revision=state.review_revision,
     )
     db.add(log)
     await db.commit()
@@ -812,27 +818,41 @@ async def srs_undo(
         .where(
             LearningCard.id == card_id,
             LearningCard.user_id == user.id,
+            LearningCard.deleted_at.is_(None),
             SrsState.scope == "main",
         )
+        .with_for_update(of=(LearningCard, SrsState))
     )
     row = result.one_or_none()
     if row is None:
         raise api_error(404, "card_not_found", "Card not found")
     card, state = row
 
-    log_result = await db.execute(
-        select(ReviewLog).where(
-            ReviewLog.client_id == body.client_id,
-            ReviewLog.user_id == user.id,
+    marker = await db.get(AppliedReviewUndo, body.client_id)
+    if marker is not None:
+        if marker.user_id != user.id or marker.card_id != card.id:
+            raise api_error(409, "operation_id_conflict", "client_id belongs to another operation")
+        # Ponowienie wykonanego undo: zwraca aktualny stan, nigdy nie nadpisuje nowszych ocen.
+        return SrsUndoResponse(srs=_srs_state_to_sync(card.id, state))
+
+    log = (
+        await db.execute(
+            select(ReviewLog).where(
+                ReviewLog.client_id == body.client_id,
+                ReviewLog.user_id == user.id,
+            )
         )
-    )
-    log = log_result.scalar_one_or_none()
+    ).scalar_one_or_none()
     if log is not None:
         if log.card_id != card.id:
             raise HTTPException(status_code=400, detail="client_id does not match card")
+        # Snapshot wolno przywrócić tylko, gdy nic nie zmieniło SRS po tej ocenie.
+        if log.applied_revision is None or log.applied_revision != state.review_revision:
+            raise api_error(409, "undo_conflict", "A newer review exists for this card")
         await db.delete(log)
-
-    _apply_sync_srs_to_state(state, body.previous_srs)
+        _apply_sync_srs_to_state(state, body.previous_srs)
+    # Brak loga: zapisujemy tylko anulowanie ID (opóźniony push oceny dostanie `superseded`).
+    db.add(AppliedReviewUndo(client_id=body.client_id, user_id=user.id, card_id=card.id))
     await db.commit()
     await db.refresh(state)
     return SrsUndoResponse(srs=_srs_state_to_sync(card.id, state))
@@ -935,6 +955,11 @@ async def create_list(
         raise api_error(400, "empty_list_name", "List name is required")
     if name.lower() in RESERVED_LIST_NAMES:
         raise api_error(400, "list_name_reserved", "This name is reserved")
+    fingerprint = hashlib.sha256(f"list|{profile.id}|{name.lower()}".encode()).hexdigest()
+    if body.client_op_id is not None:
+        replay = await _list_creation_replay(db, user.id, body.client_op_id, fingerprint)
+        if replay is not None:
+            return replay
     existing = await db.execute(
         select(WordList).where(
             WordList.profile_id == profile.id,
@@ -952,7 +977,26 @@ async def create_list(
         is_pending_inbox=False,
     )
     db.add(wl)
-    await db.commit()
+    if body.client_op_id is not None:
+        await db.flush()
+        db.add(
+            ListCreationReceipt(
+                client_op_id=body.client_op_id,
+                user_id=user.id,
+                fingerprint=fingerprint,
+                list_id=wl.id,
+            )
+        )
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Równoległe ponowienie z tym samym client_op_id wygrało: zwracamy jego wynik.
+        await db.rollback()
+        if body.client_op_id is not None:
+            replay = await _list_creation_replay(db, user.id, body.client_op_id, fingerprint)
+            if replay is not None:
+                return replay
+        raise api_error(409, "list_name_taken", "A list with this name already exists") from None
     await db.refresh(wl)
     return WordListResponse(
         id=wl.id,
@@ -960,6 +1004,33 @@ async def create_list(
         is_system=False,
         is_pending_inbox=wl.is_pending_inbox,
         word_count=0,
+        created_at=wl.created_at,
+    )
+
+
+async def _list_creation_replay(
+    db: AsyncSession, user_id: UUID, client_op_id: UUID, fingerprint: str
+) -> WordListResponse | None:
+    receipt = await db.get(ListCreationReceipt, client_op_id)
+    if receipt is None:
+        return None
+    if receipt.user_id != user_id or receipt.fingerprint != fingerprint:
+        raise api_error(409, "operation_id_conflict", "client_op_id belongs to another operation")
+    wl = await db.get(WordList, receipt.list_id)
+    if wl is None or wl.deleted_at is not None or wl.user_id != user_id:
+        # Usunięta lista nie powstaje ponownie przy retry.
+        raise api_error(410, "list_already_deleted", "The list created by this operation was deleted")
+    count = await db.execute(
+        select(func.count()).select_from(LearningCard).where(
+            LearningCard.deck_id == wl.id, LearningCard.deleted_at.is_(None)
+        )
+    )
+    return WordListResponse(
+        id=wl.id,
+        name=wl.name,
+        is_system=wl.is_system,
+        is_pending_inbox=wl.is_pending_inbox,
+        word_count=int(count.scalar_one()),
         created_at=wl.created_at,
     )
 

@@ -260,11 +260,8 @@ interface VocabularioApi {
     @POST("srs/distractors")
     suspend fun srsDistractors(@Body body: DistractorsRequest): DistractorsResponse
 
-    @GET("sync/pull")
-    suspend fun syncPull(
-        @Query("profile_id") profileId: String,
-        @Query("since") since: String? = null,
-    ): SyncPullResponse
+    @POST("sync/pull")
+    suspend fun syncPull(@Body body: SyncPullRequest): SyncPullResponse
 
     @POST("sync/push")
     suspend fun syncPush(@Body body: SyncPushRequest): SyncPushResponse

@@ -90,6 +90,8 @@ data class PendingReviewEntity(
     val correct: Boolean,
     val answer: String?,
     val createdAt: Long,
+    /** Przyczyna z ACK serwera; wiersz czeka na decyzję użytkownika i nie jest wysyłany ponownie. */
+    val blockedReason: String? = null,
 )
 
 @Entity(tableName = "pending_moves")
@@ -99,6 +101,7 @@ data class PendingMoveEntity(
     /** Null = system Learning list (deck_id NULL on server). */
     val targetListId: String?,
     val movedAt: Long,
+    val blockedReason: String? = null,
 )
 
 @Entity(tableName = "pending_lookups")
@@ -118,6 +121,7 @@ data class PendingLookupEntity(
 data class PendingUndoEntity(
     @PrimaryKey val clientId: String,
     val srsJson: String,
+    val blockedReason: String? = null,
 )
 
 @Entity(tableName = "local_settings")
@@ -136,6 +140,12 @@ data class SyncMetaEntity(
     @PrimaryKey val profileId: String,
     val lastPulledAt: String? = null,
     val lastSyncedAt: Long = 0L,
+    /** Kursor serwera; przesuwany wyłącznie w transakcji zastosowania całego pull. */
+    val cursor: String? = null,
+    val lastAttemptAt: Long? = null,
+    /** Tylko pełny udany zakres profilu (push + outbox + pull). */
+    val lastSuccessAt: Long? = null,
+    val lastError: String? = null,
 )
 
 /** Cached active language profile for offline practice. */

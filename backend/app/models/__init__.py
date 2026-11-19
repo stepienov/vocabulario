@@ -314,6 +314,10 @@ class SrsState(Base):
     stability: Mapped[float | None] = mapped_column(Float, nullable=True)
     difficulty: Mapped[float | None] = mapped_column(Float, nullable=True)
     fsrs_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Podnoszone triggerem DB przy każdej zmianie stanu (undo sprawdza zgodność rewizji).
+    review_revision: Mapped[int] = mapped_column(
+        BigInteger, default=0, server_default=text("0"), nullable=False
+    )
 
     card: Mapped["LearningCard"] = relationship(back_populates="srs_states")
 
@@ -331,6 +335,32 @@ class ReviewLog(Base):
     reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # Idempotency for offline sync push (client-generated UUID)
     client_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), unique=True, nullable=True)
+    # Rewizja SRS po zastosowaniu oceny i odcisk intencji (ten sam client_id z innym body = konflikt).
+    applied_revision: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    intent_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class AppliedReviewUndo(Base):
+    """Znacznik zastosowanego/anulowanego undo; niezależny od kasowanego ReviewLog."""
+
+    __tablename__ = "applied_review_undos"
+
+    client_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    card_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("learning_cards.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ListCreationReceipt(Base):
+    """Minimalny dowód utworzenia listy (bez nazwy) — idempotencja create po utracie odpowiedzi."""
+
+    __tablename__ = "list_creation_receipts"
+
+    client_op_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    list_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class WordList(Base):
@@ -795,6 +825,7 @@ class AppliedSyncMove(Base):
     card_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("learning_cards.id", ondelete="CASCADE"))
     moved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    intent_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 ACTIVE_IMPORT_STATUSES = (

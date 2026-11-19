@@ -19,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         OutboxOpEntity::class,
         SessionOwnerEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -145,6 +145,19 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `session_owner` ADD COLUMN `logoutDisposition` TEXT")
                 db.execSQL("ALTER TABLE `session_owner` ADD COLUMN `acceptedUnsentFingerprint` TEXT")
+            }
+        }
+
+        /** v11 → v12: zablokowane operacje kolejek, kursor pull i wynik próby sync per profil (addytywnie). */
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                for (table in listOf("pending_reviews", "pending_moves", "pending_undos")) {
+                    db.execSQL("ALTER TABLE `$table` ADD COLUMN `blockedReason` TEXT")
+                }
+                db.execSQL("ALTER TABLE `sync_meta` ADD COLUMN `cursor` TEXT")
+                db.execSQL("ALTER TABLE `sync_meta` ADD COLUMN `lastAttemptAt` INTEGER")
+                db.execSQL("ALTER TABLE `sync_meta` ADD COLUMN `lastSuccessAt` INTEGER")
+                db.execSQL("ALTER TABLE `sync_meta` ADD COLUMN `lastError` TEXT")
             }
         }
     }

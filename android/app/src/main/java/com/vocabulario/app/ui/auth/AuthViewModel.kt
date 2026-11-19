@@ -22,6 +22,8 @@ import com.vocabulario.app.data.session.SessionCoordinator
 import com.vocabulario.app.data.session.SessionState
 import com.vocabulario.app.data.session.UnsentChangesException
 import com.vocabulario.app.data.session.authNotice
+import com.vocabulario.app.data.sync.SyncScope
+import com.vocabulario.app.data.sync.needsOnboarding
 import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -162,7 +164,10 @@ class AuthViewModel @Inject constructor(
             blockingBusy.run {
                 _logoutPrompt.value = null
                 try {
-                    learningRepository.syncNow(awaitLock = true)
+                    learningRepository.syncNow(
+                        awaitLock = true,
+                        scope = SyncScope.ALL_PENDING_PROFILES,
+                    )
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
@@ -300,7 +305,15 @@ class AuthViewModel @Inject constructor(
     }
 
     private suspend fun finishSignIn(onSuccess: suspend (needsOnboarding: Boolean) -> Unit) {
-        val needsOnboarding = runCatching { !authRepository.hasProfile() }.getOrDefault(false)
+        val resolution = try {
+            authRepository.resolveProfiles()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+        // Onboarding wyłącznie po potwierdzonym braku profilu; reszta (też brak pewności) idzie dalej.
+        val needsOnboarding = resolution?.needsOnboarding == true
         if (!needsOnboarding) {
             runCatching { authRepository.ensureActiveProfile() }
             runCatching { learningRepository.applyAppLocaleFromActiveProfile() }

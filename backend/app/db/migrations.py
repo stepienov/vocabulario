@@ -529,7 +529,88 @@ _STATEMENTS = (
     "'password_change', 'password_added', 'google_linked', 'email_changed', "
     "'refresh_reuse', 'account_deleted')); "
     "END IF; END $$",
+    # E-001/F-003/T-003: ACK push, undo markers, list-create receipts, revision SRS.
+    "ALTER TABLE srs_state ADD COLUMN IF NOT EXISTS review_revision BIGINT NOT NULL DEFAULT 0",
+    "ALTER TABLE review_logs ADD COLUMN IF NOT EXISTS applied_revision BIGINT",
+    "ALTER TABLE review_logs ADD COLUMN IF NOT EXISTS intent_fingerprint VARCHAR(64)",
+    "ALTER TABLE applied_sync_moves ADD COLUMN IF NOT EXISTS intent_fingerprint VARCHAR(64)",
+    # E-001/F-003/T-003 pkt 3: pull z jawnym xid8 i snapshotem PostgreSQL (bez zegara).
+    "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS sync_xid xid8",
+    "ALTER TABLE word_lists ADD COLUMN IF NOT EXISTS sync_xid xid8",
+    "CREATE TABLE IF NOT EXISTS sync_tombstones ("
+    "id UUID PRIMARY KEY DEFAULT gen_random_uuid(), "
+    "user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, "
+    "profile_id UUID NOT NULL REFERENCES language_profiles(id) ON DELETE CASCADE, "
+    "entity_type VARCHAR(8) NOT NULL CHECK (entity_type IN ('card', 'list')), "
+    "entity_id UUID NOT NULL, "
+    "sync_xid xid8 NOT NULL, "
+    "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+    ")",
+    "CREATE INDEX IF NOT EXISTS ix_sync_tombstones_cursor "
+    "ON sync_tombstones (user_id, profile_id, sync_xid)",
+    "CREATE INDEX IF NOT EXISTS ix_sync_tombstones_created ON sync_tombstones (created_at)",
+    "CREATE TABLE IF NOT EXISTS profile_sync_state ("
+    "user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, "
+    "profile_id UUID NOT NULL REFERENCES language_profiles(id) ON DELETE CASCADE, "
+    "purged_through_xid xid8 NOT NULL, "
+    "PRIMARY KEY (user_id, profile_id)"
+    ")",
+    "CREATE TABLE IF NOT EXISTS sync_epoch ("
+    "id INTEGER PRIMARY KEY CHECK (id = 1), "
+    "epoch UUID NOT NULL"
+    ")",
+    "CREATE INDEX IF NOT EXISTS ix_learning_cards_sync_cursor "
+    "ON learning_cards (user_id, profile_id, sync_xid)",
+    "CREATE INDEX IF NOT EXISTS ix_word_lists_sync_cursor "
+    "ON word_lists (user_id, profile_id, sync_xid)",
+    "CREATE OR REPLACE FUNCTION vocab_set_sync_xid() RETURNS trigger AS $fn$ "
+    "BEGIN NEW.sync_xid = pg_current_xact_id(); RETURN NEW; END $fn$ LANGUAGE plpgsql",
+    "CREATE OR REPLACE FUNCTION vocab_touch_card_for_srs() RETURNS trigger AS $fn$ "
+    "BEGIN "
+    "UPDATE learning_cards SET sync_xid = pg_current_xact_id() "
+    "WHERE id = NEW.card_id AND sync_xid IS DISTINCT FROM pg_current_xact_id(); "
+    "RETURN NEW; END $fn$ LANGUAGE plpgsql",
+    "CREATE OR REPLACE FUNCTION vocab_bump_srs_revision() RETURNS trigger AS $fn$ "
+    "BEGIN "
+    "IF ROW(NEW.status, NEW.ease, NEW.interval_days, NEW.repetitions, NEW.lapses, "
+    "NEW.next_review_at, NEW.last_reviewed_at, NEW.last_grade, NEW.stability, "
+    "NEW.difficulty, NEW.fsrs_step) IS DISTINCT FROM "
+    "ROW(OLD.status, OLD.ease, OLD.interval_days, OLD.repetitions, OLD.lapses, "
+    "OLD.next_review_at, OLD.last_reviewed_at, OLD.last_grade, OLD.stability, "
+    "OLD.difficulty, OLD.fsrs_step) THEN "
+    "NEW.review_revision = OLD.review_revision + 1; END IF; "
+    "RETURN NEW; END $fn$ LANGUAGE plpgsql",
+    # Tombstone tylko gdy właściciel i profil istnieją: kaskada z usuwania konta/profilu nic nie zostawia.
+    "CREATE OR REPLACE FUNCTION vocab_sync_tombstone() RETURNS trigger AS $fn$ "
+    "BEGIN "
+    "IF EXISTS (SELECT 1 FROM users WHERE id = OLD.user_id) "
+    "AND EXISTS (SELECT 1 FROM language_profiles WHERE id = OLD.profile_id) THEN "
+    "INSERT INTO sync_tombstones (user_id, profile_id, entity_type, entity_id, sync_xid) "
+    "VALUES (OLD.user_id, OLD.profile_id, TG_ARGV[0], OLD.id, pg_current_xact_id()); "
+    "END IF; RETURN OLD; END $fn$ LANGUAGE plpgsql",
+    "DO $$ BEGIN "
+    "IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_learning_cards_sync_xid') THEN "
+    "CREATE TRIGGER trg_learning_cards_sync_xid BEFORE INSERT OR UPDATE ON learning_cards "
+    "FOR EACH ROW EXECUTE FUNCTION vocab_set_sync_xid(); END IF; "
+    "IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_word_lists_sync_xid') THEN "
+    "CREATE TRIGGER trg_word_lists_sync_xid BEFORE INSERT OR UPDATE ON word_lists "
+    "FOR EACH ROW EXECUTE FUNCTION vocab_set_sync_xid(); END IF; "
+    "IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_srs_state_touch_card') THEN "
+    "CREATE TRIGGER trg_srs_state_touch_card AFTER INSERT OR UPDATE ON srs_state "
+    "FOR EACH ROW EXECUTE FUNCTION vocab_touch_card_for_srs(); END IF; "
+    "IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_srs_state_revision') THEN "
+    "CREATE TRIGGER trg_srs_state_revision BEFORE UPDATE ON srs_state "
+    "FOR EACH ROW EXECUTE FUNCTION vocab_bump_srs_revision(); END IF; "
+    "IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_learning_cards_tombstone') THEN "
+    "CREATE TRIGGER trg_learning_cards_tombstone BEFORE DELETE ON learning_cards "
+    "FOR EACH ROW EXECUTE FUNCTION vocab_sync_tombstone('card'); END IF; "
+    "IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_word_lists_tombstone') THEN "
+    "CREATE TRIGGER trg_word_lists_tombstone BEFORE DELETE ON word_lists "
+    "FOR EACH ROW EXECUTE FUNCTION vocab_sync_tombstone('list'); END IF; "
+    "END $$",
 )
+
+_SYNC_BACKFILL_BATCH = 2000
 
 
 def _is_deadlock(exc: BaseException) -> bool:
@@ -592,12 +673,42 @@ async def apply_schema(engine: AsyncEngine, metadata: MetaData) -> None:
             await _run_statement(engine, statement)
         async with engine.begin() as conn:
             await _backfill_lemma_keys(conn)
+        async with engine.begin() as conn:
+            await _backfill_sync_xid(conn)
 
 
 async def run_migrations(conn: AsyncConnection) -> None:
     for statement in _STATEMENTS:
         await conn.execute(text(statement))
     await _backfill_lemma_keys(conn)
+    await _backfill_sync_xid(conn)
+
+
+async def _backfill_sync_xid(conn: AsyncConnection) -> None:
+    """Uzupełnia brakujące znaczniki w batchach (trigger BEFORE UPDATE sam wpisuje xid), potem NOT NULL."""
+    for table in ("learning_cards", "word_lists"):
+        while True:
+            done = await conn.execute(
+                text(
+                    f"UPDATE {table} SET sync_xid = pg_current_xact_id() WHERE id IN "
+                    f"(SELECT id FROM {table} WHERE sync_xid IS NULL LIMIT :n)"
+                ),
+                {"n": _SYNC_BACKFILL_BATCH},
+            )
+            if not done.rowcount:
+                break
+        nullable = (
+            await conn.execute(
+                text(
+                    "SELECT is_nullable FROM information_schema.columns "
+                    "WHERE table_schema = current_schema() AND table_name = :t "
+                    "AND column_name = 'sync_xid'"
+                ),
+                {"t": table},
+            )
+        ).scalar_one_or_none()
+        if nullable == "YES":
+            await conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN sync_xid SET NOT NULL"))
 
 
 async def _backfill_lemma_keys(conn: AsyncConnection) -> None:

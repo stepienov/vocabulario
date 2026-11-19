@@ -22,6 +22,7 @@ from app.models import (
     RecentAuthProof,
 )
 from app.services.auth_limits import cleanup_expired
+from app.services.sync_pull import purge_sync_tombstones
 
 logger = logging.getLogger(__name__)
 
@@ -94,4 +95,6 @@ async def purge_auth_records(*, now: datetime | None = None, limit: int = BATCH)
         GoogleChallenge.expires_at < now - timedelta(days=1),
         limit,
     )
+    # Tombstones synchronizacji (30 dni) czyszczone tym samym przebiegiem workera.
+    counts["sync_tombstones"] = await purge_sync_tombstones(now=now)
     return counts

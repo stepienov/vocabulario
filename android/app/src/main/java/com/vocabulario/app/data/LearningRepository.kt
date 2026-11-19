@@ -41,15 +41,39 @@ import com.vocabulario.app.data.api.WordListAddWordRequest
 import com.vocabulario.app.data.api.WordListCreate
 import com.vocabulario.app.data.api.WordListResponse
 import com.vocabulario.app.data.api.WordListUpdate
-import com.vocabulario.app.data.api.isEmailVerificationRequired
+import com.vocabulario.app.data.api.apiErrorCode
 import com.vocabulario.app.data.local.LocalAnswerCheck
 import com.vocabulario.app.data.local.OfflineStore
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.local.db.PendingReviewEntity
 import com.vocabulario.app.data.session.SessionCoordinator
 import com.vocabulario.app.data.session.SessionState
+import com.vocabulario.app.data.session.OwnerContext
+import com.vocabulario.app.data.session.SupersededException
 import com.vocabulario.app.data.session.ensureOwner
 import com.vocabulario.app.data.session.runAsOwner
+import com.vocabulario.app.data.api.SyncPullRequest
+import com.vocabulario.app.data.sync.AckDecision
+import com.vocabulario.app.data.sync.BlockedItem
+import com.vocabulario.app.data.sync.BlockedKind
+import com.vocabulario.app.data.sync.FailureKind
+import com.vocabulario.app.data.sync.OpAck
+import com.vocabulario.app.data.sync.OutboxStep
+import com.vocabulario.app.data.sync.PhaseOutcome
+import com.vocabulario.app.data.sync.QueueSnapshot
+import com.vocabulario.app.data.sync.SyncFailure
+import com.vocabulario.app.data.sync.SyncPhase
+import com.vocabulario.app.data.sync.SyncReport
+import com.vocabulario.app.data.sync.SyncResult
+import com.vocabulario.app.data.sync.SyncScope
+import com.vocabulario.app.data.sync.classifyFailure
+import com.vocabulario.app.data.sync.evaluateSyncResult
+import com.vocabulario.app.data.sync.interpretAck
+import com.vocabulario.app.data.sync.toSyncFailure
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import com.vocabulario.app.data.sync.SyncScheduler
 import com.vocabulario.app.notifications.NotificationScheduler
 import com.vocabulario.app.notifications.ReadyBatchTracker
@@ -111,6 +135,7 @@ class LearningRepository @Inject constructor(
         const val OP_LIST_CREATE = "list_create"
         const val OP_LIST_RENAME = "list_rename"
         const val OP_LIST_DELETE = "list_delete"
+        val OUTBOX_PAYLOAD_TYPES = setOf(OP_CARD_DELETE, OP_LIST_CREATE, OP_LIST_RENAME, OP_LIST_DELETE)
     }
 
     private suspend fun <T> apiTry(
@@ -860,11 +885,10 @@ class LearningRepository @Inject constructor(
 
     suspend fun undoReview(clientId: String, previous: SyncSrsState) {
         val nowMs = System.currentTimeMillis()
-        offlineStore.undoReviewLocally(clientId, previous)
+        offlineStore.recordUndoLocally(clientId, previous)
         if (previous.status == "new") {
             runCatching { dailyNewCounter.decrement(activeProfileId(), nowMs) }
         }
-        offlineStore.enqueuePendingUndo(clientId, previous)
         syncScheduler.requestNow()
     }
 
@@ -879,11 +903,7 @@ class LearningRepository @Inject constructor(
         val clientId = UUID.randomUUID().toString()
         val nowMs = System.currentTimeMillis()
         val wasNew = offlineStore.cardSrsSnapshot(cardId)?.status == "new"
-        offlineStore.applyReviewLocally(cardId, grade, correct, nowMs)
-        if (wasNew) {
-            runCatching { dailyNewCounter.increment(activeProfileId(), nowMs) }
-        }
-        offlineStore.enqueueReview(
+        offlineStore.recordReviewLocally(
             PendingReviewEntity(
                 clientId = clientId,
                 cardId = cardId,
@@ -895,6 +915,9 @@ class LearningRepository @Inject constructor(
                 createdAt = nowMs,
             ),
         )
+        if (wasNew) {
+            runCatching { dailyNewCounter.increment(activeProfileId(), nowMs) }
+        }
         // Nie czekaj na sieć — ocena musi od razu odsłonić kolejną kartę.
         // Outbox + WorkManager dociągają review w tle (timeout / mutex syncu nie blokują UI).
         syncScheduler.requestNow()
@@ -907,45 +930,216 @@ class LearningRepository @Inject constructor(
      */
     private val syncMutex = Mutex()
 
-    suspend fun syncNow(fullReplace: Boolean = false, awaitLock: Boolean = false) {
-        if (!networkMonitor.isCurrentlyOnline()) return
-        if (awaitLock) syncMutex.lock() else if (!syncMutex.tryLock()) return
+    private class SyncTally {
+        var sent = 0
+        var confirmed = 0
+    }
+
+    /** Wyjątek → Result bez połykania anulowania rodzica; timeout własnego `withTimeout` to zwykła awaria. */
+    private suspend fun <T> attempt(block: suspend () -> T): Result<T> = try {
+        Result.success(block())
+    } catch (e: SupersededException) {
+        throw e
+    } catch (e: TimeoutCancellationException) {
+        currentCoroutineContext().ensureActive()
+        Result.failure(e)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    /** Awarie, po których dalsze żądania nie mają sensu (sesja, weryfikacja, zgody, brak sieci, limit). */
+    private fun SyncFailure.stopsSync(): Boolean = kind == FailureKind.AUTH ||
+        kind == FailureKind.VERIFICATION ||
+        kind == FailureKind.LEGAL ||
+        kind == FailureKind.OFFLINE ||
+        kind == FailureKind.RATE_LIMITED
+
+    /**
+     * Push zmian, flush lookupów, pull. Wynik wynika z raportu faz i stanu kolejek, nie z braku wyjątku.
+     * Flush lookupów jest pierwszy — zatruty outbox nie może blokować opróżniania Oczekujących.
+     */
+    suspend fun syncNow(
+        fullReplace: Boolean = false,
+        awaitLock: Boolean = false,
+        scope: SyncScope = SyncScope.ACTIVE_PROFILE,
+    ): SyncResult {
+        if (awaitLock) syncMutex.lock() else if (!syncMutex.tryLock()) return SyncResult.Busy
         try {
-            asCurrentOwner { syncAsOwner(fullReplace) }
+            val startedAt = System.currentTimeMillis()
+            val owner = offlineStore.activeOwnerContext() ?: return SyncResult.Superseded
+            if (!networkMonitor.isCurrentlyOnline()) {
+                val phases = SyncPhase.values().associateWith<SyncPhase, PhaseOutcome> { PhaseOutcome.NotRun("offline") }
+                return SyncResult.Offline(
+                    SyncReport(owner, scope, startedAt, System.currentTimeMillis(), phases, emptyMap(), 0, 0, offlineStore.queueSnapshot()),
+                )
+            }
+            return asCurrentOwner { syncAsOwner(owner, fullReplace, scope, startedAt) } ?: SyncResult.Superseded
         } finally {
             syncMutex.unlock()
         }
     }
 
     /** Kroki syncu jednego właściciela; zmiana właściciela lub generacji kończy go przed kolejnym HTTP. */
-    private suspend fun syncAsOwner(fullReplace: Boolean) {
-        runCatching { withTimeout(FLUSH_LOOKUPS_TIMEOUT_MS) { flushPendingLookups() } }
-        ensureOwnerCurrent()
-        runCatching { withTimeout(API_SYNC_TIMEOUT_MS) { pushOutbox() } }
-        ensureOwnerCurrent()
-        runCatching {
-            val profileId = activeProfileId()
-            val lastPulled = offlineStore.lastPulledAt(profileId)
-            val doFull = fullReplace || lastPulled == null
-            val since = if (doFull) null else lastPulled
-            val pullTimeout = if (doFull) API_FULL_PULL_TIMEOUT_MS else API_SYNC_TIMEOUT_MS
-            withTimeout(pullTimeout) {
-                val pull = api.syncPull(profileId, since = since)
-                offlineStore.guardedWrite {
-                    offlineStore.applyPull(profileId, pull, fullReplace = doFull)
-                    offlineStore.localUserSettings()?.theme?.let { tokenStore.saveTheme(it) }
-                }
-                val needProfiles = doFull || offlineStore.cachedProfiles().isEmpty()
-                if (needProfiles) {
-                    runCatching { api.listProfiles() }.getOrNull()?.let { applyRemoteProfiles(it) }
+    private suspend fun syncAsOwner(
+        owner: OwnerContext,
+        fullReplace: Boolean,
+        scope: SyncScope,
+        startedAt: Long,
+    ): SyncResult {
+        val phases = linkedMapOf<SyncPhase, PhaseOutcome>()
+        val pulls = linkedMapOf<String, PhaseOutcome>()
+        val tally = SyncTally()
+        var stopReason: String? = null
+
+        suspend fun runPhase(phase: SyncPhase, block: suspend () -> SyncFailure?) {
+            val stopped = stopReason
+            if (stopped != null) {
+                phases[phase] = PhaseOutcome.NotRun(stopped)
+                return
+            }
+            val failure = attempt { block() }.getOrElse { error ->
+                // Wolny lookup (LLM) to awaria serwera, nie dowód braku sieci.
+                if (phase == SyncPhase.LOOKUPS && error is TimeoutCancellationException) {
+                    SyncFailure(FailureKind.SERVER, "lookups_timeout", retryable = true)
+                } else {
+                    error.toSyncFailure()
                 }
             }
+            ensureOwnerCurrent()
+            if (failure == null) {
+                phases[phase] = PhaseOutcome.Ok
+            } else {
+                phases[phase] = PhaseOutcome.Failed(failure)
+                if (failure.stopsSync()) stopReason = failure.code
+            }
         }
+
+        runPhase(SyncPhase.LOOKUPS) { withTimeout(FLUSH_LOOKUPS_TIMEOUT_MS) { flushPendingLookups(tally) } }
+        runPhase(SyncPhase.OUTBOX) { withTimeout(API_SYNC_TIMEOUT_MS) { drainOutboxOps(tally) } }
+        runPhase(SyncPhase.PUSH) {
+            withTimeout(API_SYNC_TIMEOUT_MS) { flushPendingUndos(tally) ?: pushOutbox(tally) }
+        }
+
+        val stopped = stopReason
+        if (stopped != null) {
+            phases[SyncPhase.PROFILES] = PhaseOutcome.NotRun(stopped)
+            phases[SyncPhase.PULL] = PhaseOutcome.NotRun(stopped)
+        } else {
+            pullPhase(fullReplace, scope, phases, pulls)
+        }
+
         ensureOwnerCurrent()
         evaluateReadyBatches()
         // Pierwszy pull po logowaniu przynosi ustawienia konta; wtedy dopiero włączamy alarm.
         runCatching { restoreStudyReminders(onlyIfChanged = true) }
+        val report = SyncReport(
+            owner = owner,
+            scope = scope,
+            startedAt = startedAt,
+            finishedAt = System.currentTimeMillis(),
+            phases = phases,
+            pullByProfile = pulls,
+            sent = tally.sent,
+            confirmed = tally.confirmed,
+            queue = offlineStore.queueSnapshot(),
+        )
+        return evaluateSyncResult(report)
     }
+
+    private suspend fun pullPhase(
+        fullReplace: Boolean,
+        scope: SyncScope,
+        phases: MutableMap<SyncPhase, PhaseOutcome>,
+        pulls: MutableMap<String, PhaseOutcome>,
+    ) {
+        val activeId = attempt { activeProfileId() }.getOrElse { error ->
+            val failure = error.toSyncFailure()
+            phases[SyncPhase.PROFILES] = PhaseOutcome.NotRun(failure.code)
+            phases[SyncPhase.PULL] = PhaseOutcome.Failed(failure)
+            return
+        }
+        val ids = linkedSetOf(activeId)
+        if (scope == SyncScope.ALL_PENDING_PROFILES) ids += offlineStore.profilesWithPendingWork()
+
+        var needProfiles = false
+        var stopReason: String? = null
+        for (profileId in ids) {
+            val stopped = stopReason
+            if (stopped != null) {
+                pulls[profileId] = PhaseOutcome.NotRun(stopped)
+                continue
+            }
+            val (outcome, full) = pullProfile(profileId, forceFull = fullReplace && profileId == activeId)
+            pulls[profileId] = outcome
+            if (profileId == activeId && (full || offlineStore.cachedProfiles().isEmpty())) needProfiles = true
+            if (outcome is PhaseOutcome.Failed && outcome.failure.stopsSync()) stopReason = outcome.failure.code
+            ensureOwnerCurrent()
+        }
+        phases[SyncPhase.PULL] = pulls.values.firstOrNull { it !is PhaseOutcome.Ok } ?: PhaseOutcome.Ok
+        phases[SyncPhase.PROFILES] = when {
+            !needProfiles -> PhaseOutcome.NotNeeded
+            pulls[activeId] !is PhaseOutcome.Ok -> PhaseOutcome.NotRun("pull_failed")
+            else -> {
+                val failure = attempt {
+                    withTimeout(API_SYNC_TIMEOUT_MS) { applyRemoteProfiles(api.listProfiles()) }
+                }.exceptionOrNull()?.toSyncFailure()
+                ensureOwnerCurrent()
+                if (failure == null) PhaseOutcome.Ok else PhaseOutcome.Failed(failure)
+            }
+        }
+    }
+
+    /** Pull jednego profilu z kursorem; zwraca wynik i informację, czy był pełny. */
+    private suspend fun pullProfile(profileId: String, forceFull: Boolean): Pair<PhaseOutcome, Boolean> {
+        var cursor = if (forceFull) null else offlineStore.pullCursor(profileId)
+        var result = requestPull(profileId, cursor)
+        var failure = result.exceptionOrNull()?.toSyncFailure()
+        if (failure != null && cursor != null) {
+            if (failure.kind == FailureKind.CURSOR_EXPIRED) {
+                offlineStore.resetPullCursor(profileId)
+                cursor = null
+                result = requestPull(profileId, null)
+                failure = result.exceptionOrNull()?.toSyncFailure()
+            } else if (failure.code == "invalid_sync_cursor") {
+                offlineStore.resetPullCursor(profileId)
+            }
+        }
+        val full = cursor == null
+        if (failure != null) {
+            offlineStore.recordSyncAttempt(profileId, success = false, error = failure.code)
+            return PhaseOutcome.Failed(failure) to full
+        }
+        val pull = result.getOrThrow()
+        if (pull.cursor.isNullOrBlank()) {
+            val missing = SyncFailure(FailureKind.PROTOCOL, "cursor_missing", retryable = false)
+            offlineStore.recordSyncAttempt(profileId, success = false, error = missing.code)
+            return PhaseOutcome.Failed(missing) to full
+        }
+        val applied = attempt {
+            offlineStore.guardedWrite {
+                offlineStore.applyPull(profileId, pull, fullReplace = full)
+                offlineStore.localUserSettings()?.theme?.let { tokenStore.saveTheme(it) }
+            }
+        }
+        val applyFailure = applied.exceptionOrNull()?.toSyncFailure()
+        offlineStore.recordSyncAttempt(profileId, success = applyFailure == null, error = applyFailure?.code)
+        return (if (applyFailure == null) PhaseOutcome.Ok else PhaseOutcome.Failed(applyFailure)) to full
+    }
+
+    private suspend fun requestPull(profileId: String, cursor: String?): Result<com.vocabulario.app.data.api.SyncPullResponse> =
+        attempt {
+            withTimeout(if (cursor == null) API_FULL_PULL_TIMEOUT_MS else API_SYNC_TIMEOUT_MS) {
+                api.syncPull(SyncPullRequest(profile_id = profileId, cursor = cursor))
+            }
+        }
+
+    suspend fun blockedItems(): List<BlockedItem> = offlineStore.blockedItems()
+
+    suspend fun discardBlocked(kind: BlockedKind, id: String) = offlineStore.discardBlocked(kind, id)
+
+    suspend fun queueSnapshot(): QueueSnapshot = offlineStore.queueSnapshot()
 
     suspend fun evaluateReadyBatches() {
         asCurrentOwner {
@@ -974,7 +1168,7 @@ class LearningRepository @Inject constructor(
     /** Opróżnia kolejkę offline lookupów (Oczekujące) — można wołać niezależnie od sync/outboxu. */
     suspend fun flushPendingLookupsIfNeeded() {
         if (!networkMonitor.isCurrentlyOnline()) return
-        flushPendingLookups()
+        flushPendingLookups(null)
     }
 
     suspend fun hasPendingLookups(): Boolean = offlineStore.pendingLookups().isNotEmpty()
@@ -982,9 +1176,7 @@ class LearningRepository @Inject constructor(
     /** Czy są słowa czekające na flush (bez tych już oznaczonych „wymaga sprawdzenia"). */
     suspend fun hasQueuedLookups(): Boolean = offlineStore.queuedPendingLookups().isNotEmpty()
 
-    suspend fun syncPendingReviews() {
-        runCatching { syncNow() }
-    }
+    suspend fun syncPendingReviews(): SyncResult = syncNow()
 
     // ---- Reaktywne strumienie (Room jako źródło prawdy dla UI) ----
 
@@ -1012,112 +1204,150 @@ class LearningRepository @Inject constructor(
     fun observeCard(cardId: String): Flow<CardResponse?> =
         offlineStore.observeCardById(cardId).distinctUntilChanged()
 
-    private suspend fun flushPendingUndos() {
-        for (item in offlineStore.pendingUndos()) {
+    private suspend fun flushPendingUndos(tally: SyncTally?): SyncFailure? {
+        for (item in offlineStore.sendableUndos()) {
             val srs = runCatching {
                 json.decodeFromString(SyncSrsState.serializer(), item.srsJson)
-            }.getOrNull() ?: continue
-            runCatching {
+            }.getOrNull()
+            if (srs == null) {
+                offlineStore.blockPendingUndo(item.clientId, "invalid_payload")
+                continue
+            }
+            tally?.let { it.sent++ }
+            val failure = attempt {
                 api.srsUndo(SrsUndoRequest(client_id = item.clientId, previous_srs = srs))
-            }.onSuccess {
+            }.exceptionOrNull()?.toSyncFailure()
+            if (failure == null) {
                 offlineStore.removePendingUndo(item.clientId)
+                tally?.let { it.confirmed++ }
+            } else if (failure.kind == FailureKind.CLIENT) {
+                // 409 undo_conflict / operation_id_conflict, 404 karty: ponawianie nic nie zmieni.
+                offlineStore.blockPendingUndo(item.clientId, failure.code)
+            } else {
+                return failure
             }
         }
+        return null
     }
 
     /**
-     * Drenaż ujednoliconego outboxu (mutacje Z3) przez istniejące, idempotentne endpointy REST.
-     * FIFO: zatrzymuje się na pierwszym twardym błędzie, by nie wyprzedzić zależności
-     * (np. rename/delete listy przed jej create). Offline = no-op (bez naliczania prób).
+     * Drenaż ujednoliconego outboxu (mutacje Z3) przez idempotentne endpointy REST.
+     * Zablokowana operacja nie zatrzymuje reszty; błąd przejściowy kończy fazę, żeby nie wyprzedzić
+     * zależności (np. rename listy przed jej create). Zwraca pierwszą awarię albo null.
      */
-    private suspend fun drainOutboxOps() {
-        if (!networkMonitor.isCurrentlyOnline()) return
-        outboxMutex.withLock {
+    private suspend fun drainOutboxOps(tally: SyncTally? = null): SyncFailure? {
+        if (!networkMonitor.isCurrentlyOnline()) return classifyFailure(null, null, transport = true)
+        return outboxMutex.withLock {
             offlineStore.unparkAuthFailures()
+            var firstFailure: SyncFailure? = null
+            val blockedLocalLists = mutableSetOf<String>()
             for (op in offlineStore.pendingOps()) {
-                try {
-                    applyOutboxOp(op)
-                    offlineStore.removeOp(op)
-                } catch (io: java.io.IOException) {
-                    // Utrata sieci w trakcie — nie naliczaj próby, spróbuj przy następnym syncu.
-                    break
-                } catch (http: retrofit2.HttpException) {
-                    // 401/5xx: token albo BE. Nie parkuj — Authenticator odświeży, kolejny sync dociągnie.
-                    if (http.code() == 401 || http.code() == 408 || http.code() >= 500) break
-                    // Niepotwierdzony adres blokuje sync, ale nie odrzuca zmian: czekają na weryfikację.
-                    if (http.isEmailVerificationRequired()) break
-                    offlineStore.markOpFailed(op, http.message)
-                    break
-                } catch (e: Exception) {
-                    offlineStore.markOpFailed(op, e.message)
+                val dependsOnBlocked = blockedLocalLists.firstOrNull { op.payloadJson.contains(it) }
+                if (dependsOnBlocked != null) {
+                    offlineStore.markOpBlocked(op, "target_unavailable")
+                    continue
+                }
+                tally?.let { it.sent++ }
+                val step = attempt { applyOutboxOp(op) }
+                val failure = step.exceptionOrNull()?.toSyncFailure()
+                if (failure != null) {
+                    if (firstFailure == null) firstFailure = failure
+                    if (failure.kind == FailureKind.CLIENT) {
+                        offlineStore.markOpFailed(op, failure.code)
+                        continue
+                    }
+                    // 401/5xx/sieć/weryfikacja: operacja zostaje nietknięta, bez naliczania prób.
                     break
                 }
-            }
-        }
-    }
-
-    private suspend fun applyOutboxOp(op: com.vocabulario.app.data.local.db.OutboxOpEntity) {
-        when (op.type) {
-            OP_SETTINGS_UPDATE -> {
-                val update = json.decodeFromString(UserSettingsUpdate.serializer(), op.payloadJson)
-                api.updateSettings(update)
-                // Lokalny Room jest źródłem prawdy — echo z PUT może być starsze niż kolejny tap.
-            }
-            OP_CARD_DELETE -> {
-                val p = json.parseToJsonElement(op.payloadJson).jsonObject
-                val cardId = p["cardId"]?.jsonPrimitive?.content ?: return
-                val profileId = p["profileId"]?.jsonPrimitive?.content ?: activeProfileId()
-                val resp = api.deleteCard(cardId, profileId)
-                if (!resp.isSuccessful && resp.code() != 404) throw retrofit2.HttpException(resp)
-            }
-            OP_LIST_RENAME -> {
-                val p = json.parseToJsonElement(op.payloadJson).jsonObject
-                val listId = p["listId"]?.jsonPrimitive?.content ?: return
-                if (listId.startsWith("local:")) return // create jeszcze nie zremapował — poczekaj
-                val profileId = p["profileId"]?.jsonPrimitive?.content ?: activeProfileId()
-                val name = p["name"]?.jsonPrimitive?.content ?: return
-                try {
-                    api.renameWordList(listId, profileId, WordListUpdate(name = name))
-                } catch (e: retrofit2.HttpException) {
-                    if (e.code() != 404) throw e // 404 = lista już nie istnieje → uznaj za zrobione
-                }
-            }
-            OP_LIST_CREATE -> {
-                val p = json.parseToJsonElement(op.payloadJson).jsonObject
-                val localId = p["localId"]?.jsonPrimitive?.content ?: return
-                if (!localId.startsWith("local:")) return // już zremapowane
-                val profileId = p["profileId"]?.jsonPrimitive?.content ?: activeProfileId()
-                val name = p["name"]?.jsonPrimitive?.content ?: return
-                val created = try {
-                    api.createWordList(WordListCreate(name = name, profile_id = profileId))
-                } catch (e: retrofit2.HttpException) {
-                    if (e.code() == 409) {
-                        api.listWordLists(profileId).firstOrNull { it.name.equals(name, ignoreCase = true) }
-                            ?: throw e
-                    } else {
-                        throw e
+                when (val outcome = step.getOrThrow()) {
+                    OutboxStep.Applied, OutboxStep.AlreadyApplied -> {
+                        offlineStore.removeOp(op)
+                        tally?.let { it.confirmed++ }
+                    }
+                    is OutboxStep.Deferred -> Unit
+                    is OutboxStep.Blocked -> {
+                        offlineStore.markOpBlocked(op, outcome.code)
+                        if (op.type == OP_LIST_CREATE) {
+                            runCatching { json.parseToJsonElement(op.payloadJson).jsonObject["localId"]?.jsonPrimitive?.content }
+                                .getOrNull()?.let { blockedLocalLists += it }
+                        }
                     }
                 }
-                offlineStore.remapLocalListId(localId, created.id)
             }
-            OP_LIST_DELETE -> {
-                val p = json.parseToJsonElement(op.payloadJson).jsonObject
-                val listId = p["listId"]?.jsonPrimitive?.content ?: return
-                if (listId.startsWith("local:")) return // nigdy nie było na serwerze
-                val profileId = p["profileId"]?.jsonPrimitive?.content ?: activeProfileId()
-                val resp = api.deleteWordList(listId, profileId)
-                if (!resp.isSuccessful && resp.code() != 404) throw retrofit2.HttpException(resp)
-            }
-            else -> Unit // nieznany typ — porzuć (removeOp w drainOutboxOps)
+            firstFailure
         }
     }
 
-    private suspend fun pushOutbox() {
-        drainOutboxOps()
-        flushPendingUndos()
-        val moves = offlineStore.pendingMoves()
-        val pending = offlineStore.pendingReviews()
-        if (moves.isEmpty() && pending.isEmpty()) return
+    private suspend fun applyOutboxOp(op: com.vocabulario.app.data.local.db.OutboxOpEntity): OutboxStep {
+        if (op.type == OP_SETTINGS_UPDATE) {
+            val update = runCatching { json.decodeFromString(UserSettingsUpdate.serializer(), op.payloadJson) }
+                .getOrNull() ?: return OutboxStep.Blocked("invalid_payload")
+            api.updateSettings(update)
+            // Lokalny Room jest źródłem prawdy — echo z PUT może być starsze niż kolejny tap.
+            return OutboxStep.Applied
+        }
+        if (op.type !in OUTBOX_PAYLOAD_TYPES) return OutboxStep.Blocked("unsupported_operation")
+        val p = runCatching { json.parseToJsonElement(op.payloadJson).jsonObject }.getOrNull()
+            ?: return OutboxStep.Blocked("invalid_payload")
+        val profileId = p["profileId"]?.jsonPrimitive?.content ?: activeProfileId()
+        when (op.type) {
+            OP_CARD_DELETE -> {
+                val cardId = p["cardId"]?.jsonPrimitive?.content ?: return OutboxStep.Blocked("invalid_payload")
+                val resp = api.deleteCard(cardId, profileId)
+                if (resp.isSuccessful) return OutboxStep.Applied
+                if (resp.code() == 404) return OutboxStep.AlreadyApplied
+                throw HttpException(resp)
+            }
+            OP_LIST_RENAME -> {
+                val listId = p["listId"]?.jsonPrimitive?.content ?: return OutboxStep.Blocked("invalid_payload")
+                val name = p["name"]?.jsonPrimitive?.content ?: return OutboxStep.Blocked("invalid_payload")
+                if (listId.startsWith("local:")) return OutboxStep.Deferred(OP_LIST_CREATE)
+                try {
+                    api.renameWordList(listId, profileId, WordListUpdate(name = name))
+                } catch (e: HttpException) {
+                    // Lista zniknęła z serwera: zmiana nazwy nie została zastosowana, więc nie jest ACK.
+                    if (e.code() == 404) return OutboxStep.Blocked("target_unavailable")
+                    throw e
+                }
+                return OutboxStep.Applied
+            }
+            OP_LIST_CREATE -> {
+                val localId = p["localId"]?.jsonPrimitive?.content ?: return OutboxStep.Blocked("invalid_payload")
+                val name = p["name"]?.jsonPrimitive?.content ?: return OutboxStep.Blocked("invalid_payload")
+                if (!localId.startsWith("local:")) return OutboxStep.AlreadyApplied
+                val created = try {
+                    api.createWordList(WordListCreate(name = name, profile_id = profileId, client_op_id = op.clientOpId))
+                } catch (e: HttpException) {
+                    val code = e.apiErrorCode()
+                    if (e.code() == 410 && code == "list_already_deleted") {
+                        offlineStore.blockDependentsOfLocalList(localId)
+                        return OutboxStep.AlreadyApplied
+                    }
+                    if (e.code() == 409 && code == "operation_id_conflict") return OutboxStep.Blocked(code)
+                    if (e.code() != 409) throw e
+                    // Inna lista o tej nazwie już istnieje (nie ta sama operacja): użyj jej.
+                    api.listWordLists(profileId).firstOrNull { it.name.equals(name, ignoreCase = true) }
+                        ?: return OutboxStep.Blocked("list_name_conflict")
+                }
+                offlineStore.remapLocalListId(localId, created.id)
+                return OutboxStep.Applied
+            }
+            OP_LIST_DELETE -> {
+                val listId = p["listId"]?.jsonPrimitive?.content ?: return OutboxStep.Blocked("invalid_payload")
+                if (listId.startsWith("local:")) return OutboxStep.AlreadyApplied // nigdy nie było na serwerze
+                val resp = api.deleteWordList(listId, profileId)
+                if (resp.isSuccessful) return OutboxStep.Applied
+                if (resp.code() == 404) return OutboxStep.AlreadyApplied
+                throw HttpException(resp)
+            }
+            else -> return OutboxStep.Blocked("unsupported_operation")
+        }
+    }
+
+    private suspend fun pushOutbox(tally: SyncTally?): SyncFailure? {
+        val moves = offlineStore.sendableMoves()
+        val pending = offlineStore.sendableReviews()
+        if (moves.isEmpty() && pending.isEmpty()) return null
         val body = SyncPushRequest(
             moves = moves.map {
                 SyncMoveItem(
@@ -1140,14 +1370,29 @@ class LearningRepository @Inject constructor(
                 )
             },
         )
-        val result = api.syncPush(body)
-        if (moves.isNotEmpty()) {
-            offlineStore.removePendingMoves(moves.map { it.clientId })
-        }
-        if (pending.isNotEmpty()) {
-            offlineStore.removePendingReviews(pending.map { it.clientId })
-            offlineStore.applyServerSrs(result.srs)
-        }
+        tally?.let { it.sent += moves.size + pending.size }
+        val result = attempt { api.syncPush(body) }.getOrElse { return it.toSyncFailure() }
+        val reviewAck = interpretAck(
+            pending.map { it.clientId },
+            result.review_results?.map { OpAck(it.client_id, it.outcome, it.reason) },
+        )
+        val moveAck = interpretAck(
+            moves.map { it.clientId },
+            result.move_results?.map { OpAck(it.client_id, it.outcome, it.reason) },
+        )
+        val reviews = reviewAck as? AckDecision.Valid
+        val movesDecision = moveAck as? AckDecision.Valid
+        // Każdy typ operacji jest oceniany osobno; błąd protokołu jednego nie cofa drugiego.
+        offlineStore.applyPushAck(
+            confirmedReviews = reviews?.confirmed.orEmpty(),
+            blockedReviews = reviews?.blocked.orEmpty(),
+            confirmedMoves = movesDecision?.confirmed.orEmpty(),
+            blockedMoves = movesDecision?.blocked.orEmpty(),
+            srs = if (reviews != null) result.srs else emptyList(),
+        )
+        tally?.let { it.confirmed += reviews?.confirmed.orEmpty().size + movesDecision?.confirmed.orEmpty().size }
+        val protocol = (reviewAck as? AckDecision.ProtocolError) ?: (moveAck as? AckDecision.ProtocolError)
+        return protocol?.let { SyncFailure(FailureKind.PROTOCOL, it.code, retryable = false) }
     }
 
     /**
@@ -1156,47 +1401,52 @@ class LearningRepository @Inject constructor(
      * Każdy stub kasowany JEDNORAZOWO tuż po udanym dodaniu; jeśli w międzyczasie ktoś
      * wyczyścił skrzynkę (stub zniknął), pomijamy go — brak zmartwychwstania kart.
      */
-    private suspend fun flushPendingLookups() {
-        pendingFlushMutex.withLock {
-            if (!networkMonitor.isCurrentlyOnline()) return
-            // Tylko stuby czekające — te z „wymaga sprawdzenia" pomijamy (zero kolejnych lookupów).
-            val pending = offlineStore.queuedPendingLookups()
-            if (pending.isEmpty()) return
-            val profileId = activeProfileId()
-            val inbox = runCatching {
-                api.listWordLists(profileId).find { it.is_pending_inbox }
-                    ?: api.ensurePendingInbox(profileId)
-            }.getOrNull() ?: return
+    private suspend fun flushPendingLookups(tally: SyncTally?): SyncFailure? = pendingFlushMutex.withLock {
+        if (!networkMonitor.isCurrentlyOnline()) return@withLock classifyFailure(null, null, transport = true)
+        // Tylko stuby czekające — te z „wymaga sprawdzenia" pomijamy (zero kolejnych lookupów).
+        val pending = offlineStore.queuedPendingLookups()
+        var firstFailure: SyncFailure? = null
+        // Stub należy do własnego profilu, niezależnie od tego, który profil jest teraz aktywny.
+        for ((profileId, items) in pending.groupBy { it.profileId }) {
+            val inboxResult = attempt {
+                api.listWordLists(profileId).find { it.is_pending_inbox } ?: api.ensurePendingInbox(profileId)
+            }
+            val inboxFailure = inboxResult.exceptionOrNull()?.toSyncFailure()
+            if (inboxFailure != null) {
+                if (inboxFailure.stopsSync()) return@withLock inboxFailure
+                if (firstFailure == null) firstFailure = inboxFailure
+                continue
+            }
+            val inbox = inboxResult.getOrThrow()
             val inboxId = inbox.id
             offlineStore.upsertLists(profileId, listOf(inbox))
             var anyDone = false
-            for (item in pending) {
+            for (item in items) {
                 // Stub mógł zostać usunięty (np. „Usuń listę”) między snapshotem a teraz — pomiń.
                 if (!offlineStore.pendingLookupExists(item.clientId)) continue
+                tally?.let { it.sent++ }
                 val rawLemma = item.lemma.trim()
-                var resp = runCatching {
-                    api.lookup(LookupRequest(text = rawLemma, profile_id = profileId))
-                }.getOrNull()
+                var lookup = attempt { api.lookup(LookupRequest(text = rawLemma, profile_id = profileId)) }
                 // Powtórka na lowercase gdy pierwszy strzał nie był pewny (np. „FIRANKA”).
-                if (resp?.confident != true && rawLemma != rawLemma.lowercase()) {
-                    val lower = runCatching {
-                        api.lookup(LookupRequest(text = rawLemma.lowercase(), profile_id = profileId))
-                    }.getOrNull()
-                    if (lower != null && (lower.confident || resp == null)) resp = lower
+                if (lookup.getOrNull()?.confident != true && rawLemma != rawLemma.lowercase()) {
+                    val lower = attempt { api.lookup(LookupRequest(text = rawLemma.lowercase(), profile_id = profileId)) }
+                    if (lower.getOrNull() != null && (lower.getOrThrow().confident || lookup.isFailure)) lookup = lower
                 }
                 // Ponowne sprawdzenie po (wolnym) lookupie — czyszczenie mogło wejść w tym czasie.
                 if (!offlineStore.pendingLookupExists(item.clientId)) continue
 
-                // Brak odpowiedzi z API (błąd sieci) → zostaw w kolejce, spróbujemy później.
-                if (resp == null) continue
+                val resp = lookup.getOrNull()
+                if (resp == null) {
+                    val failure = lookup.exceptionOrNull()!!.toSyncFailure()
+                    if (failure.stopsSync()) return@withLock failure
+                    if (firstFailure == null) firstFailure = failure
+                    continue
+                }
 
                 // Poważne wątpliwości: nie tworzymy karty, nie palimy enrichmentu.
                 if (!resp.confident) {
                     val suggestionsJson = runCatching {
-                        json.encodeToString(
-                            ListSerializer(LookupCandidate.serializer()),
-                            resp.candidates,
-                        )
+                        json.encodeToString(ListSerializer(LookupCandidate.serializer()), resp.candidates)
                     }.getOrNull()
                     offlineStore.markLookupNeedsReview(item.clientId, suggestionsJson)
                     continue
@@ -1204,7 +1454,7 @@ class LearningRepository @Inject constructor(
 
                 val resolved = resp.candidates.firstOrNull()
                 val lemma = resolved?.lemma?.takeIf { it.isNotBlank() } ?: rawLemma
-                var added = runCatching {
+                var added = attempt {
                     api.addWordToList(
                         inboxId,
                         WordListAddWordRequest(
@@ -1216,33 +1466,42 @@ class LearningRepository @Inject constructor(
                         ),
                     )
                 }
-                if (added.isFailure && (added.exceptionOrNull() as? retrofit2.HttpException)?.code() != 409) {
-                    added = runCatching {
-                        api.addWordToList(
-                            inboxId,
-                            WordListAddWordRequest(lemma = rawLemma, profile_id = profileId),
-                        )
+                var addFailure = added.exceptionOrNull()?.toSyncFailure()
+                var http = added.exceptionOrNull() as? HttpException
+                // Wariant z surowym słowem tylko po odrzuceniu 4xx; błąd sieci/5xx i 409 to nie powód do zmiany payloadu.
+                if (addFailure != null && addFailure.kind == FailureKind.CLIENT && http?.code() != 409 && lemma != rawLemma) {
+                    added = attempt {
+                        api.addWordToList(inboxId, WordListAddWordRequest(lemma = rawLemma, profile_id = profileId))
                     }
+                    addFailure = added.exceptionOrNull()?.toSyncFailure()
+                    http = added.exceptionOrNull() as? HttpException
                 }
-                val ok = added.isSuccess ||
-                    (added.exceptionOrNull() as? retrofit2.HttpException)?.code() == 409
-                if (ok) {
+                val alreadyOnList = http?.code() == 409 &&
+                    attempt { api.listWords(inboxId, profileId) }.getOrNull().orEmpty().any {
+                        it.lemma_l2.equals(lemma, ignoreCase = true) || it.lemma_l2.equals(rawLemma, ignoreCase = true)
+                    }
+                if (addFailure == null || alreadyOnList) {
                     // Kasuj stub NATYCHMIAST — żaden kolejny flush nie doda go ponownie.
                     offlineStore.removePendingLookup(item.clientId)
                     added.getOrNull()?.let { card ->
                         offlineStore.upsertCards(profileId, listOf(card), deckId = inboxId)
                         watchOfflineIfPending(card)
                     }
+                    tally?.let { it.confirmed++ }
                     anyDone = true
+                } else {
+                    if (addFailure.stopsSync()) return@withLock addFailure
+                    if (firstFailure == null) firstFailure = addFailure
                 }
             }
             if (anyDone) {
-                runCatching {
+                attempt {
                     val words = api.listWords(inboxId, profileId)
                     offlineStore.cacheCardsFromList(profileId, words, deckId = inboxId)
                 }
             }
         }
+        firstFailure
     }
 
     /** Propozycje zapisane przy stubie „wymaga sprawdzenia". */
@@ -1575,16 +1834,6 @@ class LearningRepository @Inject constructor(
     }
 
     suspend fun getMe() = api.me()
-
-    suspend fun hasProfile(): Boolean {
-        if (offlineStore.cachedActiveProfile() != null) return true
-        if (offlineStore.cachedProfiles().isNotEmpty()) return true
-        if (!networkMonitor.isCurrentlyOnline()) return false
-        return apiTry { api.listProfiles() }
-            .onSuccess { applyRemoteProfiles(it) }
-            .getOrElse { emptyList() }
-            .isNotEmpty()
-    }
 
     suspend fun syncThemeFromSettings() {
         val settings = getSettings()

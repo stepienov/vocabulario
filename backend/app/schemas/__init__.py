@@ -548,6 +548,8 @@ class LlmUsageListResponse(BaseModel):
 class WordListCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     profile_id: UUID
+    # Stabilny klucz z lokalnego intentu: ponowienie po utraconej odpowiedzi nie tworzy drugiej listy.
+    client_op_id: UUID | None = None
 
 
 class WordListUpdate(BaseModel):
@@ -830,7 +832,12 @@ class SyncPullResponse(BaseModel):
     lists: list[SyncListItem] = []
     deleted_card_ids: list[UUID] = []
     deleted_list_ids: list[UUID] = []
+    cursor: str | None = None
 
+
+class SyncPullRequest(BaseModel):
+    profile_id: UUID
+    cursor: str | None = None
 
 class SyncReviewItem(BaseModel):
     client_id: UUID
@@ -872,6 +879,17 @@ class SyncMoveResult(BaseModel):
     deck_id: UUID | None = None
 
 
+class SyncOperationResult(BaseModel):
+    """Potwierdzenie jednej wysłanej operacji (review albo move)."""
+
+    client_id: UUID
+    card_id: UUID
+    outcome: Literal["applied", "duplicate", "superseded", "not_found", "conflict"]
+    reason: Literal[
+        "card_unavailable", "target_unavailable", "undo_already_applied", "operation_id_conflict"
+    ] | None = None
+
+
 class SyncPushResponse(BaseModel):
     applied: int
     skipped: int
@@ -879,3 +897,5 @@ class SyncPushResponse(BaseModel):
     moves_applied: int = 0
     moves_skipped: int = 0
     moves: list[SyncMoveResult] = []
+    review_results: list[SyncOperationResult] = []
+    move_results: list[SyncOperationResult] = []

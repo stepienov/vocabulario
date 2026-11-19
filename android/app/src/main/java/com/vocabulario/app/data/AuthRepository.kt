@@ -26,7 +26,11 @@ import com.vocabulario.app.data.session.SessionCoordinator
 import com.vocabulario.app.data.session.SessionInstallException
 import com.vocabulario.app.data.session.SessionState
 import com.vocabulario.app.data.session.StartupAction
+import com.vocabulario.app.data.session.SupersededException
 import com.vocabulario.app.data.session.decideStartup
+import com.vocabulario.app.data.sync.ProfileResolution
+import com.vocabulario.app.data.sync.resolveProfileFailure
+import com.vocabulario.app.data.sync.toSyncFailure
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -242,13 +246,32 @@ class AuthRepository @Inject constructor(
         signOutCleanup.afterOwnerDataRemoved()
     }
 
-    suspend fun hasProfile(): Boolean {
-        if (offlineStore.cachedActiveProfile() != null) return true
-        if (offlineStore.cachedProfiles().isNotEmpty()) return true
-        return runCatching { api.listProfiles() }
-            .onSuccess { offlineStore.cacheProfiles(it) }
-            .getOrElse { emptyList() }
-            .isNotEmpty()
+    /**
+     * Pusta lista jest „brak profilu" wyłącznie po poprawnym 200 serwera; błąd sieci, 5xx czy
+     * auth nigdy nie wysyła użytkownika do onboardingu.
+     */
+    suspend fun resolveProfiles(): ProfileResolution {
+        val cachedActive = offlineStore.cachedActiveProfile()
+        val cached = offlineStore.cachedProfiles()
+        if (cachedActive != null || cached.isNotEmpty()) {
+            return ProfileResolution.Found(cached, cachedActive?.id, ProfileResolution.Source.CACHE)
+        }
+        val profiles = try {
+            api.listProfiles()
+        } catch (e: SupersededException) {
+            return ProfileResolution.Superseded
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return resolveProfileFailure(e.toSyncFailure(), hasCache = false)
+        }
+        if (profiles.isEmpty()) return ProfileResolution.ConfirmedEmpty
+        return try {
+            offlineStore.cacheProfiles(profiles)
+            ProfileResolution.Found(profiles, profiles.firstOrNull { it.is_active }?.id, ProfileResolution.Source.SERVER)
+        } catch (e: SupersededException) {
+            ProfileResolution.Superseded
+        }
     }
 
     suspend fun ensureActiveProfile() {

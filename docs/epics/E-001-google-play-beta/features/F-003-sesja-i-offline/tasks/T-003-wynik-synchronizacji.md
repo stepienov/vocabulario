@@ -1,6 +1,6 @@
 # T-003 · Wiarygodny wynik synchronizacji i rozpoznawania profili
 
-**ID:** `E-001/F-003/T-003` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / L.  
+**ID:** `E-001/F-003/T-003` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / L.  
 **Feature:** [Sesja i offline](../README.md). **Źródło:** B-09a; F-08/F-11 w [analizie](../../../sources/analiza-2026-11-17.md).
 
 ## Cel i zależności

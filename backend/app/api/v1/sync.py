@@ -1,7 +1,8 @@
-"""Offline sync: pull user learning data + push review/move outbox."""
+"""Offline sync: pull user learning data + push review/move outbox (z jawnym ACK per operacja)."""
 
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -11,52 +12,72 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_verified_user
 from app.db.session import get_db
-from app.models import AppliedSyncMove, LearningCard, ReviewLog, SrsState, User, UserSettings, WordList
+from app.models import (
+    AppliedReviewUndo,
+    AppliedSyncMove,
+    LearningCard,
+    ReviewLog,
+    SrsState,
+    User,
+    UserSettings,
+    WordList,
+)
 from app.schemas import (
-    SyncCardItem,
     SyncListItem,
+    SyncMoveItem,
     SyncMoveResult,
+    SyncOperationResult,
+    SyncPullRequest,
     SyncPullResponse,
     SyncPushRequest,
     SyncPushResponse,
-    SyncSrsState,
+    SyncReviewItem,
     UserSettingsResponse,
 )
+from app.services import sync_pull
 from app.services.answer_check import check_answer, collect_acceptable_answers
 from app.services.srs import apply_review
+from app.services.sync_pull import srs_payload as _srs_payload
 from app.services.word_lists import ensure_system_list, list_word_lists
 
 router = APIRouter(tags=["sync"])
-
-
-def _srs_payload(card_id: UUID, state: SrsState) -> SyncSrsState:
-    return SyncSrsState(
-        card_id=card_id,
-        status=state.status,
-        ease=state.ease,
-        interval_days=state.interval_days,
-        repetitions=state.repetitions,
-        lapses=state.lapses,
-        next_review_at=state.next_review_at,
-        last_reviewed_at=state.last_reviewed_at,
-        last_grade=state.last_grade,
-        stability=state.stability,
-        difficulty=state.difficulty,
-        fsrs_step=state.fsrs_step,
-    )
 
 
 def _aware(dt: datetime) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
+def _ms(dt: datetime) -> int:
+    return int(_aware(dt).timestamp() * 1000)
+
+
+def _digest(*parts: object) -> str:
+    return hashlib.sha256("|".join(str(p) for p in parts).encode()).hexdigest()
+
+
+def review_fingerprint(item: SyncReviewItem) -> str:
+    return _digest(
+        "review", item.card_id, item.grade, item.mode, item.direction,
+        int(item.correct), item.answer or "", _ms(item.reviewed_at),
+    )
+
+
+def move_fingerprint(item: SyncMoveItem) -> str:
+    return _digest("move", item.card_id, item.target_list_id or "", _ms(item.moved_at))
+
+
+def _result(item, outcome: str, reason: str | None = None) -> SyncOperationResult:
+    return SyncOperationResult(client_id=item.client_id, card_id=item.card_id, outcome=outcome, reason=reason)
+
+
 @router.get("/sync/pull", response_model=SyncPullResponse)
-async def sync_pull(
+async def sync_pull_legacy(
     profile_id: UUID = Query(...),
     since: datetime | None = Query(default=None),
     user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """Zgodność ze starszym klientem; nowy klient używa POST /sync/pull z kursorem."""
     settings_result = await db.execute(select(UserSettings).where(UserSettings.user_id == user.id))
     settings = settings_result.scalar_one_or_none()
     if settings is None:
@@ -92,28 +113,8 @@ async def sync_pull(
     if since is not None:
         card_q = card_q.where(LearningCard.updated_at >= since)
 
-    rows = (await db.execute(card_q)).all()
-    cards: list[SyncCardItem] = []
-    for card, state in rows:
-        cards.append(
-            SyncCardItem(
-                id=card.id,
-                profile_id=card.profile_id,
-                deck_id=card.deck_id,
-                lemma_l2=card.lemma_l2,
-                pos=card.pos,
-                gloss_primary=card.gloss_primary,
-                content=dict(card.content or {}),
-                enrichment_status=card.enrichment_status,
-                content_review_status=card.content_review_status,
-                card_activity_status=card.card_activity_status,
-                has_content_changes=bool(card.has_content_changes),
-                updated_at=card.updated_at,
-                srs=_srs_payload(card.id, state) if state is not None else None,
-            )
-        )
+    cards = [sync_pull.card_item(card, state) for card, state in (await db.execute(card_q)).all()]
 
-    # Tombstones — tylko przy inkrementalnym pull (since); pełny replace i tak czyści lokalnie.
     deleted_card_ids: list[UUID] = []
     deleted_list_ids: list[UUID] = []
     if since is not None:
@@ -147,22 +148,60 @@ async def sync_pull(
     )
 
 
+@router.post("/sync/pull", response_model=SyncPullResponse)
+async def sync_pull_cursor(
+    body: SyncPullRequest,
+    user: User = Depends(get_verified_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sync_pull.pull(db, user, body.profile_id, body.cursor)
+
+
+async def _lock_cards(db: AsyncSession, user_id: UUID, card_ids: set[UUID]) -> dict[UUID, LearningCard]:
+    """Wspólna, uporządkowana blokada kart: równoległe ponowienia i /srs/* serializują się na karcie."""
+    if not card_ids:
+        return {}
+    rows = await db.execute(
+        select(LearningCard)
+        .where(LearningCard.id.in_(card_ids), LearningCard.user_id == user_id)
+        .order_by(LearningCard.id)
+        .with_for_update()
+    )
+    return {card.id: card for card in rows.scalars().all()}
+
+
+def _foreign_or_changed(existing_user_id: UUID, existing_fp: str | None, user: User, fp: str) -> bool:
+    return existing_user_id != user.id or (existing_fp is not None and existing_fp != fp)
+
+
 async def _apply_moves(
     db: AsyncSession,
     user: User,
     body: SyncPushRequest,
-) -> tuple[int, int, list[SyncMoveResult]]:
-    moves_applied = 0
-    moves_skipped = 0
+    cards: dict[UUID, LearningCard],
+) -> tuple[int, int, list[SyncMoveResult], list[SyncOperationResult]]:
+    applied = 0
+    skipped = 0
     results: list[SyncMoveResult] = []
-    moves = sorted(body.moves, key=lambda m: _aware(m.moved_at))
+    acks: list[SyncOperationResult] = []
 
-    for item in moves:
-        exists = await db.execute(
-            select(AppliedSyncMove.client_id).where(AppliedSyncMove.client_id == item.client_id)
-        )
-        if exists.scalar_one_or_none() is not None:
-            moves_skipped += 1
+    for item in sorted(body.moves, key=lambda m: _aware(m.moved_at)):
+        fp = move_fingerprint(item)
+        existing = (
+            await db.execute(select(AppliedSyncMove).where(AppliedSyncMove.client_id == item.client_id))
+        ).scalar_one_or_none()
+        if existing is not None:
+            skipped += 1
+            if _foreign_or_changed(existing.user_id, existing.intent_fingerprint, user, fp):
+                acks.append(_result(item, "conflict", "operation_id_conflict"))
+            else:
+                acks.append(_result(item, "duplicate"))
+            continue
+
+        card = cards.get(item.card_id)
+        if card is None or card.deleted_at is not None:
+            skipped += 1
+            acks.append(_result(item, "not_found", "card_unavailable"))
             continue
 
         newer = await db.execute(
@@ -173,31 +212,15 @@ async def _apply_moves(
             ).limit(1)
         )
         if newer.scalar_one_or_none() is not None:
-            # Stale move — record client_id so retries are idempotent, don't change deck.
+            # Starszy ruch przegrywa; zapis client_id czyni ponowienia idempotentnymi.
             db.add(
                 AppliedSyncMove(
-                    client_id=item.client_id,
-                    user_id=user.id,
-                    card_id=item.card_id,
-                    moved_at=_aware(item.moved_at),
+                    client_id=item.client_id, user_id=user.id, card_id=card.id,
+                    moved_at=_aware(item.moved_at), intent_fingerprint=fp,
                 )
             )
-            moves_skipped += 1
-            continue
-
-        card = (
-            await db.execute(
-                select(LearningCard).where(
-                    LearningCard.id == item.card_id,
-                    LearningCard.user_id == user.id,
-                )
-            )
-        ).scalar_one_or_none()
-        if card is None:
-            # Card gone (deleted on another device). Skip — never abort the batch.
-            # Cannot record AppliedSyncMove (FK → learning_cards would fail); on retry
-            # the client drops skipped ops, so no reprocessing loop.
-            moves_skipped += 1
+            skipped += 1
+            acks.append(_result(item, "superseded"))
             continue
 
         target: WordList | None = None
@@ -208,20 +231,13 @@ async def _apply_moves(
                         WordList.id == item.target_list_id,
                         WordList.user_id == user.id,
                         WordList.profile_id == card.profile_id,
+                        WordList.deleted_at.is_(None),
                     )
                 )
             ).scalar_one_or_none()
             if target is None:
-                # Target list gone. Record idempotency (card still exists) and skip.
-                db.add(
-                    AppliedSyncMove(
-                        client_id=item.client_id,
-                        user_id=user.id,
-                        card_id=card.id,
-                        moved_at=_aware(item.moved_at),
-                    )
-                )
-                moves_skipped += 1
+                skipped += 1
+                acks.append(_result(item, "not_found", "target_unavailable"))
                 continue
 
         if target is None or target.is_system:
@@ -236,18 +252,15 @@ async def _apply_moves(
 
         db.add(
             AppliedSyncMove(
-                client_id=item.client_id,
-                user_id=user.id,
-                card_id=card.id,
-                moved_at=_aware(item.moved_at),
+                client_id=item.client_id, user_id=user.id, card_id=card.id,
+                moved_at=_aware(item.moved_at), intent_fingerprint=fp,
             )
         )
-        results.append(
-            SyncMoveResult(client_id=item.client_id, card_id=card.id, deck_id=card.deck_id)
-        )
-        moves_applied += 1
+        results.append(SyncMoveResult(client_id=item.client_id, card_id=card.id, deck_id=card.deck_id))
+        acks.append(_result(item, "applied"))
+        applied += 1
 
-    return moves_applied, moves_skipped, results
+    return applied, skipped, results, acks
 
 
 @router.post("/sync/push", response_model=SyncPushResponse)
@@ -256,46 +269,50 @@ async def sync_push(
     user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
-    moves_applied, moves_skipped, move_results = await _apply_moves(db, user, body)
+    cards = await _lock_cards(
+        db, user.id, {m.card_id for m in body.moves} | {r.card_id for r in body.reviews}
+    )
+    moves_applied, moves_skipped, move_results, move_acks = await _apply_moves(db, user, body, cards)
 
     applied = 0
     skipped = 0
     touched: dict[UUID, SrsState] = {}
+    review_acks: list[SyncOperationResult] = []
 
-    reviews = sorted(body.reviews, key=lambda r: _aware(r.reviewed_at))
-
-    tolerance = "tolerate"
-
-    for item in reviews:
-        exists = await db.execute(
-            select(ReviewLog.id).where(ReviewLog.client_id == item.client_id)
-        )
-        if exists.scalar_one_or_none() is not None:
+    for item in sorted(body.reviews, key=lambda r: _aware(r.reviewed_at)):
+        fp = review_fingerprint(item)
+        existing = (
+            await db.execute(select(ReviewLog).where(ReviewLog.client_id == item.client_id))
+        ).scalar_one_or_none()
+        if existing is not None:
             skipped += 1
+            if _foreign_or_changed(existing.user_id, existing.intent_fingerprint, user, fp):
+                review_acks.append(_result(item, "conflict", "operation_id_conflict"))
+            else:
+                review_acks.append(_result(item, "duplicate"))
             continue
 
-        card = (
-            await db.execute(
-                select(LearningCard).where(
-                    LearningCard.id == item.card_id,
-                    LearningCard.user_id == user.id,
-                )
-            )
-        ).scalar_one_or_none()
-        if card is None:
-            # Card gone (deleted elsewhere). Skip — never abort the batch on a stale review.
+        marker = await db.get(AppliedReviewUndo, item.client_id)
+        if marker is not None:
             skipped += 1
+            if marker.user_id != user.id or marker.card_id != item.card_id:
+                review_acks.append(_result(item, "conflict", "operation_id_conflict"))
+            else:
+                review_acks.append(_result(item, "superseded", "undo_already_applied"))
+            continue
+
+        card = cards.get(item.card_id)
+        if card is None or card.deleted_at is not None:
+            skipped += 1
+            review_acks.append(_result(item, "not_found", "card_unavailable"))
             continue
 
         state = (
             await db.execute(
-                select(SrsState).where(
-                    SrsState.card_id == card.id, SrsState.scope == "main"
-                )
+                select(SrsState).where(SrsState.card_id == card.id, SrsState.scope == "main")
             )
         ).scalar_one_or_none()
         if state is None:
-            # Card without a main SRS row (legacy / imported). Create it before applying.
             state = SrsState(card_id=card.id, scope="main", status="new")
             db.add(state)
             await db.flush()
@@ -303,10 +320,12 @@ async def sync_push(
         correct = item.correct
         if item.mode == "type" and item.answer is not None:
             answers = collect_acceptable_answers(card.content, item.direction)
-            correct, _, _, _ = check_answer(item.answer, answers, tolerance)
+            correct, _, _, _ = check_answer(item.answer, answers, "tolerate")
 
         reviewed_at = _aware(item.reviewed_at)
         state = apply_review(state, item.grade, correct, reviewed_at=reviewed_at)
+        await db.flush()
+        await db.refresh(state, ["review_revision"])
         db.add(
             ReviewLog(
                 card_id=card.id,
@@ -317,9 +336,12 @@ async def sync_push(
                 correct=correct,
                 reviewed_at=reviewed_at,
                 client_id=item.client_id,
+                applied_revision=state.review_revision,
+                intent_fingerprint=fp,
             )
         )
         touched[card.id] = state
+        review_acks.append(_result(item, "applied"))
         applied += 1
 
     await db.commit()
@@ -333,4 +355,8 @@ async def sync_push(
         moves_applied=moves_applied,
         moves_skipped=moves_skipped,
         moves=move_results,
+        review_results=review_acks,
+        move_results=move_acks,
     )
+
+

@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.vocabulario.app.data.LearningRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 
 @HiltWorker
 class SyncWorker @AssistedInject constructor(
@@ -19,11 +20,17 @@ class SyncWorker @AssistedInject constructor(
         if (!learningRepository.hasSyncableSession()) {
             return Result.success()
         }
-        return try {
+        val result = try {
             learningRepository.syncNow()
-            Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
-            if (runAttemptCount >= 4) Result.failure() else Result.retry()
+            return if (runAttemptCount >= 4) Result.failure() else Result.retry()
+        }
+        return when (result.workerDecision(runAttemptCount)) {
+            WorkerDecision.SUCCESS -> Result.success()
+            WorkerDecision.RETRY -> Result.retry()
+            WorkerDecision.FAILURE -> Result.failure()
         }
     }
 }

@@ -13,6 +13,7 @@ import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.session.SessionCoordinator
 import com.vocabulario.app.data.session.SessionState
 import com.vocabulario.app.data.session.sessionLost
+import com.vocabulario.app.data.sync.ProfileResolution
 import com.vocabulario.app.data.sync.SyncScheduler
 import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -108,24 +109,36 @@ class AppViewModel @Inject constructor(
     private fun resumeAfterVerification() {
         if (resumeJob?.isActive == true) return
         resumeJob = viewModelScope.launch {
-            val hasProfile = try {
+            val resolution = try {
                 authRepository.ensureActiveProfile()
                 runCatching { learningRepository.applyAppLocaleFromActiveProfile() }
                 runCatching { learningRepository.syncThemeFromSettings() }
-                authRepository.hasProfile()
+                authRepository.resolveProfiles()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                true
+                null
             }
             if (_startRoute.value != AppStartRoute.VERIFY_EMAIL) return@launch
-            if (hasProfile) {
-                _startRoute.value = AppStartRoute.HOME
-                syncInBackground()
-            } else {
-                _startRoute.value = AppStartRoute.ONBOARDING
+            when (val route = routeFor(resolution)) {
+                null -> retryBootstrap()
+                AppStartRoute.HOME -> {
+                    _startRoute.value = AppStartRoute.HOME
+                    syncInBackground()
+                }
+                else -> _startRoute.value = route
             }
         }
+    }
+
+    /** Trasa po rozpoznaniu profili; null = brak pewności, zostajemy na LOADING z ponowieniem. */
+    private fun routeFor(resolution: ProfileResolution?): AppStartRoute? = when (resolution) {
+        is ProfileResolution.Found -> AppStartRoute.HOME
+        ProfileResolution.ConfirmedEmpty -> AppStartRoute.ONBOARDING
+        is ProfileResolution.AuthRequired, ProfileResolution.Superseded -> AppStartRoute.AUTH
+        ProfileResolution.VerificationRequired -> AppStartRoute.VERIFY_EMAIL
+        // Zgody (F-007) nie mają jeszcze trasy; do tego czasu jak niedostępny serwer.
+        ProfileResolution.LegalAcceptanceRequired, is ProfileResolution.Unavailable, null -> null
     }
 
     private suspend fun refreshAccountQuietly() {
@@ -201,34 +214,33 @@ class AppViewModel @Inject constructor(
             return
         }
 
-        val result = withTimeoutOrNull(8_000) {
-            runCatching {
+        val resolution = withTimeoutOrNull(8_000) {
+            try {
                 authRepository.ensureActiveProfile()
                 learningRepository.applyAppLocaleFromActiveProfile()
                 learningRepository.syncThemeFromSettings()
-                authRepository.hasProfile()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Locale i motyw są kosmetyką; o trasie decyduje wyłącznie rozpoznanie profili.
             }
+            authRepository.resolveProfiles()
         }
 
-        when {
-            result == null -> {
-                _startRoute.value = AppStartRoute.HOME
-                syncInBackground()
-            }
-            result.isFailure -> {
-                // Błąd sieci/serwera nie jest wylogowaniem; o końcu sesji decyduje koordynator.
+        when (val route = routeFor(resolution)) {
+            null -> {
+                // Bez cache i bez potwierdzenia z serwera nie zgadujemy ani HOME, ani onboardingu.
                 if (sessionCoordinator.state.value !is SessionState.Active) {
                     _startRoute.value = AppStartRoute.AUTH
                 } else {
-                    _startRoute.value = AppStartRoute.HOME
-                    syncInBackground()
+                    _loadingSlow.value = true
                 }
             }
-            result.getOrNull() == false -> _startRoute.value = AppStartRoute.ONBOARDING
-            else -> {
+            AppStartRoute.HOME -> {
                 _startRoute.value = AppStartRoute.HOME
                 syncInBackground()
             }
+            else -> _startRoute.value = route
         }
     }
 
@@ -257,13 +269,18 @@ class AppViewModel @Inject constructor(
             _startRoute.value = AppStartRoute.ONBOARDING
             return
         }
+        // Logowanie nie potwierdziło profilu (serwer niedostępny): decyduje start, nie zgadywanie.
+        if (!learningRepository.hasCachedProfile()) {
+            retryBootstrap()
+            return
+        }
         blockingBusy.run(strings.get(R.string.syncing_with_server)) {
             runCatching {
                 authRepository.ensureActiveProfile()
                 learningRepository.applyAppLocaleFromActiveProfile()
                 learningRepository.syncThemeFromSettings()
             }
-            runCatching { learningRepository.syncNow(awaitLock = true) }
+            learningRepository.syncNow(awaitLock = true)
             _startRoute.value = AppStartRoute.HOME
         }
         syncScheduler.schedulePeriodic()
