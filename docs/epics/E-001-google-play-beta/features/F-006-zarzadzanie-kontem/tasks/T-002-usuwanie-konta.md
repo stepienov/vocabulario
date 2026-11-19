@@ -1,6 +1,6 @@
 # T-002 · Usuwanie konta i danych
 
-**ID:** `E-001/F-006/T-002` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / L.  
+**ID:** `E-001/F-006/T-002` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / L.  
 **Feature:** [Zarządzanie kontem](../README.md). **Źródło:** B-08; F-09 w [analizie](../../../sources/analiza-2026-11-17.md).
 
 ## Cel i zatwierdzone zachowanie

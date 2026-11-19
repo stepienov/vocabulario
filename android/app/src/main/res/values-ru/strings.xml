@@ -940,5 +940,27 @@
     <string name="err_email_unchanged">Это уже ваш адрес эл. почты.</string>
     <string name="err_email_unavailable">Этот адрес нельзя использовать. Попробуйте другой.</string>
     <string name="err_recent_auth">Подтвердите пароль ещё раз и повторите попытку.</string>
+    <string name="account_delete">Удалить аккаунт</string>
+    <string name="account_delete_scope">Это навсегда удалит ваш аккаунт и всё, что с ним связано: профили, карточки слов, списки, прогресс обучения и настройки. Вы сразу выйдете на всех устройствах.</string>
+    <string name="account_delete_grace">Отменить можно в течение 7 дней. Через 14 дней всё будет удалено безвозвратно.</string>
+    <string name="account_delete_unsent">Неотправленные изменения на этом устройстве: %1$d. Они будут потеряны. Другие устройства не проверяются.</string>
+    <string name="account_delete_confirm_check">Я понимаю, что мой аккаунт будет удалён</string>
+    <string name="deletion_pending_title">Аккаунт ожидает удаления</string>
+    <string name="deletion_pending_body">Аккаунт заблокирован, ваши данные скрыты. Отменить можно до %1$s. Окончательное удаление запланировано на %2$s.</string>
+    <string name="deletion_pending_purging">Окончательное удаление уже началось, и его нельзя отменить.</string>
+    <string name="deletion_pending_refresh">Проверить статус</string>
+    <string name="deletion_pending_cancel">Отменить удаление</string>
+    <string name="deletion_pending_cancel_hint">Введите пароль, чтобы отменить. Затем войдите снова.</string>
+    <string name="err_deletion_unavailable">Удаление аккаунта сейчас недоступно. Попробуйте позже.</string>
+    <string name="err_deletion_irreversible">Слишком поздно отменять: удаление уже началось.</string>
+    <string name="err_deletion_pending">Этот аккаунт ожидает удаления. Вход заблокирован, пока запрос не отменён.</string>
+    <string name="err_account_deleted">Этот аккаунт удалён.</string>
+    <string name="err_deletion_owner_mismatch">Эти данные для входа относятся к другому аккаунту, не к тому, в который выполнен вход на этом устройстве.</string>
+    <string name="account_profiles_note">Ваши языковые профили принадлежат этому одному аккаунту.</string>
+    <string name="account_stale_note">Последние известные данные, показаны офлайн. Для изменений безопасности и удаления аккаунта нужно подключение.</string>
+    <string name="account_methods_title">Способы входа</string>
+    <string name="account_method_password_set">Пароль: задан</string>
+    <string name="account_method_password_none">Пароль: не задан</string>
+    <string name="account_method_google_none">Google: не подключён</string>
 </resources>
 

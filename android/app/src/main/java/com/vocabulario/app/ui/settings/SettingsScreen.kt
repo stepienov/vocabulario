@@ -99,6 +99,16 @@ fun SettingsScreen(
     val account by accountViewModel.account.collectAsState()
     val changePassword by accountViewModel.changePassword.collectAsState()
     val changeEmail by accountViewModel.changeEmail.collectAsState()
+    val deleteAccount by accountViewModel.deleteAccount.collectAsState()
+    deleteAccount?.let { form ->
+        DeleteAccountDialog(
+            form = form,
+            onPasswordChange = { accountViewModel.updateDeleteAccount(password = it) },
+            onConfirmedChange = { accountViewModel.updateDeleteAccount(confirmed = it) },
+            onSubmit = accountViewModel::submitDeleteAccount,
+            onDismiss = accountViewModel::closeDeleteAccount,
+        )
+    }
     changeEmail?.let { form ->
         ChangeEmailDialog(
             form = form,
@@ -452,6 +462,8 @@ fun SettingsScreen(
                     onChangeEmail = accountViewModel::openChangeEmail,
                     onResendChange = accountViewModel::resendEmailChange,
                     onCancelChange = accountViewModel::cancelEmailChange,
+                    onDeleteAccount = accountViewModel::openDeleteAccount,
+                    onRetry = accountViewModel::load,
                 )
             }
             account.info?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }

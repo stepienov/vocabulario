@@ -11,6 +11,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.core.passwords import NEW_PASSWORD_MIN_CHARS, PASSWORD_MAX_CHARS
 from app.public_web.texts import PAGE_TEXTS
+from app.services.account_deletion import CANCEL_PATH, REQUEST_PATH
 from app.services.account_recovery import RESET_PATH, VERIFY_PATH
 from app.services.email_change import CHANGE_PATH
 from app.services.mail_templates import (
@@ -22,6 +23,9 @@ from app.services.mail_templates import (
 
 HERE = Path(__file__).resolve().parent
 ASSETS_PATH = "/account/assets"
+START_PATH = "/delete-account"
+STATUS_PATH = "/account/deletion-status"
+DELETION_API = "/api/v1/account-deletion"
 templates = Jinja2Templates(directory=str(HERE / "templates"))
 router = APIRouter(include_in_schema=False)
 
@@ -51,6 +55,30 @@ _PAGES = {
         "title": "change_title",
         "intro": "change_intro",
         "api": "/api/v1/auth/email-change/confirm",
+    },
+    "delete_start": {
+        "title": "del_title",
+        "intro": "del_intro",
+        "api": DELETION_API,
+        "template": "account_deletion.html",
+    },
+    "delete_confirm": {
+        "title": "del_title",
+        "intro": "del_intro",
+        "api": DELETION_API,
+        "template": "account_deletion.html",
+    },
+    "delete_cancel": {
+        "title": "del_cancel_title",
+        "intro": "del_cancel_intro",
+        "api": DELETION_API,
+        "template": "account_deletion.html",
+    },
+    "delete_status": {
+        "title": "del_status_title",
+        "intro": "del_status_intro",
+        "api": DELETION_API,
+        "template": "account_deletion.html",
     },
 }
 
@@ -94,7 +122,7 @@ def _render(request: Request, page: str) -> HTMLResponse:
     spec = _PAGES[page]
     response = templates.TemplateResponse(
         request,
-        "account_action.html",
+        spec.get("template", "account_action.html"),
         {
             "page": page,
             "locale": locale,
@@ -126,6 +154,26 @@ async def reset_password_page(request: Request) -> HTMLResponse:
 @router.get(CHANGE_PATH, response_class=HTMLResponse)
 async def change_email_page(request: Request) -> HTMLResponse:
     return _render(request, "change")
+
+
+@router.get(START_PATH, response_class=HTMLResponse)
+async def delete_account_start_page(request: Request) -> HTMLResponse:
+    return _render(request, "delete_start")
+
+
+@router.get(REQUEST_PATH, response_class=HTMLResponse)
+async def delete_account_confirm_page(request: Request) -> HTMLResponse:
+    return _render(request, "delete_confirm")
+
+
+@router.get(CANCEL_PATH, response_class=HTMLResponse)
+async def cancel_deletion_page(request: Request) -> HTMLResponse:
+    return _render(request, "delete_cancel")
+
+
+@router.get(STATUS_PATH, response_class=HTMLResponse)
+async def deletion_status_page(request: Request) -> HTMLResponse:
+    return _render(request, "delete_status")
 
 
 def mount_public_web(app: FastAPI) -> None:

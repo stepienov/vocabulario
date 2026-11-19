@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.admin_ui.router import mount_admin
+from app.api.v1.account_deletion import router as account_deletion_router
 from app.api.v1.admin_logs import router as admin_logs_router
 from app.api.v1.auth import me_router, profiles_router, router as auth_router
 from app.api.v1.devices import router as devices_router
@@ -19,6 +20,7 @@ from app.core.app_log_middleware import AppLogMiddleware
 from app.core.config import get_settings
 from app.core.readiness import check_ready, mark_schema_ready
 from app.db.base import Base
+from app.db.lifecycle import LifecycleBlocked
 from app.db.migrations import apply_schema
 from app.db.session import engine
 from app.public_web.router import mount_public_web
@@ -40,6 +42,7 @@ async def lifespan(app: FastAPI):
         )
     await apply_schema(engine, Base.metadata)
     mark_schema_ready()
+    from app.services.account_purge import run_purge_worker
     from app.services.card_jobs import resume_pending_enrichment
     from app.services.import_jobs import resume_unfinished_jobs, start_heartbeat_watchdog
     from app.services.llm_usage import purge_expired_llm_payloads
@@ -51,14 +54,18 @@ async def lifespan(app: FastAPI):
     watchdog = asyncio.create_task(start_heartbeat_watchdog())
     enrich_resume = asyncio.create_task(resume_pending_enrichment())
     mail_worker = asyncio.create_task(run_mail_worker())
+    purge_worker = asyncio.create_task(run_purge_worker())
     yield
     from app.services.background import drain_background
 
     await drain_background(5)
+    purge_worker.cancel()
     mail_worker.cancel()
     enrich_resume.cancel()
     watchdog.cancel()
-    await asyncio.gather(mail_worker, enrich_resume, watchdog, return_exceptions=True)
+    await asyncio.gather(
+        purge_worker, mail_worker, enrich_resume, watchdog, return_exceptions=True
+    )
     await engine.dispose()
 
 
@@ -83,8 +90,21 @@ def create_app() -> FastAPI:
         ]
         return JSONResponse(status_code=422, content={"detail": detail})
 
+    @app.exception_handler(LifecycleBlocked)
+    async def lifecycle_blocked(request: Request, exc: LifecycleBlocked) -> JSONResponse:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "detail": {
+                    "code": "account_deletion_pending",
+                    "message": "account_deletion_pending",
+                }
+            },
+        )
+
     prefix = "/api/v1"
     app.include_router(auth_router, prefix=prefix)
+    app.include_router(account_deletion_router, prefix=prefix)
     app.include_router(me_router, prefix=prefix)
     app.include_router(profiles_router, prefix=prefix)
     app.include_router(learning_router, prefix=prefix)

@@ -1,6 +1,6 @@
 # T-001 · Moje konto
 
-**ID:** `E-001/F-006/T-001` · **Status:** `ready` · **Priorytet / rozmiar:** P0 / M.  
+**ID:** `E-001/F-006/T-001` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / M.  
 **Feature:** [Zarządzanie kontem](../README.md). **Źródło:** B-07; F-02/F-15 w [analizie](../../../sources/analiza-2026-11-17.md).
 
 ## Cel i zakres

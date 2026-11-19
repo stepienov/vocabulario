@@ -343,6 +343,8 @@ class SessionCoordinatorTest {
         assertFalse(isPublicAuthPath("/api/v1/auth/password"))
         assertTrue(isPublicAuthPath("/api/v1/auth/password-reset/request"))
         assertFalse(isPublicAuthPath("/api/v1/auth/password/change"))
+        assertTrue(isPublicAuthPath("/api/v1/account-deletion/status"))
+        assertTrue(isPublicAuthPath("/api/v1/account-deletion/proof/password"))
         assertFalse(isPublicAuthPath("/api/v1/me"))
     }
 

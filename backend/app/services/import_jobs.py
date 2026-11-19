@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError, PendingRollbackError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.db.lifecycle import LifecycleBlocked, pin_lifecycle
 from app.db.session import async_session_factory
 from app.models import (
     ACTIVE_IMPORT_STATUSES,
@@ -447,6 +448,8 @@ def spawn_job(job_id: UUID) -> None:
 async def _run_guarded(job_id: UUID) -> None:
     try:
         await run_import_job(job_id)
+    except LifecycleBlocked:
+        pass  # paused with the account; the watchdog resumes it only if the account is active again
     except Exception as exc:
         logger.exception("import job %s crashed", job_id)
         from app.services.app_log import log_event
@@ -486,6 +489,7 @@ async def run_import_job(job_id: UUID) -> None:
         job = await _load_job(db, job_id, with_items=True)
         if job is None:
             return
+        await pin_lifecycle(db, job.user_id)
         if job.status == "cancelled":
             return
         if job.cancel_requested or job.status == "cancelling":
@@ -1300,7 +1304,10 @@ async def resume_unfinished_jobs() -> None:
     async with async_session_factory() as db:
         rows = (
             await db.execute(
-                select(ImportJob.id).where(ImportJob.status.in_(ACTIVE_IMPORT_STATUSES))
+                select(ImportJob.id).where(
+                    ImportJob.status.in_(ACTIVE_IMPORT_STATUSES),
+                    ImportJob.user_id.in_(select(User.id).where(User.account_status == "active")),
+                )
             )
         ).scalars().all()
         for job_id in rows:
@@ -1344,7 +1351,8 @@ async def _watchdog_tick() -> None:
         jobs = (
             await db.execute(
                 select(ImportJob).where(
-                    ImportJob.status.in_(("queued", "analyzing", "committing", "cancelling"))
+                    ImportJob.status.in_(("queued", "analyzing", "committing", "cancelling")),
+                    ImportJob.user_id.in_(select(User.id).where(User.account_status == "active")),
                 )
             )
         ).scalars().all()

@@ -1021,4 +1021,26 @@
     <string name="err_email_unchanged">Bu zaten senin e-posta adresin.</string>
     <string name="err_email_unavailable">Bu adres kullanılamıyor. Başka bir tane dene.</string>
     <string name="err_recent_auth">Parolanı yeniden doğrula ve tekrar dene.</string>
+    <string name="account_delete">Hesabı sil</string>
+    <string name="account_delete_scope">Bu işlem hesabını ve ona bağlı her şeyi kalıcı olarak siler: profiller, kelime kartları, listeler, öğrenme ilerlemesi ve ayarlar. Tüm cihazlardaki oturumların hemen kapanır.</string>
+    <string name="account_delete_grace">7 gün içinde iptal edebilirsin. 14 gün sonra her şey kalıcı olarak silinir ve geri getirilemez.</string>
+    <string name="account_delete_unsent">Bu cihazda gönderilmemiş değişiklikler: %1$d. Kaybolacaklar. Diğer cihazlar kontrol edilmez.</string>
+    <string name="account_delete_confirm_check">Hesabımın silineceğini anlıyorum</string>
+    <string name="deletion_pending_title">Hesap silinmek üzere planlandı</string>
+    <string name="deletion_pending_body">Hesabın kilitli ve verilerin gizli. %1$s tarihine kadar iptal edebilirsin. Kalıcı silme %2$s tarihinde planlandı.</string>
+    <string name="deletion_pending_purging">Kalıcı silme başladı ve iptal edilemez.</string>
+    <string name="deletion_pending_refresh">Durumu kontrol et</string>
+    <string name="deletion_pending_cancel">Silmeyi iptal et</string>
+    <string name="deletion_pending_cancel_hint">İptal etmek için şifreni gir. Ardından yeniden giriş yap.</string>
+    <string name="err_deletion_unavailable">Hesap silme şu anda kullanılamıyor. Daha sonra tekrar dene.</string>
+    <string name="err_deletion_irreversible">İptal için çok geç: silme işlemi başladı.</string>
+    <string name="err_deletion_pending">Bu hesap silinmek üzere planlandı. Talep iptal edilene kadar giriş engellenir.</string>
+    <string name="err_account_deleted">Bu hesap silindi.</string>
+    <string name="err_deletion_owner_mismatch">Bu bilgiler, bu cihazda oturum açık olan hesaba değil, başka bir hesaba ait.</string>
+    <string name="account_profiles_note">Dil profillerin bu tek hesaba aittir.</string>
+    <string name="account_stale_note">Son bilinen bilgiler, çevrimdışı gösteriliyor. Güvenlik değişiklikleri ve hesabı silme için bağlantı gerekir.</string>
+    <string name="account_methods_title">Giriş yöntemleri</string>
+    <string name="account_method_password_set">Şifre: belirlendi</string>
+    <string name="account_method_password_none">Şifre: belirlenmedi</string>
+    <string name="account_method_google_none">Google: bağlı değil</string>
 </resources>

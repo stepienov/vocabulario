@@ -492,6 +492,31 @@ _STATEMENTS = (
     "ALTER TABLE account_action_tokens ADD CONSTRAINT ck_account_action_tokens_email_change "
     "CHECK ((purpose = 'change_email') = (email_change_id IS NOT NULL)); "
     "END IF; END $$",
+    # E-001/F-006/T-002: account lifecycle and deletion proofs.
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS account_status VARCHAR(16) NOT NULL "
+    "DEFAULT 'active'",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_revision BIGINT NOT NULL DEFAULT 1",
+    "ALTER TABLE account_action_tokens ADD COLUMN IF NOT EXISTS proof_method VARCHAR(16)",
+    "ALTER TABLE account_action_tokens ADD COLUMN IF NOT EXISTS lifecycle_revision BIGINT",
+    "ALTER TABLE account_action_tokens ADD COLUMN IF NOT EXISTS target_deletion_id UUID",
+    "DO $$ BEGIN "
+    "IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_users_account_status') THEN "
+    "ALTER TABLE users ADD CONSTRAINT ck_users_account_status "
+    "CHECK (account_status IN ('active', 'deletion_pending', 'deleting')); "
+    "END IF; "
+    "IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_account_action_tokens_purpose' "
+    "AND pg_get_constraintdef(oid) NOT LIKE '%request_account_deletion%') THEN "
+    "ALTER TABLE account_action_tokens DROP CONSTRAINT ck_account_action_tokens_purpose; "
+    "ALTER TABLE account_action_tokens ADD CONSTRAINT ck_account_action_tokens_purpose "
+    "CHECK (purpose IN ('verify_email', 'reset_password', 'change_email', "
+    "'request_account_deletion', 'cancel_account_deletion')); "
+    "END IF; "
+    "IF NOT EXISTS (SELECT 1 FROM pg_constraint "
+    "WHERE conname = 'ck_account_action_tokens_deletion') THEN "
+    "ALTER TABLE account_action_tokens ADD CONSTRAINT ck_account_action_tokens_deletion "
+    "CHECK ((purpose IN ('request_account_deletion', 'cancel_account_deletion')) "
+    "= (proof_method IS NOT NULL)); "
+    "END IF; END $$",
 )
 
 

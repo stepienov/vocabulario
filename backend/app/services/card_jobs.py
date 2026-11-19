@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.schemas.similar_words import MIN_SIMILAR_FOR_QUIZ
 from app.core.deps import lang_pair_key, normalize_text
 from app.core.lemma_keys import cache_lookup_keys, canonical_lemma
+from app.db.lifecycle import LifecycleBlocked, pin_lifecycle
 from app.db.session import async_session_factory
 from app.lsp.enrichment import finish_side_jobs, has_required_inflection, run_lemma_enrichment
 from app.lsp.lang_utils import articles_for
@@ -162,6 +163,8 @@ async def _mark_enrich_failed(card_id: UUID, error: str) -> None:
                 return
             _apply_enrich_retry(card, RuntimeError(error))
             await db.commit()
+    except LifecycleBlocked:
+        return
     except Exception:
         logger.exception("Nie udało się oznaczyć karty %s jako failed", card_id)
 
@@ -853,6 +856,8 @@ async def _run_claimed_enrich(
                         await db.commit()
     except asyncio.CancelledError:
         raise
+    except LifecycleBlocked:
+        return
     except Exception:
         logger.exception("Enrichment karty %s wywalił się", card_id)
         await _mark_enrich_failed(card_id, "enrichment_crash")
@@ -883,6 +888,7 @@ async def _enrich_card_unlocked(
         ).scalar_one_or_none()
         if card is None:
             return
+        await pin_lifecycle(db, card.user_id)
         if card.enrichment_status == STATUS_READY and content_is_complete(card.content):
             return
         if card.enrichment_status == STATUS_FAILED:
@@ -1019,6 +1025,9 @@ async def _enrich_card_unlocked(
             return
         except asyncio.CancelledError:
             raise
+        except LifecycleBlocked:
+            await db.rollback()
+            return
         except Exception as exc:
             logger.exception("Enrichment karty %s nie powiódł się", card_id)
             from app.services.app_log import log_event
@@ -1307,6 +1316,7 @@ async def _resume_pending_enrichment(*, stale_only: bool = False) -> None:
         select(LearningCard.id)
         .where(
             LearningCard.deleted_at.is_(None),
+            LearningCard.user_id.in_(select(User.id).where(User.account_status == "active")),
             eligible,
         )
         .limit(_ENRICH_RESUME_BATCH)

@@ -1028,4 +1028,26 @@
     <string name="err_email_unchanged">すでにこのメールアドレスを使用しています。</string>
     <string name="err_email_unavailable">このアドレスは使用できません。別のアドレスをお試しください。</string>
     <string name="err_recent_auth">パスワードをもう一度確認してから再試行してください。</string>
+    <string name="account_delete">アカウントを削除</string>
+    <string name="account_delete_scope">アカウントと関連するすべてのデータ（プロフィール、単語カード、リスト、学習の進捗、設定）が完全に削除されます。すべての端末で直ちにログアウトされます。</string>
+    <string name="account_delete_grace">7日以内であれば取り消せます。14日後にはすべてが完全に削除され、復元できません。</string>
+    <string name="account_delete_unsent">この端末の未送信の変更：%1$d 件。失われます。他の端末は確認されません。</string>
+    <string name="account_delete_confirm_check">アカウントが削除されることを理解しました</string>
+    <string name="deletion_pending_title">アカウントは削除予定です</string>
+    <string name="deletion_pending_body">アカウントはロックされ、データは非表示になっています。%1$s まで取り消せます。完全な削除は %2$s に予定されています。</string>
+    <string name="deletion_pending_purging">完全な削除が始まっており、取り消せません。</string>
+    <string name="deletion_pending_refresh">状況を確認</string>
+    <string name="deletion_pending_cancel">削除を取り消す</string>
+    <string name="deletion_pending_cancel_hint">取り消すにはパスワードを入力してください。その後、もう一度ログインしてください。</string>
+    <string name="err_deletion_unavailable">現在アカウントを削除できません。しばらくしてからもう一度お試しください。</string>
+    <string name="err_deletion_irreversible">取り消しには遅すぎます。削除はすでに始まっています。</string>
+    <string name="err_deletion_pending">このアカウントは削除予定です。リクエストを取り消すまでログインできません。</string>
+    <string name="err_account_deleted">このアカウントは削除されました。</string>
+    <string name="err_deletion_owner_mismatch">この認証情報は、この端末でログイン中のアカウントとは別のアカウントのものです。</string>
+    <string name="account_profiles_note">言語プロフィールはすべてこの1つのアカウントに属します。</string>
+    <string name="account_stale_note">最後に取得した情報をオフラインで表示しています。セキュリティの変更とアカウント削除には接続が必要です。</string>
+    <string name="account_methods_title">ログイン方法</string>
+    <string name="account_method_password_set">パスワード：設定済み</string>
+    <string name="account_method_password_none">パスワード：未設定</string>
+    <string name="account_method_google_none">Google：未連携</string>
 </resources>

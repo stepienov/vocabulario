@@ -23,14 +23,19 @@ from app.models import ACTION_TOKEN_PURPOSES, AccountActionToken, User
 VERIFY_EMAIL = "verify_email"
 RESET_PASSWORD = "reset_password"
 CHANGE_EMAIL = "change_email"
+REQUEST_DELETION = "request_account_deletion"
+CANCEL_DELETION = "cancel_account_deletion"
 
 TOKEN_TTL: dict[str, timedelta] = {
     VERIFY_EMAIL: timedelta(hours=24),
     RESET_PASSWORD: timedelta(minutes=30),
     CHANGE_EMAIL: timedelta(hours=24),
+    REQUEST_DELETION: timedelta(minutes=30),
+    CANCEL_DELETION: timedelta(minutes=30),
 }
-# A reset or change link must die once credentials change; e-mail verification must not.
-_CREDENTIAL_BOUND = frozenset({RESET_PASSWORD, CHANGE_EMAIL})
+DELETION_PURPOSES = frozenset({REQUEST_DELETION, CANCEL_DELETION})
+# A reset, change or deletion proof must die once credentials change; e-mail verification must not.
+_CREDENTIAL_BOUND = frozenset({RESET_PASSWORD, CHANGE_EMAIL}) | DELETION_PURPOSES
 _MAX_TOKEN_CHARS = 128
 
 assert set(TOKEN_TTL) == set(ACTION_TOKEN_PURPOSES)
@@ -67,10 +72,14 @@ async def issue_action_token(
     now: datetime | None = None,
     email_change_id: UUID | None = None,
     expires_at: datetime | None = None,
+    proof_method: str | None = None,
+    target_deletion_id: UUID | None = None,
 ) -> IssuedActionToken:
     """New link proof for the current address/credentials of an already locked user."""
     if purpose not in TOKEN_TTL:
         raise ValueError(f"unknown action token purpose: {purpose}")
+    if (purpose in DELETION_PURPOSES) != (proof_method is not None):
+        raise ValueError("deletion proofs need a proof method and nothing else does")
     now = now or now_utc()
     ends_at = now + TOKEN_TTL[purpose]
     token = secrets.token_urlsafe(32)
@@ -81,6 +90,9 @@ async def issue_action_token(
         token_hash=action_token_hash(token),
         email_revision=user.email_revision,
         credentials_revision=user.credentials_revision,
+        proof_method=proof_method,
+        lifecycle_revision=user.lifecycle_revision if proof_method else None,
+        target_deletion_id=target_deletion_id,
         created_at=now,
         expires_at=min(expires_at, ends_at) if expires_at else ends_at,
     )
@@ -141,8 +153,32 @@ def _check(
         raise _invalid()
     if purpose in _CREDENTIAL_BOUND and row.credentials_revision != user.credentials_revision:
         raise _invalid()
+    if row.lifecycle_revision is not None and row.lifecycle_revision != user.lifecycle_revision:
+        raise _invalid()
     if now >= row.expires_at:
         raise ActionTokenError(410, "action_token_expired")
+
+
+async def peek_action_token(
+    db: AsyncSession,
+    user: User,
+    token: str,
+    purpose: str,
+    *,
+    now: datetime | None = None,
+) -> AccountActionToken:
+    """Validate a token exactly like `consume_action_token`, but leave it unused."""
+    now = now or now_utc()
+    digest = _usable_hash(token)
+    if digest is None:
+        raise _invalid()
+    row = (
+        await db.execute(
+            select(AccountActionToken).where(AccountActionToken.token_hash == digest)
+        )
+    ).scalar_one_or_none()
+    _check(row, digest, user, purpose, now)
+    return row
 
 
 async def consume_action_token(
@@ -190,6 +226,8 @@ async def action_token_is_current(
     if token.consumed_at is not None or token.invalidated_at is not None:
         return False
     if now >= token.expires_at or token.email_revision != user.email_revision:
+        return False
+    if token.lifecycle_revision is not None and token.lifecycle_revision != user.lifecycle_revision:
         return False
     return not (
         token.purpose in _CREDENTIAL_BOUND

@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from html import escape
 
+from app.services.mail_templates_deletion import DELETION_KEYS, DELETION_TEXTS
+
 APP_NAME = "Vocabulario"
 DEFAULT_LOCALE = "en"
 TEMPLATE_VERSION = "v1"
@@ -552,6 +554,10 @@ TEXTS: dict[str, dict[str, str]] = {
     },
 }
 
+for _locale, _extra in DELETION_TEXTS.items():
+    TEXTS[_locale].update(_extra)
+KEYS = KEYS + DELETION_KEYS
+
 SUPPORTED_LOCALES = frozenset(TEXTS)
 # A bare language picks the variant most testers use; regional ones fall back to the base.
 _LANGUAGE_DEFAULTS = {"pt": "pt-BR"}
@@ -627,7 +633,13 @@ def _html(
     return "".join(parts)
 
 
-_LINK_PREFIX = {"verify_email": "verify", "reset_password": "reset", "change_email": "emailchange"}
+_LINK_PREFIX = {
+    "verify_email": "verify",
+    "reset_password": "reset",
+    "change_email": "emailchange",
+    "request_account_deletion": "delreq",
+    "cancel_account_deletion": "delcancel",
+}
 
 
 def _link_mail(kind: str, locale: str, link: str, expiry: str) -> RenderedMail:
@@ -661,6 +673,42 @@ def render_reset_password(locale: str, link: str, *, minutes: int) -> RenderedMa
 def render_change_email(locale: str, link: str, *, hours: int) -> RenderedMail:
     expiry = _fmt(_texts(locale), "emailchange_expiry", hours=hours)
     return _link_mail("change_email", locale, link, expiry)
+
+
+def render_request_account_deletion(locale: str, link: str, *, minutes: int) -> RenderedMail:
+    expiry = _fmt(_texts(locale), "delreq_expiry", minutes=minutes)
+    return _link_mail("request_account_deletion", locale, link, expiry)
+
+
+def render_cancel_account_deletion(locale: str, link: str, *, minutes: int) -> RenderedMail:
+    expiry = _fmt(_texts(locale), "delcancel_expiry", minutes=minutes)
+    return _link_mail("cancel_account_deletion", locale, link, expiry)
+
+
+def render_deletion_started(locale: str, *, date: str, url: str) -> RenderedMail:
+    loc = normalize_locale(locale)
+    t = TEXTS[loc]
+    body = _fmt(t, "delstart_body", date=date, url=url)
+    return RenderedMail(
+        subject=_fmt(t, "delstart_subject"),
+        text=f"{body}\n\n{APP_NAME}\n",
+        html=_html(loc, [body], None, None, None, []),
+        locale=loc,
+        template=f"account_deletion_started/{TEMPLATE_VERSION}",
+    )
+
+
+def render_deletion_cancelled(locale: str) -> RenderedMail:
+    loc = normalize_locale(locale)
+    t = TEXTS[loc]
+    body = _fmt(t, "delstop_body")
+    return RenderedMail(
+        subject=_fmt(t, "delstop_subject"),
+        text=f"{body}\n\n{APP_NAME}\n",
+        html=_html(loc, [body], None, None, None, []),
+        locale=loc,
+        template=f"account_deletion_cancelled/{TEMPLATE_VERSION}",
+    )
 
 
 def _notice(locale: str, prefix: str, template: str) -> RenderedMail:

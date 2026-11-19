@@ -939,5 +939,27 @@
     <string name="err_email_unchanged">C’est déjà votre adresse e-mail.</string>
     <string name="err_email_unavailable">Cette adresse ne peut pas être utilisée. Essayez-en une autre.</string>
     <string name="err_recent_auth">Confirmez à nouveau votre mot de passe et réessayez.</string>
+    <string name="account_delete">Supprimer le compte</string>
+    <string name="account_delete_scope">Cela supprime définitivement votre compte et tout ce qui y est lié : profils, cartes de mots, listes, progression et réglages. Vous serez déconnecté de tous les appareils immédiatement.</string>
+    <string name="account_delete_grace">Vous pouvez annuler pendant 7 jours. Après 14 jours, tout est supprimé définitivement et ne peut pas être restauré.</string>
+    <string name="account_delete_unsent">Modifications non envoyées sur cet appareil : %1$d. Elles seront perdues. Les autres appareils ne sont pas vérifiés.</string>
+    <string name="account_delete_confirm_check">Je comprends que mon compte sera supprimé</string>
+    <string name="deletion_pending_title">Compte en attente de suppression</string>
+    <string name="deletion_pending_body">Votre compte est verrouillé et vos données sont masquées. Vous pouvez annuler jusqu’au %1$s. La suppression définitive est prévue le %2$s.</string>
+    <string name="deletion_pending_purging">La suppression définitive a commencé et ne peut plus être annulée.</string>
+    <string name="deletion_pending_refresh">Vérifier l’état</string>
+    <string name="deletion_pending_cancel">Annuler la suppression</string>
+    <string name="deletion_pending_cancel_hint">Saisissez votre mot de passe pour annuler. Reconnectez-vous ensuite.</string>
+    <string name="err_deletion_unavailable">La suppression du compte n’est pas disponible pour le moment. Réessayez plus tard.</string>
+    <string name="err_deletion_irreversible">Trop tard pour annuler : la suppression a déjà commencé.</string>
+    <string name="err_deletion_pending">Ce compte est en attente de suppression. La connexion est bloquée tant que la demande n’est pas annulée.</string>
+    <string name="err_account_deleted">Ce compte a été supprimé.</string>
+    <string name="err_deletion_owner_mismatch">Ces identifiants appartiennent à un autre compte que celui connecté sur cet appareil.</string>
+    <string name="account_profiles_note">Vos profils de langue appartiennent à ce compte unique.</string>
+    <string name="account_stale_note">Dernières informations connues, affichées hors ligne. Les changements de sécurité et la suppression du compte nécessitent une connexion.</string>
+    <string name="account_methods_title">Méthodes de connexion</string>
+    <string name="account_method_password_set">Mot de passe : défini</string>
+    <string name="account_method_password_none">Mot de passe : non défini</string>
+    <string name="account_method_google_none">Google : non associé</string>
 </resources>
 

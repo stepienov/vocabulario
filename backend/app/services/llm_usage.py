@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import delete, update
 
 from app.core.config import get_settings
+from app.db.lifecycle import LifecycleBlocked
 from app.services.app_log import profile_id_var, request_id_var, user_id_var
 from app.services.llm_pricing import PRICING_VERSION, TokenUsage, estimate_cost_usd
 
@@ -215,6 +216,8 @@ async def record_llm_usage(
                         model,
                     )
             await db.commit()
+    except LifecycleBlocked:
+        return None  # the owner is being deleted: no private usage record
     except Exception:
         logger.exception("llm_usage write failed purpose=%s model=%s", purpose, model)
         return None

@@ -39,6 +39,7 @@ import com.vocabulario.app.ui.auth.AuthScreen
 import com.vocabulario.app.ui.auth.AuthViewModel
 import com.vocabulario.app.ui.auth.LogoutUnsentDialog
 import com.vocabulario.app.ui.auth.VerifyEmailScreen
+import com.vocabulario.app.ui.deletion.DeletionPendingScreen
 import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.BusyOverlayHost
 import com.vocabulario.app.ui.components.ButtonLabel
@@ -59,6 +60,7 @@ import dagger.hilt.components.SingletonComponent
 object Routes {
     const val AUTH = "auth"
     const val VERIFY_EMAIL = "verify_email"
+    const val DELETION_PENDING = "deletion_pending"
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
     const val PRACTICE = "practice"
@@ -141,6 +143,7 @@ fun VocabularioAppRoot(
                 val graphStart = when (startRoute) {
                     AppStartRoute.AUTH -> Routes.AUTH
                     AppStartRoute.VERIFY_EMAIL -> Routes.VERIFY_EMAIL
+                    AppStartRoute.DELETION_PENDING -> Routes.DELETION_PENDING
                     AppStartRoute.ONBOARDING -> Routes.ONBOARDING
                     AppStartRoute.HOME -> Routes.HOME
                     AppStartRoute.LOADING -> Routes.AUTH
@@ -161,6 +164,9 @@ fun VocabularioAppRoot(
                         val onLoggedOut: suspend () -> Unit = { appViewModel.onLogout() }
                         LogoutPromptHost(authViewModel, onLoggedOut)
                         VerifyEmailScreen(onLogout = { authViewModel.requestLogout(onLoggedOut) })
+                    }
+                    composable(Routes.DELETION_PENDING) {
+                        DeletionPendingScreen()
                     }
                     composable(Routes.ONBOARDING) {
                         OnboardingScreen(

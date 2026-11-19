@@ -7,7 +7,9 @@ import com.vocabulario.app.data.AccountRepository
 import com.vocabulario.app.data.NEW_PASSWORD_MIN_CHARS
 import com.vocabulario.app.data.PASSWORD_MAX_CHARS
 import com.vocabulario.app.data.api.EmailChangeResponse
+import com.vocabulario.app.data.api.UserResponse
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.deletion.AccountDeletionRepository
 import com.vocabulario.app.i18n.UiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -33,7 +35,19 @@ data class AccountUiState(
     val loading: Boolean = false,
     /** Brak sieci lub błąd `/me`: sekcja pokazuje komunikat zamiast danych. */
     val unavailable: Boolean = false,
+    /** Dane z cache (ostatnio pobrane): akcje bezpieczeństwa i usuwania wymagają sieci, więc są wyłączone. */
+    val stale: Boolean = false,
     val info: String? = null,
+)
+
+internal fun AccountUiState.withAccount(me: UserResponse, stale: Boolean) = copy(
+    email = me.email,
+    emailVerified = me.email_verified,
+    hasPassword = "password" in me.login_methods,
+    hasGoogle = "google" in me.login_methods,
+    passwordUpgradeRequired = me.password_upgrade_required,
+    unavailable = false,
+    stale = stale,
 )
 
 /** Hasła tylko w pamięci ViewModelu; nie trafiają do SavedStateHandle ani logów. */
@@ -57,6 +71,15 @@ data class ChangeEmailUiState(
 )
 
 internal enum class NewEmailProblem { EMPTY, INVALID, UNCHANGED, PASSWORD_EMPTY }
+
+/** Hasło tylko w pamięci; [unsentCount] to niewysłane zmiany z tego urządzenia (inne urządzenia nie są znane). */
+data class DeleteAccountUiState(
+    val password: String = "",
+    val confirmed: Boolean = false,
+    val unsentCount: Int = 0,
+    val busy: Boolean = false,
+    val error: String? = null,
+)
 
 internal fun validateNewEmail(current: String?, new: String, password: String): NewEmailProblem? {
     val email = new.trim()
@@ -85,8 +108,12 @@ internal fun validateNewPassword(current: String, new: String, repeat: String): 
 @HiltViewModel
 class AccountSettingsViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
+    private val deletionRepository: AccountDeletionRepository,
     private val strings: UiStrings,
 ) : ViewModel() {
+
+    private val _deleteAccount = MutableStateFlow<DeleteAccountUiState?>(null)
+    val deleteAccount: StateFlow<DeleteAccountUiState?> = _deleteAccount.asStateFlow()
 
     private val _account = MutableStateFlow(AccountUiState())
     val account: StateFlow<AccountUiState> = _account.asStateFlow()
@@ -103,21 +130,18 @@ class AccountSettingsViewModel @Inject constructor(
             _account.update { it.copy(loading = true) }
             try {
                 val me = accountRepository.refreshAccount()
-                _account.update {
-                    it.copy(
-                        email = me.email,
-                        emailVerified = me.email_verified,
-                        hasPassword = "password" in me.login_methods,
-                        hasGoogle = "google" in me.login_methods,
-                        passwordUpgradeRequired = me.password_upgrade_required,
-                        unavailable = false,
-                    )
-                }
+                _account.update { it.withAccount(me, stale = false) }
                 loadPendingChange()
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                _account.update { it.copy(unavailable = it.email == null) }
+                val cached = accountRepository.lastKnownAccount()
+                _account.update {
+                    when {
+                        cached != null -> it.withAccount(cached.me, stale = true)
+                        else -> it.copy(unavailable = it.email == null)
+                    }
+                }
             } finally {
                 _account.update { it.copy(loading = false) }
             }
@@ -184,6 +208,52 @@ class AccountSettingsViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 _changePassword.update {
+                    it?.copy(busy = false, error = e.userMessage(strings, R.string.err_account_request_failed))
+                }
+            }
+        }
+    }
+
+    fun openDeleteAccount() {
+        _account.update { it.copy(info = null) }
+        viewModelScope.launch {
+            val unsent = runCatching { deletionRepository.unsentLocalCount() }.getOrDefault(0)
+            _deleteAccount.value = DeleteAccountUiState(unsentCount = unsent)
+        }
+    }
+
+    fun closeDeleteAccount() {
+        if (_deleteAccount.value?.busy == true) return
+        _deleteAccount.value = null
+    }
+
+    fun updateDeleteAccount(password: String? = null, confirmed: Boolean? = null) {
+        _deleteAccount.update { state ->
+            state?.copy(
+                password = password ?: state.password,
+                confirmed = confirmed ?: state.confirmed,
+                error = null,
+            )
+        }
+    }
+
+    fun submitDeleteAccount() {
+        val form = _deleteAccount.value ?: return
+        val email = _account.value.email ?: return
+        if (form.busy || !form.confirmed) return
+        if (form.password.isEmpty()) {
+            _deleteAccount.value = form.copy(error = strings.get(R.string.err_password_required))
+            return
+        }
+        viewModelScope.launch {
+            _deleteAccount.value = form.copy(busy = true, error = null)
+            try {
+                deletionRepository.request(email, form.password)
+                _deleteAccount.value = null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _deleteAccount.update {
                     it?.copy(busy = false, error = e.userMessage(strings, R.string.err_account_request_failed))
                 }
             }

@@ -276,6 +276,8 @@ async def test_registration_queues_verification_and_link_verifies(pg, pg_client)
     me = (await pg_client.get("/api/v1/me", headers=_bearer(tokens))).json()
     assert (me["email_verified"], me["login_methods"]) == (False, ["password"])
     assert "password_hash" not in me
+    assert (me["email_revision"], me["account_status"], me["lifecycle_revision"]) == (1, "active", 1)
+    assert not {"google_id", "refresh_token", "access_token"} & set(me)
 
     [row] = await _outbox(pg, "verify_email")
     assert (_decrypt(row).locale, _decrypt(row).to) == ("pt-BR", email)

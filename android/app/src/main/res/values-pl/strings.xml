@@ -962,5 +962,27 @@
     <string name="err_email_unchanged">To już jest Twój adres e-mail.</string>
     <string name="err_email_unavailable">Tego adresu nie można użyć. Wpisz inny.</string>
     <string name="err_recent_auth">Potwierdź hasło jeszcze raz i spróbuj ponownie.</string>
+    <string name="account_delete">Usuń konto</string>
+    <string name="account_delete_scope">To trwale usuwa Twoje konto i wszystko, co z nim związane: profile, karty słówek, listy, postępy w nauce i ustawienia. Zostaniesz od razu wylogowany na wszystkich urządzeniach.</string>
+    <string name="account_delete_grace">Możesz to cofnąć w ciągu 7 dni. Po 14 dniach wszystko zostanie usunięte bezpowrotnie.</string>
+    <string name="account_delete_unsent">Niewysłane zmiany na tym urządzeniu: %1$d. Zostaną utracone. Innych urządzeń nie sprawdzamy.</string>
+    <string name="account_delete_confirm_check">Rozumiem, że moje konto zostanie usunięte</string>
+    <string name="deletion_pending_title">Konto czeka na usunięcie</string>
+    <string name="deletion_pending_body">Konto jest zablokowane, a Twoje dane ukryte. Możesz cofnąć usunięcie do %1$s. Trwałe usunięcie zaplanowano na %2$s.</string>
+    <string name="deletion_pending_purging">Trwałe usuwanie już się rozpoczęło i nie można go cofnąć.</string>
+    <string name="deletion_pending_refresh">Sprawdź status</string>
+    <string name="deletion_pending_cancel">Cofnij usunięcie</string>
+    <string name="deletion_pending_cancel_hint">Podaj hasło, aby cofnąć. Potem zaloguj się ponownie.</string>
+    <string name="err_deletion_unavailable">Usuwanie konta jest teraz niedostępne. Spróbuj później.</string>
+    <string name="err_deletion_irreversible">Za późno na cofnięcie: usuwanie już się rozpoczęło.</string>
+    <string name="err_deletion_pending">To konto czeka na usunięcie. Logowanie jest zablokowane, dopóki wniosek nie zostanie cofnięty.</string>
+    <string name="err_account_deleted">To konto zostało usunięte.</string>
+    <string name="err_deletion_owner_mismatch">Te dane logowania należą do innego konta niż to, które jest zalogowane na tym urządzeniu.</string>
+    <string name="account_profiles_note">Twoje profile językowe należą do tego jednego konta.</string>
+    <string name="account_stale_note">Ostatnio pobrane dane, widoczne offline. Zmiany bezpieczeństwa i usunięcie konta wymagają połączenia.</string>
+    <string name="account_methods_title">Metody logowania</string>
+    <string name="account_method_password_set">Hasło: ustawione</string>
+    <string name="account_method_password_none">Hasło: nieustawione</string>
+    <string name="account_method_google_none">Google: niepodłączone</string>
 </resources>
 

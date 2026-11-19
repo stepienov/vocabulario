@@ -940,5 +940,27 @@
     <string name="err_email_unchanged">यह पहले से आपका ईमेल पता है।</string>
     <string name="err_email_unavailable">यह पता उपयोग नहीं किया जा सकता। कोई दूसरा आज़माएँ।</string>
     <string name="err_recent_auth">पासवर्ड की फिर से पुष्टि करें और दोबारा कोशिश करें।</string>
+    <string name="account_delete">खाता हटाएं</string>
+    <string name="account_delete_scope">इससे आपका खाता और उससे जुड़ी हर चीज़ स्थायी रूप से हट जाएगी: प्रोफ़ाइल, शब्द कार्ड, सूचियां, सीखने की प्रगति और सेटिंग्स। आप तुरंत सभी डिवाइस से साइन आउट हो जाएंगे।</string>
+    <string name="account_delete_grace">आप 7 दिनों के भीतर रद्द कर सकते हैं। 14 दिनों के बाद सब कुछ स्थायी रूप से हट जाता है और वापस नहीं लाया जा सकता।</string>
+    <string name="account_delete_unsent">इस डिवाइस पर न भेजे गए बदलाव: %1$d। वे खो जाएंगे। अन्य डिवाइस की जांच नहीं की जाती।</string>
+    <string name="account_delete_confirm_check">मैं समझता/समझती हूं कि मेरा खाता हटा दिया जाएगा</string>
+    <string name="deletion_pending_title">खाता हटाने के लिए निर्धारित है</string>
+    <string name="deletion_pending_body">आपका खाता लॉक है और आपका डेटा छिपा है। आप %1$s तक रद्द कर सकते हैं। स्थायी रूप से हटाना %2$s को निर्धारित है।</string>
+    <string name="deletion_pending_purging">स्थायी रूप से हटाना शुरू हो चुका है और रद्द नहीं किया जा सकता।</string>
+    <string name="deletion_pending_refresh">स्थिति जांचें</string>
+    <string name="deletion_pending_cancel">हटाना रद्द करें</string>
+    <string name="deletion_pending_cancel_hint">रद्द करने के लिए अपना पासवर्ड दर्ज करें। फिर दोबारा साइन इन करें।</string>
+    <string name="err_deletion_unavailable">खाता हटाना अभी उपलब्ध नहीं है। बाद में फिर कोशिश करें।</string>
+    <string name="err_deletion_irreversible">रद्द करने में बहुत देर हो चुकी है: हटाना शुरू हो चुका है।</string>
+    <string name="err_deletion_pending">यह खाता हटाने के लिए निर्धारित है। अनुरोध रद्द होने तक साइन-इन बंद है।</string>
+    <string name="err_account_deleted">यह खाता हटा दिया गया है।</string>
+    <string name="err_deletion_owner_mismatch">ये क्रेडेंशियल उस खाते के नहीं हैं जो इस डिवाइस पर साइन इन है।</string>
+    <string name="account_profiles_note">आपकी भाषा प्रोफ़ाइल इसी एक खाते की हैं।</string>
+    <string name="account_stale_note">आखिरी बार मिली जानकारी, ऑफ़लाइन दिखाई जा रही है। सुरक्षा बदलाव और खाता हटाने के लिए कनेक्शन चाहिए।</string>
+    <string name="account_methods_title">साइन-इन के तरीके</string>
+    <string name="account_method_password_set">पासवर्ड: सेट है</string>
+    <string name="account_method_password_none">पासवर्ड: सेट नहीं है</string>
+    <string name="account_method_google_none">Google: जुड़ा नहीं है</string>
 </resources>
 

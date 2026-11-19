@@ -940,5 +940,27 @@
     <string name="err_email_unchanged">Das ist bereits deine E-Mail-Adresse.</string>
     <string name="err_email_unavailable">Diese Adresse kann nicht verwendet werden. Versuche eine andere.</string>
     <string name="err_recent_auth">Bestätige dein Passwort erneut und versuche es noch einmal.</string>
+    <string name="account_delete">Konto löschen</string>
+    <string name="account_delete_scope">Damit werden dein Konto und alles, was dazugehört, endgültig gelöscht: Profile, Wortkarten, Listen, Lernfortschritt und Einstellungen. Du wirst sofort auf allen Geräten abgemeldet.</string>
+    <string name="account_delete_grace">Du kannst innerhalb von 7 Tagen abbrechen. Nach 14 Tagen wird alles endgültig entfernt und kann nicht wiederhergestellt werden.</string>
+    <string name="account_delete_unsent">Nicht gesendete Änderungen auf diesem Gerät: %1$d. Sie gehen verloren. Andere Geräte werden nicht geprüft.</string>
+    <string name="account_delete_confirm_check">Ich verstehe, dass mein Konto gelöscht wird</string>
+    <string name="deletion_pending_title">Konto zur Löschung vorgemerkt</string>
+    <string name="deletion_pending_body">Dein Konto ist gesperrt und deine Daten sind ausgeblendet. Du kannst bis %1$s abbrechen. Die endgültige Löschung ist für %2$s geplant.</string>
+    <string name="deletion_pending_purging">Die endgültige Löschung hat begonnen und kann nicht abgebrochen werden.</string>
+    <string name="deletion_pending_refresh">Status prüfen</string>
+    <string name="deletion_pending_cancel">Löschung abbrechen</string>
+    <string name="deletion_pending_cancel_hint">Gib zum Abbrechen dein Passwort ein. Danach meldest du dich neu an.</string>
+    <string name="err_deletion_unavailable">Das Löschen des Kontos ist gerade nicht verfügbar. Versuche es später erneut.</string>
+    <string name="err_deletion_irreversible">Zu spät zum Abbrechen: Die Löschung hat bereits begonnen.</string>
+    <string name="err_deletion_pending">Dieses Konto ist zur Löschung vorgemerkt. Die Anmeldung ist gesperrt, bis der Antrag abgebrochen wird.</string>
+    <string name="err_account_deleted">Dieses Konto wurde gelöscht.</string>
+    <string name="err_deletion_owner_mismatch">Diese Zugangsdaten gehören zu einem anderen Konto als dem, das auf diesem Gerät angemeldet ist.</string>
+    <string name="account_profiles_note">Deine Sprachprofile gehören zu diesem einen Konto.</string>
+    <string name="account_stale_note">Zuletzt abgerufene Angaben, offline angezeigt. Sicherheitsänderungen und das Löschen des Kontos brauchen eine Verbindung.</string>
+    <string name="account_methods_title">Anmeldemethoden</string>
+    <string name="account_method_password_set">Passwort: festgelegt</string>
+    <string name="account_method_password_none">Passwort: nicht festgelegt</string>
+    <string name="account_method_google_none">Google: nicht verknüpft</string>
 </resources>
 

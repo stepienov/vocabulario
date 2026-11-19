@@ -2,7 +2,7 @@ import re
 import unicodedata
 from uuid import UUID
 
-from fastapi import Depends, Request, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,8 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.http_errors import api_error
 from app.core.security import TokenClaims
+from app.db.lifecycle import pin_revision
 from app.db.session import get_db
 from app.models import AuthSession, User
+from app.services.account_lifecycle import lifecycle_override
 from app.services.auth_sessions import (
     AccessContext,
     SessionAuthError,
@@ -54,15 +56,31 @@ async def get_current_user_id(
     async with db_session.async_session_factory() as db:
         row = (
             await db.execute(
-                select(AuthSession, User.email_verified_at)
+                select(AuthSession, User.email_verified_at, User.account_status)
                 .join(User, User.id == AuthSession.user_id)
                 .where(AuthSession.id == claims.session_id)
             )
         ).first()
-    session, verified_at = row if row is not None else (None, None)
-    context = _context(request, claims, session)
+        session, verified_at, account_status = row if row is not None else (None, None, None)
+        try:
+            context = _context(request, claims, session)
+        except HTTPException as exc:
+            await _lifecycle_error(db, claims, exc)
+            raise
+    if account_status != "active":
+        raise api_error(status.HTTP_403_FORBIDDEN, "account_deletion_pending")
     request.state.email_verified = verified_at is not None
     return context.user_id
+
+
+async def _lifecycle_error(db: AsyncSession, claims: TokenClaims, exc: HTTPException) -> None:
+    """A revoked session of a pending/erased account answers with the lifecycle code."""
+    detail = exc.detail if isinstance(exc.detail, dict) else {}
+    if exc.status_code != status.HTTP_401_UNAUTHORIZED or detail.get("code") != "session_revoked":
+        return
+    override = await lifecycle_override(db, claims.user_id, claims.session_id)
+    if override is not None:
+        raise api_error(*override) from exc
 
 
 async def get_current_user(
@@ -80,8 +98,15 @@ async def get_current_user(
         )
     ).first()
     session, user = row if row is not None else (None, None)
-    _context(request, claims, session)
+    try:
+        _context(request, claims, session)
+    except HTTPException as exc:
+        await _lifecycle_error(db, claims, exc)
+        raise
+    if user.account_status != "active":
+        raise api_error(status.HTTP_403_FORBIDDEN, "account_deletion_pending")
     request.state.email_verified = user.email_verified_at is not None
+    pin_revision(user.id, user.lifecycle_revision)
     return user
 
 

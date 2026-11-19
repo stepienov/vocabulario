@@ -152,6 +152,10 @@ class UserResponse(BaseModel):
     login_methods: list[str]
     # Legacy password hash: only a reset can set a new password.
     password_upgrade_required: bool = False
+    # Revision of the current address: a cached confirmation never carries over to another address.
+    email_revision: int = 1
+    account_status: str = "active"
+    lifecycle_revision: int = 1
 
 
 class UserSettingsResponse(BaseModel):

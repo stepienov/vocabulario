@@ -9,6 +9,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from app.models import AppLog
+from app.db.lifecycle import LifecycleBlocked
 
 logger = logging.getLogger(__name__)
 
@@ -200,6 +201,8 @@ async def log_event(
         async with async_session_factory() as db:
             db.add(row)
             await db.commit()
+    except LifecycleBlocked:
+        return  # the owner is being deleted: dropping the log is the point
     except Exception:
         logger.exception("app_log write failed event=%s", event)
 

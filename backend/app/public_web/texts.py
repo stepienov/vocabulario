@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.public_web.texts_deletion import DELETION_KEYS, DELETION_TEXTS
+
 KEYS = (
     "verify_title",
     "verify_intro",
@@ -755,3 +757,7 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
         "working": "कृपया प्रतीक्षा करें…",
     },
 }
+
+for _locale, _texts in DELETION_TEXTS.items():
+    PAGE_TEXTS[_locale].update(_texts)
+KEYS = KEYS + DELETION_KEYS

@@ -77,7 +77,12 @@ class Settings(BaseSettings):
     # Learning API refuses accounts without a proven address. Switch on only after the
     # Android release with the verification screens is out (T-002, release order of F-003).
     email_verification_gate: bool = False
-
+    # Account deletion (E-001/F-006/T-002). Requests are refused until the flag is on; the
+    # HMAC key (>= 32 chars) pseudonymises the user id in the kept process record and must
+    # outlive ordinary deploys, so it is never rotated casually or reused as another secret.
+    account_deletion_enabled: bool = False
+    account_erasure_key: str = ""
+    account_erasure_key_version: int = 1
     openai_api_key: str = ""
     llm_provider: str = "openai"
     llm_lookup_model: str = "gpt-5.6-terra"
@@ -161,6 +166,8 @@ class Settings(BaseSettings):
         ):
             errors.append("auth_refresh_retry_key")
         errors.extend(self._mail_errors())
+        if self.account_deletion_enabled and not self.erasure_key_ready():
+            errors.append("account_erasure_key")
         if len(self.auth_rate_limit_key.strip()) < 32 or self.auth_rate_limit_key.strip() in {
             secret.strip(),
             self.auth_refresh_retry_key.strip(),
@@ -188,6 +195,16 @@ class Settings(BaseSettings):
         access = self.access_token_expire_minutes
         refresh_minutes = self.refresh_token_expire_days * 24 * 60
         return 0 < access < refresh_minutes
+
+    def erasure_key_ready(self) -> bool:
+        key = self.account_erasure_key.strip()
+        others = {
+            self.jwt_secret.strip(),
+            self.auth_refresh_retry_key.strip(),
+            self.mail_outbox_key.strip(),
+            self.auth_rate_limit_key.strip(),
+        }
+        return len(key) >= 32 and key not in others and self.account_erasure_key_version > 0
 
     def mail_ready(self) -> bool:
         """Whether account mail can be accepted; local environments use the log transport."""

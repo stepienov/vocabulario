@@ -940,5 +940,27 @@
     <string name="err_email_unchanged">Este já é o seu e-mail.</string>
     <string name="err_email_unavailable">Este endereço não pode ser usado. Tente outro.</string>
     <string name="err_recent_auth">Confirme sua senha novamente e tente de novo.</string>
+    <string name="account_delete">Excluir conta</string>
+    <string name="account_delete_scope">Isso exclui permanentemente sua conta e tudo o que está ligado a ela: perfis, cartões de palavras, listas, progresso de aprendizado e configurações. Você será desconectado de todos os dispositivos imediatamente.</string>
+    <string name="account_delete_grace">Você pode cancelar em até 7 dias. Depois de 14 dias, tudo é removido permanentemente e não pode ser restaurado.</string>
+    <string name="account_delete_unsent">Alterações não enviadas neste dispositivo: %1$d. Elas serão perdidas. Outros dispositivos não são verificados.</string>
+    <string name="account_delete_confirm_check">Entendo que minha conta será excluída</string>
+    <string name="deletion_pending_title">Conta programada para exclusão</string>
+    <string name="deletion_pending_body">Sua conta está bloqueada e seus dados estão ocultos. Você pode cancelar até %1$s. A remoção permanente está prevista para %2$s.</string>
+    <string name="deletion_pending_purging">A exclusão permanente já começou e não pode ser cancelada.</string>
+    <string name="deletion_pending_refresh">Verificar status</string>
+    <string name="deletion_pending_cancel">Cancelar exclusão</string>
+    <string name="deletion_pending_cancel_hint">Digite sua senha para cancelar. Depois, entre novamente.</string>
+    <string name="err_deletion_unavailable">A exclusão de conta não está disponível agora. Tente novamente mais tarde.</string>
+    <string name="err_deletion_irreversible">É tarde demais para cancelar: a exclusão já começou.</string>
+    <string name="err_deletion_pending">Esta conta está programada para exclusão. O login fica bloqueado até que a solicitação seja cancelada.</string>
+    <string name="err_account_deleted">Esta conta foi excluída.</string>
+    <string name="err_deletion_owner_mismatch">Essas credenciais pertencem a uma conta diferente da que está conectada neste dispositivo.</string>
+    <string name="account_profiles_note">Seus perfis de idioma pertencem a esta única conta.</string>
+    <string name="account_stale_note">Últimos dados conhecidos, exibidos offline. Alterações de segurança e a exclusão da conta exigem conexão.</string>
+    <string name="account_methods_title">Métodos de login</string>
+    <string name="account_method_password_set">Senha: definida</string>
+    <string name="account_method_password_none">Senha: não definida</string>
+    <string name="account_method_google_none">Google: não vinculado</string>
 </resources>
 

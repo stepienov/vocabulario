@@ -25,6 +25,12 @@ from app.db.base import Base
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint(
+            "account_status IN ('active', 'deletion_pending', 'deleting')",
+            name="ck_users_account_status",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
@@ -39,6 +45,14 @@ class User(Base):
         BigInteger, nullable=False, default=1, server_default=text("1")
     )
     credentials_revision: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, default=1, server_default=text("1")
+    )
+    # E-001/F-006/T-002: `active` | `deletion_pending` | `deleting`; the revision grows on
+    # every accepted/cancelled/started deletion so stale background snapshots are rejected.
+    account_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="active", server_default=text("'active'")
+    )
+    lifecycle_revision: Mapped[int] = mapped_column(
         BigInteger, nullable=False, default=1, server_default=text("1")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -481,7 +495,11 @@ class AuthRefreshRetry(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
 
 
-ACTION_TOKEN_PURPOSES = ("verify_email", "reset_password", "change_email")
+DELETION_PURPOSES = ("request_account_deletion", "cancel_account_deletion")
+ACTION_TOKEN_PURPOSES = ("verify_email", "reset_password", "change_email", *DELETION_PURPOSES)
+DELETION_PROOF_METHODS = ("password", "google", "email")
+ACCOUNT_STATUSES = ("active", "deletion_pending", "deleting")
+DELETION_STATES = ("grace", "purging", "completed", "cancelled")
 RECENT_AUTH_ACTIONS = ("change_email", "add_password", "link_google")
 EMAIL_CHANGE_MODES = ("change", "correction")
 EMAIL_CHANGE_STATES = ("pending", "confirmed", "cancelled", "replaced", "expired")
@@ -567,6 +585,11 @@ class AccountActionToken(Base):
             "(purpose = 'change_email') = (email_change_id IS NOT NULL)",
             name="ck_account_action_tokens_email_change",
         ),
+        CheckConstraint(
+            "(purpose IN ('request_account_deletion', 'cancel_account_deletion')) "
+            "= (proof_method IS NOT NULL)",
+            name="ck_account_action_tokens_deletion",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -576,6 +599,12 @@ class AccountActionToken(Base):
     email_change_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("account_email_changes.id", ondelete="CASCADE"), nullable=True
     )
+    # Deletion proofs only (E-001/F-006/T-002): how ownership was shown and which process.
+    proof_method: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    lifecycle_revision: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    target_deletion_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
     purpose: Mapped[str] = mapped_column(String(32), nullable=False)
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     email_revision: Mapped[int] = mapped_column(BigInteger, nullable=False)
@@ -584,6 +613,59 @@ class AccountActionToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AccountDeletion(Base):
+    """One account deletion process (E-001/F-006/T-002).
+
+    Survives the physical user delete (`user_id` -> NULL); it keeps only a keyed pseudonym of
+    the user id, dates and state, never an e-mail, Google subject or content.
+    """
+
+    __tablename__ = "account_deletions"
+    __table_args__ = (
+        Index(
+            "uq_account_deletions_active",
+            "user_id",
+            unique=True,
+            postgresql_where=text("state IN ('grace', 'purging')"),
+        ),
+        Index("ix_account_deletions_due", "state", "next_attempt_at"),
+        CheckConstraint(
+            "state IN (" + ", ".join(f"'{s}'" for s in DELETION_STATES) + ")",
+            name="ck_account_deletions_state",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    subject_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    subject_key_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    state: Mapped[str] = mapped_column(String(16), nullable=False, default="grace")
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    cancel_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    purge_due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status_secret_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    request_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    cancel_request_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
+    cancel_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    purge_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    stage: Mapped[str] = mapped_column(String(24), nullable=False, default="grace")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lease_token: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    last_error_code: Mapped[str | None] = mapped_column(String(48), nullable=True)
 
 
 MAIL_DISPATCH_STATES = ("queued", "leased", "accepted", "failed", "cancelled")

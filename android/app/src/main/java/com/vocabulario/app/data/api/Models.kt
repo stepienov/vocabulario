@@ -40,6 +40,9 @@ data class UserResponse(
     val email_verification_required: Boolean = false,
     val login_methods: List<String> = emptyList(),
     val password_upgrade_required: Boolean = false,
+    val email_revision: Int = 1,
+    val account_status: String = "active",
+    val lifecycle_revision: Int = 1,
 )
 
 @Serializable
@@ -84,6 +87,49 @@ data class EmailChangeResponse(
 
 @Serializable
 data class EmailChangeCurrentResponse(val change: EmailChangeResponse? = null)
+
+/** `action`: `request` albo `cancel`. Dowód nie wymaga sesji (konto po wniosku jest zablokowane). */
+@Serializable
+data class DeletionProofRequest(val email: String, val password: String, val action: String)
+
+@Serializable
+data class DeletionProofResponse(
+    val action_token: String,
+    val user_id: String,
+    val deletion_id: String? = null,
+    val state: String? = null,
+)
+
+@Serializable
+data class DeletionRequestBody(
+    val request_id: String,
+    val action_token: String,
+    val status_secret: String,
+    val confirmation_version: String = "delete-account-v1",
+)
+
+@Serializable
+data class DeletionStatusRequest(val request_id: String, val status_secret: String)
+
+@Serializable
+data class DeletionCancelBody(val deletion_id: String, val request_id: String, val action_token: String)
+
+/** `state`: grace / purging / completed / cancelled; daty ISO-8601 z serwera. */
+@Serializable
+data class DeletionView(
+    val deletion_id: String,
+    val state: String,
+    val requested_at: String,
+    val cancel_until: String,
+    val purge_due_at: String,
+    val can_cancel: Boolean = false,
+    val cancelled_at: String? = null,
+    val completed_at: String? = null,
+    val server_time: String? = null,
+)
+
+@Serializable
+data class DeletionCancelResponse(val status: String = "cancelled", val deletion: DeletionView)
 
 @Serializable
 data class UserSettingsResponse(

@@ -1019,4 +1019,26 @@
     <string name="err_email_unchanged">Đây đã là địa chỉ email của bạn.</string>
     <string name="err_email_unavailable">Không thể dùng địa chỉ này. Hãy thử địa chỉ khác.</string>
     <string name="err_recent_auth">Hãy xác nhận lại mật khẩu rồi thử lại.</string>
+    <string name="account_delete">Xóa tài khoản</string>
+    <string name="account_delete_scope">Thao tác này xóa vĩnh viễn tài khoản của bạn và mọi thứ liên quan: hồ sơ, thẻ từ, danh sách, tiến độ học và cài đặt. Bạn sẽ bị đăng xuất khỏi mọi thiết bị ngay lập tức.</string>
+    <string name="account_delete_grace">Bạn có thể hủy trong vòng 7 ngày. Sau 14 ngày, mọi thứ sẽ bị xóa vĩnh viễn và không thể khôi phục.</string>
+    <string name="account_delete_unsent">Thay đổi chưa gửi trên thiết bị này: %1$d. Chúng sẽ bị mất. Các thiết bị khác không được kiểm tra.</string>
+    <string name="account_delete_confirm_check">Tôi hiểu rằng tài khoản của tôi sẽ bị xóa</string>
+    <string name="deletion_pending_title">Tài khoản đã lên lịch xóa</string>
+    <string name="deletion_pending_body">Tài khoản của bạn đã bị khóa và dữ liệu được ẩn. Bạn có thể hủy đến %1$s. Việc xóa vĩnh viễn dự kiến vào %2$s.</string>
+    <string name="deletion_pending_purging">Việc xóa vĩnh viễn đã bắt đầu và không thể hủy.</string>
+    <string name="deletion_pending_refresh">Kiểm tra trạng thái</string>
+    <string name="deletion_pending_cancel">Hủy việc xóa</string>
+    <string name="deletion_pending_cancel_hint">Nhập mật khẩu để hủy. Sau đó hãy đăng nhập lại.</string>
+    <string name="err_deletion_unavailable">Hiện chưa thể xóa tài khoản. Hãy thử lại sau.</string>
+    <string name="err_deletion_irreversible">Đã quá muộn để hủy: việc xóa đã bắt đầu.</string>
+    <string name="err_deletion_pending">Tài khoản này đã lên lịch xóa. Đăng nhập bị chặn cho đến khi yêu cầu được hủy.</string>
+    <string name="err_account_deleted">Tài khoản này đã bị xóa.</string>
+    <string name="err_deletion_owner_mismatch">Thông tin đăng nhập này thuộc về tài khoản khác với tài khoản đang đăng nhập trên thiết bị này.</string>
+    <string name="account_profiles_note">Các hồ sơ ngôn ngữ của bạn thuộc về tài khoản duy nhất này.</string>
+    <string name="account_stale_note">Thông tin biết gần nhất, hiển thị khi ngoại tuyến. Thay đổi bảo mật và xóa tài khoản cần có kết nối.</string>
+    <string name="account_methods_title">Phương thức đăng nhập</string>
+    <string name="account_method_password_set">Mật khẩu: đã đặt</string>
+    <string name="account_method_password_none">Mật khẩu: chưa đặt</string>
+    <string name="account_method_google_none">Google: chưa liên kết</string>
 </resources>

@@ -34,6 +34,7 @@ private val LOCAL_ERROR_CODES = setOf(
     "no_inbox",
     "add_failed",
     "no_active_profile",
+    "deletion_owner_mismatch",
 )
 
 private val CODE_TO_RES: Map<String, Int> = mapOf(
@@ -91,6 +92,11 @@ private val CODE_TO_RES: Map<String, Int> = mapOf(
     "email_change_inactive" to R.string.account_email_change_expired,
     "email_change_not_found" to R.string.account_email_change_expired,
     "email_change_completed" to R.string.account_email_change_expired,
+    "account_deletion_unavailable" to R.string.err_deletion_unavailable,
+    "deletion_irreversible" to R.string.err_deletion_irreversible,
+    "account_deletion_pending" to R.string.err_deletion_pending,
+    "account_deleted" to R.string.err_account_deleted,
+    "deletion_owner_mismatch" to R.string.err_deletion_owner_mismatch,
 )
 
 private val DETAIL_ALIASES: Map<String, String> = mapOf(

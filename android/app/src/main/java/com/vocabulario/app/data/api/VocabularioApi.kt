@@ -53,6 +53,18 @@ interface VocabularioApi {
     @POST("auth/email-change/{id}/cancel")
     suspend fun emailChangeCancel(@Path("id") id: String): MailStatusResponse
 
+    @POST("account-deletion/proof/password")
+    suspend fun deletionProofPassword(@Body body: DeletionProofRequest): DeletionProofResponse
+
+    @POST("account-deletion/request")
+    suspend fun deletionRequest(@Body body: DeletionRequestBody): DeletionView
+
+    @POST("account-deletion/status")
+    suspend fun deletionStatus(@Body body: DeletionStatusRequest): DeletionView
+
+    @POST("account-deletion/cancel")
+    suspend fun deletionCancel(@Body body: DeletionCancelBody): DeletionCancelResponse
+
     @GET("me")
     suspend fun me(): UserResponse
 

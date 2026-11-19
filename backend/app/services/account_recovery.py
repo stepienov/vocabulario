@@ -165,7 +165,11 @@ async def request_password_reset(
     now = now or now_utc()
     user_id = (
         await db.execute(
-            select(User.id).where(User.email == email.lower(), User.password_hash.is_not(None))
+            select(User.id).where(
+                User.email == email.lower(),
+                User.password_hash.is_not(None),
+                User.account_status == "active",
+            )
         )
     ).scalar_one_or_none()
     if user_id is None:

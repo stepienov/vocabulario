@@ -940,5 +940,27 @@
     <string name="err_email_unchanged">هذا هو عنوان بريدك الإلكتروني الحالي بالفعل.</string>
     <string name="err_email_unavailable">لا يمكن استخدام هذا العنوان. جرّب عنوانًا آخر.</string>
     <string name="err_recent_auth">أكّد كلمة المرور مرة أخرى ثم أعد المحاولة.</string>
+    <string name="account_delete">حذف الحساب</string>
+    <string name="account_delete_scope">سيؤدي هذا إلى حذف حسابك وكل ما يرتبط به نهائيًا: الملفات الشخصية وبطاقات الكلمات والقوائم وتقدّم التعلّم والإعدادات. سيتم تسجيل خروجك من جميع الأجهزة فورًا.</string>
+    <string name="account_delete_grace">يمكنك الإلغاء خلال 7 أيام. بعد 14 يومًا يُحذف كل شيء نهائيًا ولا يمكن استعادته.</string>
+    <string name="account_delete_unsent">تغييرات لم تُرسل على هذا الجهاز: %1$d. ستضيع. لا يتم فحص الأجهزة الأخرى.</string>
+    <string name="account_delete_confirm_check">أدرك أن حسابي سيُحذف</string>
+    <string name="deletion_pending_title">الحساب مجدول للحذف</string>
+    <string name="deletion_pending_body">حسابك مقفل وبياناتك مخفية. يمكنك الإلغاء حتى %1$s. الحذف النهائي مجدول في %2$s.</string>
+    <string name="deletion_pending_purging">بدأ الحذف النهائي ولا يمكن إلغاؤه.</string>
+    <string name="deletion_pending_refresh">التحقق من الحالة</string>
+    <string name="deletion_pending_cancel">إلغاء الحذف</string>
+    <string name="deletion_pending_cancel_hint">أدخل كلمة المرور للإلغاء. بعد ذلك سجّل الدخول من جديد.</string>
+    <string name="err_deletion_unavailable">حذف الحساب غير متاح حاليًا. حاول لاحقًا.</string>
+    <string name="err_deletion_irreversible">فات أوان الإلغاء: لقد بدأ الحذف بالفعل.</string>
+    <string name="err_deletion_pending">هذا الحساب مجدول للحذف. تسجيل الدخول محظور حتى يتم إلغاء الطلب.</string>
+    <string name="err_account_deleted">تم حذف هذا الحساب.</string>
+    <string name="err_deletion_owner_mismatch">بيانات الدخول هذه تخص حسابًا مختلفًا عن الحساب المسجّل دخوله على هذا الجهاز.</string>
+    <string name="account_profiles_note">ملفاتك اللغوية تنتمي إلى هذا الحساب الواحد.</string>
+    <string name="account_stale_note">آخر البيانات المعروفة، معروضة دون اتصال. تتطلب تغييرات الأمان وحذف الحساب اتصالًا بالإنترنت.</string>
+    <string name="account_methods_title">طرق تسجيل الدخول</string>
+    <string name="account_method_password_set">كلمة المرور: معيّنة</string>
+    <string name="account_method_password_none">كلمة المرور: غير معيّنة</string>
+    <string name="account_method_google_none">Google: غير مرتبط</string>
 </resources>
 

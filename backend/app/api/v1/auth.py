@@ -65,6 +65,7 @@ from app.services.account_recovery import (
     verification_status,
 )
 from app.services.action_tokens import ActionTokenError
+from app.services.account_lifecycle import lifecycle_override
 from app.services.email_change import (
     EmailChangeView,
     cancel_email_change,
@@ -212,6 +213,9 @@ async def login(
     if locked is None or locked.password_hash != verified_hash:
         await db.rollback()
         raise _invalid_credentials()
+    if locked.account_status != "active":
+        await db.rollback()
+        raise api_error(status.HTTP_403_FORBIDDEN, "account_deletion_pending")
     issued = await create_session(db, user.id)
     await db.commit()
     return _token_response(issued, response)
@@ -253,6 +257,11 @@ async def google_auth(
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
         if user:
+            if user.account_status != "active":
+                # An e-mail match is no proof of ownership; say nothing about the account.
+                raise api_error(
+                    status.HTTP_401_UNAUTHORIZED, "invalid_google_token", "Invalid Google token"
+                )
             # Linking by e-mail is no proof: the address may have been pre-registered by someone else.
             user.google_id = google_id
         else:
@@ -269,7 +278,12 @@ async def google_auth(
             await _ensure_settings(db, user.id)
 
     await db.flush()
-    await lock_user(db, user.id)
+    locked = await lock_user(db, user.id)
+    if locked is not None and locked.account_status != "active":
+        await db.rollback()
+        if trusted:
+            raise api_error(status.HTTP_403_FORBIDDEN, "account_deletion_pending")
+        raise api_error(status.HTTP_401_UNAUTHORIZED, "invalid_google_token", "Invalid Google token")
     now = now_utc()
     if trusted and proven and user.email == email and user.email_verified_at is None:
         user.email_verified_at = now
@@ -280,6 +294,20 @@ async def google_auth(
     if queue_mail:
         wake_mail_worker()
     return _token_response(issued, response)
+
+
+async def _lifecycle_refresh_error(db: AsyncSession, refresh_token: str) -> None:
+    """A signed refresh token of a pending or erased account gets the lifecycle answer."""
+    try:
+        claims = read_token(refresh_token, REFRESH)
+    except TokenError:
+        return
+    await db.rollback()
+    override = await lifecycle_override(db, claims.user_id, claims.session_id)
+    if override is not None:
+        await db.rollback()
+        raise api_error(*override)
+    await db.rollback()
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -299,6 +327,8 @@ async def refresh(
     try:
         issued = await refresh_session(db, body.refresh_token, body.request_id)
     except SessionAuthError as exc:
+        if exc.code == "session_revoked" and not exc.commit:
+            await _lifecycle_refresh_error(db, body.refresh_token)
         raise await _session_error(db, exc) from exc
     except RetryRecordError as exc:
         await db.rollback()
@@ -660,6 +690,9 @@ async def get_me(user: User = Depends(get_current_user)) -> UserResponse:
         login_methods=methods,
         password_upgrade_required=bool(user.password_hash)
         and is_legacy_bcrypt(user.password_hash),
+        email_revision=user.email_revision,
+        account_status=user.account_status,
+        lifecycle_revision=user.lifecycle_revision,
     )
 
 

@@ -8,6 +8,7 @@ import com.vocabulario.app.data.AuthRepository
 import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.EmailVerificationGate
 import com.vocabulario.app.data.LearningRepository
+import com.vocabulario.app.data.deletion.AccountDeletionRepository
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.session.SessionCoordinator
 import com.vocabulario.app.data.session.SessionState
@@ -29,11 +30,19 @@ import javax.inject.Inject
 /** Po tym czasie start pokazuje stan i ponowienie zamiast samego spinnera (T-002 §7: 10 s). */
 private const val LOADING_SLOW_MS = 10_000L
 
+private data class RouteInputs(
+    val route: AppStartRoute,
+    val state: SessionState,
+    val required: Boolean,
+    val deletionPending: Boolean,
+)
 enum class AppStartRoute {
     LOADING,
     AUTH,
     /** Bramka F-004: konto bez potwierdzonego adresu; nauka/import/sync zablokowane, dane zostają. */
     VERIFY_EMAIL,
+    /** Konto czeka na usunięcie (F-006/T-002): biblioteka ukryta, sesji nie ma, dane lokalne zostają. */
+    DELETION_PENDING,
     ONBOARDING,
     HOME,
 }
@@ -43,6 +52,7 @@ class AppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val accountRepository: AccountRepository,
     private val verificationGate: EmailVerificationGate,
+    private val deletionRepository: AccountDeletionRepository,
     private val learningRepository: LearningRepository,
     private val tokenStore: TokenStore,
     private val sessionCoordinator: SessionCoordinator,
@@ -68,13 +78,22 @@ class AppViewModel @Inject constructor(
         // Utrata sesji w trakcie pracy prowadzi na logowanie; dane lokalne zostają.
         // Wymóg potwierdzenia adresu zmienia uprawnienie (ekran weryfikacji), nie właściciela.
         viewModelScope.launch {
-            combine(_startRoute, sessionCoordinator.state, verificationGate.required) { route, state, required ->
-                Triple(route, state, required)
-            }.collect { (route, state, required) ->
+            combine(
+                _startRoute,
+                sessionCoordinator.state,
+                verificationGate.required,
+                deletionRepository.receipt,
+            ) { route, state, required, receipt ->
+                RouteInputs(route, state, required, receipt?.deletion != null)
+            }.collect { (route, state, required, deletionPending) ->
                 val signedInRoute = route == AppStartRoute.HOME ||
                     route == AppStartRoute.ONBOARDING ||
                     route == AppStartRoute.VERIFY_EMAIL
                 when {
+                    deletionPending && route != AppStartRoute.LOADING && route != AppStartRoute.DELETION_PENDING ->
+                        _startRoute.value = AppStartRoute.DELETION_PENDING
+                    !deletionPending && route == AppStartRoute.DELETION_PENDING ->
+                        _startRoute.value = AppStartRoute.AUTH
                     signedInRoute && sessionLost(state) -> _startRoute.value = AppStartRoute.AUTH
                     required && (route == AppStartRoute.HOME || route == AppStartRoute.ONBOARDING) ->
                         _startRoute.value = AppStartRoute.VERIFY_EMAIL
@@ -143,6 +162,15 @@ class AppViewModel @Inject constructor(
 
     private suspend fun runBootstrap() {
         withTimeoutOrNull(1_500) { tokenStore.awaitReady() }
+
+        // Wniosek o usunięcie ma pierwszeństwo przed sesją: konta nie wolno używać, nawet offline.
+        deletionRepository.load()?.let { receipt ->
+            if (receipt.deletion == null) runCatching { deletionRepository.refreshStatus() }
+            if (deletionRepository.receipt.value?.deletion != null) {
+                _startRoute.value = AppStartRoute.DELETION_PENDING
+                return
+            }
+        }
 
         // Błąd uzgodnienia nie wylogowuje; sesja niepasująca do danych przechodzi w reauth.
         try {

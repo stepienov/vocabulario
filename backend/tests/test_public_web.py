@@ -101,3 +101,32 @@ async def test_texts_are_escaped_json_and_assets_are_served(client):
 async def test_pages_accept_only_get(client):
     response = await client.post("/account/reset-password", json={})
     assert response.status_code == 405
+    assert (await client.post("/account/delete-account", json={})).status_code == 405
+
+
+DELETION_PAGES = (
+    "/delete-account",
+    "/account/delete-account",
+    "/account/cancel-deletion",
+    "/account/deletion-status",
+)
+
+
+@pytest.mark.parametrize("path", DELETION_PAGES)
+async def test_deletion_pages_render_without_acting(client, path):
+    response = await client.get(path + "?lang=pl")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert "'unsafe-inline'" not in response.headers["content-security-policy"]
+    assert '<script src="/account/assets/account_deletion.js"></script>' in response.text
+    assert re.findall(r"<script(?![^>]*(?:src=|application/json))", response.text) == []
+    assert 'data-api="/api/v1/account-deletion"' in response.text
+    assert 'id="action-form" novalidate hidden' in response.text
+    assert _html_lang(response) == ("pl", "ltr")
+
+
+async def test_deletion_script_keeps_token_and_password_out_of_storage(client):
+    script = await client.get("/account/assets/account_deletion.js")
+    assert script.status_code == 200
+    assert "history.replaceState" in script.text
+    assert script.text.count("sessionStorage") == 3  # only the status receipt is stored

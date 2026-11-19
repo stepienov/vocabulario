@@ -39,7 +39,10 @@ MAX_ATTEMPTS = 6
 # Attempt n (0-based) is due this long after the mail was queued.
 ATTEMPT_OFFSETS_S = (0, 30, 120, 300, 600, 1200)
 # Mails that carry a one-time link; they are dropped once the link stops being valid.
-LINK_KINDS = frozenset({"verify_email", "reset_password", "change_email"})
+LINK_KINDS = frozenset(
+    {"verify_email", "reset_password", "change_email", "request_account_deletion",
+     "cancel_account_deletion"}
+)
 
 assert len(ATTEMPT_OFFSETS_S) == MAX_ATTEMPTS
 

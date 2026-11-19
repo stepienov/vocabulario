@@ -1013,4 +1013,26 @@
     <string name="err_email_unchanged">Questo è già il tuo indirizzo email.</string>
     <string name="err_email_unavailable">Questo indirizzo non può essere usato. Prova con un altro.</string>
     <string name="err_recent_auth">Conferma di nuovo la password e riprova.</string>
+    <string name="account_delete">Elimina account</string>
+    <string name="account_delete_scope">Questo elimina definitivamente il tuo account e tutto ciò che contiene: profili, schede di parole, liste, progressi di apprendimento e impostazioni. Verrai disconnesso subito da tutti i dispositivi.</string>
+    <string name="account_delete_grace">Puoi annullare entro 7 giorni. Dopo 14 giorni tutto viene rimosso in modo definitivo e non può essere ripristinato.</string>
+    <string name="account_delete_unsent">Modifiche non inviate su questo dispositivo: %1$d. Andranno perse. Gli altri dispositivi non vengono controllati.</string>
+    <string name="account_delete_confirm_check">Capisco che il mio account verrà eliminato</string>
+    <string name="deletion_pending_title">Account in attesa di eliminazione</string>
+    <string name="deletion_pending_body">Il tuo account è bloccato e i tuoi dati sono nascosti. Puoi annullare fino al %1$s. La rimozione definitiva è prevista per il %2$s.</string>
+    <string name="deletion_pending_purging">L’eliminazione definitiva è iniziata e non può essere annullata.</string>
+    <string name="deletion_pending_refresh">Controlla stato</string>
+    <string name="deletion_pending_cancel">Annulla eliminazione</string>
+    <string name="deletion_pending_cancel_hint">Inserisci la password per annullare. Poi accedi di nuovo.</string>
+    <string name="err_deletion_unavailable">L’eliminazione dell’account non è disponibile al momento. Riprova più tardi.</string>
+    <string name="err_deletion_irreversible">Troppo tardi per annullare: l’eliminazione è già iniziata.</string>
+    <string name="err_deletion_pending">Questo account è in attesa di eliminazione. L’accesso è bloccato finché la richiesta non viene annullata.</string>
+    <string name="err_account_deleted">Questo account è stato eliminato.</string>
+    <string name="err_deletion_owner_mismatch">Queste credenziali appartengono a un account diverso da quello connesso su questo dispositivo.</string>
+    <string name="account_profiles_note">I tuoi profili linguistici appartengono a questo unico account.</string>
+    <string name="account_stale_note">Ultimi dati noti, mostrati offline. Le modifiche di sicurezza e l’eliminazione dell’account richiedono una connessione.</string>
+    <string name="account_methods_title">Metodi di accesso</string>
+    <string name="account_method_password_set">Password: impostata</string>
+    <string name="account_method_password_none">Password: non impostata</string>
+    <string name="account_method_google_none">Google: non collegato</string>
 </resources>

@@ -940,5 +940,27 @@
     <string name="err_email_unchanged">Este já é o seu e-mail.</string>
     <string name="err_email_unavailable">Este endereço não pode ser utilizado. Tente outro.</string>
     <string name="err_recent_auth">Confirme novamente a palavra-passe e tente de novo.</string>
+    <string name="account_delete">Eliminar conta</string>
+    <string name="account_delete_scope">Isto elimina permanentemente a sua conta e tudo o que está associado: perfis, cartões de palavras, listas, progresso de aprendizagem e definições. A sessão será terminada de imediato em todos os dispositivos.</string>
+    <string name="account_delete_grace">Pode cancelar no prazo de 7 dias. Passados 14 dias, tudo é removido permanentemente e não pode ser restaurado.</string>
+    <string name="account_delete_unsent">Alterações por enviar neste dispositivo: %1$d. Serão perdidas. Os outros dispositivos não são verificados.</string>
+    <string name="account_delete_confirm_check">Compreendo que a minha conta será eliminada</string>
+    <string name="deletion_pending_title">Conta agendada para eliminação</string>
+    <string name="deletion_pending_body">A sua conta está bloqueada e os seus dados estão ocultos. Pode cancelar até %1$s. A remoção permanente está prevista para %2$s.</string>
+    <string name="deletion_pending_purging">A eliminação permanente já começou e não pode ser cancelada.</string>
+    <string name="deletion_pending_refresh">Verificar estado</string>
+    <string name="deletion_pending_cancel">Cancelar eliminação</string>
+    <string name="deletion_pending_cancel_hint">Introduza a palavra-passe para cancelar. Depois, inicie sessão novamente.</string>
+    <string name="err_deletion_unavailable">A eliminação de conta não está disponível neste momento. Tente novamente mais tarde.</string>
+    <string name="err_deletion_irreversible">É demasiado tarde para cancelar: a eliminação já começou.</string>
+    <string name="err_deletion_pending">Esta conta está agendada para eliminação. O início de sessão fica bloqueado até o pedido ser cancelado.</string>
+    <string name="err_account_deleted">Esta conta foi eliminada.</string>
+    <string name="err_deletion_owner_mismatch">Estas credenciais pertencem a uma conta diferente da que tem sessão iniciada neste dispositivo.</string>
+    <string name="account_profiles_note">Os seus perfis de idioma pertencem a esta única conta.</string>
+    <string name="account_stale_note">Últimos dados conhecidos, apresentados offline. As alterações de segurança e a eliminação da conta requerem ligação.</string>
+    <string name="account_methods_title">Métodos de início de sessão</string>
+    <string name="account_method_password_set">Palavra-passe: definida</string>
+    <string name="account_method_password_none">Palavra-passe: não definida</string>
+    <string name="account_method_google_none">Google: não associado</string>
 </resources>
 

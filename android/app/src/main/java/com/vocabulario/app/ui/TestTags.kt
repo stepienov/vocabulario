@@ -136,6 +136,10 @@ object TestTags {
     const val SETTINGS_SECTION_ACCOUNT = "settings_section_account"
     const val SETTINGS_CHANGE_PASSWORD = "settings_change_password"
     const val SETTINGS_CHANGE_EMAIL = "settings_change_email"
+    const val SETTINGS_DELETE_ACCOUNT = "settings_delete_account"
+    const val DELETE_ACCOUNT_CONFIRM = "delete_account_confirm"
+    const val DELETION_PENDING_REFRESH = "deletion_pending_refresh"
+    const val DELETION_PENDING_CANCEL = "deletion_pending_cancel"
 
     const val BTN_VIEW_CARD = "btn_view_card"
     const val BTN_VIEW_CARD_CLOSE = "btn_view_card_close"

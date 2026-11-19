@@ -15,6 +15,10 @@ private val PUBLIC_AUTH_SUFFIXES = listOf(
     "/auth/refresh",
     "/auth/logout",
     "/auth/password-reset/request",
+    "/account-deletion/proof/password",
+    "/account-deletion/request",
+    "/account-deletion/status",
+    "/account-deletion/cancel",
 )
 
 /** Publiczne operacje auth: bez Bearer i bez refresh po 401 (np. błędne hasło to nie koniec sesji). */

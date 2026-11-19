@@ -962,5 +962,27 @@
     <string name="err_email_unchanged">This is already your email address.</string>
     <string name="err_email_unavailable">This address can’t be used. Try a different one.</string>
     <string name="err_recent_auth">Confirm your password again and retry.</string>
+    <string name="account_delete">Delete account</string>
+    <string name="account_delete_scope">This permanently deletes your account and everything linked to it: profiles, word cards, lists, learning progress and settings. You’ll be signed out on all devices right away.</string>
+    <string name="account_delete_grace">You can cancel within 7 days. After 14 days everything is removed permanently and can’t be restored.</string>
+    <string name="account_delete_unsent">Unsent changes on this device: %1$d. They will be lost. Other devices aren’t checked.</string>
+    <string name="account_delete_confirm_check">I understand my account will be deleted</string>
+    <string name="deletion_pending_title">Account scheduled for deletion</string>
+    <string name="deletion_pending_body">Your account is locked and your data is hidden. You can cancel until %1$s. Permanent removal is scheduled for %2$s.</string>
+    <string name="deletion_pending_purging">Permanent deletion has started and can’t be cancelled.</string>
+    <string name="deletion_pending_refresh">Check status</string>
+    <string name="deletion_pending_cancel">Cancel deletion</string>
+    <string name="deletion_pending_cancel_hint">Enter your password to cancel. Afterwards, sign in again.</string>
+    <string name="err_deletion_unavailable">Account deletion isn’t available right now. Try again later.</string>
+    <string name="err_deletion_irreversible">It’s too late to cancel: deletion has already started.</string>
+    <string name="err_deletion_pending">This account is scheduled for deletion. Sign-in is blocked until the request is cancelled.</string>
+    <string name="err_account_deleted">This account has been deleted.</string>
+    <string name="err_deletion_owner_mismatch">These credentials belong to a different account than the one signed in on this device.</string>
+    <string name="account_profiles_note">Your language profiles belong to this one account.</string>
+    <string name="account_stale_note">Last known details, shown offline. Security changes and account deletion need a connection.</string>
+    <string name="account_methods_title">Sign-in methods</string>
+    <string name="account_method_password_set">Password: set</string>
+    <string name="account_method_password_none">Password: not set</string>
+    <string name="account_method_google_none">Google: not linked</string>
 </resources>
 

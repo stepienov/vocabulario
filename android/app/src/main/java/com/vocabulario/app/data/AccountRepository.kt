@@ -63,6 +63,17 @@ class EmailVerificationGate @Inject constructor(
     }
 }
 
+class StaleAccountResponseException : Exception("account response belongs to a different owner")
+
+/** Ostatnia odpowiedź `/me` właściciela; [fetchedAtMs] pozwala oznaczyć dane jako nieświeże. */
+data class CachedAccount(val me: UserResponse, val fetchedAtMs: Long)
+
+/** Cache dotyczy wyłącznie aktywnego właściciela sesji: dane A nie pokażą się po logowaniu B. */
+internal fun cachedFor(cache: CachedAccount?, state: SessionState): CachedAccount? {
+    val owner = (state as? SessionState.Active)?.ownerUserId ?: return null
+    return cache?.takeIf { it.me.id == owner }
+}
+
 /** Konto, poczta i hasło (E-001/F-004/T-002 §3–5). Bez pollingu: odczyt na żądanie. */
 @Singleton
 class AccountRepository @Inject constructor(
@@ -71,11 +82,21 @@ class AccountRepository @Inject constructor(
     private val sessionCoordinator: SessionCoordinator,
     private val gate: EmailVerificationGate,
 ) {
+    @Volatile
+    private var cache: CachedAccount? = null
+
     suspend fun refreshAccount(): UserResponse {
         val me = api.me()
         gate.apply(me)
+        val owner = (sessionCoordinator.state.value as? SessionState.Active)?.ownerUserId
+        // Spóźniona odpowiedź poprzedniego właściciela nie może trafić do ekranu nowego konta.
+        if (owner != null && owner != me.id) throw StaleAccountResponseException()
+        if (owner != null) cache = CachedAccount(me, System.currentTimeMillis())
         return me
     }
+
+    /** Ostatnio pobrane dane tego właściciela (tylko w pamięci procesu); `null` po zmianie konta. */
+    fun lastKnownAccount(): CachedAccount? = cachedFor(cache, sessionCoordinator.state.value)
 
     /** Język maila: UI aplikacji, a przed pierwszym profilem język systemu. */
     fun mailLocale(): String = tokenStore.mailLocale()

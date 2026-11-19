@@ -1,5 +1,7 @@
 package com.vocabulario.app.di
 
+import com.vocabulario.app.data.deletion.DataStoreDeletionReceiptPersistence
+import com.vocabulario.app.data.deletion.DeletionReceiptPersistence
 import com.vocabulario.app.data.local.TokenStore
 import com.vocabulario.app.data.session.DataStoreRevocationPersistence
 import com.vocabulario.app.data.session.DataStoreSessionPersistence
@@ -28,6 +30,11 @@ abstract class SessionModule {
 
     @Binds
     abstract fun bindSessionPersistence(impl: DataStoreSessionPersistence): SessionPersistence
+
+    @Binds
+    abstract fun bindDeletionReceiptPersistence(
+        impl: DataStoreDeletionReceiptPersistence,
+    ): DeletionReceiptPersistence
 
     @Binds
     abstract fun bindRefreshTransport(impl: OkHttpRefreshTransport): RefreshTransport
