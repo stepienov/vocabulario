@@ -20,14 +20,92 @@ interface VocabularioApi {
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): TokenResponse
 
+    @POST("auth/google/challenge")
+    suspend fun googleChallenge(): GoogleChallengeResponse
+
     @POST("auth/google")
     suspend fun googleAuth(@Body body: GoogleAuthRequest): TokenResponse
 
-    @POST("auth/refresh")
-    suspend fun refresh(@Body body: RefreshRequest): TokenResponse
+    @POST("auth/google/link/challenge")
+    suspend fun googleLinkChallenge(@Body body: GoogleLinkChallengeRequest): GoogleChallengeResponse
+
+    @POST("auth/google/link")
+    suspend fun googleLink(@Body body: GoogleLinkRequest): TokenResponse
+
+    @POST("auth/recent-auth/google/challenge")
+    suspend fun recentAuthGoogleChallenge(@Body body: RecentAuthGoogleChallengeRequest): GoogleChallengeResponse
+
+    @POST("auth/recent-auth/google")
+    suspend fun recentAuthGoogle(@Body body: RecentAuthGoogleRequest): RecentAuthResponse
+
+    @POST("auth/password/add")
+    suspend fun passwordAdd(@Body body: AddPasswordRequest): TokenResponse
+
+    @POST("auth/logout")
+    suspend fun logout(@Body body: LogoutRequest): retrofit2.Response<Unit>
+
+    @POST("auth/password-reset/request")
+    suspend fun passwordResetRequest(@Body body: PasswordResetRequestBody): MailStatusResponse
+
+    @POST("auth/password/change")
+    suspend fun passwordChange(@Body body: PasswordChangeRequest): TokenResponse
+
+    @POST("auth/email-verification/request")
+    suspend fun emailVerificationRequest(): MailStatusResponse
+
+    @GET("auth/email-verification/status")
+    suspend fun emailVerificationStatus(): EmailVerificationStatusResponse
+
+    @POST("auth/recent-auth/password")
+    suspend fun recentAuthPassword(@Body body: RecentAuthPasswordRequest): RecentAuthResponse
+
+    @POST("auth/email-change/request")
+    suspend fun emailChangeRequest(@Body body: EmailChangeRequestBody): EmailChangeResponse
+
+    @GET("auth/email-change")
+    suspend fun emailChangeCurrent(): EmailChangeCurrentResponse
+
+    @POST("auth/email-change/{id}/resend")
+    suspend fun emailChangeResend(@Path("id") id: String): EmailChangeResponse
+
+    @POST("auth/email-change/{id}/cancel")
+    suspend fun emailChangeCancel(@Path("id") id: String): MailStatusResponse
+
+    @POST("account-deletion/proof/password")
+    suspend fun deletionProofPassword(@Body body: DeletionProofRequest): DeletionProofResponse
+
+    @POST("account-deletion/google/challenge")
+    suspend fun deletionGoogleChallenge(@Body body: DeletionGoogleChallengeRequest): GoogleChallengeResponse
+
+    @POST("account-deletion/proof/google")
+    suspend fun deletionProofGoogle(@Body body: DeletionGoogleProofRequest): DeletionProofResponse
+
+    @POST("account-deletion/request")
+    suspend fun deletionRequest(@Body body: DeletionRequestBody): DeletionView
+
+    @POST("account-deletion/status")
+    suspend fun deletionStatus(@Body body: DeletionStatusRequest): DeletionView
+
+    @POST("account-deletion/cancel")
+    suspend fun deletionCancel(@Body body: DeletionCancelBody): DeletionCancelResponse
 
     @GET("me")
     suspend fun me(): UserResponse
+
+    @GET("legal/current")
+    suspend fun legalCurrent(
+        @Query("locale") locale: String,
+        @retrofit2.http.Header("If-None-Match") etag: String?,
+    ): retrofit2.Response<LegalManifest>
+
+    @POST("me/legal-acceptance")
+    suspend fun acceptLegal(@Body body: LegalAcceptanceBody): LegalStatus
+
+    @POST("content-reports")
+    suspend fun createContentReport(@Body body: ContentReportRequest): ContentReportReceipt
+
+    @GET("content-reports/{id}")
+    suspend fun contentReportStatus(@Path("id") id: String): ContentReportReceipt
 
     @GET("me/settings")
     suspend fun getSettings(): UserSettingsResponse
@@ -197,11 +275,8 @@ interface VocabularioApi {
     @POST("srs/distractors")
     suspend fun srsDistractors(@Body body: DistractorsRequest): DistractorsResponse
 
-    @GET("sync/pull")
-    suspend fun syncPull(
-        @Query("profile_id") profileId: String,
-        @Query("since") since: String? = null,
-    ): SyncPullResponse
+    @POST("sync/pull")
+    suspend fun syncPull(@Body body: SyncPullRequest): SyncPullResponse
 
     @POST("sync/push")
     suspend fun syncPush(@Body body: SyncPushRequest): SyncPushResponse

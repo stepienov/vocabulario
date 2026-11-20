@@ -12,9 +12,13 @@ dependencies = [
     "pydantic>=2.10.0",
     "pydantic-settings>=2.6.0",
     "python-jose[cryptography]>=3.3.0",
-    "passlib[bcrypt]>=1.7.4",
-    "bcrypt>=4.0.1,<4.1",
+    "cryptography>=43.0.0",
+    "argon2-cffi>=25.1.0",
     "httpx>=0.28.0",
+    "google-auth>=2.35.0",
+    "requests>=2.32.0",
+    "cachecontrol>=0.14.0",
+    "svix>=1.60.0",
     "curl_cffi>=0.7.0",
     "openai>=1.57.0",
     "redis>=5.2.0",
@@ -31,6 +35,9 @@ dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
     "ruff>=0.8.0",
+    # Only to build a legacy bcrypt hash in tests; the runtime has no bcrypt verifier.
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt>=4.0.1,<4.1",
 ]
 
 [build-system]
@@ -54,5 +61,5 @@ asyncio_default_fixture_loop_scope = "function"
 addopts = "-m 'not visual'"
 markers = [
     "visual: HTML/PNG import galleries (needs Playwright; not run in CI)",
-    "pg: needs local Postgres from TEST_DATABASE_URL (skipped without it)",
+    "pg: needs local Postgres from TEST_DATABASE_URL (skipped without it; REQUIRE_PG_TESTS=1 makes that a failure)",
 ]

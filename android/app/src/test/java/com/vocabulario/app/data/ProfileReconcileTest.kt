@@ -1,6 +1,7 @@
 package com.vocabulario.app.data
 
 import com.vocabulario.app.data.api.LanguageProfileResponse
+import com.vocabulario.app.data.sync.ProfileFields
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -54,24 +55,45 @@ class ProfileReconcileTest {
             profile("old", active = false, cefr = "A1"),
             profile("live", active = true),
         )
-        val merged = mergeRemoteProfiles(remote, local, "old")
+        val drafts = mapOf("old" to ProfileFields(cefr_level = "B1", selected_tenses = listOf("pres")))
+        val merged = mergeRemoteProfiles(remote, listOf(local), drafts, setOf("old"), "old")
         val kept = merged.single { it.is_active }
         assertEquals("old", kept.id)
         assertEquals("B1", kept.cefr_level)
         assertEquals(listOf("pres"), kept.selected_tenses)
+        assertEquals("A1", kept.confirmed?.cefr_level)
         assertEquals(false, merged.first { it.id == "live" }.is_active)
+    }
+
+    @Test
+    fun mergeTakesServerValuesWhenNoDraft() {
+        val local = profile("old", active = true, cefr = "B1")
+        val remote = listOf(profile("old", active = false, cefr = "C1").copy(revision = 4))
+        val merged = mergeRemoteProfiles(remote, listOf(local), emptyMap(), emptySet(), "old").single()
+        assertEquals("C1", merged.cefr_level)
+        assertEquals(4L, merged.revision)
+        assertEquals(true, merged.is_active)
+    }
+
+    @Test
+    fun mergeKeepsLocalProfileWithPendingWorkMissingOnServer() {
+        val local = listOf(profile("mine", active = true), profile("gone", active = false))
+        val remote = listOf(profile("live", active = true))
+        val merged = mergeRemoteProfiles(remote, local, emptyMap(), setOf("mine"), "mine")
+        assertEquals(setOf("live", "mine"), merged.map { it.id }.toSet())
+        assertEquals("mine", merged.single { it.is_active }.id)
     }
 
     @Test
     fun mergeFallsBackToServerActiveWhenLocalIdMissing() {
         val remote = listOf(profile("live", active = true), profile("other", active = false))
-        val merged = mergeRemoteProfiles(remote, localActive = null, chosenId = "ghost")
+        val merged = mergeRemoteProfiles(remote, emptyList(), emptyMap(), emptySet(), "ghost")
         assertEquals("live", merged.single { it.is_active }.id)
     }
 
     @Test
     fun mergeEmptyRemoteReturnsEmpty() {
-        assertEquals(emptyList<LanguageProfileResponse>(), mergeRemoteProfiles(emptyList(), null, "x"))
+        assertEquals(emptyList<LanguageProfileResponse>(), mergeRemoteProfiles(emptyList(), emptyList(), emptyMap(), emptySet(), "x"))
     }
 
     private fun profile(

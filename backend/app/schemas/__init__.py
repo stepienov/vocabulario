@@ -1,39 +1,209 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, computed_field, field_validator, model_validator
+from pydantic import (
+    UUID4,
+    BaseModel,
+    EmailStr,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    user_id: UUID
+    session_id: UUID
+    expires_in: int
+
+
+class LegalAcceptanceIn(BaseModel):
+    terms_version: str = Field(min_length=1, max_length=32)
+    locale: str = Field(min_length=2, max_length=16)
+    adult_confirmed: bool
+
+
+class LegalStatus(BaseModel):
+    accepted_terms_version: str | None = None
+    required_terms_version: str
+    adult_confirmed: bool = False
+    acceptance_required: bool = False
 
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
+    # Password policy codes (422) come from the service; the schema only caps the body size.
+    password: str = Field(max_length=4096)
+    # UI language for the verification mail; the account has no profile yet.
+    locale: str | None = Field(default=None, max_length=16)
+    legal_acceptance: LegalAcceptanceIn | None = None
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(max_length=4096)
 
 
 class GoogleAuthRequest(BaseModel):
-    id_token: str
+    challenge_id: UUID4
+    id_token: str = Field(min_length=1, max_length=8192)
+    # Verification mail language when a new account's Google address is not proven.
+    locale: str | None = Field(default=None, max_length=16)
+    # Needed only when the sign-in creates a new account.
+    legal_acceptance: LegalAcceptanceIn | None = None
+
+
+class GoogleLinkChallengeRequest(BaseModel):
+    recent_auth_token: str = Field(min_length=1, max_length=128)
+
+
+class RecentAuthGoogleChallengeRequest(BaseModel):
+    action: Literal["change_email", "add_password"]
+
+
+class GoogleChallengeResponse(BaseModel):
+    challenge_id: UUID
+    nonce: str
+    expires_at: datetime
+
+
+class GoogleLinkRequest(BaseModel):
+    challenge_id: UUID4
+    id_token: str = Field(min_length=1, max_length=8192)
+    recent_auth_token: str = Field(min_length=1, max_length=128)
+
+
+class RecentAuthGoogleRequest(BaseModel):
+    challenge_id: UUID4
+    id_token: str = Field(min_length=1, max_length=8192)
+    action: Literal["change_email", "add_password"]
 
 
 class RefreshRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str = Field(min_length=1, max_length=4096)
+    request_id: UUID4
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str = Field(min_length=1, max_length=4096)
+
+
+# Password values get their own policy codes (422) in the service, so the schema only
+# caps the body size instead of using min/max_length.
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+    locale: str | None = Field(default=None, max_length=16)
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str = Field(min_length=1, max_length=512)
+    new_password: str = Field(max_length=4096)
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(max_length=4096)
+    new_password: str = Field(max_length=4096)
+
+
+class MailAcceptedResponse(BaseModel):
+    status: str = "accepted"
+    retry_after_seconds: int
+
+
+class PasswordResetResponse(BaseModel):
+    status: str = "password_reset"
+    requires_login: bool = True
+
+
+class EmailVerificationConfirm(BaseModel):
+    token: str = Field(min_length=1, max_length=512)
+
+
+class StatusResponse(BaseModel):
+    status: str
+
+
+class RecentAuthPasswordRequest(BaseModel):
+    password: str = Field(max_length=4096)
+    action: str = Field(max_length=32)
+
+
+class RecentAuthResponse(BaseModel):
+    recent_auth_token: str
+    action: str
+    expires_at: datetime
+
+
+class EmailChangeRequest(BaseModel):
+    new_email: EmailStr
+    recent_auth_token: str = Field(min_length=1, max_length=128)
+    request_id: UUID4
+
+    @field_validator("new_email", mode="before")
+    @classmethod
+    def _strip_edges(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+
+class EmailChangeResponse(BaseModel):
+    change_id: UUID
+    mode: str
+    status: str
+    new_email: str
+    expires_at: datetime
+    resend_available_at: datetime | None
+    delivery_status: str
+    delivery_delayed: bool
+
+
+class EmailChangeCurrentResponse(BaseModel):
+    change: EmailChangeResponse | None
+
+
+class EmailChangeConfirm(BaseModel):
+    token: str = Field(min_length=1, max_length=512)
+
+
+class EmailChangeConfirmed(BaseModel):
+    status: str = "email_changed"
+    requires_login: bool = True
+
+
+class AddPasswordRequest(BaseModel):
+    new_password: str = Field(max_length=4096)
+    recent_auth_token: str = Field(min_length=1, max_length=128)
+
+
+class EmailVerificationStatusResponse(BaseModel):
+    email_verified: bool
+    delivery_status: str
+    delivery_delayed: bool
+    resend_available_at: datetime | None
 
 
 class UserResponse(BaseModel):
     id: UUID
     email: str
     role: str
-
-    model_config = {"from_attributes": True}
+    email_verified: bool
+    # True when the server gate blocks study/sync until this address is confirmed.
+    email_verification_required: bool = False
+    login_methods: list[str]
+    # Legacy password hash: only a reset can set a new password.
+    password_upgrade_required: bool = False
+    # Revision of the current address: a cached confirmation never carries over to another address.
+    email_revision: int = 1
+    account_status: str = "active"
+    lifecycle_revision: int = 1
+    # Last address Google reported for the linked identity; absent without a Google method.
+    google_email: str | None = None
+    google_email_observed_at: datetime | None = None
+    legal_status: LegalStatus | None = None
 
 
 class UserSettingsResponse(BaseModel):
@@ -54,8 +224,8 @@ class UserSettingsResponse(BaseModel):
     conjugation_expanded_default: bool = False
     show_example_sentences: bool = True
     related_words_expanded_default: bool = False
-    study_reminder_enabled: bool = True
-    cards_ready_push_enabled: bool = True
+    study_reminder_enabled: bool = False
+    cards_ready_push_enabled: bool = False
     reminder_hour: int = 19
 
     model_config = {"from_attributes": True}
@@ -127,6 +297,7 @@ class LanguageProfileResponse(BaseModel):
     tense_label_lang: str = "app_lang"
     is_active: bool
     last_used_at: datetime | None
+    revision: int = 1
 
     model_config = {"from_attributes": True}
 
@@ -159,6 +330,9 @@ class LanguageProfileUpdate(BaseModel):
     selected_tenses: list[str] | None = None
     app_lang: str | None = Field(default=None, min_length=2, max_length=8)
     tense_label_lang: str | None = None
+    # Kontrakt T-004: rewizja bazowa i stabilny ID mutacji; legacy klient je pomija.
+    expected_revision: int | None = Field(default=None, ge=1)
+    client_op_id: UUID | None = None
 
     @field_validator("selected_tenses")
     @classmethod
@@ -395,6 +569,8 @@ class LlmUsageListResponse(BaseModel):
 class WordListCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     profile_id: UUID
+    # Stabilny klucz z lokalnego intentu: ponowienie po utraconej odpowiedzi nie tworzy drugiej listy.
+    client_op_id: UUID | None = None
 
 
 class WordListUpdate(BaseModel):
@@ -677,7 +853,12 @@ class SyncPullResponse(BaseModel):
     lists: list[SyncListItem] = []
     deleted_card_ids: list[UUID] = []
     deleted_list_ids: list[UUID] = []
+    cursor: str | None = None
 
+
+class SyncPullRequest(BaseModel):
+    profile_id: UUID
+    cursor: str | None = None
 
 class SyncReviewItem(BaseModel):
     client_id: UUID
@@ -719,6 +900,17 @@ class SyncMoveResult(BaseModel):
     deck_id: UUID | None = None
 
 
+class SyncOperationResult(BaseModel):
+    """Potwierdzenie jednej wysłanej operacji (review albo move)."""
+
+    client_id: UUID
+    card_id: UUID
+    outcome: Literal["applied", "duplicate", "superseded", "not_found", "conflict"]
+    reason: Literal[
+        "card_unavailable", "target_unavailable", "undo_already_applied", "operation_id_conflict"
+    ] | None = None
+
+
 class SyncPushResponse(BaseModel):
     applied: int
     skipped: int
@@ -726,3 +918,5 @@ class SyncPushResponse(BaseModel):
     moves_applied: int = 0
     moves_skipped: int = 0
     moves: list[SyncMoveResult] = []
+    review_results: list[SyncOperationResult] = []
+    move_results: list[SyncOperationResult] = []

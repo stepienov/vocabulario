@@ -107,6 +107,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vocabulario.app.ui.sync.SyncStatusLine
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -158,6 +159,8 @@ import com.vocabulario.app.ui.card.CorrectionActivityColor
 import com.vocabulario.app.ui.card.cardActivityStatusLabel
 import com.vocabulario.app.ui.card.CardActivitySpinner
 import com.vocabulario.app.ui.practice.ListFlashcardSummary
+import com.vocabulario.app.ui.report.ReportContentButton
+import com.vocabulario.app.ui.report.ReportTarget
 
 private val ScreenPad = 20.dp
 private val TileRadius = RoundedCornerShape(28.dp)
@@ -200,6 +203,7 @@ fun HomeScreen(
         HomeHeader(
             onSettings = onSettings,
         )
+        SyncStatusLine(onOpen = onSettings)
         HomeTabs(
             selected = state.tab,
             onSelect = viewModel::selectTab,
@@ -1399,6 +1403,15 @@ private fun CandidateRow(
                         onClick = { onOpenWord(candidate) },
                     )
                 }
+                Spacer(Modifier.weight(1f))
+                ReportContentButton(
+                    ReportTarget(
+                        kind = "lookup",
+                        targetId = null,
+                        field = "meaning",
+                        excerpt = "${candidate.lemma} — ${candidate.gloss}",
+                    ),
+                )
             }
             if (candidate.isCreating && !candidate.membershipUnknown) {
                 Spacer(modifier = Modifier.height(8.dp))

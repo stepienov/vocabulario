@@ -33,6 +33,7 @@ enum class SettingsSection {
     LANGUAGES,
     CEFR,
     NOTIFICATIONS,
+    ACCOUNT,
 }
 
 data class SettingsUiState(
@@ -190,11 +191,13 @@ class SettingsViewModel @Inject constructor(
                     reminderHour = s.reminder_hour,
                     reminderMinute = notificationScheduler.reminderMinute(),
                 )
-                notificationScheduler.scheduleStudyReminder(
-                    s.reminder_hour,
-                    s.study_reminder_enabled || s.cards_ready_push_enabled,
-                    notificationScheduler.reminderMinute(),
-                )
+                viewModelScope.launch {
+                    repository.applyStudyReminder(
+                        s.reminder_hour,
+                        s.study_reminder_enabled || s.cards_ready_push_enabled,
+                        notificationScheduler.reminderMinute(),
+                    )
+                }
                 viewModelScope.launch {
                     runCatching { repository.refreshProfilesFromNetwork() }
                         .onSuccess { remote ->
@@ -287,7 +290,7 @@ class SettingsViewModel @Inject constructor(
                 cards_ready_push_enabled = value,
             ),
         ) {
-            notificationScheduler.scheduleStudyReminder(it.reminderHour, value, it.reminderMinute)
+            viewModelScope.launch { repository.applyStudyReminder(it.reminderHour, value, it.reminderMinute) }
             it.copy(studyReminderEnabled = value, cardsReadyPushEnabled = value)
         }
     }
@@ -305,11 +308,8 @@ class SettingsViewModel @Inject constructor(
         val safeMinute = minute.coerceIn(0, 59)
         writeGen++
         _state.value = _state.value.copy(reminderHour = safeHour, reminderMinute = safeMinute)
-        notificationScheduler.scheduleStudyReminder(
-            safeHour,
-            _state.value.notificationsEnabled,
-            safeMinute,
-        )
+        val enabledNow = _state.value.notificationsEnabled
+        viewModelScope.launch { repository.applyStudyReminder(safeHour, enabledNow, safeMinute) }
         reminderSaveJob?.cancel()
         reminderSaveJob = viewModelScope.launch {
             delay(450)

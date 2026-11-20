@@ -34,6 +34,8 @@ import com.vocabulario.app.data.asJsonString
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.ui.TestTags
+import com.vocabulario.app.ui.report.ReportContentButton
+import com.vocabulario.app.ui.report.ReportTarget
 
 @Composable
 fun ListCardDetailOverlay(
@@ -71,6 +73,18 @@ fun ListCardDetailOverlay(
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1f),
                     )
+                    if (card.persisted) {
+                        ReportContentButton(
+                            ReportTarget(
+                                kind = "card",
+                                targetId = card.id,
+                                field = "other",
+                                excerpt = listOfNotNull(card.lemma_l2, card.gloss_primary)
+                                    .filter { it.isNotBlank() }
+                                    .joinToString(" — "),
+                            ),
+                        )
+                    }
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier.testTag(TestTags.BTN_VIEW_CARD_CLOSE),

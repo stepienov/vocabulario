@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError, PendingRollbackError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.db.lifecycle import LifecycleBlocked, pin_lifecycle
 from app.db.session import async_session_factory
 from app.models import (
     ACTIVE_IMPORT_STATUSES,
@@ -51,6 +52,7 @@ from app.services.import_package import (
     load_text_import,
 )
 from app.services.import_urls import ImportUrlError, detect_import_url, fetch_words_from_url
+from app.services.ai_budget import AiBudgetExhausted, AiBudgetUnavailable
 from app.services.llm import LLMService
 from app.services.word_lists import select_live_card_for_lemma
 
@@ -68,6 +70,13 @@ _running: set[UUID] = set()
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+def _llm_error_code(exc: BaseException) -> str:
+    """A cap stop is reported as such, so the app can tell it from a broken word list."""
+    if isinstance(exc, (AiBudgetExhausted, AiBudgetUnavailable)):
+        return "ai_budget_exhausted"
+    return "llm_fail"
 
 
 def _note_label(note: list[Any]) -> str:
@@ -447,6 +456,8 @@ def spawn_job(job_id: UUID) -> None:
 async def _run_guarded(job_id: UUID) -> None:
     try:
         await run_import_job(job_id)
+    except LifecycleBlocked:
+        pass  # paused with the account; the watchdog resumes it only if the account is active again
     except Exception as exc:
         logger.exception("import job %s crashed", job_id)
         from app.services.app_log import log_event
@@ -486,6 +497,7 @@ async def run_import_job(job_id: UUID) -> None:
         job = await _load_job(db, job_id, with_items=True)
         if job is None:
             return
+        await pin_lifecycle(db, job.user_id)
         if job.status == "cancelled":
             return
         if job.cancel_requested or job.status == "cancelling":
@@ -780,7 +792,7 @@ async def _run_analyze(db: AsyncSession, job: ImportJob) -> None:
             exc=exc,
         )
         await _touch(
-            db, job, status="failed", error_code="llm_fail",
+            db, job, status="failed", error_code=_llm_error_code(exc),
             error_message=str(exc)[:2000], finished_at=_now(),
         )
         await _add_event(db, job.id, "llm_fail", level="error", payload={"phase": "format"})
@@ -818,7 +830,7 @@ async def _run_analyze(db: AsyncSession, job: ImportJob) -> None:
             exc=exc,
         )
         await _touch(
-            db, job, status="failed", error_code="llm_fail",
+            db, job, status="failed", error_code=_llm_error_code(exc),
             error_message=str(exc)[:2000], finished_at=_now(),
         )
         await _add_event(db, job.id, "llm_fail", level="error", payload={"err": str(exc)[:500]})
@@ -1300,7 +1312,10 @@ async def resume_unfinished_jobs() -> None:
     async with async_session_factory() as db:
         rows = (
             await db.execute(
-                select(ImportJob.id).where(ImportJob.status.in_(ACTIVE_IMPORT_STATUSES))
+                select(ImportJob.id).where(
+                    ImportJob.status.in_(ACTIVE_IMPORT_STATUSES),
+                    ImportJob.user_id.in_(select(User.id).where(User.account_status == "active")),
+                )
             )
         ).scalars().all()
         for job_id in rows:
@@ -1344,7 +1359,8 @@ async def _watchdog_tick() -> None:
         jobs = (
             await db.execute(
                 select(ImportJob).where(
-                    ImportJob.status.in_(("queued", "analyzing", "committing", "cancelling"))
+                    ImportJob.status.in_(("queued", "analyzing", "committing", "cancelling")),
+                    ImportJob.user_id.in_(select(User.id).where(User.account_status == "active")),
                 )
             )
         ).scalars().all()

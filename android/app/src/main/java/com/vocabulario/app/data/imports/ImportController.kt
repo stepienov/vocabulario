@@ -6,6 +6,7 @@ import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.NetworkMonitor
 import com.vocabulario.app.data.api.ImportJobProgressResponse
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.session.AccountResetHooks
 import com.vocabulario.app.data.sync.BackgroundJobScheduler
 import com.vocabulario.app.i18n.UiStrings
 import kotlinx.coroutines.CoroutineScope
@@ -33,6 +34,7 @@ class ImportController @Inject constructor(
     private val networkMonitor: NetworkMonitor,
     private val backgroundJobs: BackgroundJobScheduler,
     private val blockingBusy: BlockingBusy,
+    resetHooks: AccountResetHooks,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -45,6 +47,10 @@ class ImportController @Inject constructor(
     private var pollJob: Job? = null
 
     init {
+        resetHooks.register {
+            stopPoll()
+            _state.value = ImportJobState()
+        }
         scope.launch { restore() }
     }
 
@@ -331,33 +337,42 @@ class ImportController @Inject constructor(
         pollJob = scope.launch {
             while (isActive) {
                 val id = _state.value.jobId ?: break
-                val working = _state.value.busy
-                val progress = runCatching {
-                    if (working) {
-                        repository.getImportJobProgress(id)
-                    } else if (_state.value.status == ImportStatus.Review && _state.value.items.isEmpty()) {
-                        repository.getImportJob(id, includeItems = true)
-                    } else {
-                        null
-                    }
-                }.getOrNull()
-                if (progress != null) {
-                    applyProgress(progress)
-                    if (_state.value.status == ImportStatus.Cancelled) {
-                        dismissResult()
-                        break
-                    }
-                }
-                if (!_state.value.busy) {
-                    if (_state.value.status == ImportStatus.Review && _state.value.items.isEmpty()) {
-                        delay(1_000)
-                        continue
-                    }
-                    break
-                }
+                // Każda iteracja jako bieżący właściciel: po reauth tego samego konta obserwujemy ten sam job.
+                val step = repository.asCurrentOwner { pollOnce(id) } ?: PollStep.WAIT
+                if (step == PollStep.STOP) break
                 delay(1_000)
             }
         }
+    }
+
+    private enum class PollStep { WAIT, STOP }
+
+    private suspend fun pollOnce(id: String): PollStep {
+        val working = _state.value.busy
+        val progress = runCatching {
+            if (working) {
+                repository.getImportJobProgress(id)
+            } else if (_state.value.status == ImportStatus.Review && _state.value.items.isEmpty()) {
+                repository.getImportJob(id, includeItems = true)
+            } else {
+                null
+            }
+        }.getOrNull()
+        if (progress != null) {
+            repository.ensureOwnerCurrent()
+            applyProgress(progress)
+            if (_state.value.status == ImportStatus.Cancelled) {
+                dismissResult()
+                return PollStep.STOP
+            }
+        }
+        if (!_state.value.busy) {
+            if (_state.value.status == ImportStatus.Review && _state.value.items.isEmpty()) {
+                return PollStep.WAIT
+            }
+            return PollStep.STOP
+        }
+        return PollStep.WAIT
     }
 
     private suspend fun applyProgress(progress: ImportJobProgressResponse) {

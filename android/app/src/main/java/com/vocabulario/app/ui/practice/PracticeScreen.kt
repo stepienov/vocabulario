@@ -86,6 +86,8 @@ import com.vocabulario.app.ui.components.GradeRow
 import com.vocabulario.app.ui.components.PracticeProgressBar
 import com.vocabulario.app.ui.components.PromptCard
 import com.vocabulario.app.ui.home.listNameConflictMessage
+import com.vocabulario.app.ui.report.ReportContentButton
+import com.vocabulario.app.ui.report.ReportTarget
 import com.vocabulario.app.ui.theme.GradeAgain
 import com.vocabulario.app.ui.theme.GradeKnown
 import com.vocabulario.app.ui.theme.GradeLearning
@@ -402,6 +404,16 @@ fun PracticeScreen(
                                                     )
                                                 }
                                             }
+                                            ReportContentButton(
+                                                ReportTarget(
+                                                    kind = "practice",
+                                                    targetId = item.card_id,
+                                                    field = "answer",
+                                                    excerpt = listOfNotNull(item.lemma_l2, item.gloss_primary)
+                                                        .filter { it.isNotBlank() }
+                                                        .joinToString(" — "),
+                                                ),
+                                            )
                                             if (item.has_content_changes) {
                                                 IconButton(
                                                     onClick = viewModel::openCardHistory,

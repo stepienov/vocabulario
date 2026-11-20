@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_admin_user, get_current_user
+from app.core.deps import get_admin_user, get_verified_user
 from app.core.http_errors import api_error
 from app.db.session import get_db
 from app.models import ImportJob, ImportJobEvent, ImportJobItem, LanguageProfile, User, WordList
@@ -165,7 +165,7 @@ async def _detail(db: AsyncSession, job: ImportJob) -> ImportJobDetailResponse:
 @router.post("/imports/jobs", response_model=ImportJobProgressResponse, status_code=202)
 async def create_import_job(
     body: ImportJobCreateRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _profile(db, user, body.profile_id)
@@ -220,7 +220,7 @@ async def create_import_job_file(
     list_id: UUID = Form(...),
     mode: str = Form("vocabulario"),
     file: UploadFile = File(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _profile(db, user, profile_id)
@@ -309,7 +309,7 @@ async def list_import_jobs_admin(
 @router.get("/imports/jobs/{job_id}/events", response_model=list[ImportJobEventResponse])
 async def list_import_job_events(
     job_id: UUID,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     job = (
@@ -343,7 +343,7 @@ async def list_import_job_events(
 @router.get("/imports/jobs/active", response_model=ImportJobProgressResponse)
 async def get_active_import_job(
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     await _profile(db, user, profile_id)
@@ -357,7 +357,7 @@ async def get_active_import_job(
 @router.get("/imports/jobs/{job_id}/progress", response_model=ImportJobProgressResponse)
 async def get_import_job_progress(
     job_id: UUID,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     job = await _owned_job(db, user, job_id)
@@ -369,7 +369,7 @@ async def get_import_job_progress(
 async def get_import_job(
     job_id: UUID,
     include_items: bool = Query(True),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     job = await _owned_job(db, user, job_id)
@@ -384,7 +384,7 @@ async def get_import_job(
 async def commit_import_job(
     job_id: UUID,
     body: ImportJobCommitRequest | None = None,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     job = await _owned_job(db, user, job_id)
@@ -413,7 +413,7 @@ async def commit_import_job(
 @router.post("/imports/jobs/{job_id}/cancel", response_model=ImportJobProgressResponse)
 async def cancel_import_job(
     job_id: UUID,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     job = await _owned_job(db, user, job_id)

@@ -25,15 +25,45 @@ import com.vocabulario.app.data.local.db.PendingLookupEntity
 import com.vocabulario.app.data.local.db.PendingMoveEntity
 import com.vocabulario.app.data.local.db.PendingReviewEntity
 import com.vocabulario.app.data.local.db.PendingUndoEntity
+import com.vocabulario.app.data.local.db.OwnerPhase
+import com.vocabulario.app.data.local.db.SessionOwnerEntity
 import com.vocabulario.app.data.local.db.SyncMetaEntity
+import com.vocabulario.app.data.session.LoginDecision
+import com.vocabulario.app.data.session.LogoutConsent
+import com.vocabulario.app.data.session.OwnerContext
+import com.vocabulario.app.data.session.OwnerScope
+import com.vocabulario.app.data.session.OwnerSnapshot
+import com.vocabulario.app.data.session.SupersededException
+import com.vocabulario.app.data.session.UnsentChangesException
+import com.vocabulario.app.data.session.consentCovers
+import com.vocabulario.app.data.session.ownerContextOf
+import com.vocabulario.app.data.session.decideLogin
+import com.vocabulario.app.data.sync.BlockedItem
+import com.vocabulario.app.data.sync.BlockedKind
+import com.vocabulario.app.data.sync.OP_CONTENT_REPORT
+import com.vocabulario.app.data.sync.OP_PROFILE_ACTIVATE
+import com.vocabulario.app.data.sync.OP_PROFILE_UPDATE
+import com.vocabulario.app.data.sync.PROFILE_OP_SENT
+import com.vocabulario.app.data.sync.ProfileEditPlan
+import com.vocabulario.app.data.sync.ProfileFields
+import com.vocabulario.app.data.sync.ProfileOpView
+import com.vocabulario.app.data.sync.ProfileUpdatePayload
+import com.vocabulario.app.data.sync.overlayDrafts
+import com.vocabulario.app.data.sync.planProfileEdit
+import com.vocabulario.app.data.sync.withFields
+import com.vocabulario.app.data.sync.QueueSnapshot
+import com.vocabulario.app.data.session.logoutCovered
+import com.vocabulario.app.data.session.unsentFingerprint
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import java.time.Instant
 import java.util.UUID
@@ -49,6 +79,9 @@ class OfflineStore @Inject constructor(
             AppDatabase.MIGRATION_6_7,
             AppDatabase.MIGRATION_7_8,
             AppDatabase.MIGRATION_8_9,
+            AppDatabase.MIGRATION_9_10,
+            AppDatabase.MIGRATION_10_11,
+            AppDatabase.MIGRATION_11_12,
         )
         // Zachowaj dane (w tym niewysłany outbox) przy aktualizacji z v6.
         // Twardy reset tylko dla prehistorycznych wersji, których w praktyce nie ma w terenie.
@@ -64,13 +97,70 @@ class OfflineStore @Inject constructor(
     private val syncMetaDao = db.syncMetaDao()
     private val profileDao = db.cachedProfileDao()
     private val outboxDao = db.outboxOpDao()
+    private val ownerDao = db.sessionOwnerDao()
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun applyPull(profileId: String, pull: SyncPullResponse, fullReplace: Boolean) {
+    /** Aktywny właściciel danych; null w każdej fazie przejściowej i po wylogowaniu. */
+    suspend fun activeOwnerContext(): OwnerContext? =
+        ownerDao.get()?.let { ownerContextOf(it.ownerUserId, it.generation, it.phase) }
+
+    /**
+     * Pod [OwnerScope] zapis przechodzi tylko dla tego samego właściciela i generacji, sprawdzonych
+     * w tej samej transakcji co zapis; w przeciwnym razie [SupersededException] bez zmian.
+     * Poza zakresem (akcje UI bieżącego właściciela) działa jak zwykły zapis.
+     */
+    suspend fun <T> guardedWrite(block: suspend () -> T): T {
+        val scoped = currentCoroutineContext()[OwnerScope]?.owner ?: return block()
+        return db.withTransaction {
+            if (activeOwnerContext() != scoped) throw SupersededException()
+            block()
+        }
+    }
+
+    suspend fun applyPull(profileId: String, pull: SyncPullResponse, fullReplace: Boolean): Unit = guardedWrite {
         db.withTransaction {
             applyPullLocked(profileId, pull, fullReplace)
         }
     }
+
+    /** Lokalna praca, której serwer jeszcze nie widział; pull nie może jej cofnąć ani wskrzesić usuniętego. */
+    private class PullOverlay(
+        val srsCards: Map<String, CachedCardEntity>,
+        val movedCards: Map<String, CachedCardEntity>,
+        val deletedCardIds: Set<String>,
+        val deletedListIds: Set<String>,
+        val renamedLists: Map<String, String>,
+    )
+
+    private suspend fun capturePullOverlay(): PullOverlay {
+        val srsIds = reviewDao.all().map { it.cardId }.toMutableSet()
+        undoDao.all().forEach { undo ->
+            runCatching { json.decodeFromString(SyncSrsState.serializer(), undo.srsJson).card_id }
+                .getOrNull()?.let { srsIds += it }
+        }
+        val moveIds = moveDao.all().map { it.cardId }.toSet()
+        val deletedCards = mutableSetOf<String>()
+        val deletedLists = mutableSetOf<String>()
+        val renames = mutableMapOf<String, String>()
+        for (op in outboxDao.all()) {
+            val p = runCatching { json.parseToJsonElement(op.payloadJson) as? JsonObject }.getOrNull() ?: continue
+            when (op.type) {
+                "card_delete" -> p["cardId"].asContent()?.let { deletedCards += it }
+                "list_delete" -> p["listId"].asContent()?.let { deletedLists += it }
+                "list_rename" -> {
+                    val id = p["listId"].asContent()
+                    val name = p["name"].asContent()
+                    if (id != null && name != null) renames[id] = name
+                }
+            }
+        }
+        suspend fun locals(ids: Collection<String>) =
+            ids.mapNotNull { id -> cardDao.byId(id)?.let { id to it } }.toMap()
+        return PullOverlay(locals(srsIds), locals(moveIds), deletedCards, deletedLists, renames)
+    }
+
+    private fun kotlinx.serialization.json.JsonElement?.asContent(): String? =
+        (this as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
 
     private suspend fun applyPullLocked(profileId: String, pull: SyncPullResponse, fullReplace: Boolean) {
         // Settings: telefon jest źródłem prawdy. Pull wkleja je tylko gdy Room jest pusty
@@ -83,6 +173,7 @@ class OfflineStore @Inject constructor(
         val localInbox = listDao.pendingInbox(profileId)
         // Preserve offline-created lists (local:<uuid>) that haven't been pushed/remapped yet.
         val localOnlyLists = listDao.forProfile(profileId).filter { it.isLocalOnly }
+        val overlay = capturePullOverlay()
         if (fullReplace) {
             cardDao.clearProfile(profileId)
             listDao.clearProfile(profileId)
@@ -98,7 +189,13 @@ class OfflineStore @Inject constructor(
             }
             listDao.deleteById(deletedListId)
         }
-        val listEntities = pull.lists.map { it.toEntity(profileId) }
+        val listEntities = pull.lists
+            .filter { it.id !in overlay.deletedListIds }
+            .map { item ->
+                item.toEntity(profileId).let { entity ->
+                    overlay.renamedLists[item.id]?.let { entity.copy(name = it) } ?: entity
+                }
+            }
         if (listEntities.isNotEmpty()) {
             listDao.upsertAll(listEntities)
         }
@@ -109,32 +206,114 @@ class OfflineStore @Inject constructor(
         ) {
             listDao.upsertAll(listOf(localInbox))
         }
-        val entities = pull.cards.map { it.toEntity() }
+        val entities = pull.cards
+            .filter { it.id !in overlay.deletedCardIds && it.deck_id !in overlay.deletedListIds }
+            .map { it.toEntity() }
         if (entities.isNotEmpty()) {
             cardDao.upsertAll(entities)
         }
+        applyOverlayToCards(overlay)
         if (fullReplace && localOnlyLists.isNotEmpty()) {
             val present = listDao.forProfile(profileId).map { it.id }.toSet()
             val restore = localOnlyLists.filter { it.id !in present }
             if (restore.isNotEmpty()) listDao.upsertAll(restore)
         }
+        val now = System.currentTimeMillis()
+        val previous = syncMetaDao.get(profileId)
         syncMetaDao.upsert(
-            SyncMetaEntity(
-                profileId = profileId,
+            (previous ?: SyncMetaEntity(profileId = profileId)).copy(
                 lastPulledAt = pull.server_time,
-                lastSyncedAt = System.currentTimeMillis(),
+                lastSyncedAt = now,
+                cursor = pull.cursor,
             ),
         )
+    }
+
+    /** Stan serwera jako baza, lokalne nowsze oceny i ruchy odtworzone na wierzchu; usuniętej karty nie wskrzesza. */
+    private suspend fun applyOverlayToCards(overlay: PullOverlay) {
+        for ((id, local) in overlay.srsCards) {
+            val pulled = cardDao.byId(id) ?: continue
+            cardDao.update(pulled.withSrs(local.toSyncSrsState()).copy(updatedAt = pulled.updatedAt))
+        }
+        for ((id, local) in overlay.movedCards) {
+            val pulled = cardDao.byId(id) ?: continue
+            if (pulled.deckId != local.deckId) cardDao.update(pulled.copy(deckId = local.deckId))
+        }
     }
 
     suspend fun lastPulledAt(profileId: String): String? =
         syncMetaDao.get(profileId)?.lastPulledAt
 
+    suspend fun lastCompleteSyncAt(profileId: String): Long? =
+        syncMetaDao.get(profileId)?.lastSuccessAt
+
+    /** Każda zmiana kolejek (także status wiersza) daje nowy, spójny snapshot. */
+    fun observeQueueSnapshot(): Flow<QueueSnapshot> =
+        outboxDao.observeQueueTouch().map { queueSnapshot() }
+
+    suspend fun pullCursor(profileId: String): String? =
+        syncMetaDao.get(profileId)?.cursor
+
+    /** Kursor odrzucony przez serwer (410/422): następny pull jest pełny, kolejki i overlaye zostają. */
+    suspend fun resetPullCursor(profileId: String): Unit = guardedWrite {
+        syncMetaDao.clearCursor(profileId)
+    }
+
+    suspend fun recordSyncAttempt(profileId: String, success: Boolean, error: String?): Unit = guardedWrite {
+        val now = System.currentTimeMillis()
+        val previous = syncMetaDao.get(profileId) ?: SyncMetaEntity(profileId = profileId)
+        syncMetaDao.upsert(
+            previous.copy(
+                lastAttemptAt = now,
+                lastSuccessAt = if (success) now else previous.lastSuccessAt,
+                lastError = if (success) null else error,
+            ),
+        )
+    }
+
+    /** Spójny odczyt wszystkich kolejek wszystkich profili; operację liczymy raz. */
+    suspend fun queueSnapshot(): QueueSnapshot = db.withTransaction {
+        val reviews = reviewDao.all()
+        val moves = moveDao.all()
+        val undos = undoDao.all()
+        val lookups = lookupDao.all()
+        val ops = outboxDao.all()
+        val (reports, rest) = ops.partition { it.type == OP_CONTENT_REPORT }
+        QueueSnapshot(
+            reviews = reviews.size,
+            moves = moves.size,
+            undos = undos.size,
+            lookupsQueued = lookups.count { it.status != "needs_review" },
+            lookupsNeedsReview = lookups.count { it.status == "needs_review" },
+            outboxPending = rest.count { it.status == "pending" },
+            outboxParked = rest.count { it.status == "parked" },
+            outboxBlocked = rest.count { it.status == "blocked" },
+            contentReports = reports.size,
+            blockedReviews = reviews.count { it.blockedReason != null },
+            blockedMoves = moves.count { it.blockedReason != null },
+            blockedUndos = undos.count { it.blockedReason != null },
+        )
+    }
+
+    /** Profile z niewysłaną pracą: stuby lookupów, karty ocen/ruchów i operacje outboxu z `profileId`. */
+    suspend fun profilesWithPendingWork(): Set<String> = db.withTransaction {
+        val ids = mutableSetOf<String>()
+        lookupDao.all().forEach { ids += it.profileId }
+        (reviewDao.all().map { it.cardId } + moveDao.all().map { it.cardId }).forEach { cardId ->
+            cardDao.byId(cardId)?.let { ids += it.profileId }
+        }
+        for (op in outboxDao.all()) {
+            val p = runCatching { json.parseToJsonElement(op.payloadJson) as? JsonObject }.getOrNull() ?: continue
+            p["profileId"].asContent()?.let { ids += it }
+        }
+        ids
+    }
+
     fun observeMembershipRows(profileId: String) = cardDao.observeMembershipRows(profileId)
 
     fun observeLastPulledAt(profileId: String) = syncMetaDao.observeLastPulledAt(profileId)
 
-    suspend fun saveSettings(settings: UserSettingsResponse) {
+    suspend fun saveSettings(settings: UserSettingsResponse): Unit = guardedWrite {
         settingsDao.upsert(
             LocalSettingsEntity(
                 practiceInputPref = settings.practice_input_pref,
@@ -147,7 +326,7 @@ class OfflineStore @Inject constructor(
         )
     }
 
-    suspend fun cacheProfile(profile: LanguageProfileResponse) {
+    suspend fun cacheProfile(profile: LanguageProfileResponse): Unit = guardedWrite {
         if (profile.is_active) {
             profileDao.deactivateOthers(profile.id)
         }
@@ -172,10 +351,154 @@ class OfflineStore @Inject constructor(
         return runCatching { json.decodeFromString(LanguageProfileResponse.serializer(), raw) }.getOrNull()
     }
 
-    suspend fun clearAll() {
-        withContext(Dispatchers.IO) {
-            db.clearAllTables()
+    suspend fun ownerSnapshot(): OwnerSnapshot = db.withTransaction { ownerSnapshotLocked() }
+
+    /** Decyzja loginu i zapis zamiaru instalacji w jednej transakcji; inne decyzje niczego nie zmieniają. */
+    suspend fun beginInstall(candidateUserId: String, transitionId: String): LoginDecision =
+        db.withTransaction {
+            val snapshot = ownerSnapshotLocked()
+            val decision = decideLogin(snapshot, candidateUserId)
+            when (decision) {
+                LoginDecision.Claim -> {
+                    deleteOwnedDataLocked()
+                    writeOwnerLocked(snapshot, candidateUserId, OwnerPhase.INSTALLING, transitionId)
+                }
+                LoginDecision.SameOwner ->
+                    writeOwnerLocked(snapshot, candidateUserId, OwnerPhase.INSTALLING, transitionId)
+                is LoginDecision.OtherAccount, is LoginDecision.LegacyQuarantine -> Unit
+            }
+            decision
         }
+
+    /** Kończy przejście tylko wtedy, gdy w międzyczasie nie zaczęło się inne. */
+    suspend fun completeInstall(transitionId: String): Boolean = db.withTransaction {
+        val row = ownerDao.get()
+        if (row?.transitionId != transitionId || row.phase != OwnerPhase.INSTALLING) return@withTransaction false
+        ownerDao.upsert(row.copy(phase = OwnerPhase.ACTIVE, transitionId = null))
+        true
+    }
+
+    /** Aktywna sesja przejmuje bazę tylko wtedy, gdy ta nadal nie zawiera danych. */
+    suspend fun claimEmpty(ownerUserId: String): Boolean = db.withTransaction {
+        val snapshot = ownerSnapshotLocked()
+        if (snapshot.hasOwnedData) return@withTransaction false
+        writeOwnerLocked(snapshot, ownerUserId, OwnerPhase.ACTIVE, null)
+        true
+    }
+
+    /**
+     * Bariera logoutu: końcowy odczyt kolejek i zapis zamiaru są jedną transakcją. Praca spoza
+     * zgody przerywa logout bez zmian ([UnsentChangesException] z aktualnym snapshotem).
+     */
+    suspend fun beginLogout(transitionId: String, consent: LogoutConsent) {
+        db.withTransaction {
+            val snapshot = ownerSnapshotLocked()
+            val covered = consentCovers(
+                consent.disposition,
+                consent.acceptedFingerprint,
+                snapshot.unsentCount,
+                snapshot.unsentFingerprint,
+            )
+            if (!covered) throw UnsentChangesException(snapshot.unsentCount, snapshot.unsentFingerprint)
+            writeOwnerLocked(
+                snapshot,
+                snapshot.ownerUserId,
+                OwnerPhase.LOGGING_OUT,
+                transitionId,
+                logoutDisposition = consent.disposition,
+                acceptedUnsentFingerprint = consent.acceptedFingerprint,
+            )
+        }
+    }
+
+    /** Wycofanie zamiaru, gdy usunięcie sesji się nie powiodło; generacja nie wraca. */
+    suspend fun abortLogout(transitionId: String): Boolean = db.withTransaction {
+        val row = ownerDao.get() ?: return@withTransaction false
+        if (row.transitionId != transitionId || row.phase != OwnerPhase.LOGGING_OUT) return@withTransaction false
+        ownerDao.upsert(row.cancelledLogout())
+        true
+    }
+
+    /**
+     * Usuwa dane właściciela, ale nie rekord metadanych ani licznik generacji. Gdy w kolejkach
+     * jest praca nieobjęta zapisaną zgodą, dane zostają (właściciel bez sesji) i zwraca false.
+     */
+    suspend fun completeLogout(): Boolean = db.withTransaction {
+        val snapshot = ownerSnapshotLocked()
+        if (snapshot.phase != OwnerPhase.LOGGING_OUT) return@withTransaction false
+        if (!logoutCovered(snapshot)) {
+            ownerDao.get()?.let { ownerDao.upsert(it.cancelledLogout()) }
+            return@withTransaction false
+        }
+        deleteOwnedDataLocked()
+        ownerDao.upsert(
+            SessionOwnerEntity(
+                ownerUserId = null,
+                generation = snapshot.generation,
+                phase = OwnerPhase.SIGNED_OUT,
+                transitionId = null,
+            ),
+        )
+        true
+    }
+
+    private fun SessionOwnerEntity.cancelledLogout() = copy(
+        phase = OwnerPhase.ACTIVE,
+        transitionId = null,
+        logoutDisposition = null,
+        acceptedUnsentFingerprint = null,
+    )
+
+    /** Świadome odrzucenie danych bez właściciela; inne fazy pozostają nietknięte. */
+    suspend fun discardUnclaimedData(): Boolean = db.withTransaction {
+        val snapshot = ownerSnapshotLocked()
+        val unclaimed = snapshot.phase == OwnerPhase.LEGACY_UNCLAIMED ||
+            (snapshot.ownerUserId == null && snapshot.phase != OwnerPhase.LOGGING_OUT)
+        if (!unclaimed) return@withTransaction false
+        deleteOwnedDataLocked()
+        writeOwnerLocked(snapshot, null, OwnerPhase.SIGNED_OUT, null)
+        true
+    }
+
+    private suspend fun ownerSnapshotLocked(): OwnerSnapshot {
+        val row = ownerDao.get() ?: SessionOwnerEntity()
+        val unsentIds = ownerDao.unsentIds()
+        return OwnerSnapshot(
+            ownerUserId = row.ownerUserId,
+            generation = row.generation,
+            phase = row.phase,
+            transitionId = row.transitionId,
+            hasOwnedData = ownerDao.hasOwnedData(),
+            unsentCount = unsentIds.size,
+            unsentFingerprint = unsentFingerprint(unsentIds),
+            logoutDisposition = row.logoutDisposition,
+            acceptedUnsentFingerprint = row.acceptedUnsentFingerprint,
+        )
+    }
+
+    private suspend fun writeOwnerLocked(
+        snapshot: OwnerSnapshot,
+        ownerUserId: String?,
+        phase: String,
+        transitionId: String?,
+        logoutDisposition: String? = null,
+        acceptedUnsentFingerprint: String? = null,
+    ) {
+        ownerDao.upsert(
+            SessionOwnerEntity(
+                ownerUserId = ownerUserId,
+                generation = snapshot.generation + 1,
+                phase = phase,
+                transitionId = transitionId,
+                logoutDisposition = logoutDisposition,
+                acceptedUnsentFingerprint = acceptedUnsentFingerprint,
+            ),
+        )
+    }
+
+    private fun deleteOwnedDataLocked() {
+        val sqlite = db.openHelper.writableDatabase
+        AppDatabase.OWNED_TABLES.forEach { table -> sqlite.execSQL("DELETE FROM `$table`") }
     }
 
     suspend fun cardCount(profileId: String): Int = cardDao.countForProfile(profileId)
@@ -190,7 +513,7 @@ class OfflineStore @Inject constructor(
             }.getOrNull()
         }
 
-    suspend fun cacheProfiles(profiles: List<LanguageProfileResponse>) {
+    suspend fun cacheProfiles(profiles: List<LanguageProfileResponse>): Unit = guardedWrite {
         db.withTransaction {
             if (profiles.isEmpty()) {
                 profileDao.deleteAll()
@@ -245,8 +568,8 @@ class OfflineStore @Inject constructor(
         cards: List<CardResponse>,
         deckId: String? = null,
         overwriteDeckId: Boolean = false,
-    ) {
-        if (cards.isEmpty()) return
+    ): Unit = guardedWrite {
+        if (cards.isEmpty()) return@guardedWrite
         val entities = cards.map { card ->
             val existing = cardDao.byId(card.id)
             CachedCardEntity(
@@ -462,7 +785,7 @@ class OfflineStore @Inject constructor(
      * Pełna synchronizacja list z odpowiedzi serwera — kasuje w Room wiersze usunięte na serwerze.
      * Tylko dla kompletnego GET /lists (sync pull, import refresh). Nigdy dla pojedynczej skrzynki.
      */
-    suspend fun cacheLists(profileId: String, lists: List<WordListResponse>) {
+    suspend fun cacheLists(profileId: String, lists: List<WordListResponse>): Unit = guardedWrite {
         consolidatePendingInboxes(profileId)
         val stubCount = pendingLookupCount(profileId)
         val serverLists = lists.filter { !it.id.startsWith("local-pending-inbox-") }
@@ -500,8 +823,8 @@ class OfflineStore @Inject constructor(
     }
 
     /** Aktualizuje / dopisuje wybrane listy bez kasowania pozostałych wierszy w Room. */
-    suspend fun upsertLists(profileId: String, lists: List<WordListResponse>) {
-        if (lists.isEmpty()) return
+    suspend fun upsertLists(profileId: String, lists: List<WordListResponse>): Unit = guardedWrite {
+        if (lists.isEmpty()) return@guardedWrite
         consolidatePendingInboxes(profileId)
         val stubCount = pendingLookupCount(profileId)
         val serverLists = lists.filter { !it.id.startsWith("local-pending-inbox-") }
@@ -621,14 +944,114 @@ class OfflineStore @Inject constructor(
         return updated
     }
 
+    /** Ocena i jej trwały intent w jednej transakcji: śmierć procesu nie zostawia postępu bez kolejki ani odwrotnie. */
+    suspend fun recordReviewLocally(review: PendingReviewEntity): CachedCardEntity? = db.withTransaction {
+        val updated = applyReviewLocally(review.cardId, review.grade, review.correct, review.createdAt)
+        reviewDao.insert(review)
+        updated
+    }
+
+    suspend fun recordUndoLocally(clientId: String, srs: SyncSrsState): Unit = db.withTransaction {
+        undoReviewLocally(clientId, srs)
+        enqueuePendingUndo(clientId, srs)
+    }
+
     suspend fun restoreCard(card: CachedCardEntity) {
         cardDao.update(card)
     }
 
-    suspend fun applyServerSrs(states: List<SyncSrsState>) {
-        for (srs in states) {
-            val card = cardDao.byId(srs.card_id) ?: continue
-            cardDao.update(card.withSrs(srs))
+    /**
+     * Zastosowanie ACK push w jednej transakcji z kontrolą właściciela: zdejmuje tylko potwierdzone ID,
+     * blokuje not_found/conflict, a serwerowy SRS nakłada wyłącznie na karty bez lokalnych niewysłanych
+     * ocen/undo (nowsza lokalna ocena z lotu nie wraca do starego stanu).
+     */
+    suspend fun applyPushAck(
+        confirmedReviews: List<String>,
+        blockedReviews: Map<String, String>,
+        confirmedMoves: List<String>,
+        blockedMoves: Map<String, String>,
+        srs: List<SyncSrsState>,
+    ): Unit = guardedWrite {
+        db.withTransaction {
+            if (confirmedReviews.isNotEmpty()) reviewDao.deleteIds(confirmedReviews)
+            blockedReviews.forEach { (id, reason) -> reviewDao.block(id, reason) }
+            if (confirmedMoves.isNotEmpty()) moveDao.deleteIds(confirmedMoves)
+            blockedMoves.forEach { (id, reason) -> moveDao.block(id, reason) }
+            if (srs.isNotEmpty()) {
+                val protectedIds = reviewDao.all().map { it.cardId }.toMutableSet()
+                undoDao.all().forEach { undo ->
+                    runCatching { json.decodeFromString(SyncSrsState.serializer(), undo.srsJson).card_id }
+                        .getOrNull()?.let { protectedIds += it }
+                }
+                for (state in srs) {
+                    if (state.card_id in protectedIds) continue
+                    val card = cardDao.byId(state.card_id) ?: continue
+                    cardDao.update(card.withSrs(state))
+                }
+            }
+        }
+    }
+
+    suspend fun blockPendingUndo(clientId: String, reason: String): Unit = guardedWrite {
+        undoDao.block(clientId, reason)
+    }
+
+    /**
+     * Świadome „Odrzuć" zablokowanej operacji. Cursor profilu jest zerowany, więc następny pull
+     * przywróci stan serwera dla odrzuconej lokalnej zmiany (z zachowaniem pozostałych overlayów).
+     */
+    suspend fun discardBlocked(kind: BlockedKind, id: String): Unit = guardedWrite {
+        db.withTransaction {
+            val profileIds = when (kind) {
+                BlockedKind.REVIEW -> reviewDao.all().filter { it.clientId == id }
+                    .mapNotNull { cardDao.byId(it.cardId)?.profileId }
+                BlockedKind.MOVE -> moveDao.all().filter { it.clientId == id }
+                    .mapNotNull { cardDao.byId(it.cardId)?.profileId }
+                BlockedKind.UNDO -> undoDao.all().filter { it.clientId == id }
+                    .mapNotNull { undo ->
+                        runCatching { json.decodeFromString(SyncSrsState.serializer(), undo.srsJson).card_id }
+                            .getOrNull()?.let { cardDao.byId(it)?.profileId }
+                    }
+                BlockedKind.OUTBOX -> emptyList()
+            }
+            when (kind) {
+                BlockedKind.REVIEW -> reviewDao.delete(id)
+                BlockedKind.MOVE -> moveDao.deleteIds(listOf(id))
+                BlockedKind.UNDO -> undoDao.delete(id)
+                BlockedKind.OUTBOX -> id.toLongOrNull()?.let { seq ->
+                    outboxDao.bySeq(seq)?.let { op ->
+                        profileOpView(op)?.payload?.profileId?.let { pid ->
+                            outboxDao.deleteBySeq(seq)
+                            cachedProfiles().firstOrNull { it.id == pid }?.let { cacheEffectiveProfile(it) }
+                        } ?: outboxDao.deleteBySeq(seq)
+                    }
+                }
+            }
+            val resets = profileIds.ifEmpty { syncMetaDao.all().map { it.profileId } }
+            resets.toSet().forEach { syncMetaDao.clearCursor(it) }
+        }
+    }
+
+    suspend fun blockedItems(): List<BlockedItem> = db.withTransaction {
+        buildList {
+            reviewDao.all().filter { it.blockedReason != null }
+                .forEach { add(BlockedItem(BlockedKind.REVIEW, it.clientId, it.blockedReason.orEmpty())) }
+            moveDao.all().filter { it.blockedReason != null }
+                .forEach { add(BlockedItem(BlockedKind.MOVE, it.clientId, it.blockedReason.orEmpty())) }
+            undoDao.all().filter { it.blockedReason != null }
+                .forEach { add(BlockedItem(BlockedKind.UNDO, it.clientId, it.blockedReason.orEmpty())) }
+            outboxDao.all().filter { it.status == "blocked" }
+                .forEach {
+                    add(
+                        BlockedItem(
+                            BlockedKind.OUTBOX,
+                            it.seq.toString(),
+                            it.lastError.orEmpty(),
+                            type = it.type,
+                            profileId = outboxProfileId(it),
+                        ),
+                    )
+                }
         }
     }
 
@@ -672,7 +1095,14 @@ class OfflineStore @Inject constructor(
 
     suspend fun pendingReviews(): List<PendingReviewEntity> = reviewDao.all()
 
-    suspend fun removePendingReviews(clientIds: List<String>) {
+    /** Tylko niezablokowane wpisy; zablokowane czekają na decyzję użytkownika, nie na sieć. */
+    suspend fun sendableReviews(): List<PendingReviewEntity> = reviewDao.sendable()
+
+    suspend fun sendableMoves(): List<PendingMoveEntity> = moveDao.sendable()
+
+    suspend fun sendableUndos(): List<PendingUndoEntity> = undoDao.sendable()
+
+    suspend fun removePendingReviews(clientIds: List<String>): Unit = guardedWrite {
         if (clientIds.isNotEmpty()) reviewDao.deleteIds(clientIds)
     }
 
@@ -682,11 +1112,9 @@ class OfflineStore @Inject constructor(
 
     suspend fun pendingMoves(): List<PendingMoveEntity> = moveDao.all()
 
-    suspend fun removePendingMoves(clientIds: List<String>) {
+    suspend fun removePendingMoves(clientIds: List<String>): Unit = guardedWrite {
         if (clientIds.isNotEmpty()) moveDao.deleteIds(clientIds)
     }
-
-    suspend fun pendingCount(): Int = reviewDao.count()
 
     suspend fun enqueueOfflineLookup(profileId: String, lemma: String): PendingLookupEntity? {
         val trimmed = lemma.trim()
@@ -715,12 +1143,12 @@ class OfflineStore @Inject constructor(
         lookupDao.byId(clientId)
 
     /** Oznacza stub jako „wymaga sprawdzenia" i zapisuje propozycje. NIE tworzy karty na serwerze. */
-    suspend fun markLookupNeedsReview(clientId: String, suggestionsJson: String?) {
+    suspend fun markLookupNeedsReview(clientId: String, suggestionsJson: String?): Unit = guardedWrite {
         lookupDao.setStatus(clientId, "needs_review", suggestionsJson)
         lookupDao.byId(clientId)?.let { syncPendingInboxWordCount(it.profileId) }
     }
 
-    suspend fun removePendingLookup(clientId: String) {
+    suspend fun removePendingLookup(clientId: String): Unit = guardedWrite {
         val removed = lookupDao.all().firstOrNull { it.clientId == clientId }
         lookupDao.deleteIds(listOf(clientId))
         removed?.let { syncPendingInboxWordCount(it.profileId) }
@@ -782,7 +1210,7 @@ class OfflineStore @Inject constructor(
 
     suspend fun pendingUndos(): List<PendingUndoEntity> = undoDao.all()
 
-    suspend fun removePendingUndo(clientId: String) {
+    suspend fun removePendingUndo(clientId: String): Unit = guardedWrite {
         undoDao.delete(clientId)
     }
 
@@ -830,13 +1258,194 @@ class OfflineStore @Inject constructor(
 
     suspend fun pendingOps(): List<OutboxOpEntity> = outboxDao.pending()
 
-    suspend fun outboxPendingCount(): Int = outboxDao.pendingCount()
+    suspend fun opByClientId(clientOpId: String): OutboxOpEntity? =
+        outboxDao.all().firstOrNull { it.clientOpId == clientOpId }
+
+    suspend fun removeOpByClientId(clientOpId: String): Unit = guardedWrite {
+        outboxDao.deleteByClientOpId(clientOpId)
+    }
+    // ---- Profil: edycje i wybór pary jako trwałe intenty (F-003/T-004) ----
+
+    private fun profileOpView(op: OutboxOpEntity): ProfileOpView? {
+        if (op.type != OP_PROFILE_UPDATE) return null
+        val payload = runCatching { json.decodeFromString(ProfileUpdatePayload.serializer(), op.payloadJson) }
+            .getOrNull() ?: return null
+        return ProfileOpView(op.seq, op.status, op.attempts, op.lastError, payload)
+    }
+
+    private suspend fun profileOps(profileId: String): List<ProfileOpView> =
+        outboxDao.all().mapNotNull(::profileOpView).filter { it.payload.profileId == profileId }
+
+    /** Widoczne wartości = potwierdzony snapshot + nakładka wszystkich niepotwierdzonych edycji. */
+    suspend fun profileDrafts(): Map<String, ProfileFields> =
+        outboxDao.all().mapNotNull(::profileOpView).groupBy { it.payload.profileId }
+            .mapValues { overlayDrafts(it.value) }
+
+    private suspend fun cacheEffectiveProfile(profile: LanguageProfileResponse) {
+        val confirmed = profile.confirmed ?: ProfileFields.of(profile)
+        val draft = overlayDrafts(profileOps(profile.id))
+        cacheProfile(profile.copy(confirmed = confirmed).withFields(draft))
+    }
+
+    /**
+     * Lokalna edycja: cache widocznych wartości i intent w jednej transakcji, bez sieci.
+     * Brak zmian względem obecnych wartości nie tworzy intentu.
+     */
+    suspend fun editProfileLocally(profileId: String, requested: ProfileFields): LanguageProfileResponse =
+        guardedWrite {
+            db.withTransaction {
+                val current = cachedProfiles().firstOrNull { it.id == profileId } ?: error("no_profile")
+                val currentFields = ProfileFields.of(current)
+                val changed = requested.changedAgainst(currentFields)
+                if (changed.isEmpty) return@withTransaction current
+                val prev = changed.valuesFrom(current.confirmed ?: currentFields)
+                val existing = profileOps(profileId)
+                when (val plan = planProfileEdit(profileId, changed, prev, current.revision, existing)) {
+                    is ProfileEditPlan.Append -> enqueueOp(
+                        OP_PROFILE_UPDATE,
+                        json.encodeToString(ProfileUpdatePayload.serializer(), plan.payload),
+                    )
+                    is ProfileEditPlan.MergeInto -> outboxDao.bySeq(plan.seq)?.let { row ->
+                        outboxDao.update(
+                            row.copy(
+                                clientOpId = UUID.randomUUID().toString(),
+                                payloadJson = json.encodeToString(ProfileUpdatePayload.serializer(), plan.payload),
+                                status = if (plan.newPending) "pending" else row.status,
+                                attempts = if (plan.newPending) 0 else row.attempts,
+                                lastError = if (plan.newPending) null else row.lastError,
+                            ),
+                        )
+                    }
+                }
+                val shown = current.withFields(changed).copy(confirmed = current.confirmed ?: currentFields)
+                cacheProfile(shown)
+                shown
+            }
+        }
+
+    /** Zaczyna wysyłkę: oznacza op jako wysłany i zwraca najświeższą treść (scalenia w locie nie giną). */
+    suspend fun markProfileOpSending(seq: Long): OutboxOpEntity? = guardedWrite {
+        db.withTransaction {
+            val row = outboxDao.bySeq(seq) ?: return@withTransaction null
+            if (row.status != "pending") return@withTransaction null
+            val marked = if (row.lastError == null) row.copy(lastError = PROFILE_OP_SENT) else row
+            if (marked !== row) outboxDao.update(marked)
+            marked
+        }
+    }
+
+    /** Wcześniejsza zablokowana lub zaparkowana edycja tego profilu wstrzymuje kolejne. */
+    suspend fun hasEarlierUnresolvedProfileOp(seq: Long, profileId: String): Boolean =
+        outboxDao.all().any { row ->
+            row.seq < seq && row.status != "pending" && profileOpView(row)?.payload?.profileId == profileId
+        }
+
+    /**
+     * ACK serwera. Op znika tylko, gdy wysłany `clientOpId` nadal jest aktualny; inaczej w międzyczasie
+     * scalono nowszą edycję i zostaje do wysłania na nowej rewizji. Cache dostaje snapshot serwera
+     * z nakładką pozostałych edycji, a lokalny wybór aktywnego profilu zostaje.
+     */
+    suspend fun confirmProfileUpdate(seq: Long, sentClientOpId: String, server: LanguageProfileResponse): Unit =
+        guardedWrite {
+            db.withTransaction {
+                val row = outboxDao.bySeq(seq)
+                val profileId = server.id
+                if (row != null && row.clientOpId == sentClientOpId) outboxDao.deleteBySeq(seq)
+                for (other in outboxDao.all()) {
+                    val view = profileOpView(other) ?: continue
+                    if (view.payload.profileId != profileId || other.status == "blocked") continue
+                    val rebased = view.payload.copy(baseRevision = server.revision)
+                    outboxDao.update(
+                        other.copy(payloadJson = json.encodeToString(ProfileUpdatePayload.serializer(), rebased)),
+                    )
+                }
+                val local = cachedProfiles().firstOrNull { it.id == profileId }
+                cacheEffectiveProfile(
+                    server.copy(
+                        is_active = local?.is_active ?: server.is_active,
+                        confirmed = ProfileFields.of(server),
+                    ),
+                )
+            }
+        }
+
+    /** Przelicza widoczny profil po usunięciu/odrzuceniu edycji (np. „przyjmij serwer", „odrzuć"). */
+    suspend fun rebuildProfileCache(profileId: String): Unit = guardedWrite {
+        db.withTransaction {
+            cachedProfiles().firstOrNull { it.id == profileId }?.let { cacheEffectiveProfile(it) }
+        }
+    }
+
+    /** Kolejny wybór zastępuje jeszcze nie wysłany; wysłane zostają, ostatni wygrywa na serwerze. */
+    suspend fun enqueueProfileActivate(profileId: String) {
+        for (row in outboxDao.all()) {
+            if (row.type == OP_PROFILE_ACTIVATE && row.status == "pending" && row.attempts == 0 && row.lastError == null) {
+                outboxDao.deleteBySeq(row.seq)
+            }
+        }
+        enqueueOp(OP_PROFILE_ACTIVATE, buildJsonObject { put("profileId", JsonPrimitive(profileId)) }.toString())
+    }
+
+    /** „Zastosuj moje zmiany" po konflikcie: nowa baza z serwera, nowy clientOpId, z powrotem do kolejki. */
+    suspend fun reopenProfileOp(seq: Long, serverRevision: Long?): Boolean = guardedWrite {
+        db.withTransaction {
+            val row = outboxDao.bySeq(seq) ?: return@withTransaction false
+            val view = profileOpView(row) ?: return@withTransaction false
+            val payload = view.payload.copy(baseRevision = serverRevision)
+            outboxDao.update(
+                row.copy(
+                    clientOpId = UUID.randomUUID().toString(),
+                    payloadJson = json.encodeToString(ProfileUpdatePayload.serializer(), payload),
+                    status = "pending",
+                    attempts = 0,
+                    lastError = null,
+                ),
+            )
+            true
+        }
+    }
+
+    private fun outboxProfileId(op: OutboxOpEntity): String? = runCatching {
+        (json.parseToJsonElement(op.payloadJson) as? JsonObject)?.get("profileId").asContent()
+    }.getOrNull()
+
+    suspend fun outboxOp(seq: Long): OutboxOpEntity? = outboxDao.bySeq(seq)
+
+    /** Lokalna zmiana i jej intent (outbox) zatwierdzane razem lub wcale. */
+    suspend fun <T> atomically(block: suspend () -> T): T = db.withTransaction { block() }
+
+    /** Operacja wymaga decyzji użytkownika: nie jest wysyłana ponownie ani uznawana za wykonaną. */
+    suspend fun markOpBlocked(op: OutboxOpEntity, code: String): Unit = guardedWrite {
+        // Świeży odczyt: scalenie profilu w trakcie wysyłki nie może zostać nadpisane starą kopią.
+        db.withTransaction {
+            val row = outboxDao.bySeq(op.seq) ?: return@withTransaction
+            outboxDao.update(row.copy(status = "blocked", lastError = code))
+        }
+    }
+
+    /**
+     * Create listy został już wykonany i lista usunięta (receipt): zależne operacje i ruchy do lokalnego
+     * ID dostają `target_unavailable`, a lokalny wiersz znika z kartami z powrotem na liście „Uczę się".
+     */
+    suspend fun blockDependentsOfLocalList(localId: String): Unit = guardedWrite {
+        db.withTransaction {
+            for (op in outboxDao.pending()) {
+                if (op.payloadJson.contains(localId)) {
+                    outboxDao.update(op.copy(status = "blocked", lastError = "target_unavailable"))
+                }
+            }
+            moveDao.all().filter { it.targetListId == localId && it.blockedReason == null }
+                .forEach { moveDao.block(it.clientId, "target_unavailable") }
+            cardDao.cardsByDeckId(localId).forEach { cardDao.update(it.copy(deckId = null)) }
+            listDao.deleteById(localId)
+        }
+    }
 
     /**
      * 401 na wygasłym tokenie parkowało settings_update i zmiana nigdy nie wylatywała.
      * Po udanym odświeżeniu sesji wracają do kolejki.
      */
-    suspend fun unparkAuthFailures() {
+    suspend fun unparkAuthFailures(): Unit = guardedWrite {
         for (op in outboxDao.all()) {
             if (op.status != "parked") continue
             val err = op.lastError.orEmpty()
@@ -846,24 +1455,27 @@ class OfflineStore @Inject constructor(
         }
     }
 
-    suspend fun removeOp(op: OutboxOpEntity) {
+    suspend fun removeOp(op: OutboxOpEntity): Unit = guardedWrite {
         outboxDao.deleteBySeq(op.seq)
     }
 
     /** Zwiększa licznik prób; parkuje po [MAX_OP_ATTEMPTS], żeby poison-pill nie blokował reszty. */
-    suspend fun markOpFailed(op: OutboxOpEntity, error: String?) {
-        val attempts = op.attempts + 1
-        outboxDao.update(
-            op.copy(
-                attempts = attempts,
-                lastError = error,
-                status = if (attempts >= MAX_OP_ATTEMPTS) "parked" else "pending",
-            ),
-        )
+    suspend fun markOpFailed(op: OutboxOpEntity, error: String?): Unit = guardedWrite {
+        db.withTransaction {
+            val row = outboxDao.bySeq(op.seq) ?: return@withTransaction
+            val attempts = row.attempts + 1
+            outboxDao.update(
+                row.copy(
+                    attempts = attempts,
+                    lastError = error,
+                    status = if (attempts >= MAX_OP_ATTEMPTS) "parked" else "pending",
+                ),
+            )
+        }
     }
 
     /** Remap ID listy lokalnej → server ID w cache, kartach, ruchach i payloadach operacji. */
-    suspend fun remapLocalListId(localId: String, serverId: String) {
+    suspend fun remapLocalListId(localId: String, serverId: String): Unit = guardedWrite {
         listDao.byId(localId)?.let { entity ->
             listDao.deleteById(localId)
             listDao.upsertAll(listOf(entity.copy(id = serverId, isLocalOnly = false)))
@@ -952,7 +1564,7 @@ class OfflineStore @Inject constructor(
         profileId: String,
         cards: List<CardResponse>,
         deckId: String? = null,
-    ) {
+    ): Unit = guardedWrite {
         val newIds = cards.map { it.id }.toSet()
         // Lista systemowa (deckId == null): tylko upsert. Niepełny GET nie może
         // skasować kart, które Room już ma — to nie jest restore z serwera.
@@ -963,7 +1575,7 @@ class OfflineStore @Inject constructor(
                 cardDao.deleteIds(stale.map { it.id })
             }
         }
-        if (cards.isEmpty()) return
+        if (cards.isEmpty()) return@guardedWrite
         val entities = cards.map { card ->
             val existing = cardDao.byId(card.id)
             CachedCardEntity(

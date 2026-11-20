@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="{{ locale }}" dir="{{ direction }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>{{ title }} · {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ assets }}/account.css">
+</head>
+<body>
+  <main class="card" data-page="{{ page }}" data-api="{{ api }}">
+    <p class="brand">{{ app_name }}</p>
+    <h1>{{ title }}</h1>
+    <p id="intro">{{ intro }}</p>
+
+    <div id="status" class="status" role="status" aria-live="polite" tabindex="-1" hidden></div>
+
+    <noscript><p class="status error">{{ texts.noscript }}</p></noscript>
+
+    {% if page == "delete_start" %}
+    <form id="credentials" novalidate hidden>
+      <label for="email">{{ texts.del_email_label }}</label>
+      <input id="email" name="email" type="email" autocomplete="username" required>
+
+      <label for="password">{{ texts.del_password_label }}</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+      <button id="proof-request" type="submit">{{ texts.del_continue }}</button>
+      <button id="proof-cancel" type="button">{{ texts.del_undo_button }}</button>
+      <button id="link-request" type="button">{{ texts.del_send_link }}</button>
+      <button id="link-cancel" type="button">{{ texts.del_undo_link }}</button>
+    </form>
+    {% endif %}
+
+    <form id="action-form" novalidate hidden>
+      {% if page in ("delete_start", "delete_confirm") %}
+      <label class="toggle"><input id="acknowledge" type="checkbox"> {{ texts.del_confirm_check }}</label>
+      <button id="submit" type="submit" disabled>{{ texts.del_confirm_button }}</button>
+      {% elif page == "delete_cancel" %}
+      <button id="submit" type="submit">{{ texts.del_cancel_button }}</button>
+      {% else %}
+      <button id="submit" type="submit">{{ texts.del_status_refresh }}</button>
+      {% endif %}
+    </form>
+  </main>
+  <script type="application/json" id="texts">{{ texts | tojson }}</script>
+  <script src="{{ assets }}/account_deletion.js"></script>
+</body>
+</html>

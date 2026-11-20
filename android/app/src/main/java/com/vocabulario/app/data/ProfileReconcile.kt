@@ -2,6 +2,8 @@ package com.vocabulario.app.data
 
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.api.appLang
+import com.vocabulario.app.data.sync.ProfileFields
+import com.vocabulario.app.data.sync.withFields
 
 /** Wybiera profil, który naprawdę jest na serwerze — nie ghost ID z TokenStore/Room. */
 internal fun resolveActiveProfile(
@@ -16,27 +18,35 @@ internal fun resolveActiveProfile(
 }
 
 /**
- * GET /profiles nie może cofać lokalnie wybranej pary.
- * CEFR / czasy aktywnego id zostają; [is_active] idzie za TokenStore/Room.
+ * GET /profiles nie może cofać lokalnie wybranej pary ani niewysłanej edycji.
+ * Wartości serwera są zatwierdzonym snapshotem ([LanguageProfileResponse.confirmed]); widoczne pola
+ * to snapshot z nakładką [drafts]. [is_active] idzie za wyborem lokalnym, nie za serwerowym flagą.
+ * Profil z lokalną pracą ([protectedIds]) nie znika, gdy serwer go nie zwrócił.
  */
 internal fun mergeRemoteProfiles(
     remote: List<LanguageProfileResponse>,
-    localActive: LanguageProfileResponse?,
+    local: List<LanguageProfileResponse>,
+    drafts: Map<String, ProfileFields>,
+    protectedIds: Set<String>,
     chosenId: String?,
 ): List<LanguageProfileResponse> {
-    if (remote.isEmpty()) return emptyList()
-    val resolved = resolveActiveProfile(chosenId ?: localActive?.id, remote) ?: return remote
-    return remote.map { remoteProfile ->
-        val withLocalPrefs = if (localActive != null && remoteProfile.id == localActive.id) {
-            remoteProfile.copy(
-                selected_tenses = localActive.selected_tenses,
-                cefr_level = localActive.cefr_level,
-                tense_label_lang = localActive.tense_label_lang,
-            )
-        } else {
-            remoteProfile
-        }
-        withLocalPrefs.copy(is_active = withLocalPrefs.id == resolved.id)
+    val remoteIds = remote.map { it.id }.toSet()
+    val localById = local.associateBy { it.id }
+    // Spóźniona odpowiedź GET nie cofa rewizji już potwierdzonej przez ACK: zostaje lokalny snapshot.
+    val fromRemote = remote.map { r ->
+        val l = localById[r.id]
+        val lr = l?.revision
+        val rr = r.revision
+        if (l != null && lr != null && rr != null && rr < lr) l else r.copy(confirmed = ProfileFields.of(r))
+    }
+    val kept = local.filter { it.id !in remoteIds && it.id in protectedIds }
+    val combined = fromRemote + kept
+    if (combined.isEmpty()) return emptyList()
+    val resolved = resolveActiveProfile(chosenId ?: local.firstOrNull { it.is_active }?.id, combined)
+        ?: return combined
+    return combined.map { profile ->
+        val withDraft = drafts[profile.id]?.let { profile.withFields(it) } ?: profile
+        withDraft.copy(is_active = withDraft.id == resolved.id)
     }
 }
 

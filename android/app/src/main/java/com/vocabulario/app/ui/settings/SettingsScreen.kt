@@ -1,7 +1,9 @@
 package com.vocabulario.app.ui.settings
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -39,8 +41,10 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -64,9 +69,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vocabulario.app.R
+import com.vocabulario.app.ui.report.SupportHelpDialog
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.data.CEFR_LEVELS
+import com.vocabulario.app.data.ApiBaseUrl
+import com.vocabulario.app.data.publicSiteUrl
 import com.vocabulario.app.data.LanguagePacks
 import com.vocabulario.app.data.SUPPORTED_LEARNING_LANGS
 import com.vocabulario.app.data.api.appLang
@@ -85,6 +96,7 @@ import com.vocabulario.app.ui.components.SettingsCheckRow
 import com.vocabulario.app.ui.components.SettingsRadioRow
 import com.vocabulario.app.ui.components.SettingsValueSlider
 import com.vocabulario.app.ui.components.WheelTimePicker
+import com.vocabulario.app.ui.sync.SyncStatusCard
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,9 +105,62 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
+    accountViewModel: AccountSettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val account by accountViewModel.account.collectAsState()
+    val changePassword by accountViewModel.changePassword.collectAsState()
+    val changeEmail by accountViewModel.changeEmail.collectAsState()
+    val deleteAccount by accountViewModel.deleteAccount.collectAsState()
+    val linkGoogle by accountViewModel.linkGoogle.collectAsState()
+    val addPassword by accountViewModel.addPassword.collectAsState()
     val context = LocalContext.current
+    deleteAccount?.let { form ->
+        DeleteAccountDialog(
+            form = form,
+            onPasswordChange = { accountViewModel.updateDeleteAccount(password = it) },
+            onConfirmedChange = { accountViewModel.updateDeleteAccount(confirmed = it) },
+            onSubmit = { accountViewModel.submitDeleteAccount(context) },
+            onDismiss = accountViewModel::closeDeleteAccount,
+        )
+    }
+    linkGoogle?.let { form ->
+        LinkGoogleDialog(
+            form = form,
+            accountEmail = account.email,
+            onPasswordChange = accountViewModel::updateLinkGoogle,
+            onSubmit = { accountViewModel.submitLinkGoogle(context) },
+            onDismiss = accountViewModel::closeLinkGoogle,
+        )
+    }
+    addPassword?.let { form ->
+        AddPasswordDialog(
+            form = form,
+            onNewChange = { accountViewModel.updateAddPassword(new = it) },
+            onRepeatChange = { accountViewModel.updateAddPassword(repeat = it) },
+            onSubmit = { accountViewModel.submitAddPassword(context) },
+            onDismiss = accountViewModel::closeAddPassword,
+        )
+    }
+    changeEmail?.let { form ->
+        ChangeEmailDialog(
+            form = form,
+            onEmailChange = { accountViewModel.updateChangeEmail(newEmail = it) },
+            onPasswordChange = { accountViewModel.updateChangeEmail(password = it) },
+            onSubmit = { accountViewModel.submitChangeEmail(context) },
+            onDismiss = accountViewModel::closeChangeEmail,
+        )
+    }
+    changePassword?.let { form ->
+        ChangePasswordDialog(
+            form = form,
+            onCurrentChange = { accountViewModel.updateChangePassword(current = it) },
+            onNewChange = { accountViewModel.updateChangePassword(new = it) },
+            onRepeatChange = { accountViewModel.updateChangePassword(repeat = it) },
+            onSubmit = accountViewModel::submitChangePassword,
+            onDismiss = accountViewModel::closeChangePassword,
+        )
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
@@ -108,7 +173,20 @@ fun SettingsScreen(
             viewModel.setNotificationsEnabled(true)
         }
     }
-    LaunchedEffect(Unit) { viewModel.load() }
+    LaunchedEffect(Unit) {
+        viewModel.load()
+        accountViewModel.load()
+    }
+    var systemBlocked by remember { mutableStateOf(!NotificationHelper.canPost(context)) }
+    var supportOpen by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) systemBlocked = !NotificationHelper.canPost(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     LaunchedEffect(state.expanded, state.notificationsEnabled) {
         if (state.expanded == SettingsSection.NOTIFICATIONS &&
             state.notificationsEnabled &&
@@ -347,6 +425,29 @@ fun SettingsScreen(
                     exit = shrinkVertically() + fadeOut(),
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
+                        if (systemBlocked) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .testTag(TestTags.SETTINGS_NOTIF_BLOCKED),
+                            ) {
+                                Text(
+                                    stringResource(R.string.notif_blocked_hint),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                TextButton(
+                                    onClick = {
+                                        context.startActivity(
+                                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                        )
+                                    },
+                                ) { Text(stringResource(R.string.notif_open_settings)) }
+                            }
+                        }
                         Text(
                             stringResource(R.string.settings_study_hour),
                             style = MaterialTheme.typography.titleMedium,
@@ -410,6 +511,46 @@ fun SettingsScreen(
 
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
+            SettingsGroupLabel(stringResource(R.string.sync_title))
+            SyncStatusCard()
+
+            SettingsGroupLabel(stringResource(R.string.settings_group_account))
+            AccordionSection(
+                title = stringResource(R.string.settings_account),
+                subtitle = account.email,
+                expanded = state.expanded == SettingsSection.ACCOUNT,
+                onHeaderClick = { viewModel.toggleSection(SettingsSection.ACCOUNT) },
+                testTag = TestTags.SETTINGS_SECTION_ACCOUNT,
+                showDivider = false,
+            ) {
+                AccountSectionBody(
+                    account,
+                    onChangePassword = accountViewModel::openChangePassword,
+                    onSendReset = accountViewModel::sendPasswordReset,
+                    onChangeEmail = accountViewModel::openChangeEmail,
+                    onResendChange = accountViewModel::resendEmailChange,
+                    onCancelChange = accountViewModel::cancelEmailChange,
+                    onDeleteAccount = accountViewModel::openDeleteAccount,
+                    onLinkGoogle = accountViewModel::openLinkGoogle,
+                    onAddPassword = accountViewModel::openAddPassword,
+                    onRetry = accountViewModel::load,
+                )
+            }
+            account.info?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+
+            Spacer(Modifier.height(8.dp))
+            val uriHandler = LocalUriHandler.current
+            OutlinedButton(
+                onClick = { uriHandler.openUri(publicSiteUrl(ApiBaseUrl.resolve(), "/legal")) },
+                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_LEGAL),
+                shape = AppButtonShape,
+            ) { Text(stringResource(R.string.settings_legal)) }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { supportOpen = true },
+                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_SUPPORT),
+                shape = AppButtonShape,
+            ) { Text(stringResource(R.string.support_title)) }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = onLogout,
@@ -419,6 +560,8 @@ fun SettingsScreen(
             Spacer(Modifier.height(80.dp))
         }
     }
+
+    if (supportOpen) SupportHelpDialog(onDismiss = { supportOpen = false })
 
     if (tenseModalOpen && tenseOptions.isNotEmpty()) {
         TensePickerDialog(

@@ -2,6 +2,9 @@
 
 Adres musi być ustawiony, zanim jakikolwiek test zaimportuje `app`:
 `app.db.session.engine` powstaje przy imporcie z `get_settings()`.
+
+Bez bazy testy `pg` są pomijane. `REQUIRE_PG_TESTS=1` (CI) zamienia każdy
+brak bazy, brak wybranych testów `pg` i pominięty test `pg` w błąd.
 """
 
 from __future__ import annotations
@@ -23,8 +26,20 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+_REQUIRE_ENV = "REQUIRE_PG_TESTS"
 _schema_ready = False
 _pg_skip_reason: str | None = None
+_pg_required = False
+_pg_not_run: list[str] = []
+
+
+def _require_flag() -> bool:
+    value = os.environ.get(_REQUIRE_ENV, "").strip().lower()
+    if value in {"", "0", "false", "no"}:
+        return False
+    if value in {"1", "true", "yes"}:
+        return True
+    pytest.exit(f"{_REQUIRE_ENV} must be 1 or 0, got {value!r}.", returncode=4)
 
 
 def _url_from_dotenv() -> str | None:
@@ -73,16 +88,22 @@ async def _ping(url: str) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    global _pg_skip_reason
+    global _pg_skip_reason, _pg_required
+    _pg_required = _require_flag()
     if not _test_url:
         _pg_skip_reason = "TEST_DATABASE_URL is not set"
-        return
-    _guard_test_url(_test_url)
-    os.environ["DATABASE_URL"] = _test_url
-    try:
-        asyncio.run(_ping(_test_url))
-    except Exception as exc:
-        _pg_skip_reason = f"TEST_DATABASE_URL connection failed: {type(exc).__name__}"
+    else:
+        _guard_test_url(_test_url)
+        os.environ["DATABASE_URL"] = _test_url
+        try:
+            asyncio.run(_ping(_test_url))
+        except Exception as exc:
+            _pg_skip_reason = f"TEST_DATABASE_URL connection failed: {type(exc).__name__}"
+    if _pg_required and _pg_skip_reason is not None:
+        pytest.exit(
+            f"{_REQUIRE_ENV}=1 but PostgreSQL tests cannot run: {_pg_skip_reason}.",
+            returncode=3,
+        )
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
@@ -92,6 +113,36 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     for item in items:
         if "pg" in item.keywords:
             item.add_marker(skip)
+
+
+def pytest_collection_finish(session: pytest.Session) -> None:
+    if _pg_required and not any("pg" in item.keywords for item in session.items):
+        pytest.exit(f"{_REQUIRE_ENV}=1 but no tests marked pg were selected.", returncode=3)
+
+
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    if report.skipped and "pg" in report.keywords and report.nodeid not in _pg_not_run:
+        _pg_not_run.append(report.nodeid)
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    if _pg_required and _pg_not_run and session.exitstatus == pytest.ExitCode.OK:
+        session.exitstatus = pytest.ExitCode.TESTS_FAILED
+
+
+def pytest_terminal_summary(terminalreporter) -> None:
+    if not _pg_not_run:
+        return
+    if _pg_required:
+        terminalreporter.section("required PostgreSQL tests did not pass", red=True)
+        for nodeid in _pg_not_run:
+            terminalreporter.line(f"SKIPPED/XFAIL {nodeid}")
+        return
+    terminalreporter.write_line(
+        f"{len(_pg_not_run)} PostgreSQL tests (marker pg) skipped: "
+        f"{_pg_skip_reason or 'skipped by the test'}. They did not verify the database.",
+        yellow=True,
+    )
 
 
 async def _prepare_engine():

@@ -53,7 +53,7 @@ async def test_me_with_auth_headers(pg, pg_client):
     async with pg() as session:
         user = await create_user(session, email="pg-me@test.com")
         await session.commit()
-        headers = auth_headers(user)
+        headers = await auth_headers(session, user)
     response = await pg_client.get("/api/v1/me", headers=headers)
     assert response.status_code == 200
     assert response.json()["email"] == "pg-me@test.com"

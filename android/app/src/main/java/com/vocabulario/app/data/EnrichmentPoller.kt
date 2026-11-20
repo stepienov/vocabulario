@@ -1,6 +1,7 @@
 package com.vocabulario.app.data
 
 import com.vocabulario.app.data.api.CardResponse
+import com.vocabulario.app.data.session.AccountResetHooks
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,6 +24,7 @@ import javax.inject.Singleton
 @Singleton
 class EnrichmentPoller @Inject constructor(
     private val repository: LearningRepository,
+    resetHooks: AccountResetHooks,
 ) {
     data class Watch(
         val id: String,
@@ -41,6 +43,10 @@ class EnrichmentPoller @Inject constructor(
     private val _pollingIds = MutableStateFlow<Set<String>>(emptySet())
     val pollingIds: StateFlow<Set<String>> = _pollingIds.asStateFlow()
     private var loopJob: Job? = null
+
+    init {
+        resetHooks.register { reset() }
+    }
 
     fun isPolling(cardId: String): Boolean = cardId in _pollingIds.value
 
@@ -152,7 +158,9 @@ class EnrichmentPoller @Inject constructor(
                     runCatching { repository.evaluateReadyBatches() }
                     break
                 }
-                val fetched = runCatching { repository.refreshCardsFromServer(ids) }
+                val fetched = runCatching {
+                    repository.asCurrentOwner { repository.refreshCardsFromServer(ids) }
+                }
                     .getOrNull()
                     .orEmpty()
                 mutex.withLock {

@@ -24,9 +24,22 @@ class ImportPollWorker @AssistedInject constructor(
         if (!repository.hasSyncableSession()) return Result.success()
         val jobId = persistence.loadJobId() ?: return Result.success()
         return try {
-            val progress = repository.getImportJobProgress(jobId)
-            importController.ingestRemoteProgress(progress)
-            if (importController.state.value.busy) Result.retry() else Result.success()
+            val busy = repository.asCurrentOwner {
+                val progress = repository.getImportJobProgress(jobId)
+                repository.ensureOwnerCurrent()
+                importController.ingestRemoteProgress(progress)
+                importController.state.value.busy
+            }
+            when (busy) {
+                true -> Result.retry()
+                false -> Result.success()
+                // Zastąpiony właściciel: ponawiamy tylko, gdy to samo konto nadal czeka na ten job.
+                null -> if (persistence.loadJobId() == jobId && repository.hasActiveOwner()) {
+                    Result.retry()
+                } else {
+                    Result.success()
+                }
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {

@@ -1,6 +1,7 @@
 package com.vocabulario.app.data.api
 
 import com.vocabulario.app.data.EnrichmentStatus
+import com.vocabulario.app.data.sync.ProfileFields
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.JsonElement
@@ -11,26 +12,188 @@ data class TokenResponse(
     val access_token: String,
     val refresh_token: String,
     val token_type: String = "bearer",
+    val user_id: String? = null,
+    val session_id: String? = null,
+    val expires_in: Long? = null,
 )
 
 @Serializable
-data class RegisterRequest(val email: String, val password: String)
+data class RegisterRequest(
+    val email: String,
+    val password: String,
+    val locale: String? = null,
+    val legal_acceptance: LegalAcceptanceBody? = null,
+)
+
+/** Dowód akceptacji dla wersji z manifestu: osobno warunki (wersja) i oświadczenie o wieku. */
+@Serializable
+data class LegalAcceptanceBody(val terms_version: String, val locale: String, val adult_confirmed: Boolean)
+
+@Serializable
+data class LegalDocumentRef(val kind: String, val version: String, val locale: String, val url: String)
+
+@Serializable
+data class LegalManifest(
+    val terms_version: String,
+    val privacy_version: String = "",
+    val locale: String = "en",
+    val documents: List<LegalDocumentRef> = emptyList(),
+    val support_email: String? = null,
+) {
+    fun urlOf(kind: String): String? = documents.firstOrNull { it.kind == kind }?.url
+}
+
+@Serializable
+data class LegalStatus(
+    val accepted_terms_version: String? = null,
+    val required_terms_version: String = "",
+    val adult_confirmed: Boolean = false,
+    val acceptance_required: Boolean = false,
+)
 
 @Serializable
 data class LoginRequest(val email: String, val password: String)
 
 @Serializable
-data class GoogleAuthRequest(val id_token: String)
+data class GoogleAuthRequest(
+    val challenge_id: String,
+    val id_token: String,
+    val locale: String? = null,
+    val legal_acceptance: LegalAcceptanceBody? = null,
+)
 
 @Serializable
-data class RefreshRequest(val refresh_token: String)
+data class GoogleChallengeResponse(val challenge_id: String, val nonce: String, val expires_at: String)
+
+@Serializable
+data class GoogleLinkChallengeRequest(val recent_auth_token: String)
+
+@Serializable
+data class GoogleLinkRequest(val challenge_id: String, val id_token: String, val recent_auth_token: String)
+
+@Serializable
+data class RecentAuthGoogleChallengeRequest(val action: String)
+
+@Serializable
+data class RecentAuthGoogleRequest(val challenge_id: String, val id_token: String, val action: String)
+
+@Serializable
+data class AddPasswordRequest(val new_password: String, val recent_auth_token: String)
+
+@Serializable
+data class RefreshRequest(val refresh_token: String, val request_id: String)
+
+@Serializable
+data class LogoutRequest(val refresh_token: String)
 
 @Serializable
 data class UserResponse(
     val id: String,
     val email: String,
     val role: String,
+    val email_verified: Boolean = true,
+    val email_verification_required: Boolean = false,
+    val login_methods: List<String> = emptyList(),
+    val google_email: String? = null,
+    val password_upgrade_required: Boolean = false,
+    val email_revision: Int = 1,
+    val account_status: String = "active",
+    val lifecycle_revision: Int = 1,
+    val legal_status: LegalStatus? = null,
 )
+
+@Serializable
+data class PasswordResetRequestBody(val email: String, val locale: String? = null)
+
+@Serializable
+data class PasswordChangeRequest(val current_password: String, val new_password: String)
+
+/** 202 `accepted` (mail w kolejce) albo 200 `already_verified`. */
+@Serializable
+data class MailStatusResponse(val status: String, val retry_after_seconds: Int? = null)
+
+@Serializable
+data class EmailVerificationStatusResponse(
+    val email_verified: Boolean,
+    val delivery_status: String = "not_requested",
+    val delivery_delayed: Boolean = false,
+    val resend_available_at: String? = null,
+)
+
+@Serializable
+data class RecentAuthPasswordRequest(val password: String, val action: String)
+
+@Serializable
+data class RecentAuthResponse(val recent_auth_token: String, val action: String, val expires_at: String)
+
+@Serializable
+data class EmailChangeRequestBody(val new_email: String, val recent_auth_token: String, val request_id: String)
+
+/** `status`: pending / expired / cancelled / confirmed / replaced; `mode`: change albo correction. */
+@Serializable
+data class EmailChangeResponse(
+    val change_id: String,
+    val mode: String,
+    val status: String,
+    val new_email: String,
+    val expires_at: String,
+    val resend_available_at: String? = null,
+    val delivery_status: String = "queued",
+    val delivery_delayed: Boolean = false,
+)
+
+@Serializable
+data class EmailChangeCurrentResponse(val change: EmailChangeResponse? = null)
+
+/** `action`: `request` albo `cancel`. Dowód nie wymaga sesji (konto po wniosku jest zablokowane). */
+@Serializable
+data class DeletionProofRequest(val email: String, val password: String, val action: String)
+
+@Serializable
+data class DeletionGoogleChallengeRequest(val action: String)
+
+@Serializable
+data class DeletionGoogleProofRequest(val challenge_id: String, val id_token: String, val action: String)
+
+@Serializable
+data class DeletionProofResponse(
+    val action_token: String,
+    val user_id: String,
+    val method: String? = null,
+    val deletion_id: String? = null,
+    val state: String? = null,
+)
+
+@Serializable
+data class DeletionRequestBody(
+    val request_id: String,
+    val action_token: String,
+    val status_secret: String,
+    val confirmation_version: String = "delete-account-v1",
+)
+
+@Serializable
+data class DeletionStatusRequest(val request_id: String, val status_secret: String)
+
+@Serializable
+data class DeletionCancelBody(val deletion_id: String, val request_id: String, val action_token: String)
+
+/** `state`: grace / purging / completed / cancelled; daty ISO-8601 z serwera. */
+@Serializable
+data class DeletionView(
+    val deletion_id: String,
+    val state: String,
+    val requested_at: String,
+    val cancel_until: String,
+    val purge_due_at: String,
+    val can_cancel: Boolean = false,
+    val cancelled_at: String? = null,
+    val completed_at: String? = null,
+    val server_time: String? = null,
+)
+
+@Serializable
+data class DeletionCancelResponse(val status: String = "cancelled", val deletion: DeletionView)
 
 @Serializable
 data class UserSettingsResponse(
@@ -51,8 +214,8 @@ data class UserSettingsResponse(
     val conjugation_expanded_default: Boolean = false,
     val show_example_sentences: Boolean = true,
     val related_words_expanded_default: Boolean = false,
-    val study_reminder_enabled: Boolean = true,
-    val cards_ready_push_enabled: Boolean = true,
+    val study_reminder_enabled: Boolean = false,
+    val cards_ready_push_enabled: Boolean = false,
     val reminder_hour: Int = 19,
 )
 
@@ -102,6 +265,10 @@ data class LanguageProfileResponse(
     val tense_label_lang: String = "app_lang",
     val is_active: Boolean,
     val last_used_at: String? = null,
+    /** Rewizja ostatniej zatwierdzonej edycji na serwerze; null u starego serwera lub w starym cache. */
+    val revision: Long? = null,
+    /** Tylko lokalnie: wartości potwierdzone przez serwer, pod nakładką niewysłanych zmian. */
+    val confirmed: ProfileFields? = null,
 )
 
 @Serializable
@@ -110,6 +277,8 @@ data class LanguageProfileUpdate(
     val selected_tenses: List<String>? = null,
     val app_lang: String? = null,
     val tense_label_lang: String? = null,
+    val expected_revision: Long? = null,
+    val client_op_id: String? = null,
 )
 
 @Serializable
@@ -250,6 +419,8 @@ data class ImportJobProgressResponse(
 data class WordListCreate(
     val name: String,
     val profile_id: String,
+    /** Stabilny klucz z lokalnego intentu; retry po utraconej odpowiedzi nie tworzy drugiej listy. */
+    val client_op_id: String? = null,
 )
 
 @Serializable
@@ -444,6 +615,14 @@ data class SyncPullResponse(
     val lists: List<SyncListItem> = emptyList(),
     val deleted_card_ids: List<String> = emptyList(),
     val deleted_list_ids: List<String> = emptyList(),
+    /** Nieprzezroczysty kursor następnego pull; brak oznacza serwer bez nowego kontraktu. */
+    val cursor: String? = null,
+)
+
+@Serializable
+data class SyncPullRequest(
+    val profile_id: String,
+    val cursor: String? = null,
 )
 
 @Serializable
@@ -480,6 +659,14 @@ data class SyncMoveResult(
 )
 
 @Serializable
+data class SyncOperationResult(
+    val client_id: String,
+    val card_id: String? = null,
+    val outcome: String,
+    val reason: String? = null,
+)
+
+@Serializable
 data class SyncPushResponse(
     val applied: Int = 0,
     val skipped: Int = 0,
@@ -487,6 +674,9 @@ data class SyncPushResponse(
     val moves_applied: Int = 0,
     val moves_skipped: Int = 0,
     val moves: List<SyncMoveResult> = emptyList(),
+    // null = stary serwer bez ACK per operacja; nic nie jest wtedy potwierdzone.
+    val review_results: List<SyncOperationResult>? = null,
+    val move_results: List<SyncOperationResult>? = null,
 )
 
 @Serializable

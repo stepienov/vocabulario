@@ -1,0 +1,37 @@
+{% extends "site_base.html" %}
+{% block body %}
+{% if kind == "home" %}
+  <p>{{ intro }}</p>
+  <ul class="site-list">
+    <li><a href="/privacy?lang={{ locale }}">{{ t.nav_privacy }}</a></li>
+    <li><a href="/terms?lang={{ locale }}">{{ t.nav_terms }}</a></li>
+    <li><a href="/support?lang={{ locale }}">{{ t.nav_support }}</a></li>
+    <li><a href="/delete-account?lang={{ locale }}">{{ t.nav_delete }}</a></li>
+  </ul>
+{% elif kind == "legal" %}
+  <p>{{ intro }}</p>
+  <ul class="site-list">
+    {% for doc in documents %}
+    <li>{{ doc.title }} · {{ t.legal_version }} {{ doc.version }} ·
+      <a href="{{ doc.path }}">{{ t.legal_open }}</a></li>
+    {% endfor %}
+  </ul>
+  <p class="hint">{{ t.draft_notice }}</p>
+{% elif kind == "support" %}
+  <p>{{ intro }}</p>
+  <p><strong>{{ t.support_contact }}:</strong> {{ contact }}</p>
+  <ul class="site-list">
+    <li>{{ t.support_report }}</li>
+    <li>{{ t.support_account }} <a href="/delete-account?lang={{ locale }}">{{ t.support_delete }}</a></li>
+    <li>{{ t.support_secrets }}</li>
+  </ul>
+  <p class="hint">{{ t.support_response }}</p>
+{% else %}
+  {% for section in document.sections %}
+  <h2>{{ section.heading }}</h2>
+  {% for paragraph in section.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
+  {% endfor %}
+  <p class="hint">{{ t.legal_version }} {{ document.version }} · SHA-256 {{ document.sha256[:16] }}…</p>
+  <p class="hint">{{ t.draft_notice }}</p>
+{% endif %}
+{% endblock %}

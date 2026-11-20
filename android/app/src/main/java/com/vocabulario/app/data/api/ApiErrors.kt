@@ -6,6 +6,7 @@ import com.vocabulario.app.i18n.UiStrings
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import retrofit2.HttpException
@@ -17,6 +18,7 @@ private val json = Json { ignoreUnknownKeys = true }
 data class ParsedApiError(
     val code: String? = null,
     val message: String? = null,
+    val legal: LegalManifest? = null,
 )
 
 private val httpErrorCache: MutableMap<HttpException, ParsedApiError> =
@@ -34,18 +36,36 @@ private val LOCAL_ERROR_CODES = setOf(
     "no_inbox",
     "add_failed",
     "no_active_profile",
+    "deletion_owner_mismatch",
 )
 
 private val CODE_TO_RES: Map<String, Int> = mapOf(
     "email_taken" to R.string.err_email_taken,
-    "invalid_credentials" to R.string.err_login_wrong_password,
+    "invalid_credentials" to R.string.err_login_invalid_credentials,
+    "rate_limited" to R.string.err_rate_limited,
+    "auth_temporarily_unavailable" to R.string.err_auth_unavailable,
     "email_not_found" to R.string.err_login_email_unknown,
     "wrong_password" to R.string.err_login_wrong_password,
     "google_login_required" to R.string.err_login_use_google,
     "invalid_google_token" to R.string.err_google_login,
+    "auth_challenge_invalid" to R.string.err_google_challenge,
+    "auth_challenge_used" to R.string.err_google_challenge,
+    "auth_challenge_expired" to R.string.err_google_challenge,
+    "google_account_mismatch" to R.string.err_google_account_mismatch,
+    "google_already_linked" to R.string.err_google_already_linked,
+    "google_method_already_present" to R.string.err_google_already_linked,
+    "google_link_unavailable" to R.string.err_google_link_unavailable,
+    "google_not_linked" to R.string.err_google_not_linked,
+    "google_sign_in_conflict" to R.string.err_google_sign_in_conflict,
+    "google_temporarily_unavailable" to R.string.err_google_unavailable,
+    "password_already_set" to R.string.err_password_already_set,
+    "recent_auth_action_invalid" to R.string.err_recent_auth,
     "invalid_refresh_token" to R.string.err_login,
     "not_authenticated" to R.string.err_login,
     "invalid_token" to R.string.err_login,
+    "session_revoked" to R.string.err_session_ended,
+    "session_expired" to R.string.err_session_ended,
+    "session_upgrade_required" to R.string.err_session_ended,
     "user_not_found" to R.string.err_login,
     "profile_not_found" to R.string.err_load_profile,
     "no_active_profile" to R.string.err_load_profile,
@@ -70,6 +90,34 @@ private val CODE_TO_RES: Map<String, Int> = mapOf(
     "offline_card" to R.string.err_offline_card,
     "no_inbox" to R.string.err_no_inbox,
     "add_failed" to R.string.err_add,
+    "email_verification_required" to R.string.err_email_verification_required,
+    "mail_rate_limited" to R.string.err_mail_rate_limited,
+    "mail_temporarily_unavailable" to R.string.err_mail_unavailable,
+    "current_password_invalid" to R.string.err_current_password_invalid,
+    "password_not_set" to R.string.err_password_not_set,
+    "password_too_short" to R.string.err_new_password_short,
+    "password_too_long" to R.string.err_password_too_long,
+    "password_invalid_unicode" to R.string.err_password_invalid_chars,
+    "email_unchanged" to R.string.err_email_unchanged,
+    "email_unavailable" to R.string.err_email_unavailable,
+    "recent_auth_required" to R.string.err_recent_auth,
+    "recent_auth_used" to R.string.err_recent_auth,
+    "email_change_expired" to R.string.account_email_change_expired,
+    "email_change_inactive" to R.string.account_email_change_expired,
+    "email_change_not_found" to R.string.account_email_change_expired,
+    "email_change_completed" to R.string.account_email_change_expired,
+    "account_deletion_unavailable" to R.string.err_deletion_unavailable,
+    "deletion_irreversible" to R.string.err_deletion_irreversible,
+    "account_deletion_pending" to R.string.err_deletion_pending,
+    "account_deleted" to R.string.err_account_deleted,
+    "deletion_owner_mismatch" to R.string.err_deletion_owner_mismatch,
+    "terms_acceptance_required" to R.string.err_terms_required,
+    "legal_acceptance_missing" to R.string.err_terms_required,
+    "adult_confirmation_required" to R.string.err_adult_required,
+    "legal_version_changed" to R.string.err_legal_changed,
+    "ai_budget_exhausted" to R.string.err_ai_budget,
+    "restore_recovery_required" to R.string.err_restore_recovery,
+    "app_update_required" to R.string.update_required_body,
 )
 
 private val DETAIL_ALIASES: Map<String, String> = mapOf(
@@ -112,6 +160,28 @@ fun Throwable.userMessage(default: String, strings: UiStrings): String {
 
 fun Throwable.isWordAlreadyOnList(): Boolean =
     mappedErrorRes() == R.string.err_word_on_list
+
+/** Kod `detail.code` z odpowiedzi API (bez aliasów tekstowych). */
+fun Throwable.apiErrorCode(): String? =
+    (this as? HttpException)?.readApiError()?.code?.trim()?.lowercase()
+
+/** Bramka F-004: zmiana uprawnienia, nie końca sesji ani odrzucenia danych. */
+fun Throwable.isEmailVerificationRequired(): Boolean =
+    (this as? HttpException)?.code() == 403 && apiErrorCode() == EMAIL_VERIFICATION_REQUIRED
+
+const val EMAIL_VERIFICATION_REQUIRED = "email_verification_required"
+
+/** Bramka F-007: nowa wersja warunków do zaakceptowania; nie kończy sesji ani nie odrzuca danych. */
+const val TERMS_ACCEPTANCE_REQUIRED = "terms_acceptance_required"
+const val LEGAL_ACCEPTANCE_MISSING = "legal_acceptance_missing"
+const val LEGAL_VERSION_CHANGED = "legal_version_changed"
+
+/** Manifest aktualnych dokumentów z odpowiedzi 409 `legal_version_changed`. */
+fun Throwable.legalManifestFromError(): LegalManifest? =
+    (this as? HttpException)?.takeIf { it.code() == 409 && apiErrorCode() == LEGAL_VERSION_CHANGED }
+        ?.readApiError()?.legal
+
+fun Throwable.isLegalAcceptanceMissing(): Boolean = apiErrorCode() == LEGAL_ACCEPTANCE_MISSING
 
 fun Throwable.mappedErrorRes(): Int? {
     val parsed = if (this is HttpException) readApiError() else null
@@ -183,6 +253,7 @@ internal fun parseApiError(body: String): ParsedApiError? {
                 code = detail["code"]?.jsonPrimitive?.content,
                 message = detail["message"]?.jsonPrimitive?.content
                     ?: detail["code"]?.jsonPrimitive?.content,
+                legal = detail["legal"]?.let { runCatching { json.decodeFromJsonElement<LegalManifest>(it) }.getOrNull() },
             )
             null -> null
             else -> ParsedApiError(message = detail.jsonPrimitive.content)

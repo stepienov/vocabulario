@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="{{ locale }}" dir="{{ direction }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>{{ title }} · {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ assets }}/account.css">
+</head>
+<body>
+  <main class="card" data-page="{{ page }}" data-api="{{ api }}" data-min="{{ min_chars }}" data-max="{{ max_chars }}">
+    <p class="brand">{{ app_name }}</p>
+    <h1>{{ title }}</h1>
+    <p id="intro">{{ intro }}</p>
+
+    <div id="status" class="status" role="status" aria-live="polite" tabindex="-1" hidden></div>
+
+    <noscript><p class="status error">{{ texts.noscript }}</p></noscript>
+
+    {% if page == "reset" %}
+    <form id="action-form" novalidate hidden>
+      <label for="new-password">{{ texts.new_password }}</label>
+      <input id="new-password" name="new-password" type="password" autocomplete="new-password"
+             required aria-describedby="password-hint password-error">
+      <p id="password-hint" class="hint">{{ texts.password_hint }}</p>
+
+      <label for="confirm-password">{{ texts.confirm_password }}</label>
+      <input id="confirm-password" name="confirm-password" type="password" autocomplete="new-password"
+             required aria-describedby="password-error">
+
+      <label class="toggle"><input id="show-password" type="checkbox"> {{ texts.show_password }}</label>
+      <p id="password-error" class="field-error" hidden></p>
+
+      <button id="submit" type="submit">{{ texts.reset_button }}</button>
+    </form>
+    {% elif page == "change" %}
+    <form id="action-form" novalidate hidden>
+      <button id="submit" type="submit">{{ texts.change_button }}</button>
+    </form>
+    {% else %}
+    <form id="action-form" novalidate hidden>
+      <button id="submit" type="submit">{{ texts.verify_button }}</button>
+    </form>
+    {% endif %}
+  </main>
+  <script type="application/json" id="texts">{{ texts | tojson }}</script>
+  <script src="{{ assets }}/account.js"></script>
+</body>
+</html>
