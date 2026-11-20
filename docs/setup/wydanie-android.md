@@ -33,6 +33,17 @@ Wynik: `android\app\build\outputs\bundle\release\app-release.aab`. Skrypt sprawd
 - Schemat bazy Room jest eksportowany do `android\app\schemas\` (podstawa pod testy migracji; same testy wymagają urządzenia).
 - Minifikacja R8 jest wyłączona do czasu testu na urządzeniu; decyzja o jej włączeniu należy do właściciela po próbie na S24.
 
+## Logowanie Google (klienty OAuth)
+
+Projekt Google Cloud **Vocabulario** (`vocabulario-515311`), Platforma uwierzytelniania Google, odbiorcy: zewnętrzni, status **w wersji produkcyjnej** (tylko zakresy podstawowe, bez weryfikacji). Identyfikatory klientów są publiczne, to nie sekrety; tajny klucz klienta webowego nie jest używany (backend tylko sprawdza `aud` tokenu).
+
+| Klient | Typ | Użycie |
+|---|---|---|
+| `480709179447-nf37u6tirtbbkjlisfabamm3fvrjg82l` | Aplikacja internetowa | `GOOGLE_OAUTH_CLIENT_ID` w Railway i `GOOGLE_WEB_CLIENT_ID` w `android\app\build.gradle.kts` (to ten sam ID, `serverClientId`). |
+| `480709179447-rc3kmqaeelc5aiq57l1lfu8i851f5jqd` | Android | Pakiet `com.vocabulario.app` + SHA-1 `android\keystore\debug.keystore` (build debug na S24). |
+
+Do zrobienia po pierwszym uploadzie do Play: dodać **drugi klient Android** dla pakietu `io.vocabulario.app` z SHA-1 z Play Console → Integralność aplikacji → certyfikat podpisywania aplikacji (Play App Signing), oraz osobno z SHA-1 klucza uploadu, jeśli testujesz lokalny build release. Bez tego logowanie Google w buildzie z Play zakończy się błędem.
+
 ## Przejście z buildu debug do Play
 
 Nowy pakiet to osobna instalacja: nie zastąpi debug `com.vocabulario.app` i nie przeniesie jego danych lokalnych. Praca z kolejek debug musi być wysłana (synchronizacja) przed zainstalowaniem wersji z Play; potem logowanie na to samo konto pobiera dane z serwera. Do tego czasu nie odinstalowuj debug.
