@@ -62,7 +62,7 @@ def test_assetlinks_lists_only_configured_fingerprints(client, monkeypatch):
     assert client.get("/.well-known/assetlinks.json").json() == []
     monkeypatch.setattr(get_settings(), "android_cert_sha256", "aa:bb, cc:dd")
     target = client.get("/.well-known/assetlinks.json").json()[0]["target"]
-    assert target["package_name"] == "com.vocabulario.app"
+    assert target["package_name"] == "io.vocabulario.app"
     assert target["sha256_cert_fingerprints"] == ["AA:BB", "CC:DD"]
 
 

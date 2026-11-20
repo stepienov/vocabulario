@@ -8,7 +8,7 @@ Build release **nie wystartuje**, dopóki nie podasz wszystkich poniższych wart
 
 | Parametr | Znaczenie |
 |---|---|
-| `-Prelease.application.id` | Ostateczny pakiet aplikacji. To osobna aplikacja od dotychczasowego debug `com.vocabulario.app`. |
+| `-Prelease.application.id` | Ostateczny pakiet aplikacji: **`io.vocabulario.app`** (decyzja z 2026-11-20, po pierwszym uploadzie do Play nie do zmiany). To osobna aplikacja od dotychczasowego debug `com.vocabulario.app`. |
 | `-Prelease.version.code` | Liczba całkowita ≥ 1, każdy upload do Play wyższy niż poprzedni. |
 | `-Prelease.version.name` | Nazwa widoczna dla użytkownika, np. `0.2.0`. |
 | `-Papi.base.url` | `https://<domena>/api/v1`. Tylko https, bez portu, hosta lokalnego, adresu IP, danych logowania i query. Sprawdzane przy buildzie i w aplikacji. |

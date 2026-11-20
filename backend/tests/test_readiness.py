@@ -47,7 +47,7 @@ def test_valid_deployed_settings_have_no_errors():
 
 
 def test_enabled_version_gate_needs_this_apps_play_listing():
-    url = "https://play.google.com/store/apps/details?id=com.vocabulario.app"
+    url = "https://play.google.com/store/apps/details?id=io.vocabulario.app"
     assert _settings(min_app_version_code=5, app_update_url=url).deployment_errors() == []
 
 
@@ -113,7 +113,7 @@ def test_unknown_environment_is_an_error():
         (
             {
                 "min_app_version_code": 5,
-                "app_update_url": "http://play.google.com/store/apps/details?id=com.vocabulario.app",
+                "app_update_url": "http://play.google.com/store/apps/details?id=io.vocabulario.app",
             },
             "app_update",
         ),

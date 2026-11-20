@@ -6,7 +6,7 @@ from app.core.client_version import parse_version_code, update_required
 from app.core.config import get_settings
 from app.main import create_app
 
-PLAY_URL = "https://play.google.com/store/apps/details?id=com.vocabulario.app"
+PLAY_URL = "https://play.google.com/store/apps/details?id=io.vocabulario.app"
 
 
 @pytest.mark.parametrize(

@@ -101,7 +101,7 @@ class Settings(BaseSettings):
     operator_name: str = ""
     support_email: str = ""
     # Digital Asset Links for the Android app (comma separated SHA-256 certificate fingerprints).
-    android_package: str = "com.vocabulario.app"
+    android_package: str = "io.vocabulario.app"
     android_cert_sha256: str = ""
     openai_api_key: str = ""
     llm_provider: str = "openai"
