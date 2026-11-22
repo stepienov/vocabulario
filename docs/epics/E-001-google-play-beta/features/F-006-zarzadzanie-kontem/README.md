@@ -1,13 +1,13 @@
 # F-006 · Zarządzanie kontem
 
-**ID:** `E-001/F-006` · **Status:** `ready` · **Epic:** [E-001](../../README.md).
+**ID:** `E-001/F-006` · **Status:** `in_progress` · **Epic:** [E-001](../../README.md).
 
 **Wartość:** użytkownik wie, czyje dane widzi, czym konto różni się od profilu nauki i jak zakończyć korzystanie z usługi.
 
 ## Zakres i akceptacja
 
 - „Moje konto” pokazuje e-mail, stan weryfikacji i metody logowania bez zbędnych danych osobowych.
-- Pomoc, prywatność, odzyskanie/zmiana hasła, zmiana e-maila, logout i usuwanie są rzeczywistymi ścieżkami.
+- Pomoc, prywatność, odzyskanie/zmiana hasła, logout i usuwanie są rzeczywistymi ścieżkami. Zmiana e-maila została wycofana.
 - Usunięcie działa w aplikacji i przez publiczny kanał WWW, z weryfikacją właściciela i informacją o terminie.
 - Aktywne kolejki i sesje nie odtwarzają danych; wspólny słownik oraz inne konto są chronione.
 
@@ -28,15 +28,15 @@ Backupy, logi/dostawcy i minimalny rejestr zapobiegający wskrzeszeniu po restor
 | T-001 | `/me` z legal/legacy password flag, owner cache, ekran/metody i stany | F-007 definiuje wersje/URL, domena/kontakt uzupełniane przed startem; test na urządzeniu |
 | T-002 | Dowody/API, 7+7, pauza/cancel/purge/fencing, manifest, journal i testy | Retencja/cache F-007, append/restore F-008/T-003, alerty T-004, release F-002; prawdziwe umowy/konfiguracja przed włączeniem |
 
-Decyzje i projekty z zależnościami zamknięte do implementacji po zleceniu. `ready` nie stanowi zgody na operację danych ani dowodu skutecznego purge/restore; potrzebne są wyniki implementacji i realne umowy/wyjątki.
+Kod i testy istnieją; nie stanowią dowodu skutecznego purge w rzeczywistym środowisku ani odbioru na urządzeniu. Włączenie usuwania zależy od konfiguracji.
 
 | ID | Task | Status |
 |---|---|---|
-| E-001/F-006/T-001 | [Moje konto](./tasks/T-001-moje-konto.md), B-07 | `ready` |
-| E-001/F-006/T-002 | [Usuwanie konta i danych](./tasks/T-002-usuwanie-konta.md), B-08 | `ready` |
+| E-001/F-006/T-001 | [Moje konto](./tasks/T-001-moje-konto.md), B-07 | `in_progress` |
+| E-001/F-006/T-002 | [Usuwanie konta i danych](./tasks/T-002-usuwanie-konta.md), B-08 | `in_progress` |
 
 **Zależności:** T-001 po sesji Androida, poczcie i Google; akcja usunięcia po T-002. T-002 start po decyzjach i sesjach backendu, integracja urządzenia po E-001/F-003/T-002. WWW nie wymaga budowy pełnego portalu.
 
-Zmiana e-maila ma jednego właściciela: [E-001/F-004/T-004](../F-004-email-i-hasla/tasks/T-004-zmiana-emaila.md); tutaj integrujemy wejście i stany, nie tworzymy drugiej implementacji procesu.
+Zmiana e-maila została wycofana: [E-001/F-004/T-004](../F-004-email-i-hasla/tasks/T-004-zmiana-emaila.md).
 
-**Weryfikacja:** A-13/A-15/A-16, wszystkie 17 locale, realne zatrzymanie zadań i retencja. **Dowody:** brak.
+**Weryfikacja:** A-13/A-15/A-16, wszystkie locale, realne zatrzymanie zadań i retencja. Szczegóły implementacji i dotychczasowe dowody znajdują się w taskach.

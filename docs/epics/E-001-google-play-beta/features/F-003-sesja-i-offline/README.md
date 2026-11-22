@@ -27,8 +27,8 @@ Wspólny przegląd projektu obejmuje retencję F-007, procedurę F-002 i nowe st
 |---|---|---|
 | E-001/F-003/T-001 | [Sesje backendu](./tasks/T-001-sesje-backendu.md), B-02 | `in_progress` |
 | E-001/F-003/T-002 | [Sesja Androida i logout](./tasks/T-002-sesja-androida.md), B-03 | `in_progress` |
-| E-001/F-003/T-003 | [Wynik sync i profili](./tasks/T-003-wynik-synchronizacji.md), B-09a | `ready` |
-| E-001/F-003/T-004 | [Kolejka i zapis profilu](./tasks/T-004-kolejka-i-profil.md), B-09b | `ready` |
+| E-001/F-003/T-003 | [Wynik sync i profili](./tasks/T-003-wynik-synchronizacji.md), B-09a | `in_progress` |
+| E-001/F-003/T-004 | [Kolejka i zapis profilu](./tasks/T-004-kolejka-i-profil.md), B-09b | `in_progress` |
 
 **Zależności:** T-001 po decyzjach E-001/F-001/T-001; T-002 po T-001/T-003; T-004 po T-003. Nie blokujemy rozpoczęcia T-003 gotowym panelem konta.
 

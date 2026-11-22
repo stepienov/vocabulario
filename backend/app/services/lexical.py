@@ -670,8 +670,8 @@ class LexicalService:
             return self._raw_to_candidates(
                 raw, query=text, learning_lang=profile.learning_lang
             )
-        except Exception:
-            logger.warning("lookup draft failed for %r", text, exc_info=True)
+        except Exception as exc:
+            logger.warning("lookup draft failed (%s)", type(exc).__name__)
             return []
 
     async def lookup_cached_fast(

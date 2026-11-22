@@ -26,6 +26,8 @@
   }
 
   let proofToken = null;
+  let googleScript = null;
+  let googleGeneration = 0;
   const cancelRequestId = newUuid();
 
   function newUuid() {
@@ -46,15 +48,18 @@
     try {
       return JSON.parse(window.sessionStorage.getItem(RECEIPT_KEY));
     } catch (_error) {
-      return null;
+      throw new Error("storage_unavailable");
     }
   }
 
   function writeReceipt(receipt) {
     try {
       window.sessionStorage.setItem(RECEIPT_KEY, JSON.stringify(receipt));
+      if (window.sessionStorage.getItem(RECEIPT_KEY) !== JSON.stringify(receipt)) {
+        throw new Error("storage_unavailable");
+      }
     } catch (_error) {
-      /* storage blocked: the status page then says nothing was found */
+      throw new Error("storage_unavailable");
     }
   }
 
@@ -69,7 +74,10 @@
   // Stored before the request leaves, so a lost answer can be retried with the same ids.
   function receiptForRequest() {
     const previous = readReceipt();
-    if (previous && previous.pending) return previous;
+    if (previous && previous.pending) {
+      writeReceipt(previous);
+      return previous;
+    }
     const receipt = { request_id: newUuid(), status_secret: randomSecret(), pending: true };
     writeReceipt(receipt);
     return receipt;
@@ -153,8 +161,8 @@
     busy(true);
     try {
       await work();
-    } catch (_error) {
-      say("network", "error");
+    } catch (error) {
+      say(error.message === "storage_unavailable" ? "del_storage" : "network", "error");
     } finally {
       busy(false);
     }
@@ -162,18 +170,33 @@
 
   async function requestDeletion(token) {
     const receipt = receiptForRequest();
-    const { status, body } = await post("/request", {
-      request_id: receipt.request_id,
-      action_token: token,
-      status_secret: receipt.status_secret,
-      confirmation_version: "delete-account-v1",
-    });
+    let response;
+    try {
+      response = await post("/request", {
+        request_id: receipt.request_id,
+        action_token: token,
+        status_secret: receipt.status_secret,
+        confirmation_version: "delete-account-v1",
+      });
+    } catch (_error) {
+      say("del_unknown", "error");
+      return;
+    }
+    const { status, body } = response;
     if (status === 202) {
+      if (body.deletion_id !== receipt.request_id) {
+        clearReceipt();
+        finish(describe(body) + " " + texts.del_receipt_unavailable, "info");
+        return;
+      }
       writeReceipt({ ...receipt, pending: false });
       finish(describe(body), "success");
       return;
     }
-    clearReceipt();
+    if (status >= 500 || status === 408) {
+      say("del_unknown", "error");
+      return;
+    }
     proofToken = null;
     if (credentials) {
       form.hidden = true;
@@ -192,22 +215,29 @@
       }
       deletionId = found.body.deletion_id;
     }
-    const { status, body } = await post("/cancel", {
-      deletion_id: deletionId,
-      request_id: cancelRequestId,
-      action_token: token,
-    });
+    let response;
+    try {
+      response = await post("/cancel", {
+        deletion_id: deletionId,
+        request_id: cancelRequestId,
+        action_token: token,
+      });
+    } catch (_error) {
+      say("del_unknown", "error");
+      return;
+    }
+    const { status, body } = response;
     if (status === 200) {
       clearReceipt();
       finish(texts.del_cancelled, "success");
       return;
     }
-    say(errorKey(status, body, false), "error");
+    say(status >= 500 || status === 408 ? "del_unknown" : errorKey(status, body, false), "error");
   }
 
   async function refreshStatus() {
     const receipt = readReceipt();
-    if (!receipt || receipt.pending) {
+    if (!receipt) {
       finish(texts.del_status_none, "error");
       return;
     }
@@ -219,7 +249,7 @@
       showStatus(describe(body), body.state === "grace" ? "success" : "info");
       return;
     }
-    say(errorKey(status, body, false), "error");
+    say(status === 404 && receipt.pending ? "del_unknown" : errorKey(status, body, false), "error");
   }
 
   function credentialValues() {
@@ -229,6 +259,7 @@
   }
 
   async function withPassword(action) {
+    googleGeneration += 1;
     const { email, password, field } = credentialValues();
     if (!email || !password) {
       say("del_bad_credentials", "error");
@@ -240,6 +271,10 @@
       say(errorKey(status, body, true), "error");
       return;
     }
+    await useProof(body, action);
+  }
+
+  async function useProof(body, action) {
     if (action === "cancel") {
       await cancelDeletion(body.action_token, body.deletion_id);
       return;
@@ -251,7 +286,57 @@
     acknowledge.focus();
   }
 
+  function loadGoogle() {
+    if (!googleScript) {
+      googleScript = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://accounts.google.com/gsi/client";
+        script.onload = resolve;
+        script.onerror = () => {
+          googleScript = null;
+          script.remove();
+          reject(new Error("google_unavailable"));
+        };
+        document.head.appendChild(script);
+      });
+    }
+    return googleScript;
+  }
+
+  async function startGoogle(action) {
+    const generation = ++googleGeneration;
+    const challenge = await post("/google/challenge", { action });
+    if (challenge.status !== 200) {
+      say(errorKey(challenge.status, challenge.body, false), "error");
+      return;
+    }
+    await loadGoogle();
+    const container = document.getElementById("google-button");
+    container.replaceChildren();
+    window.google.accounts.id.initialize({
+      client_id: main.dataset.googleClientId,
+      nonce: challenge.body.nonce,
+      auto_select: false,
+      callback: (result) => guarded(async () => {
+        if (generation !== googleGeneration) return;
+        const proof = await post("/proof/google", {
+          action,
+          challenge_id: challenge.body.challenge_id,
+          id_token: result.credential,
+        });
+        if (proof.status !== 200) {
+          say(errorKey(proof.status, proof.body, false), "error");
+          return;
+        }
+        container.replaceChildren();
+        await useProof(proof.body, action);
+      }),
+    });
+    window.google.accounts.id.renderButton(container, { type: "standard", theme: "outline", size: "large" });
+  }
+
   async function sendLink(action) {
+    googleGeneration += 1;
     const { email } = credentialValues();
     if (!email) {
       say("del_bad_credentials", "error");
@@ -275,6 +360,10 @@
     document
       .getElementById("link-cancel")
       .addEventListener("click", () => guarded(() => sendLink("cancel")));
+    if (main.dataset.googleClientId) {
+      document.getElementById("google-request").addEventListener("click", () => guarded(() => startGoogle("request")));
+      document.getElementById("google-cancel").addEventListener("click", () => guarded(() => startGoogle("cancel")));
+    }
   }
 
   if (acknowledge) {
@@ -300,12 +389,8 @@
     credentials.hidden = false;
     document.getElementById("email").focus();
   } else if (page === "delete_status") {
-    if (readReceipt()) {
-      form.hidden = false;
-      guarded(refreshStatus);
-    } else {
-      finish(texts.del_status_none, "error");
-    }
+    form.hidden = false;
+    guarded(refreshStatus);
   } else if (!fragmentToken) {
     finish(texts.missing_token, "error");
   } else {

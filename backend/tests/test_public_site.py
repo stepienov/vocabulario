@@ -34,6 +34,19 @@ def test_language_selection_and_honest_fallback(client):
     assert "not available in your language" not in client.get("/terms?lang=en").text
 
 
+@pytest.mark.parametrize(("locale", "heading"), [
+    ("en", "How it works"), ("pl", "Jak to działa"), ("es", "Cómo funciona"),
+])
+def test_home_has_localized_content_and_local_assets(client, locale, heading):
+    response = client.get(f"/?lang={locale}")
+    assert heading in response.text
+    assert 'id="how"' in response.text
+    assert "/account/assets/logo_wordmark_light.png" in response.text
+    assert "font-src 'self'" in response.headers["content-security-policy"]
+    for asset in ("logo_wordmark_light.png", "inter_regular.ttf", "inter_semibold.ttf"):
+        assert client.get(f"/account/assets/{asset}").status_code == 200
+
+
 def test_documents_are_served_only_for_known_versions(client):
     version = legal_docs.current_version("terms")
     ok = client.get(f"/documents/terms/{version}/pl")

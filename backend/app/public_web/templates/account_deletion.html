@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="{{ assets }}/account.css">
 </head>
 <body>
-  <main class="card" data-page="{{ page }}" data-api="{{ api }}">
+  <main class="card" data-page="{{ page }}" data-api="{{ api }}" data-google-client-id="{{ google_client_id }}">
     <p class="brand">{{ app_name }}</p>
     <h1>{{ title }}</h1>
     <p id="intro">{{ intro }}</p>
@@ -30,6 +30,11 @@
       <button id="proof-cancel" type="button">{{ texts.del_undo_button }}</button>
       <button id="link-request" type="button">{{ texts.del_send_link }}</button>
       <button id="link-cancel" type="button">{{ texts.del_undo_link }}</button>
+      {% if google_client_id %}
+      <button id="google-request" type="button">{{ texts.del_google_request }}</button>
+      <button id="google-cancel" type="button">{{ texts.del_google_cancel }}</button>
+      <div id="google-button"></div>
+      {% endif %}
     </form>
     {% endif %}
 
@@ -43,6 +48,10 @@
       <button id="submit" type="submit">{{ texts.del_status_refresh }}</button>
       {% endif %}
     </form>
+    <p class="account-links">
+      {% if page != "delete_status" %}<a href="/account/deletion-status?lang={{ locale }}">{{ texts.del_status_title }}</a>{% endif %}
+      {% if page != "delete_start" %}<a href="/delete-account?lang={{ locale }}">{{ texts.del_title }}</a>{% endif %}
+    </p>
   </main>
   <script type="application/json" id="texts">{{ texts | tojson }}</script>
   <script src="{{ assets }}/account_deletion.js"></script>

@@ -107,7 +107,7 @@ async def _settle_failed_call(reservation, model: str, exc: BaseException, usage
         return
     if usage is not None:
         await ai_budget.settle(reservation, model, usage)
-    elif isinstance(getattr(exc, "status_code", None), int):
+    elif isinstance(getattr(exc, "status_code", None), int) and 400 <= exc.status_code < 500 and exc.status_code != 408:
         await ai_budget.release(reservation)
     else:
         await ai_budget.leave_unresolved(reservation)
@@ -128,7 +128,8 @@ class LLMService:
         settings = get_settings()
         self.mock = settings.llm_mock or not settings.openai_api_key
         self.client = (
-            AsyncOpenAI(api_key=settings.openai_api_key, timeout=90.0) if not self.mock else None
+            AsyncOpenAI(api_key=settings.openai_api_key, timeout=90.0, max_retries=0)
+            if not self.mock else None
         )
         self.lookup_model = settings.llm_lookup_model
         self.enrichment_model = settings.llm_enrichment_model
@@ -144,7 +145,7 @@ class LLMService:
             try:
                 from anthropic import AsyncAnthropic
 
-                self._anthropic = AsyncAnthropic(api_key=self.anthropic_api_key)
+                self._anthropic = AsyncAnthropic(api_key=self.anthropic_api_key, max_retries=0)
             except Exception:
                 logger.exception("Anthropic client init failed; falling back to OpenAI")
                 self.import_provider = "openai"

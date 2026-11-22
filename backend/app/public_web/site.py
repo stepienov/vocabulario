@@ -56,6 +56,7 @@ def _render(
     }
     response = templates.TemplateResponse(request, "site_page.html", context)
     response.headers.update(SECURITY_HEADERS)
+    response.headers["Content-Security-Policy"] += "; font-src 'self'"
     return response
 
 

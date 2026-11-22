@@ -88,6 +88,25 @@ def test_draft_prompt_names_the_query():
     assert 'User query: "zamek"' in draft
 
 
+async def test_lookup_failure_logs_neither_query_nor_exception_details(caplog):
+    from types import SimpleNamespace
+    from uuid import uuid4
+
+    from app.services.lexical import LexicalService
+
+    query = "sensitive-search-text"
+
+    async def fail(*args):
+        raise ValueError(f"provider echoed {query}")
+
+    service = object.__new__(LexicalService)
+    service.llm = SimpleNamespace(lookup_draft=fail)
+    profile = SimpleNamespace(id=uuid4(), app_lang="pl", learning_lang="en")
+    assert await service._light_draft_candidates(profile, query) == []
+    assert "lookup draft failed (ValueError)" in caplog.text
+    assert query not in caplog.text
+
+
 def test_expand_prompt_lists_existing_candidates():
     from app.ai.prompts.v1 import LOOKUP_EXPAND_PROMPT_V1, lookup_output_form_rules_text
     from app.services.llm import LLMService

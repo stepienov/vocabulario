@@ -1,6 +1,9 @@
 """One-time account pages behind the e-mail links (E-001/F-004/T-002, step 3)."""
 
 import re
+import shutil
+import subprocess
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -135,4 +138,26 @@ async def test_deletion_script_keeps_token_and_password_out_of_storage(client):
     script = await client.get("/account/assets/account_deletion.js")
     assert script.status_code == 200
     assert "history.replaceState" in script.text
-    assert script.text.count("sessionStorage") == 3  # only the status receipt is stored
+    assert script.text.count("sessionStorage") == 4  # only the status receipt is stored
+
+
+async def test_google_is_available_only_when_configured(client, monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "google_oauth_client_id", "")
+    response = await client.get("/delete-account")
+    assert 'id="google-request"' not in response.text
+    assert "accounts.google.com" not in response.headers["content-security-policy"]
+    monkeypatch.setattr(get_settings(), "google_oauth_client_id", "client-id.example")
+    response = await client.get("/delete-account")
+    assert 'id="google-request"' in response.text
+    assert "https://accounts.google.com/gsi/client" in response.headers["content-security-policy"]
+    assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
+    assert "accounts.google.com" not in (await client.get("/account/deletion-status")).headers["content-security-policy"]
+
+
+def test_deletion_browser_behaviour():
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js is needed for the browser-script regression test")
+    subprocess.run([node, str(Path(__file__).with_name("account_deletion_browser.cjs"))], check=True)

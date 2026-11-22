@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from app.core.config import get_settings
 from app.core.passwords import NEW_PASSWORD_MIN_CHARS, PASSWORD_MAX_CHARS
 from app.public_web.texts import PAGE_TEXTS
 from app.services.account_deletion import CANCEL_PATH, REQUEST_PATH
@@ -129,9 +130,20 @@ def _render(request: Request, page: str) -> HTMLResponse:
             "assets": ASSETS_PATH,
             "min_chars": NEW_PASSWORD_MIN_CHARS,
             "max_chars": PASSWORD_MAX_CHARS,
+            "google_client_id": get_settings().google_oauth_client_id if page == "delete_start" else "",
         },
     )
     response.headers.update(SECURITY_HEADERS)
+    if page == "delete_start" and get_settings().google_oauth_client_id:
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; script-src 'self' https://accounts.google.com/gsi/client; "
+            "style-src 'self' https://accounts.google.com/gsi/style; "
+            "connect-src 'self' https://accounts.google.com/gsi/; "
+            "frame-src https://accounts.google.com/gsi/; img-src 'self'; "
+            "form-action 'none'; frame-ancestors 'none'; base-uri 'none'"
+        )
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
     return response
 
 

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from app.public_web.texts_deletion import DELETION_KEYS, DELETION_TEXTS
+from app.public_web.texts_deletion import (
+    BROWSER_KEYS, BROWSER_RECEIPT_TEXTS, BROWSER_TEXTS, DELETION_KEYS, DELETION_TEXTS,
+)
 
 KEYS = (
     "verify_title",
@@ -760,4 +762,7 @@ PAGE_TEXTS: dict[str, dict[str, str]] = {
 
 for _locale, _texts in DELETION_TEXTS.items():
     PAGE_TEXTS[_locale].update(_texts)
-KEYS = KEYS + DELETION_KEYS
+    PAGE_TEXTS[_locale].update(
+        dict(zip(BROWSER_KEYS, (*BROWSER_TEXTS[_locale], BROWSER_RECEIPT_TEXTS[_locale]), strict=True))
+    )
+KEYS = KEYS + DELETION_KEYS + BROWSER_KEYS

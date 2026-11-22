@@ -35,6 +35,46 @@ DELETION_KEYS = (
     "del_unavailable",
 )
 
+# Additional browser-only states; the receipt is not a proof of ownership.
+BROWSER_KEYS = ("del_google_request", "del_google_cancel", "del_storage", "del_unknown", "del_receipt_unavailable")
+BROWSER_TEXTS = {
+    "en": ("Delete with Google", "Undo with Google", "Browser storage is unavailable. Enable it before requesting deletion.", "The result is unknown. Check the status or try again with the same request."),
+    "pl": ("Usuń z Google", "Cofnij z Google", "Pamięć przeglądarki jest niedostępna. Włącz ją przed wysłaniem żądania.", "Wynik jest nieznany. Sprawdź status lub ponów to samo żądanie."),
+    "es": ("Eliminar con Google", "Deshacer con Google", "El almacenamiento del navegador no está disponible. Actívalo antes de solicitar la eliminación.", "El resultado es desconocido. Comprueba el estado o repite la misma solicitud."),
+    "de": ("Mit Google löschen", "Mit Google widerrufen", "Der Browserspeicher ist nicht verfügbar. Aktiviere ihn vor der Löschanfrage.", "Das Ergebnis ist unbekannt. Prüfe den Status oder wiederhole dieselbe Anfrage."),
+    "fr": ("Supprimer avec Google", "Annuler avec Google", "Le stockage du navigateur est indisponible. Activez-le avant la demande de suppression.", "Le résultat est inconnu. Vérifiez le statut ou réessayez la même demande."),
+    "it": ("Elimina con Google", "Annulla con Google", "La memoria del browser non è disponibile. Attivala prima della richiesta.", "Il risultato è sconosciuto. Controlla lo stato o ripeti la stessa richiesta."),
+    "pt-BR": ("Excluir com Google", "Desfazer com Google", "O armazenamento do navegador está indisponível. Ative-o antes de solicitar a exclusão.", "O resultado é desconhecido. Verifique o status ou repita a mesma solicitação."),
+    "pt-PT": ("Eliminar com Google", "Anular com Google", "O armazenamento do navegador está indisponível. Ative-o antes de pedir a eliminação.", "O resultado é desconhecido. Verifique o estado ou repita o mesmo pedido."),
+    "ru": ("Удалить через Google", "Отменить через Google", "Хранилище браузера недоступно. Включите его до отправки запроса.", "Результат неизвестен. Проверьте статус или повторите тот же запрос."),
+    "tr": ("Google ile sil", "Google ile geri al", "Tarayıcı depolaması kullanılamıyor. Silme isteğinden önce etkinleştirin.", "Sonuç bilinmiyor. Durumu kontrol edin veya aynı isteği tekrar deneyin."),
+    "vi": ("Xóa bằng Google", "Hoàn tác bằng Google", "Bộ nhớ trình duyệt không khả dụng. Hãy bật trước khi yêu cầu xóa.", "Chưa rõ kết quả. Hãy kiểm tra trạng thái hoặc thử lại cùng yêu cầu."),
+    "zh": ("使用 Google 删除", "使用 Google 撤销", "浏览器存储不可用。请先启用存储再请求删除。", "结果未知。请检查状态或重试同一请求。"),
+    "ja": ("Google で削除", "Google で取り消す", "ブラウザのストレージを利用できません。削除を依頼する前に有効にしてください。", "結果は不明です。状態を確認するか、同じリクエストを再試行してください。"),
+    "ko": ("Google로 삭제", "Google로 취소", "브라우저 저장소를 사용할 수 없습니다. 삭제 요청 전에 활성화하세요.", "결과를 알 수 없습니다. 상태를 확인하거나 같은 요청을 다시 시도하세요."),
+    "ar": ("الحذف باستخدام Google", "التراجع باستخدام Google", "تخزين المتصفح غير متاح. فعّله قبل طلب الحذف.", "النتيجة غير معروفة. تحقق من الحالة أو أعد المحاولة بالطلب نفسه."),
+    "hi": ("Google से हटाएँ", "Google से रद्द करें", "ब्राउज़र स्टोरेज उपलब्ध नहीं है। हटाने का अनुरोध करने से पहले इसे चालू करें।", "परिणाम अज्ञात है। स्थिति जाँचें या उसी अनुरोध को फिर से भेजें।"),
+}
+
+BROWSER_RECEIPT_TEXTS = {
+    "en": "Status is unavailable on this device. To cancel, verify your account again.",
+    "pl": "Status jest niedostępny na tym urządzeniu. Aby cofnąć usunięcie, potwierdź konto ponownie.",
+    "es": "El estado no está disponible en este dispositivo. Para cancelar, verifica tu cuenta de nuevo.",
+    "de": "Der Status ist auf diesem Gerät nicht verfügbar. Bestätige dein Konto erneut, um abzubrechen.",
+    "fr": "Le statut est indisponible sur cet appareil. Pour annuler, vérifiez à nouveau votre compte.",
+    "it": "Lo stato non è disponibile su questo dispositivo. Per annullare, verifica di nuovo il tuo account.",
+    "pt-BR": "O status não está disponível neste dispositivo. Para cancelar, verifique sua conta novamente.",
+    "pt-PT": "O estado não está disponível neste dispositivo. Para cancelar, confirme novamente a sua conta.",
+    "ru": "Статус недоступен на этом устройстве. Чтобы отменить удаление, подтвердите аккаунт снова.",
+    "tr": "Durum bu cihazda kullanılamıyor. İptal etmek için hesabınızı tekrar doğrulayın.",
+    "vi": "Không thể xem trạng thái trên thiết bị này. Để hủy, hãy xác minh lại tài khoản.",
+    "zh": "此设备无法查看状态。如需取消，请重新验证账户。",
+    "ja": "この端末では状態を確認できません。取り消すにはアカウントを再確認してください。",
+    "ko": "이 기기에서 상태를 확인할 수 없습니다. 취소하려면 계정을 다시 확인하세요.",
+    "ar": "الحالة غير متاحة على هذا الجهاز. للإلغاء، تحقّق من حسابك مرة أخرى.",
+    "hi": "इस डिवाइस पर स्थिति उपलब्ध नहीं है। रद्द करने के लिए अपना खाता फिर सत्यापित करें।",
+}
+
 
 def _t(*values: str) -> dict[str, str]:
     assert len(values) == len(DELETION_KEYS)

@@ -1,10 +1,10 @@
 :root {
   color-scheme: light dark;
-  --bg: #f4f6f8;
-  --card: #ffffff;
-  --text: #1c2430;
+  --bg: #f8f6fc;
+  --card: #fffefa;
+  --text: #2d3039;
   --muted: #5b6675;
-  --accent: #2f6fdf;
+  --accent: #505aa8;
   --accent-text: #ffffff;
   --border: #ccd3dc;
   --success-bg: #e5f5ea;
@@ -99,6 +99,7 @@ input[type="text"] {
 
 input:focus-visible,
 button:focus-visible,
+a:focus-visible,
 .status:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
@@ -121,6 +122,17 @@ button:focus-visible,
   margin: 0 0 8px;
   color: var(--muted);
   font-size: 14px;
+}
+
+.account-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 24px 0 0;
+}
+
+.account-links a {
+  color: var(--accent);
 }
 
 .field-error {

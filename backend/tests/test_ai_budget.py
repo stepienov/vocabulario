@@ -2,6 +2,7 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -11,12 +12,44 @@ from app.core.config import get_settings
 from app.models import AiBudgetPeriod, AiBudgetReservation
 from app.services import ai_budget
 from app.services.card_jobs import WAITING_BUDGET, _apply_enrich_retry
-from app.services.llm import LLMService
+from app.services.llm import LLMService, _settle_failed_call
 from app.services.llm_pricing import TokenUsage, estimate_max_cost_usd
 
 MODEL = "gpt-5.6-luna"
 CHARS = 1000
 MAX_TOKENS = 1000
+
+
+def test_provider_client_disables_unbudgeted_retries(monkeypatch):
+    from app.services import llm
+
+    calls = []
+    monkeypatch.setattr(get_settings(), "llm_mock", False)
+    monkeypatch.setattr(get_settings(), "openai_api_key", "test-key")
+    monkeypatch.setattr(llm, "AsyncOpenAI", lambda **kwargs: calls.append(kwargs))
+    LLMService()
+    assert calls[0]["max_retries"] == 0
+
+
+@pytest.mark.parametrize(("status", "expected"), [(400, "release"), (408, "leave_unresolved"), (500, "leave_unresolved")])
+async def test_failed_call_keeps_uncertain_provider_costs(monkeypatch, status, expected):
+    mocks = {name: AsyncMock() for name in ("settle", "release", "leave_unresolved")}
+    for name, mock in mocks.items():
+        monkeypatch.setattr(ai_budget, name, mock)
+    error = RuntimeError("provider error")
+    error.status_code = status
+    await _settle_failed_call(object(), MODEL, error, None)
+    for name, mock in mocks.items():
+        assert mock.await_count == (1 if name == expected else 0)
+
+
+async def test_failed_call_with_usage_is_charged(monkeypatch):
+    settle = AsyncMock()
+    monkeypatch.setattr(ai_budget, "settle", settle)
+    usage = TokenUsage(prompt_tokens=5, completion_tokens=3)
+    reservation = object()
+    await _settle_failed_call(reservation, MODEL, RuntimeError("error"), usage)
+    settle.assert_awaited_once_with(reservation, MODEL, usage)
 
 
 def _estimate() -> Decimal:

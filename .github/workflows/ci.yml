@@ -35,6 +35,10 @@ jobs:
           cache: pip
           cache-dependency-path: backend/pyproject.toml
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Install backend (dev)
         run: pip install -e "./backend[dev]"
 
