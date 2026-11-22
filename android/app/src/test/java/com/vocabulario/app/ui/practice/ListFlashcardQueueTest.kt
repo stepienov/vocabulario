@@ -1,6 +1,7 @@
 package com.vocabulario.app.ui.practice
 
 import com.vocabulario.app.data.api.CardResponse
+import com.vocabulario.app.data.api.LanguageProfileResponse
 import kotlinx.serialization.json.buildJsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -8,6 +9,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ListFlashcardQueueTest {
+    @Test
+    fun languageLabelFollowsEachItemsActualDirection() {
+        val profile = LanguageProfileResponse(
+            id = "profile", app_lang = "pl", learning_lang = "es",
+            cefr_level = "A1", selected_tenses = emptyList(), is_active = true,
+        )
+        assertEquals("es", practicePromptLanguage("l2_to_l1", profile))
+        assertEquals("pl", practicePromptLanguage("l1_to_l2", profile))
+        assertEquals("es", practicePromptLanguage("l2_to_l1", profile))
+    }
+
 
     private fun card(id: String, status: String = "ready") = CardResponse(
         id = id,

@@ -18,6 +18,7 @@ NAV = [
     ("costs", "/admin/costs", "Koszty LLM"),
     ("errors", "/admin/errors", "Błędy"),
     ("imports", "/admin/imports", "Importy"),
+    ("reports", "/admin/reports", "Zgłoszenia treści"),
 ]
 
 STATUS_LABELS = {
@@ -35,6 +36,9 @@ STATUS_LABELS = {
     "learning": "nauka",
     "review": "powtórka",
     "relearning": "ponownie",
+    "received": "przyjęte",
+    "in_review": "w analizie",
+    "resolved": "rozwiązane",
 }
 
 STATUS_TONE = {
@@ -48,6 +52,9 @@ STATUS_TONE = {
     "failed": "err",
     "error": "err",
     "prep_problem": "err",
+    "received": "warn",
+    "in_review": "warn",
+    "resolved": "ok",
 }
 
 

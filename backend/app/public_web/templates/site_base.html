@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="{{ locale }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="{{ t.home_intro }}">
+  <title>{{ title }} · {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ assets }}/site.css">
+</head>
+<body>
+  <header class="site-header wrap">
+    <a class="brand" href="/?lang={{ locale }}" aria-label="{{ t.nav_home }}">
+      <img src="{{ assets }}/logo_wordmark_light.png" alt="{{ app_name }}">
+    </a>
+    <nav class="site-nav" aria-label="{{ app_name }}">
+      <a href="/?lang={{ locale }}#how">{{ t.home_how }}</a>
+      <a href="/support?lang={{ locale }}">{{ t.nav_support }}</a>
+      <span class="site-lang" aria-label="{{ t.language }}">
+        {% for code in languages %}
+          {% if code == locale %}<strong aria-current="true">{{ code|upper }}</strong>{% else %}<a href="{{ lang_links[code] }}" hreflang="{{ code }}">{{ code|upper }}</a>{% endif %}
+        {% endfor %}
+      </span>
+    </nav>
+  </header>
+  <main class="{% if kind == 'home' %}home{% else %}content wrap{% endif %}">
+    {% if fallback %}<p class="notice">{{ t.fallback_notice }}</p>{% endif %}
+    {% if kind != "home" %}<h1>{{ title }}</h1>{% endif %}
+    {% block body %}{% endblock %}
+  </main>
+  <footer class="site-footer wrap">
+    <span>© {{ app_name }}</span>
+    <nav aria-label="{{ t.nav_legal }}">
+      <a href="/support?lang={{ locale }}">{{ t.nav_support }}</a>
+      <a href="/privacy?lang={{ locale }}">{{ t.nav_privacy }}</a>
+      <a href="/terms?lang={{ locale }}">{{ t.nav_terms }}</a>
+      <a href="/legal?lang={{ locale }}">{{ t.nav_legal }}</a>
+      <a href="/delete-account?lang={{ locale }}">{{ t.nav_delete }}</a>
+    </nav>
+  </footer>
+</body>
+</html>

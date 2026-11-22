@@ -17,6 +17,15 @@ import com.vocabulario.app.R
 object NotificationHelper {
     const val CHANNEL_STUDY = "study"
     const val CHANNEL_CARDS = "cards"
+    private const val ID_STUDY = 1001
+    private const val ID_CARDS = 1002
+
+    /** Powiadomienia z danymi konta nie mogą zostać w szufladzie po wylogowaniu. */
+    fun cancelAccountNotifications(context: Context) {
+        val manager = NotificationManagerCompat.from(context)
+        manager.cancel(ID_STUDY)
+        manager.cancel(ID_CARDS)
+    }
 
     fun canPost(context: Context): Boolean {
         if (Build.VERSION.SDK_INT >= 33) {
@@ -48,7 +57,7 @@ object NotificationHelper {
         )
     }
 
-    fun showStudyReminder(context: Context, dueCount: Int) {
+    fun showStudyReminder(context: Context, dueCount: Int = 0) {
         val body = if (dueCount > 0) {
             context.getString(R.string.notif_study_body, dueCount)
         } else {
@@ -57,7 +66,7 @@ object NotificationHelper {
         post(
             context,
             CHANNEL_STUDY,
-            1001,
+            ID_STUDY,
             context.getString(R.string.notif_study_title),
             body,
         )
@@ -67,7 +76,7 @@ object NotificationHelper {
         post(
             context,
             CHANNEL_CARDS,
-            1002,
+            ID_CARDS,
             context.getString(R.string.notif_cards_ready_title),
             context.getString(R.string.notif_cards_ready_body),
         )
@@ -108,6 +117,10 @@ object NotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .build()
-        runCatching { NotificationManagerCompat.from(context).notify(id, notification) }
+        try {
+            NotificationManagerCompat.from(context).notify(id, notification)
+        } catch (e: SecurityException) {
+            // Permission revoked between canPost() and notify().
+        }
     }
 }

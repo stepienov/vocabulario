@@ -6,9 +6,11 @@ import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.NetworkMonitor
 import com.vocabulario.app.data.api.ImportJobProgressResponse
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.session.AccountResetHooks
 import com.vocabulario.app.data.sync.BackgroundJobScheduler
 import com.vocabulario.app.i18n.UiStrings
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -33,6 +35,7 @@ class ImportController @Inject constructor(
     private val networkMonitor: NetworkMonitor,
     private val backgroundJobs: BackgroundJobScheduler,
     private val blockingBusy: BlockingBusy,
+    resetHooks: AccountResetHooks,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -45,6 +48,10 @@ class ImportController @Inject constructor(
     private var pollJob: Job? = null
 
     init {
+        resetHooks.register {
+            stopPoll()
+            _state.value = ImportJobState()
+        }
         scope.launch { restore() }
     }
 
@@ -192,13 +199,9 @@ class ImportController @Inject constructor(
         blockingBusy.launchIn(scope) {
             runCatching { repository.commitImportJob(jobId, itemIds) }
                 .onSuccess {
-                    val next = it.toState(cur)
-                    if (next.status == ImportStatus.Done) {
-                        runCatching { repository.refreshLocalAfterImport(next.targetListId) }
-                        watchImportedCards(next)
-                    }
-                    _state.value = next
-                    if (next.busy) backgroundJobs.enqueueImport(replace = true)
+                    _state.value = cur.copy(status = ImportStatus.Committing)
+                    applyProgress(it)
+                    if (_state.value.busy) backgroundJobs.enqueueImport(replace = true)
                     startPoll()
                 }
                 .onFailure { e ->
@@ -244,13 +247,6 @@ class ImportController @Inject constructor(
             }
     }
 
-    fun copiedErrorsNotice() {
-        val n = _state.value.failedItems.size
-        _state.value = _state.value.copy(
-            notice = strings.get(R.string.import_errors_copied, n),
-        )
-    }
-
     fun onAppForeground() {
         scope.launch {
             if (!repository.hasSyncableSession()) return@launch
@@ -273,21 +269,36 @@ class ImportController @Inject constructor(
         if (!repository.hasSyncableSession()) return
         val stored = persistence.loadJobId()
         if (!stored.isNullOrBlank()) {
-            val detail = runCatching { repository.getImportJob(stored, includeItems = true) }.getOrNull()
-            if (detail != null) {
-                val restored = detail.toState()
-                if (restored.status == ImportStatus.Cancelled) {
+            val detail = try {
+                repository.getImportJob(stored, includeItems = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e is HttpException && e.code() == 404) {
                     persistence.saveJobId(null)
-                    return
+                    restoreActive()
+                } else {
+                    _state.value = ImportJobState(
+                        status = ImportStatus.Queued,
+                        jobId = stored,
+                        notice = strings.get(R.string.import_details_error),
+                    )
+                    startPoll()
                 }
-                if (restored.status == ImportStatus.Done || restored.status == ImportStatus.Failed) {
-                    runCatching { repository.refreshLocalAfterImport(restored.targetListId) }
-                    if (restored.status == ImportStatus.Done) watchImportedCards(restored)
-                }
-                _state.value = restored
-                startPoll()
                 return
             }
+            val restored = detail.toState()
+            if (restored.status == ImportStatus.Cancelled) {
+                persistence.saveJobId(null)
+                return
+            }
+            if (restored.status == ImportStatus.Done || restored.status == ImportStatus.Failed) {
+                runCatching { repository.refreshLocalAfterImport(restored.targetListId) }
+                if (restored.status == ImportStatus.Done) watchImportedCards(restored)
+            }
+            _state.value = restored
+            startPoll()
+            return
         }
         restoreActive()
     }
@@ -303,9 +314,8 @@ class ImportController @Inject constructor(
             return
         }
         persistence.saveJobId(jobId)
-        val detail = runCatching { repository.getImportJob(jobId, includeItems = true) }
-            .getOrDefault(active)
-        _state.value = detail.toState(_state.value)
+        _state.value = _state.value.copy(status = ImportStatus.Queued, jobId = jobId)
+        applyProgress(active)
         startPoll()
     }
 
@@ -331,33 +341,42 @@ class ImportController @Inject constructor(
         pollJob = scope.launch {
             while (isActive) {
                 val id = _state.value.jobId ?: break
-                val working = _state.value.busy
-                val progress = runCatching {
-                    if (working) {
-                        repository.getImportJobProgress(id)
-                    } else if (_state.value.status == ImportStatus.Review && _state.value.items.isEmpty()) {
-                        repository.getImportJob(id, includeItems = true)
-                    } else {
-                        null
-                    }
-                }.getOrNull()
-                if (progress != null) {
-                    applyProgress(progress)
-                    if (_state.value.status == ImportStatus.Cancelled) {
-                        dismissResult()
-                        break
-                    }
-                }
-                if (!_state.value.busy) {
-                    if (_state.value.status == ImportStatus.Review && _state.value.items.isEmpty()) {
-                        delay(1_000)
-                        continue
-                    }
-                    break
-                }
+                // Każda iteracja jako bieżący właściciel: po reauth tego samego konta obserwujemy ten sam job.
+                val step = repository.asCurrentOwner { pollOnce(id) } ?: PollStep.WAIT
+                if (step == PollStep.STOP) break
                 delay(1_000)
             }
         }
+    }
+
+    private enum class PollStep { WAIT, STOP }
+
+    private suspend fun pollOnce(id: String): PollStep {
+        val working = _state.value.busy
+        val progress = runCatching {
+            if (working) {
+                repository.getImportJobProgress(id)
+            } else if (_state.value.status == ImportStatus.Review && _state.value.items.isEmpty()) {
+                repository.getImportJob(id, includeItems = true)
+            } else {
+                null
+            }
+        }.getOrNull()
+        if (progress != null) {
+            repository.ensureOwnerCurrent()
+            applyProgress(progress)
+            if (_state.value.status == ImportStatus.Cancelled) {
+                dismissResult()
+                return PollStep.STOP
+            }
+        }
+        if (!_state.value.busy) {
+            if (_state.value.status == ImportStatus.Review && _state.value.items.isEmpty()) {
+                return PollStep.WAIT
+            }
+            return PollStep.STOP
+        }
+        return PollStep.WAIT
     }
 
     private suspend fun applyProgress(progress: ImportJobProgressResponse) {
@@ -374,12 +393,26 @@ class ImportController @Inject constructor(
             progress.status == "failed" ||
             progress.status == "cancelled"
         val next = if (include && progress.items.isEmpty()) {
-            runCatching { repository.getImportJob(id, includeItems = true) }.getOrNull()
-                ?: progress
+            try {
+                repository.getImportJob(id, includeItems = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    status = if (progress.status == "review") ImportStatus.Analyzing else ImportStatus.Committing,
+                    jobId = id,
+                    notice = strings.get(R.string.import_details_error),
+                )
+                if (pollJob?.isActive != true) startPoll()
+                return
+            }
         } else {
             progress
         }
-        val nextState = next.toState(_state.value, includeItems = true)
+        val nextState = next.toState(
+            _state.value,
+            includeItems = include || next.items.isNotEmpty(),
+        ).copy(notice = null)
         val prevCreated = _state.value.createdCount
         val becameDone = nextState.status == ImportStatus.Done &&
             _state.value.status != ImportStatus.Done

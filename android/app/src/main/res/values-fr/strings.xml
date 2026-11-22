@@ -127,15 +127,15 @@
 
     <string name="settings_theme">Thème</string>
 
-    <string name="settings_mode">Mode d’étude</string>
+    <string name="settings_mode">Méthode d’apprentissage</string>
 
-    <string name="settings_group_study">ÉTUDE</string>
+    <string name="settings_group_study">APPRENTISSAGE</string>
 
-    <string name="settings_group_general">GÉNÉRAL</string>
+    <string name="settings_group_general">APPLICATION</string>
 
     <string name="settings_mode_choice">Quiz</string>
 
-    <string name="settings_mode_type">Taper le mot</string>
+    <string name="settings_mode_type">Saisir la réponse</string>
 
     <string name="settings_mode_flash">Cartes</string>
 
@@ -145,7 +145,7 @@
 
     <string name="settings_tolerate_typos_sub">Orthographe et accents</string>
 
-    <string name="settings_direction">Sens d’étude</string>
+    <string name="settings_direction">Que montrer en premier ?</string>
 
     <string name="settings_direction_first">D’abord %1$s</string>
 
@@ -153,25 +153,25 @@
 
     <string name="settings_direction_sub">Quoi afficher en premier : %1$s</string>
 
-    <string name="settings_card_layout">Mise en page de la carte</string>
+    <string name="settings_card_layout">Contenu de la fiche</string>
 
     <string name="settings_card_layout_sub">Personnaliser le contenu de la fiche</string>
 
-    <string name="settings_examples">Phrases</string>
+    <string name="settings_examples">Phrases exemples</string>
 
-    <string name="settings_usages">Expressions</string>
+    <string name="settings_usages">Expressions et usage</string>
 
     <string name="settings_periphrases">Tournures</string>
 
-    <string name="settings_syn_ant">Autour du mot</string>
+    <string name="settings_syn_ant">Synonymes et antonymes</string>
     <string name="settings_word_family">Famille de mots</string>
     <string name="settings_associations">Associations</string>
 
-    <string name="settings_conjugation">Conjugaison</string>
+    <string name="settings_conjugation">Conjugaison du verbe</string>
 
     <string name="settings_all_tenses">Tous les temps</string>
 
-    <string name="settings_limits">Limites</string>
+    <string name="settings_limits">Nouveaux mots par jour</string>
 
     <string name="settings_new_limit">Limite quotidienne de nouveaux mots</string>
 
@@ -355,7 +355,7 @@
     <string name="import_reason_unknown">Ce mot ne peut pas être importé pour le moment.</string>
     <string name="import_ready_hint">Ces mots seront ajoutés à ta liste.</string>
     <string name="import_review_loading">Chargement des mots…</string>
-    <string name="import_errors_hint">Ces mots ne seront pas ajoutés à ta liste.</string>
+    <string name="import_errors_hint">Ces termes ne seront pas ajoutés. Vérifiez leur orthographe ou leur langue.</string>
     <string name="import_item_untitled">Mot inconnu</string>
     <string name="import_reason_write_failed">Impossible d’enregistrer ce mot (après 3 essais).</string>
     <string name="import_cancelled">Annulé. Rien n’a été ajouté.</string>
@@ -624,13 +624,49 @@
 
     <string name="err_password_required">Saisissez un mot de passe</string>
 
-    <string name="err_password_short">Le mot de passe doit contenir au moins 8 caractères</string>
+    <string name="err_password_short">Le mot de passe doit contenir au moins 15 caractères</string>
 
     <string name="err_login">Échec de la connexion</string>
 
     <string name="err_login_email_unknown">Aucun compte avec cet e-mail</string>
     <string name="err_login_wrong_password">Mot de passe incorrect</string>
     <string name="err_login_use_google">Ce compte utilise Google. Continuez avec Google.</string>
+    <string name="err_session_ended">Votre session a pris fin. Reconnectez-vous.</string>
+    <string name="err_login_other_account">Cet appareil contient les données d’un autre compte. Connectez-vous à ce compte pour continuer.</string>
+    <string name="legacy_data_title">Données non attribuées sur cet appareil</string>
+    <string name="legacy_data_message">Cet appareil contient des données d’une version antérieure de l’application qui ne peuvent être associées à aucun compte. Modifications non envoyées : %1$d. Vos données sont conservées. Contactez l’assistance pour vous connecter.</string>
+    <string name="legacy_data_discard">Supprimer les données locales</string>
+    <string name="legacy_data_discard_confirm_title">Supprimer définitivement ?</string>
+    <string name="legacy_data_discard_confirm">Les modifications non envoyées (%1$d) seront perdues et ne pourront pas être récupérées.</string>
+    <string name="legacy_data_discarded">Données locales supprimées. Reconnectez-vous.</string>
+    <string name="legacy_data_discard_failed">Impossible de supprimer les données locales. Réessayez.</string>
+    <string name="auth_notice_reauth_title">Reconnectez-vous</string>
+    <string name="auth_notice_reauth">Connectez-vous avec le même compte pour continuer. Vos données sur cet appareil sont conservées.</string>
+    <string name="auth_notice_recovery_title">Impossible de restaurer la session</string>
+    <string name="auth_notice_recovery">La connexion enregistrée sur cet appareil n’a pas pu être lue. Réessayez ou connectez-vous avec le même compte. Vos données sur cet appareil sont conservées.</string>
+    <string name="auth_notice_local_data_title">Données de votre compte</string>
+    <string name="auth_notice_local_data">Cet appareil contient encore des données d’apprentissage d’une session précédente. Connectez-vous avec le même compte pour les conserver.</string>
+    <string name="auth_notice_unsent">Modifications pas encore envoyées au serveur : %1$d</string>
+    <string name="auth_sign_out_device">Se déconnecter sur cet appareil</string>
+    <string name="auth_sign_out_device_confirm_title">Supprimer les données de cet appareil ?</string>
+    <string name="auth_sign_out_device_confirm">Les données d’apprentissage enregistrées sur cet appareil seront supprimées. Les données déjà présentes sur le serveur ne sont pas concernées.</string>
+    <string name="auth_signed_out_device">Déconnecté. Données supprimées de cet appareil.</string>
+    <string name="auth_sign_out_device_failed">Impossible de se déconnecter. Réessayez.</string>
+    <string name="auth_recovery_retry_failed">La session enregistrée est toujours illisible. Reconnectez-vous.</string>
+    <string name="loading_slow_title">Cela prend plus de temps que d’habitude</string>
+    <string name="loading_slow_message">L’application est toujours en cours de démarrage. Vérifiez votre connexion ou réessayez.</string>
+    <string name="auth_revocation_pending">Déconnecté sur cet appareil. Le serveur confirmera la déconnexion dès que vous serez en ligne.</string>
+    <string name="auth_revocation_unconfirmed">Sessions sans confirmation du serveur : %1$d. Elles ne sont plus utilisées sur cet appareil, mais peuvent encore être actives sur le serveur.</string>
+    <string name="auth_revocation_confirmed">Déconnecté également sur le serveur.</string>
+    <string name="auth_revocation_queue_full">Trop de déconnexions attendent le serveur. Connectez-vous à Internet, patientez un instant et réessayez.</string>
+    <string name="logout_unsent_title">Modifications non envoyées</string>
+    <string name="logout_unsent_message">Synchronisez vos modifications avant de vous déconnecter pour ne pas les perdre.</string>
+    <string name="logout_unsent_sync_incomplete">Toutes les modifications n’ont pas pu être envoyées. Vérifiez votre connexion et réessayez, ou supprimez-les.</string>
+    <string name="logout_unsent_changed">De nouvelles modifications non envoyées sont apparues entre-temps. Veuillez décider à nouveau.</string>
+    <string name="logout_discard_confirm_title">Supprimer les modifications non envoyées ?</string>
+    <string name="logout_discard_confirm_message">Modifications qui seront définitivement supprimées de cet appareil : %1$d. Cette action est irréversible.</string>
+    <string name="action_sync_and_logout">Synchroniser et se déconnecter</string>
+    <string name="action_discard_and_logout">Supprimer et se déconnecter</string>
 
 
     <string name="err_register">Échec de l’inscription</string>
@@ -673,8 +709,8 @@
         <string name="list_clear_all">Supprimer tous les mots</string>
     <string name="list_clear_all_title">Supprimer tous les mots ?</string>
     <string name="list_clear_all_body">Vous retirerez tous les mots de « %1$s ». La liste elle-même reste.</string>
-    <string name="settings_level">Niveau</string>
-    <string name="settings_selected_tenses">Temps sélectionnés</string>
+    <string name="settings_level">Niveau de langue</string>
+    <string name="settings_selected_tenses">Choisir les temps</string>
     <string name="action_edit">Modifier</string>
     <string name="import_cards_count">Cartes importées (%1$d)</string>
     <string name="import_flashcards_count">Cartes : %1$d</string>
@@ -720,8 +756,8 @@
 <string name="settings_notifications_summary">Rappels d’étude et statut des cartes</string>
     <string name="settings_notif_study">Rappels d’étude</string>
     <string name="settings_notif_cards">Cartes prêtes</string>
-    <string name="settings_notif_enabled">Je veux des notifications</string>
-    <string name="settings_study_hour">Heure d’étude</string>
+    <string name="settings_notif_enabled">Activer les notifications</string>
+    <string name="settings_study_hour">Heure du rappel</string>
     <string name="notif_offline_ready_title">Toutes les cartes sont prêtes !</string>
     <string name="notif_offline_ready_body">C’est l’heure d’étudier !</string>
     <string name="notif_import_ready_title">Toutes les cartes sont prêtes !</string>
@@ -840,5 +876,205 @@
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 
+    <string name="settings_account">Compte</string>
+    <string name="account_loading">Chargement des données du compte…</string>
+    <string name="account_unavailable">Les données du compte ne sont pas disponibles hors ligne. Réessaie une fois en ligne.</string>
+    <string name="account_email_verified">E-mail confirmé</string>
+    <string name="account_email_unverified">E-mail pas encore confirmé</string>
+    <string name="account_change_password">Changer le mot de passe</string>
+    <string name="account_current_password">Mot de passe actuel</string>
+    <string name="account_new_password">Nouveau mot de passe</string>
+    <string name="account_repeat_password">Répète le nouveau mot de passe</string>
+    <string name="account_new_password_hint">Au moins 15 caractères. Les autres appareils seront déconnectés.</string>
+    <string name="account_password_changed">Mot de passe modifié. Les autres appareils ont été déconnectés.</string>
+    <string name="auth_forgot_password">Mot de passe oublié ?</string>
+    <string name="auth_forgot_password_title">Réinitialiser le mot de passe</string>
+    <string name="auth_forgot_password_body">Saisis l’e-mail de ton compte. Nous t’enverrons un lien pour définir un nouveau mot de passe.</string>
+    <string name="auth_forgot_password_send">Envoyer le lien</string>
+    <string name="auth_forgot_password_sent">Si un compte avec mot de passe existe pour %1$s, nous avons envoyé un lien. Vérifie ta boîte de réception et tes spams.</string>
+    <string name="auth_forgot_password_google_hint">Si tu t’es inscrit avec Google, connecte-toi simplement avec Google : aucun mot de passe n’est nécessaire.</string>
+    <string name="err_account_request_failed">Impossible de terminer la demande. Vérifie la connexion et réessaie.</string>
+    <string name="err_current_password_invalid">Le mot de passe actuel est incorrect.</string>
+    <string name="err_email_verification_required">Confirme ton adresse e-mail pour continuer.</string>
+    <string name="err_mail_rate_limited">Trop d’e-mails envoyés. Patiente un instant et réessaie.</string>
+    <string name="err_mail_unavailable">L’envoi d’e-mails est temporairement indisponible. Réessaie plus tard.</string>
+    <string name="err_new_password_short">Le nouveau mot de passe doit contenir au moins 15 caractères.</string>
+    <string name="err_password_too_long">Le mot de passe peut contenir au maximum 128 caractères.</string>
+    <string name="err_password_invalid_chars">Le mot de passe contient des caractères non autorisés.</string>
+    <string name="err_password_not_set">Ce compte n’a pas de mot de passe : connecte-toi avec Google.</string>
+    <string name="err_passwords_mismatch">Les mots de passe ne correspondent pas.</string>
+    <string name="verify_email_title">Confirme ton e-mail</string>
+    <string name="verify_email_body">Nous avons envoyé un lien de confirmation à %1$s. Ouvre-le sur cet appareil ou un autre, puis reviens ici.</string>
+    <string name="verify_email_body_no_address">Nous avons envoyé un lien de confirmation à ton adresse e-mail. Ouvre-le, puis reviens ici.</string>
+    <string name="verify_email_check">C’est confirmé — vérifier</string>
+    <string name="verify_email_resend">Renvoyer l’e-mail</string>
+    <string name="verify_email_resend_in">Renvoyer dans %1$d s</string>
+    <string name="verify_email_sent">E-mail envoyé. Il peut mettre quelques minutes à arriver.</string>
+    <string name="verify_email_not_yet">Ton adresse e-mail n’est pas encore confirmée.</string>
+    <string name="verify_email_status_sending">L’e-mail est en route.</string>
+    <string name="verify_email_status_sent">L’e-mail a atteint le serveur de messagerie.</string>
+    <string name="verify_email_status_delayed">La livraison prend plus de temps que d’habitude. Patiente un instant ou renvoie l’e-mail.</string>
+    <string name="verify_email_status_failed">Impossible de livrer l’e-mail. Vérifie l’adresse ou renvoie-le.</string>
+    <string name="verify_email_spam_hint">Introuvable ? Regarde dans les spams ou les promotions.</string>
+    <string name="verify_email_data_kept">Tes données d’étude sur cet appareil sont en sécurité et seront synchronisées après la confirmation.</string>
+    <string name="verify_email_wrong_address">Mauvaise adresse ? Déconnecte-toi et crée un compte avec la bonne adresse e-mail.</string>
+    <string name="err_login_invalid_credentials">E-mail ou mot de passe incorrect</string>
+    <string name="err_rate_limited">Trop de tentatives. Patientez un instant et réessayez.</string>
+    <string name="err_auth_unavailable">La connexion est temporairement indisponible. Réessayez dans un instant.</string>
+    <string name="account_password_reset_needed">Votre mot de passe doit être redéfini. Nous enverrons un lien à votre adresse e-mail.</string>
+    <string name="account_password_reset_send">Envoyer le lien de réinitialisation</string>
+    <string name="err_email_unavailable">Cette adresse ne peut pas être utilisée. Essayez-en une autre.</string>
+    <string name="err_recent_auth">Confirmez à nouveau votre mot de passe et réessayez.</string>
+    <string name="account_delete">Supprimer le compte</string>
+    <string name="account_delete_scope">Cela supprime définitivement votre compte et tout ce qui y est lié : profils, cartes de mots, listes, progression et réglages. Vous serez déconnecté de tous les appareils immédiatement.</string>
+    <string name="account_delete_grace">Vous pouvez annuler pendant 7 jours. Après 14 jours, tout est supprimé définitivement et ne peut pas être restauré.</string>
+    <string name="account_delete_unsent">Modifications non envoyées sur cet appareil : %1$d. Elles seront perdues. Les autres appareils ne sont pas vérifiés.</string>
+    <string name="account_delete_confirm_check">Je comprends que mon compte sera supprimé</string>
+    <string name="deletion_pending_title">Compte en attente de suppression</string>
+    <string name="deletion_pending_body">Votre compte est verrouillé et vos données sont masquées. Vous pouvez annuler jusqu’au %1$s. La suppression définitive est prévue le %2$s.</string>
+    <string name="deletion_pending_purging">La suppression définitive a commencé et ne peut plus être annulée.</string>
+    <string name="deletion_pending_refresh">Vérifier l’état</string>
+    <string name="deletion_pending_cancel">Annuler la suppression</string>
+    <string name="deletion_pending_cancel_hint">Saisissez votre mot de passe pour annuler. Reconnectez-vous ensuite.</string>
+    <string name="err_deletion_unavailable">La suppression du compte n’est pas disponible pour le moment. Réessayez plus tard.</string>
+    <string name="err_deletion_irreversible">Trop tard pour annuler : la suppression a déjà commencé.</string>
+    <string name="err_deletion_pending">Ce compte est en attente de suppression. La connexion est bloquée tant que la demande n’est pas annulée.</string>
+    <string name="err_account_deleted">Ce compte a été supprimé.</string>
+    <string name="err_deletion_owner_mismatch">Ces identifiants appartiennent à un autre compte que celui connecté sur cet appareil.</string>
+    <string name="account_stale_note">Dernières informations connues, affichées hors ligne. Les changements de sécurité et la suppression du compte nécessitent une connexion.</string>
+    <string name="err_google_challenge">La connexion avec Google a expiré. Réessayez.</string>
+    <string name="err_google_account_mismatch">Ce n’est pas le compte Google associé ici. Choisissez le bon.</string>
+    <string name="err_google_already_linked">Google est déjà associé à ce compte.</string>
+    <string name="err_google_link_unavailable">Ce compte Google ne peut pas être associé à ce compte.</string>
+    <string name="err_google_not_linked">Google n’est pas associé à ce compte.</string>
+    <string name="err_google_sign_in_conflict">Un compte avec cette adresse e-mail existe déjà. Connectez-vous avec votre mot de passe, puis associez Google dans les Paramètres.</string>
+    <string name="err_google_unavailable">La vérification Google est temporairement indisponible. Réessayez dans un instant.</string>
+    <string name="err_password_already_set">Ce compte a déjà un mot de passe.</string>
+    <string name="account_link_google">Associer Google</string>
+    <string name="account_link_google_hint">Ajoute Google comme second moyen de connexion à %1$s. Votre adresse e-mail ne change pas et les comptes ne sont pas fusionnés. Les autres appareils seront déconnectés. Confirmez votre mot de passe actuel, puis choisissez un compte Google.</string>
+    <string name="account_link_google_done">Google associé. Les autres appareils ont été déconnectés.</string>
+    <string name="account_add_password">Ajouter un mot de passe</string>
+    <string name="account_add_password_hint">Au moins 15 caractères. Vous confirmerez d’abord avec votre compte Google. Les autres appareils seront déconnectés.</string>
+    <string name="account_password_added">Mot de passe ajouté. Les autres appareils ont été déconnectés.</string>
+    <string name="account_google_confirm_hint">Il vous sera demandé de confirmer avec votre compte Google.</string>
+    <string name="sync_title">Synchronisation</string>
+    <string name="sync_headline_idle">Prêt à synchroniser</string>
+    <string name="sync_headline_syncing">Synchronisation…</string>
+    <string name="sync_headline_synced">Toutes les modifications sont synchronisées</string>
+    <string name="sync_headline_saved_locally">Enregistré sur l’appareil. En attente de synchronisation</string>
+    <string name="sync_headline_offline">Pas de connexion</string>
+    <string name="sync_headline_offline_pending">Pas de connexion. Les modifications sont enregistrées sur l’appareil</string>
+    <string name="sync_headline_partial">Certaines modifications n’ont pas encore été envoyées</string>
+    <string name="sync_headline_sign_in">Reconnectez-vous pour synchroniser</string>
+    <string name="sync_headline_verification">Vérifiez votre e-mail pour synchroniser</string>
+    <string name="sync_headline_consent">Acceptez les conditions mises à jour pour synchroniser</string>
+    <string name="sync_headline_attention">Certaines modifications nécessitent votre décision</string>
+    <string name="sync_details_show">Afficher les détails de synchronisation</string>
+    <string name="sync_details_hide">Masquer les détails de synchronisation</string>
+    <string name="sync_detail_waiting">En attente d’envoi : %1$d</string>
+    <string name="sync_detail_blocked">Décision requise : %1$d</string>
+    <string name="sync_detail_needs_review">Mots à vérifier : %1$d</string>
+    <string name="sync_detail_last_complete">Dernière synchronisation complète : %1$s</string>
+    <string name="sync_action_retry">Réessayer</string>
+    <string name="sync_blocked_title">Votre décision est requise</string>
+    <string name="sync_item_review">Révision d’étude</string>
+    <string name="sync_item_move">Déplacement d’une carte</string>
+    <string name="sync_item_undo">Annulation d’une action</string>
+    <string name="sync_item_profile_update">Modification des réglages du profil</string>
+    <string name="sync_item_profile_update_for">Modification des réglages pour %1$s</string>
+    <string name="sync_item_other">Modification en attente d’envoi</string>
+    <string name="sync_reason_conflict">Ce profil a été modifié ailleurs entre-temps.</string>
+    <string name="sync_reason_not_found">Ce profil n’existe plus.</string>
+    <string name="sync_reason_invalid">Ces réglages ne sont pas valides.</string>
+    <string name="sync_reason_pair_exists">Cette paire de langues existe déjà.</string>
+    <string name="sync_reason_generic">Cette modification n’a pas pu être envoyée.</string>
+    <string name="sync_action_apply_mine">Appliquer les miennes</string>
+    <string name="sync_action_accept_server">Utiliser la version du serveur</string>
+    <string name="sync_action_discard">Ignorer</string>
+    <string name="sync_notice_needs_network">Connectez-vous à internet pour appliquer vos modifications.</string>
+    <string name="legal_adult_confirm">J’ai au moins 18 ans.</string>
+    <string name="legal_terms_accept">J’accepte les Conditions d’utilisation.</string>
+    <string name="legal_read_terms">Lire les Conditions d’utilisation</string>
+    <string name="legal_read_privacy">Lire la Politique de confidentialité</string>
+    <string name="legal_privacy_info">Les informations sur le traitement de vos données figurent dans la Politique de confidentialité.</string>
+    <string name="legal_loading">Chargement des documents actuels…</string>
+    <string name="legal_gate_title">Conditions mises à jour</string>
+    <string name="legal_gate_body">Pour continuer à utiliser Vocabulario, confirmez votre âge et acceptez les Conditions d’utilisation actuelles.</string>
+    <string name="legal_gate_accept">Accepter et continuer</string>
+    <string name="legal_gate_data_kept">Vos données restent sur cet appareil.</string>
+    <string name="legal_google_title">Nouveau compte</string>
+    <string name="legal_google_body">Ce compte Google n’a pas encore de compte Vocabulario. Pour en créer un, confirmez les déclarations ci-dessous.</string>
+    <string name="legal_continue">Continuer</string>
+    <string name="settings_legal">Informations</string>
+    <string name="err_terms_required">Acceptez les Conditions d’utilisation pour continuer.</string>
+    <string name="err_adult_required">Confirmez que vous avez au moins 18 ans.</string>
+    <string name="err_legal_changed">Les conditions ont été mises à jour. Lisez-les et acceptez-les à nouveau.</string>
+    <string name="err_legal_load">Impossible de charger les documents actuels. Réessayez.</string>
+    <string name="report_action">Signaler le contenu</string>
+    <string name="report_title">Signaler un problème avec ce contenu</string>
+    <string name="report_reason_incorrect">Incorrect ou trompeur</string>
+    <string name="report_reason_offensive">Choquant ou inapproprié</string>
+    <string name="report_reason_privacy">Contient des données personnelles</string>
+    <string name="report_reason_other">Autre</string>
+    <string name="report_note_label">Remarque (facultatif)</string>
+    <string name="report_preview_label">Ce texte sera envoyé :</string>
+    <string name="report_warning">N’indique pas de mots de passe ni d’autres secrets dans la remarque.</string>
+    <string name="report_send">Envoyer le signalement</string>
+    <string name="report_sent">Merci. Ton signalement a été envoyé.</string>
+    <string name="report_resolved">Ce signalement a déjà été examiné.</string>
+    <string name="report_queued">Enregistré sur cet appareil, pas encore envoyé.</string>
+    <string name="report_discard">Abandonner</string>
+    <string name="report_rejected">Ce signalement ne peut plus être envoyé.</string>
+    <string name="report_failed">Impossible d’envoyer le signalement. Réessaie.</string>
+    <string name="support_title">Aide</string>
+    <string name="support_email_label">E-mail du support</string>
+    <string name="support_copy">Copier l’adresse</string>
+    <string name="support_open_site">Ouvrir la page d’assistance</string>
+    <string name="support_no_email">L’adresse du support n’est pas encore disponible.</string>
+    <string name="notif_blocked_hint">Les notifications sont bloquées dans les paramètres du système, les rappels n’apparaîtront donc pas.</string>
+    <string name="notif_open_settings">Ouvrir les paramètres du système</string>
+    <string name="err_ai_budget">La création de nouveaux contenus est suspendue pour le moment. Tes mots enregistrés sont en sécurité. Réessaie plus tard.</string>
+    <string name="err_restore_recovery">Par sécurité, réinitialise ton mot de passe ou connecte-toi avec Google pour continuer.</string>
+    <string name="update_required_title">Mise à jour requise</string>
+    <string name="update_required_body">Cette version de Vocabulario n\'est plus prise en charge. Mets l\'application à jour depuis Google Play pour continuer. Tes données restent sur cet appareil.</string>
+    <string name="update_required_action">Mettre à jour</string>
+    <string name="account_link_verify_title">Confirmez votre adresse e-mail</string>
+    <string name="account_link_verify_intro">Appuyez sur le bouton ci-dessous pour confirmer qu\'il s\'agit bien de l\'adresse e-mail de votre compte Vocabulario.</string>
+    <string name="account_link_verify_button">Confirmer l\'adresse</string>
+    <string name="account_link_verify_done">C\'est fait ! Votre adresse e-mail est confirmée. Vous pouvez revenir à l\'application.</string>
+    <string name="account_link_reset_title">Définissez un nouveau mot de passe</string>
+    <string name="account_link_reset_intro">Choisissez un nouveau mot de passe pour votre compte Vocabulario. Après l\'enregistrement, vous serez déconnecté de tous vos appareils.</string>
+    <string name="account_link_reset_button">Enregistrer le nouveau mot de passe</string>
+    <string name="account_link_reset_done">Votre mot de passe a été modifié. Connectez-vous à l\'application avec le nouveau mot de passe.</string>
+    <string name="account_link_missing_token">Ce lien est incomplet. Rouvrez-le depuis l\'e-mail ou demandez-en un nouveau dans l\'application.</string>
+    <string name="account_link_invalid">Ce lien n\'est plus valide. Demandez-en un nouveau dans l\'application.</string>
+    <string name="account_link_expired">Ce lien a expiré. Demandez-en un nouveau dans l\'application.</string>
+    <string name="account_link_used">Ce lien a déjà été utilisé. Si c\'était vous, la modification est déjà enregistrée.</string>
+    <string name="account_link_network">Connexion impossible. Vérifiez votre connexion Internet et réessayez.</string>
+    <string name="account_link_rate_limited">Trop de tentatives. Patientez un instant et réessayez.</string>
+    <string name="account_link_error">Une erreur s\'est produite. Réessayez dans un instant.</string>
+    <string name="settings_invalid_time">Saisissez une heure valide, par ex. 19:00.</string>
+    <string name="settings_notifications_on">Activées</string>
+    <string name="settings_notifications_off">Désactivées</string>
+    <plurals name="settings_card_content_count">
+        <item quantity="one">%1$d élément</item>
+        <item quantity="other">%1$d éléments</item>
+    </plurals>
+    <string name="import_info_title">Informations</string>
+    <string name="import_paste_info">Collez le texte exporté depuis une autre application ou saisissez vos propres termes dans la langue que vous apprenez.</string>
+    <string name="import_analysis_description">Nous vérifions l’orthographe, la langue et les termes déjà présents dans vos listes.</string>
+    <string name="import_analysis_wait">Cela peut prendre un moment.</string>
+    <string name="import_analysis_result">Résultat de l’analyse</string>
+    <string name="import_stat_all">Tous</string>
+    <string name="import_stat_ready">Prêts</string>
+    <string name="import_stat_duplicate">Doublons</string>
+    <string name="import_stat_check">À vérifier</string>
+    <string name="import_stat_added">Ajoutés</string>
+    <string name="import_stat_skipped">Écartés par choix</string>
+    <string name="import_review_select">Choisir les termes à ajouter</string>
+    <string name="import_copy_check">Copier les termes à vérifier (%1$d)</string>
+    <string name="import_copy_done">Copié</string>
+    <string name="import_done">Terminé !</string>
+    <string name="import_details_error">Impossible de charger les détails de l’importation. Nouvelle tentative en cours.</string>
 </resources>
 

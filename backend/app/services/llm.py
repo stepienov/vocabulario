@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import re
@@ -7,6 +8,7 @@ from typing import Any
 import httpx
 from openai import AsyncOpenAI
 
+from app.services import ai_budget
 from app.ai.prompts.v1 import (
     IMPORT_ADAPTIVE_PROMPT_V1,
     IMPORT_ADAPTIVE_SYSTEM_V1,
@@ -90,15 +92,35 @@ ENRICH_CORE_SYSTEM = (
 
 
 def _log_import_llm(title: str, body: str) -> None:
-    """Widoczne w terminalu uvicorn — pełny prompt / response importu."""
-    sep = "=" * 72
-    block = f"\n{sep}\n{title}\n{sep}\n{body}\n{sep}\n"
-    logger.info(block)
-    try:
-        print(block, flush=True)
-    except UnicodeEncodeError:
-        # Windows cp1250 consoles can't print arrows / some Spanish diacritics
-        print(block.encode("utf-8", errors="replace").decode("ascii", errors="replace"), flush=True)
+    """Only the step title is logged: prompts and responses carry the user's own text."""
+    logger.info("%s (%d chars)", title, len(body))
+
+
+def _is_insufficient_quota(exc: BaseException) -> bool:
+    """The provider account (not our cap) is out of balance."""
+    return getattr(exc, "code", None) == "insufficient_quota"
+
+
+async def _settle_failed_call(reservation, model: str, exc: BaseException, usage) -> None:
+    """Charge, release or keep unresolved depending on what the provider is known to have done."""
+    if reservation is None:
+        return
+    if usage is not None:
+        await ai_budget.settle(reservation, model, usage)
+    elif isinstance(getattr(exc, "status_code", None), int) and 400 <= exc.status_code < 500 and exc.status_code != 408:
+        await ai_budget.release(reservation)
+    else:
+        await ai_budget.leave_unresolved(reservation)
+
+
+class ProviderRefusal(Exception):
+    """The provider declined the content. It is a result, not a transport error: never stored as
+    card content and never retried with another model to get around the refusal."""
+
+    code = "content_refused"
+
+    def __init__(self) -> None:
+        super().__init__(self.code)
 
 
 class LLMService:
@@ -106,7 +128,8 @@ class LLMService:
         settings = get_settings()
         self.mock = settings.llm_mock or not settings.openai_api_key
         self.client = (
-            AsyncOpenAI(api_key=settings.openai_api_key, timeout=90.0) if not self.mock else None
+            AsyncOpenAI(api_key=settings.openai_api_key, timeout=90.0, max_retries=0)
+            if not self.mock else None
         )
         self.lookup_model = settings.llm_lookup_model
         self.enrichment_model = settings.llm_enrichment_model
@@ -122,7 +145,7 @@ class LLMService:
             try:
                 from anthropic import AsyncAnthropic
 
-                self._anthropic = AsyncAnthropic(api_key=self.anthropic_api_key)
+                self._anthropic = AsyncAnthropic(api_key=self.anthropic_api_key, max_retries=0)
             except Exception:
                 logger.exception("Anthropic client init failed; falling back to OpenAI")
                 self.import_provider = "openai"
@@ -182,6 +205,9 @@ class LLMService:
             prompt_len = len(prompt_static) + len(prompt_dynamic)
         started = time.perf_counter()
         usage = None
+        reservation = await ai_budget.reserve(
+            model, purpose, prompt_len + len(system or ""), max_tokens
+        )
         try:
             if use_provider == "anthropic" and self._anthropic is not None:
                 data, usage = await self._chat_json_anthropic(
@@ -207,14 +233,20 @@ class LLMService:
                     reasoning_effort=reasoning_effort,
                     service_tier=service_tier,
                 )
+        except asyncio.CancelledError:
+            await ai_budget.leave_unresolved(reservation)
+            raise
         except Exception as exc:
+            usage = getattr(exc, "llm_usage", None)
+            await _settle_failed_call(reservation, model, exc, usage)
             duration_ms = int((time.perf_counter() - started) * 1000)
+            refused = isinstance(exc, ProviderRefusal)
             schedule_llm_meter(
                 {
                     "provider": use_provider,
                     "model": model,
                     "purpose": purpose,
-                    "status": "error",
+                    "status": "refused" if refused else "error",
                     "duration_ms": duration_ms,
                     "usage": usage,
                     "request_json": build_llm_request_json(
@@ -228,10 +260,10 @@ class LLMService:
                     ),
                 },
                 {
-                    "level": "error",
+                    "level": "warning" if refused else "error",
                     "category": "llm",
                     "event": "llm_call",
-                    "status": "error",
+                    "status": "refused" if refused else "error",
                     "duration_ms": duration_ms,
                     "message": f"{use_provider}:{model} {schema_name} failed",
                     "payload": {
@@ -245,8 +277,11 @@ class LLMService:
                     "exc": exc,
                 },
             )
+            if _is_insufficient_quota(exc):
+                raise ai_budget.AiBudgetExhausted(provider_side=True) from exc
             raise
 
+        await ai_budget.settle(reservation, model, usage)
         duration_ms = int((time.perf_counter() - started) * 1000)
         schedule_llm_meter(
             {
@@ -358,8 +393,15 @@ class LLMService:
             kwargs["service_tier"] = service_tier
         response = await self.client.chat.completions.create(**kwargs)
         usage = parse_openai_usage(response)
-        content = response.choices[0].message.content or "{}"
-        return json.loads(content), usage
+        try:
+            choice = response.choices[0]
+            if getattr(choice.message, "refusal", None) or getattr(choice, "finish_reason", None) == "content_filter":
+                raise ProviderRefusal()
+            content = choice.message.content or "{}"
+            return json.loads(content), usage
+        except Exception as exc:
+            exc.llm_usage = usage  # the call is billed even when its answer is unusable
+            raise
 
     async def _chat_json_anthropic(
         self,
@@ -385,14 +427,21 @@ class LLMService:
             system=system_content,
             messages=[{"role": "user", "content": prompt}],
         )
-        text = "".join(
-            block.text for block in msg.content if getattr(block, "type", "") == "text"
-        )
-        text = text.strip()
-        if text.startswith("```"):
-            text = re.sub(r"^```(?:json)?\s*", "", text)
-            text = re.sub(r"\s*```$", "", text)
-        return json.loads(text or "{}"), parse_anthropic_usage(msg)
+        usage = parse_anthropic_usage(msg)
+        try:
+            if getattr(msg, "stop_reason", None) == "refusal":
+                raise ProviderRefusal()
+            text = "".join(
+                block.text for block in msg.content if getattr(block, "type", "") == "text"
+            )
+            text = text.strip()
+            if text.startswith("```"):
+                text = re.sub(r"^```(?:json)?\s*", "", text)
+                text = re.sub(r"\s*```$", "", text)
+            return json.loads(text or "{}"), usage
+        except Exception as exc:
+            exc.llm_usage = usage
+            raise
 
     def _mock_similar_words(self, lemma: str, pos: str = "verb") -> list[dict[str, str]]:
         """Dystraktory — inne hasła, nie odmiany lematu."""
@@ -1262,14 +1311,14 @@ class LLMService:
         prompt = IMPORT_CLASSIFY_PROMPT_V1.format(
             native_name=lang_name_en(native),
             learning_name=lang_name_en(learning),
-            notes_json=json.dumps(compact, ensure_ascii=False, indent=2),
+            notes_json=json.dumps(compact, ensure_ascii=False),
         )
         _log_import_llm(
-            f"IMPORT CLASSIFY → PROMPT (model={self.lookup_model}, n={len(notes)})",
+            f"IMPORT CLASSIFY → PROMPT (model={LOOKUP_DRAFT_MODEL}, n={len(notes)})",
             f"--- SYSTEM ---\n{IMPORT_CLASSIFY_SYSTEM_V1}\n\n--- USER ---\n{prompt}",
         )
         result = await self._chat_json(
-            self.lookup_model,
+            LOOKUP_DRAFT_MODEL,
             prompt,
             system=IMPORT_CLASSIFY_SYSTEM_V1,
             json_schema=import_classify_schema(),
@@ -1562,22 +1611,3 @@ class LLMService:
             "reason_detail": data.get("reason_detail") or data.get("reason"),
             "patch": data.get("patch") if isinstance(data.get("patch"), dict) else None,
         }
-
-
-async def verify_google_id_token(id_token: str) -> dict[str, Any]:
-    settings = get_settings()
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            "https://oauth2.googleapis.com/tokeninfo",
-            params={"id_token": id_token},
-            timeout=10.0,
-        )
-        response.raise_for_status()
-        data = response.json()
-
-    aud = data.get("aud")
-    if settings.google_client_ids and aud not in settings.google_client_ids:
-        raise ValueError("Invalid Google token audience")
-    if not data.get("email"):
-        raise ValueError("Google token missing email")
-    return data

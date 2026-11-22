@@ -89,13 +89,20 @@ data class ImportJobState(
         get() = items.filter { it.verdict == "duplicate" }.sortedWith(importLemmaComparator)
 
     val failedItems: List<ImportJobItemResponse>
-        get() = items.filter { it.verdict == "failed" }.sortedWith(importLemmaComparator)
+        get() = items.filter { it.verdict == "failed" && it.reason_code != "deselected" }
+            .sortedWith(importLemmaComparator)
+
+    val skippedCount: Int
+        get() = items.count { it.verdict == "skipped" || it.reason_code == "deselected" }
 
     val errorClipboard: String
         get() = failedItems
             .sortedBy { it.ordinal }
             .mapNotNull { it.lemma?.takeIf(String::isNotBlank) ?: it.input_label.takeIf(String::isNotBlank) }
             .joinToString("; ")
+
+    val errorClipboardCount: Int
+        get() = failedItems.count { !it.lemma.isNullOrBlank() || it.input_label.isNotBlank() }
 }
 
 @Serializable
@@ -118,7 +125,7 @@ fun ImportJobProgressResponse.toState(
             jobId = previous.jobId,
         )
     }
-    val nextItems = if (includeItems && items.isNotEmpty()) items else previous.items
+    val nextItems = if (includeItems) items else previous.items
     val readyIds = nextItems.filter { it.verdict == "ready" }.map { it.id }.toSet()
     val enteringReview =
         previous.status != ImportStatus.Review && parsed == ImportStatus.Review
@@ -144,14 +151,26 @@ fun ImportJobProgressResponse.toState(
         currentAttempt = current_attempt,
         readyCount = ready_count,
         duplicateCount = duplicate_count,
-        failedCount = failed_count,
+        failedCount = if (includeItems && items.isNotEmpty()) {
+            items.count { it.verdict == "failed" && it.reason_code != "deselected" }
+        } else {
+            failed_count
+        },
         createdCount = created_count,
         dailyUsed = daily_used,
         dailyLimit = daily_limit,
         items = nextItems,
         selectedItemIds = nextSelected,
         result = if (parsed == ImportStatus.Done) {
-            ImportResult(created = created_count, duplicates = duplicate_count, failed = failed_count)
+            ImportResult(
+                created = created_count,
+                duplicates = duplicate_count,
+                failed = if (includeItems && items.isNotEmpty()) {
+                    items.count { it.verdict == "failed" && it.reason_code != "deselected" }
+                } else {
+                    failed_count
+                },
+            )
         } else {
             previous.result
         },

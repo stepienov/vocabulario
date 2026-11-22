@@ -74,4 +74,37 @@ class ListFiltersTest {
         )
         assertEquals(listOf("la Copa"), filtered.map { it.lemma_l2 })
     }
+
+    @Test
+    fun freshListDefaultsToNewestAndRemembersIndependentViews() {
+        val words = listOf(
+            card("older", pos = "noun").copy(created_at = "2026-01-01T10:00:00Z"),
+            card("newer", pos = "verb").copy(created_at = "2026-01-03T10:00:00Z"),
+            card("middle", pos = "noun").copy(created_at = "2026-01-02T10:00:00Z"),
+        )
+        val fresh = HomeUiState(selectedListId = "fresh", listWords = words)
+        assertEquals(listOf("newer", "middle", "older"), fresh.visibleListWords.map { it.id })
+        val remembered = fresh.copy(listViews = mapOf(
+            "a" to ListViewPreferences(ListSortOrder.Oldest, ListFilterState(pos = setOf("noun"))),
+            "b" to ListViewPreferences(ListSortOrder.Newest, ListFilterState(pos = setOf("verb"))),
+        ))
+        assertEquals(listOf("older", "middle"), remembered.copy(selectedListId = "a").visibleListWords.map { it.id })
+        assertEquals(listOf("newer"), remembered.copy(selectedListId = "b").visibleListWords.map { it.id })
+        assertEquals(listOf("newer", "middle", "older"), remembered.visibleListWords.map { it.id })
+    }
+
+    @Test
+    fun openingWordTemporarilyRevealsItWithoutChangingSavedFilter() {
+        val filter = ListFilterState(pos = setOf("noun"), states = setOf(CardStateFilter.Review))
+        val original = HomeUiState(
+            selectedListId = "a",
+            listWords = listOf(card("verb", pos = "verb")),
+            listViews = mapOf("a" to ListViewPreferences(filter = filter)),
+        )
+        val opened = original.copy(listFilterOverride = ListFilterState(), focusWordId = "verb")
+        assertEquals(listOf("verb"), opened.visibleListWords.map { it.id })
+        assertEquals(listOf("verb"), opened.copy(focusWordId = null).visibleListWords.map { it.id })
+        assertEquals(filter, opened.listViews["a"]?.filter)
+        assertEquals(emptyList<CardResponse>(), opened.copy(listFilterOverride = null).visibleListWords)
+    }
 }

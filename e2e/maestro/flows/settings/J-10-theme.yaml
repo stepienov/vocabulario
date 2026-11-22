@@ -3,19 +3,15 @@ tags:
   - regression
   - settings
 ---
-# J-10 · Theme light / dark / system
+# J-10 · Theme toggle
 - launchApp:
     clearState: false
 - runFlow: ../../helpers/ensure-logged-in.yaml
 - runFlow: ../../helpers/goto-settings.yaml
 - tapOn:
-    id: settings_section_theme
+    id: settings_theme_toggle
 - tapOn:
-    id: settings_theme_dark
-- tapOn:
-    id: settings_theme_light
-- tapOn:
-    id: settings_theme_system
+    id: settings_theme_toggle
 - tapOn:
     id: btn_back
 - assertVisible:

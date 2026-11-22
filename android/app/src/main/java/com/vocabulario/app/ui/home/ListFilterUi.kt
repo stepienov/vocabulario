@@ -4,12 +4,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
@@ -23,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -152,20 +157,30 @@ fun FlowRowChips(content: @Composable () -> Unit) {
 fun FilterToggleChip(
     label: String,
     selected: Boolean,
+    unselectedColor: Color,
     onClick: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     Surface(
+        selected = selected,
         onClick = onClick,
         shape = AppChipShape,
-        color = if (selected) scheme.primaryContainer else scheme.surfaceVariant,
-        contentColor = if (selected) scheme.onPrimaryContainer else scheme.onSurface,
+        color = if (selected) scheme.primary else unselectedColor,
+        contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
     ) {
-        Text(
-            label,
+        Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-        )
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (selected) {
+                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+            }
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            )
+        }
     }
 }

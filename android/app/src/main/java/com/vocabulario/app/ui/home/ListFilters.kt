@@ -2,7 +2,9 @@ package com.vocabulario.app.ui.home
 
 import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.normalizePosKey
+import kotlinx.serialization.Serializable
 
+@Serializable
 enum class ListSortOrder {
     LemmaAsc,
     LemmaDesc,
@@ -10,6 +12,7 @@ enum class ListSortOrder {
     Oldest,
 }
 
+@Serializable
 enum class CardStateFilter {
     New,
     Learning,
@@ -17,6 +20,7 @@ enum class CardStateFilter {
     Mastered,
 }
 
+@Serializable
 data class ListFilterState(
     val pos: Set<String> = emptySet(),
     val states: Set<CardStateFilter> = emptySet(),

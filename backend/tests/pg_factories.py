@@ -6,8 +6,8 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import create_access_token
 from app.models import LanguageProfile, LearningCard, SrsState, User, WordList
+from app.services.auth_sessions import create_session
 
 
 async def create_user(session: AsyncSession, *, email: str | None = None) -> User:
@@ -67,5 +67,8 @@ async def create_card(
     return card
 
 
-def auth_headers(user: User) -> dict[str, str]:
-    return {"Authorization": f"Bearer {create_access_token(user.id)}"}
+async def auth_headers(session: AsyncSession, user: User) -> dict[str, str]:
+    """Bearer header backed by a real session row, like a production login."""
+    issued = await create_session(session, user.id)
+    await session.commit()
+    return {"Authorization": f"Bearer {issued.access_token}"}

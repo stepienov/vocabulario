@@ -119,6 +119,12 @@ interface PendingReviewDao {
     @Query("SELECT * FROM pending_reviews ORDER BY createdAt ASC")
     suspend fun all(): List<PendingReviewEntity>
 
+    @Query("SELECT * FROM pending_reviews WHERE blockedReason IS NULL ORDER BY createdAt ASC")
+    suspend fun sendable(): List<PendingReviewEntity>
+
+    @Query("UPDATE pending_reviews SET blockedReason = :reason WHERE clientId = :clientId")
+    suspend fun block(clientId: String, reason: String)
+
     @Query("DELETE FROM pending_reviews WHERE clientId = :clientId")
     suspend fun delete(clientId: String)
 
@@ -136,6 +142,12 @@ interface PendingMoveDao {
 
     @Query("SELECT * FROM pending_moves ORDER BY movedAt ASC")
     suspend fun all(): List<PendingMoveEntity>
+
+    @Query("SELECT * FROM pending_moves WHERE blockedReason IS NULL ORDER BY movedAt ASC")
+    suspend fun sendable(): List<PendingMoveEntity>
+
+    @Query("UPDATE pending_moves SET blockedReason = :reason WHERE clientId = :clientId")
+    suspend fun block(clientId: String, reason: String)
 
     @Query("DELETE FROM pending_moves WHERE clientId IN (:ids)")
     suspend fun deleteIds(ids: List<String>)
@@ -194,6 +206,12 @@ interface PendingUndoDao {
     @Query("SELECT * FROM pending_undos ORDER BY clientId ASC")
     suspend fun all(): List<PendingUndoEntity>
 
+    @Query("SELECT * FROM pending_undos WHERE blockedReason IS NULL ORDER BY clientId ASC")
+    suspend fun sendable(): List<PendingUndoEntity>
+
+    @Query("UPDATE pending_undos SET blockedReason = :reason WHERE clientId = :clientId")
+    suspend fun block(clientId: String, reason: String)
+
     @Query("DELETE FROM pending_undos WHERE clientId = :clientId")
     suspend fun delete(clientId: String)
 }
@@ -221,6 +239,17 @@ interface OutboxOpDao {
     @Query("SELECT * FROM outbox_ops ORDER BY seq ASC")
     suspend fun all(): List<OutboxOpEntity>
 
+    @Query("SELECT * FROM outbox_ops WHERE seq = :seq LIMIT 1")
+    suspend fun bySeq(seq: Long): OutboxOpEntity?
+
+    /** Wartość nieistotna: Room emituje przy każdej zmianie któregokolwiek z tabel kolejek. */
+    @Query(
+        "SELECT (SELECT COUNT(*) FROM outbox_ops) + (SELECT COUNT(*) FROM pending_reviews) + " +
+            "(SELECT COUNT(*) FROM pending_moves) + (SELECT COUNT(*) FROM pending_undos) + " +
+            "(SELECT COUNT(*) FROM pending_lookups)",
+    )
+    fun observeQueueTouch(): Flow<Int>
+
     @Update
     suspend fun update(op: OutboxOpEntity)
 
@@ -229,9 +258,6 @@ interface OutboxOpDao {
 
     @Query("DELETE FROM outbox_ops WHERE clientOpId = :clientOpId")
     suspend fun deleteByClientOpId(clientOpId: String)
-
-    @Query("SELECT COUNT(*) FROM outbox_ops WHERE status = 'pending'")
-    suspend fun pendingCount(): Int
 }
 
 @Dao
@@ -244,6 +270,12 @@ interface SyncMetaDao {
 
     @Query("SELECT lastPulledAt FROM sync_meta WHERE profileId = :profileId LIMIT 1")
     fun observeLastPulledAt(profileId: String): Flow<String?>
+
+    @Query("UPDATE sync_meta SET cursor = NULL WHERE profileId = :profileId")
+    suspend fun clearCursor(profileId: String)
+
+    @Query("SELECT * FROM sync_meta")
+    suspend fun all(): List<SyncMetaEntity>
 }
 
 @Dao
@@ -268,4 +300,41 @@ interface CachedProfileDao {
 
     @Query("DELETE FROM cached_profile")
     suspend fun deleteAll()
+}
+
+@Dao
+interface SessionOwnerDao {
+    @Query("SELECT * FROM session_owner WHERE id = 0 LIMIT 1")
+    suspend fun get(): SessionOwnerEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(owner: SessionOwnerEntity)
+
+    /**
+     * Identyfikatory operacji czekających na wysłanie (także zaparkowanych w outboxie i lookupów
+     * do decyzji); liczba i fingerprint zgody na logout pochodzą z tego samego odczytu.
+     */
+    @Query(
+        "SELECT 'r:' || clientId FROM pending_reviews UNION ALL " +
+            "SELECT 'm:' || clientId FROM pending_moves UNION ALL " +
+            "SELECT 'l:' || clientId FROM pending_lookups UNION ALL " +
+            "SELECT 'u:' || clientId FROM pending_undos UNION ALL " +
+            "SELECT 'o:' || seq FROM outbox_ops",
+    )
+    suspend fun unsentIds(): List<String>
+
+    @Query(
+        "SELECT id FROM cached_profile UNION SELECT profileId FROM cached_cards UNION " +
+            "SELECT profileId FROM cached_lists UNION SELECT profileId FROM sync_meta",
+    )
+    suspend fun localProfileIds(): List<String>
+
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM cached_cards) OR EXISTS(SELECT 1 FROM cached_lists) OR " +
+            "EXISTS(SELECT 1 FROM pending_reviews) OR EXISTS(SELECT 1 FROM pending_moves) OR " +
+            "EXISTS(SELECT 1 FROM pending_lookups) OR EXISTS(SELECT 1 FROM pending_undos) OR " +
+            "EXISTS(SELECT 1 FROM local_settings) OR EXISTS(SELECT 1 FROM sync_meta) OR " +
+            "EXISTS(SELECT 1 FROM cached_profile) OR EXISTS(SELECT 1 FROM outbox_ops)",
+    )
+    suspend fun hasOwnedData(): Boolean
 }

@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.schemas.similar_words import MIN_SIMILAR_FOR_QUIZ
 from app.core.deps import lang_pair_key, normalize_text
 from app.core.lemma_keys import cache_lookup_keys, canonical_lemma
+from app.db.lifecycle import LifecycleBlocked, pin_lifecycle
 from app.db.session import async_session_factory
 from app.lsp.enrichment import finish_side_jobs, has_required_inflection, run_lemma_enrichment
 from app.lsp.lang_utils import articles_for
@@ -27,6 +28,8 @@ from app.models import LanguageProfile, LearningCard, LexicalEntry, User
 from app.services.distractors import in_learning_lemma, lemma_keys
 from app.services.enrichment import enrich_adaptive_card_content, enrich_card_content
 from app.services.lexical import LexicalService
+from app.services.ai_budget import AiBudgetExhausted, AiBudgetUnavailable
+from app.services.llm import ProviderRefusal
 from app.services.app_log import log_event
 from app.services.background import spawn_background
 from app.services.llm_usage import bind_llm_usage_context
@@ -43,6 +46,8 @@ STATUS_LEARNABLE = "learnable"
 STATUS_READY = "ready"
 STATUS_FAILED = "failed"
 
+# Cause of waiting, not a status: the card keeps pending/preparing/learnable while the AI cap is hit.
+WAITING_BUDGET = "waiting_budget"
 # Kolejka SRS / dashboard: nauka po rdzeniu, nie dopiero po pełnym słowniku.
 STUDYABLE_STATUSES = (STATUS_READY, STATUS_LEARNABLE)
 
@@ -69,7 +74,7 @@ async def _log_enrich_pipeline(
         profile_id=card.profile_id,
         entity_type="card",
         entity_id=str(card.id),
-        message=f"{event} {card.lemma_l2!r}",
+        message=event,
         payload={
             "lemma": card.lemma_l2,
             "pos": card.pos,
@@ -162,6 +167,8 @@ async def _mark_enrich_failed(card_id: UUID, error: str) -> None:
                 return
             _apply_enrich_retry(card, RuntimeError(error))
             await db.commit()
+    except LifecycleBlocked:
+        return
     except Exception:
         logger.exception("Nie udało się oznaczyć karty %s jako failed", card_id)
 
@@ -172,6 +179,27 @@ def _apply_enrich_retry(card: LearningCard, exc: BaseException) -> None:
     Learnable nie schodzi z kolejki — dociągamy tylko brakujące sekcje.
     """
     err = public_enrichment_error(exc)
+
+    if isinstance(exc, (AiBudgetExhausted, AiBudgetUnavailable)):
+        # Not the card's fault: no retry is spent and the status stays; maintenance resumes it
+        # once the monthly cap has room again.
+        card.enrichment_error = WAITING_BUDGET
+        card.enrichment_retry_at = None
+        logger.info("Enrichment karty %s czeka na budżet AI (%s)", card.id, card.lemma_l2)
+        return
+
+    if isinstance(exc, ProviderRefusal):
+        # A refusal is a result: no automatic or manual retry, never learnable-with-content.
+        card.enrichment_error = err
+        card.enrichment_retry_at = None
+        card.enrichment_manual_triggered = False
+        card.enrichment_auto_retry_used = True
+        if card.enrichment_status != STATUS_LEARNABLE:
+            card.enrichment_status = STATUS_FAILED
+        else:
+            card.enrichment_side_retries = _MAX_SIDE_RETRIES
+        logger.info("Enrichment karty %s odrzucony przez dostawcę (%s)", card.id, card.lemma_l2)
+        return
 
     if card.enrichment_status == STATUS_LEARNABLE:
         card.enrichment_error = err
@@ -486,14 +514,14 @@ async def find_ready_entry(
             )
             rows = [e for e in legacy_rows if _entry_has_paid_content(e)]
     if not rows:
-        logger.info("lexical cache MISS pair=%s keys=%s lemma=%r gloss=%r", lang_pair, keys, lemma, gloss)
+        logger.info("lexical cache MISS pair=%s", lang_pair)
         spawn_background(
             lambda: log_event(
                 level="info",
                 category="enrichment",
                 event="lexical_cache_miss",
                 status="ok",
-                message=f"cache miss {lemma!r}",
+                message="cache miss",
                 payload={
                     "lang_pair": lang_pair,
                     "keys": sorted(keys),
@@ -853,6 +881,8 @@ async def _run_claimed_enrich(
                         await db.commit()
     except asyncio.CancelledError:
         raise
+    except LifecycleBlocked:
+        return
     except Exception:
         logger.exception("Enrichment karty %s wywalił się", card_id)
         await _mark_enrich_failed(card_id, "enrichment_crash")
@@ -883,6 +913,7 @@ async def _enrich_card_unlocked(
         ).scalar_one_or_none()
         if card is None:
             return
+        await pin_lifecycle(db, card.user_id)
         if card.enrichment_status == STATUS_READY and content_is_complete(card.content):
             return
         if card.enrichment_status == STATUS_FAILED:
@@ -1019,6 +1050,9 @@ async def _enrich_card_unlocked(
             return
         except asyncio.CancelledError:
             raise
+        except LifecycleBlocked:
+            await db.rollback()
+            return
         except Exception as exc:
             logger.exception("Enrichment karty %s nie powiódł się", card_id)
             from app.services.app_log import log_event
@@ -1032,8 +1066,7 @@ async def _enrich_card_unlocked(
                 profile_id=card.profile_id,
                 entity_type="card",
                 entity_id=str(card_id),
-                message=f"enrichment failed {card.lemma_l2!r}",
-                payload={"lemma": card.lemma_l2, "pos": card.pos},
+                message="enrichment failed",
                 exc=exc,
             )
             _apply_enrich_retry(card, exc)
@@ -1307,6 +1340,11 @@ async def _resume_pending_enrichment(*, stale_only: bool = False) -> None:
         select(LearningCard.id)
         .where(
             LearningCard.deleted_at.is_(None),
+            LearningCard.user_id.in_(select(User.id).where(User.account_status == "active")),
+            or_(
+                LearningCard.enrichment_error.is_(None),
+                LearningCard.enrichment_error != WAITING_BUDGET,
+            ),
             eligible,
         )
         .limit(_ENRICH_RESUME_BATCH)
@@ -1326,3 +1364,34 @@ async def _resume_pending_enrichment(*, stale_only: bool = False) -> None:
             spawned,
             _ENRICH_CONCURRENCY,
         )
+
+
+async def resume_waiting_budget(limit: int = _ENRICH_RESUME_BATCH) -> int:
+    """Wake cards parked by the AI cap; the caller checked that the cap has room."""
+    async with async_session_factory() as db:
+        ids = (
+            await db.execute(
+                select(LearningCard.id)
+                .where(
+                    LearningCard.deleted_at.is_(None),
+                    LearningCard.enrichment_error == WAITING_BUDGET,
+                    LearningCard.user_id.in_(
+                        select(User.id).where(User.account_status == "active")
+                    ),
+                )
+                .order_by(LearningCard.updated_at)
+                .limit(limit)
+            )
+        ).scalars().all()
+        if not ids:
+            return 0
+        await db.execute(
+            update(LearningCard)
+            .where(LearningCard.id.in_(ids))
+            .values(enrichment_error=None)
+        )
+        await db.commit()
+    for card_id in ids:
+        if card_id not in _claimed:
+            spawn_enrich(card_id)
+    return len(ids)

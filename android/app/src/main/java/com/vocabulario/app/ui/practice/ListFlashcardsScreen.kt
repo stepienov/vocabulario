@@ -46,6 +46,8 @@ import com.vocabulario.app.ui.components.ButtonLabel
 import com.vocabulario.app.ui.components.EmptyState
 import com.vocabulario.app.ui.components.PracticeProgressBar
 import com.vocabulario.app.ui.components.PromptCard
+import com.vocabulario.app.i18n.languageDisplayName
+import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.ui.theme.ActionConfirm
 
 @Composable
@@ -122,7 +124,13 @@ fun ListFlashcardsScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        PromptCard(prompt, modifier = Modifier.fillMaxWidth())
+                        PromptCard(
+                            prompt,
+                            modifier = Modifier.fillMaxWidth(),
+                            languageLabel = state.activeProfile?.let {
+                                languageDisplayName(it.learning_lang, it.appLang)
+                            },
+                        )
                         Spacer(Modifier.height(24.dp))
                         Button(
                             onClick = viewModel::reveal,

@@ -18,14 +18,17 @@ class EnrichmentCheckWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        if (!repository.hasSyncableSession()) return Result.success()
+        if (!repository.hasActiveOwner()) return Result.success()
         return try {
-            val settings = repository.getSettings()
-            val on = settings.study_reminder_enabled || settings.cards_ready_push_enabled
-            if (!on) return Result.success()
-            repository.syncNow(fullReplace = false)
-            repository.evaluateReadyBatches()
-            if (tracker.hasWatches()) scheduler.scheduleEnrichmentSoon()
+            repository.asCurrentOwner {
+                val settings = repository.getSettings()
+                val on = settings.study_reminder_enabled || settings.cards_ready_push_enabled
+                if (!on) return@asCurrentOwner
+                repository.syncNow(fullReplace = false)
+                repository.evaluateReadyBatches()
+                repository.ensureOwnerCurrent()
+                if (tracker.hasWatches()) scheduler.scheduleEnrichmentSoon()
+            }
             Result.success()
         } catch (_: Exception) {
             Result.retry()

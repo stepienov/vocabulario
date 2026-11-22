@@ -149,15 +149,15 @@
 
     <string name="settings_theme">テーマ</string>
 
-    <string name="settings_mode">学習モード</string>
+    <string name="settings_mode">学習方法</string>
 
     <string name="settings_group_study">学習</string>
 
-    <string name="settings_group_general">一般</string>
+    <string name="settings_group_general">アプリ</string>
 
     <string name="settings_mode_choice">Quiz</string>
 
-    <string name="settings_mode_type">単語を入力</string>
+    <string name="settings_mode_type">回答を入力</string>
 
     <string name="settings_mode_flash">フラッシュカード</string>
 
@@ -167,7 +167,7 @@
 
     <string name="settings_tolerate_typos_sub">スペルとダイアクリティクス</string>
 
-    <string name="settings_direction">学習方向</string>
+    <string name="settings_direction">最初に何を表示しますか？</string>
 
     <string name="settings_direction_first">%1$s 先</string>
 
@@ -175,25 +175,25 @@
 
     <string name="settings_direction_sub">最初に表示: %1$s</string>
 
-    <string name="settings_card_layout">カードレイアウト</string>
+    <string name="settings_card_layout">カードに表示する内容</string>
 
     <string name="settings_card_layout_sub">カードの内容をカスタマイズ</string>
 
-    <string name="settings_examples">文</string>
+    <string name="settings_examples">例文</string>
 
-    <string name="settings_usages">フレーズ</string>
+    <string name="settings_usages">表現と使い方</string>
 
     <string name="settings_periphrases">言い回し</string>
 
-    <string name="settings_syn_ant">この語のまわり</string>
+    <string name="settings_syn_ant">類義語と対義語</string>
     <string name="settings_word_family">語族</string>
     <string name="settings_associations">連想</string>
 
-    <string name="settings_conjugation">活用</string>
+    <string name="settings_conjugation">動詞の活用</string>
 
     <string name="settings_all_tenses">すべての時制</string>
 
-    <string name="settings_limits">制限</string>
+    <string name="settings_limits">1日の新しい単語数</string>
 
     <string name="settings_new_limit">毎日の新単語制限</string>
 
@@ -386,7 +386,7 @@
     <string name="import_reason_unknown">この語は今インポートできません。</string>
     <string name="import_ready_hint">これらの語がリストに入ります。</string>
     <string name="import_review_loading">語を読み込み中…</string>
-    <string name="import_errors_hint">これらの語はリストに入りません。</string>
+    <string name="import_errors_hint">これらの単語は追加されません。スペルまたは言語を確認してください。</string>
     <string name="import_item_untitled">不明な語</string>
     <string name="import_reason_write_failed">3回試してもこの語を保存できませんでした。</string>
     <string name="import_cancelled">中止しました。何も追加されていません。</string>
@@ -656,13 +656,49 @@
 
     <string name="err_password_required">パスワードを入力してください</string>
 
-    <string name="err_password_short">パスワードは8文字以上でなければなりません</string>
+    <string name="err_password_short">パスワードは15文字以上でなければなりません</string>
 
     <string name="err_login">ログインに失敗しました</string>
 
     <string name="err_login_email_unknown">このメールアドレスのアカウントはありません</string>
     <string name="err_login_wrong_password">パスワードが違います</string>
     <string name="err_login_use_google">このアカウントはGoogleを使います。Googleで続行してください。</string>
+    <string name="err_session_ended">セッションが終了しました。もう一度ログインしてください。</string>
+    <string name="err_login_other_account">このデバイスには別のアカウントのデータがあります。続けるには、そのアカウントでログインしてください。</string>
+    <string name="legacy_data_title">このデバイスの未割り当てデータ</string>
+    <string name="legacy_data_message">このデバイスには、アカウントに関連付けられない以前のバージョンのアプリのデータがあります。未送信の変更: %1$d件。データは保持されます。ログインについてはサポートにお問い合わせください。</string>
+    <string name="legacy_data_discard">ローカルデータを削除</string>
+    <string name="legacy_data_discard_confirm_title">完全に削除しますか？</string>
+    <string name="legacy_data_discard_confirm">未送信の変更（%1$d件）は失われ、復元できません。</string>
+    <string name="legacy_data_discarded">ローカルデータを削除しました。もう一度ログインしてください。</string>
+    <string name="legacy_data_discard_failed">ローカルデータを削除できませんでした。もう一度お試しください。</string>
+    <string name="auth_notice_reauth_title">再度ログインしてください</string>
+    <string name="auth_notice_reauth">続けるには同じアカウントでログインしてください。この端末のデータは保持されます。</string>
+    <string name="auth_notice_recovery_title">セッションを復元できませんでした</string>
+    <string name="auth_notice_recovery">この端末に保存されたログイン情報を読み取れませんでした。もう一度試すか、同じアカウントでログインしてください。この端末のデータは保持されます。</string>
+    <string name="auth_notice_local_data_title">アカウントのデータ</string>
+    <string name="auth_notice_local_data">この端末には以前のセッションの学習データが残っています。保持するには同じアカウントでログインしてください。</string>
+    <string name="auth_notice_unsent">まだサーバーに送信されていない変更: %1$d</string>
+    <string name="auth_sign_out_device">この端末でログアウト</string>
+    <string name="auth_sign_out_device_confirm_title">この端末からデータを削除しますか？</string>
+    <string name="auth_sign_out_device_confirm">この端末に保存された学習データは削除されます。サーバー上のデータには影響しません。</string>
+    <string name="auth_signed_out_device">ログアウトしました。この端末からデータを削除しました。</string>
+    <string name="auth_sign_out_device_failed">ログアウトできませんでした。もう一度お試しください。</string>
+    <string name="auth_recovery_retry_failed">保存されたセッションをまだ読み取れません。再度ログインしてください。</string>
+    <string name="loading_slow_title">通常より時間がかかっています</string>
+    <string name="loading_slow_message">アプリはまだ起動中です。接続を確認するか、もう一度お試しください。</string>
+    <string name="auth_revocation_pending">このデバイスからログアウトしました。オンラインになるとサーバーがログアウトを確認します。</string>
+    <string name="auth_revocation_unconfirmed">サーバーで確認されていないセッション: %1$d。このデバイスでは使用されませんが、サーバーではまだ有効な可能性があります。</string>
+    <string name="auth_revocation_confirmed">サーバーからもログアウトしました。</string>
+    <string name="auth_revocation_queue_full">サーバー待ちのログアウトが多すぎます。インターネットに接続し、しばらく待ってからもう一度お試しください。</string>
+    <string name="logout_unsent_title">未送信の変更</string>
+    <string name="logout_unsent_message">変更が失われないよう、ログアウトする前に同期してください。</string>
+    <string name="logout_unsent_sync_incomplete">すべての変更を送信できませんでした。接続を確認してもう一度お試しいただくか、変更を破棄してください。</string>
+    <string name="logout_unsent_changed">その間に新しい未送信の変更が発生しました。もう一度選択してください。</string>
+    <string name="logout_discard_confirm_title">未送信の変更を破棄しますか？</string>
+    <string name="logout_discard_confirm_message">この端末から完全に削除される変更: %1$d。この操作は元に戻せません。</string>
+    <string name="action_sync_and_logout">同期してログアウト</string>
+    <string name="action_discard_and_logout">破棄してログアウト</string>
 
 
     <string name="err_register">登録に失敗しました</string>
@@ -709,9 +745,9 @@
 
     <string name="list_clear_all_body">「%1$s」からすべての単語を削除します。リスト自体は残ります。</string>
 
-    <string name="settings_level">レベル</string>
+    <string name="settings_level">言語レベル</string>
 
-    <string name="settings_selected_tenses">選択した時制</string>
+    <string name="settings_selected_tenses">時制を選択</string>
 
     <string name="action_edit">編集</string>
 
@@ -796,9 +832,9 @@
     <string name="settings_notif_cards">カードの準備完了</string>
 
 
-    <string name="settings_notif_enabled">通知を受け取る</string>
+    <string name="settings_notif_enabled">通知を有効にする</string>
 
-    <string name="settings_study_hour">学習時刻</string>
+    <string name="settings_study_hour">リマインダーの時刻</string>
 
     <string name="notif_offline_ready_title">カードの準備ができました！</string>
 
@@ -929,4 +965,203 @@
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 
+    <string name="settings_account">アカウント情報</string>
+    <string name="account_loading">アカウント情報を読み込み中…</string>
+    <string name="account_unavailable">オフラインではアカウント情報を表示できません。オンラインで再試行してください。</string>
+    <string name="account_email_verified">メールアドレス確認済み</string>
+    <string name="account_email_unverified">メールアドレス未確認</string>
+    <string name="account_change_password">パスワードを変更</string>
+    <string name="account_current_password">現在のパスワード</string>
+    <string name="account_new_password">新しいパスワード</string>
+    <string name="account_repeat_password">新しいパスワード（確認）</string>
+    <string name="account_new_password_hint">15 文字以上。他のデバイスはログアウトされます。</string>
+    <string name="account_password_changed">パスワードを変更しました。他のデバイスはログアウトされました。</string>
+    <string name="auth_forgot_password">パスワードをお忘れですか？</string>
+    <string name="auth_forgot_password_title">パスワードの再設定</string>
+    <string name="auth_forgot_password_body">アカウントのメールアドレスを入力してください。新しいパスワードを設定するリンクを送ります。</string>
+    <string name="auth_forgot_password_send">リンクを送信</string>
+    <string name="auth_forgot_password_sent">%1$s にパスワード付きのアカウントがある場合、再設定リンクを送信しました。受信トレイと迷惑メールを確認してください。</string>
+    <string name="auth_forgot_password_google_hint">Google で登録した場合は、Google でログインしてください。パスワードは不要です。</string>
+    <string name="err_account_request_failed">リクエストを完了できませんでした。接続を確認して再試行してください。</string>
+    <string name="err_current_password_invalid">現在のパスワードが正しくありません。</string>
+    <string name="err_email_verification_required">続行するにはメールアドレスを確認してください。</string>
+    <string name="err_mail_rate_limited">送信したメールが多すぎます。しばらく待ってから再試行してください。</string>
+    <string name="err_mail_unavailable">メール送信は一時的に利用できません。後でもう一度お試しください。</string>
+    <string name="err_new_password_short">新しいパスワードは 15 文字以上にしてください。</string>
+    <string name="err_password_too_long">パスワードは 128 文字以内にしてください。</string>
+    <string name="err_password_invalid_chars">パスワードに使用できない文字が含まれています。</string>
+    <string name="err_password_not_set">このアカウントにはパスワードがありません。Google でログインしてください。</string>
+    <string name="err_passwords_mismatch">パスワードが一致しません。</string>
+    <string name="verify_email_title">メールアドレスを確認</string>
+    <string name="verify_email_body">%1$s に確認リンクを送信しました。このデバイスまたは別のデバイスで開いてから、ここに戻ってください。</string>
+    <string name="verify_email_body_no_address">メールアドレスに確認リンクを送信しました。開いてから、ここに戻ってください。</string>
+    <string name="verify_email_check">確認しました — チェック</string>
+    <string name="verify_email_resend">メールを再送信</string>
+    <string name="verify_email_resend_in">%1$d 秒後に再送信できます</string>
+    <string name="verify_email_sent">メールを送信しました。届くまで数分かかることがあります。</string>
+    <string name="verify_email_not_yet">メールアドレスはまだ確認されていません。</string>
+    <string name="verify_email_status_sending">メールを送信中です。</string>
+    <string name="verify_email_status_sent">メールはメールサーバーに届きました。</string>
+    <string name="verify_email_status_delayed">配信に通常より時間がかかっています。しばらく待つか、メールを再送信してください。</string>
+    <string name="verify_email_status_failed">メールを配信できませんでした。アドレスを確認するか、再送信してください。</string>
+    <string name="verify_email_spam_hint">見つかりませんか？迷惑メールやプロモーションのフォルダを確認してください。</string>
+    <string name="verify_email_data_kept">このデバイスの学習データは安全です。確認後に同期されます。</string>
+    <string name="verify_email_wrong_address">アドレスが違いますか？ログアウトして正しいメールアドレスでアカウントを作成してください。</string>
+    <string name="err_login_invalid_credentials">メールアドレスまたはパスワードが正しくありません</string>
+    <string name="err_rate_limited">試行回数が多すぎます。しばらく待ってからもう一度お試しください。</string>
+    <string name="err_auth_unavailable">ログインは一時的に利用できません。しばらくしてからもう一度お試しください。</string>
+    <string name="account_password_reset_needed">パスワードを再設定する必要があります。メールアドレスにリンクを送信します。</string>
+    <string name="account_password_reset_send">再設定リンクを送信</string>
+    <string name="err_email_unavailable">このアドレスは使用できません。別のアドレスをお試しください。</string>
+    <string name="err_recent_auth">パスワードをもう一度確認してから再試行してください。</string>
+    <string name="account_delete">アカウントを削除</string>
+    <string name="account_delete_scope">アカウントと関連するすべてのデータ（プロフィール、単語カード、リスト、学習の進捗、設定）が完全に削除されます。すべての端末で直ちにログアウトされます。</string>
+    <string name="account_delete_grace">7日以内であれば取り消せます。14日後にはすべてが完全に削除され、復元できません。</string>
+    <string name="account_delete_unsent">この端末の未送信の変更：%1$d 件。失われます。他の端末は確認されません。</string>
+    <string name="account_delete_confirm_check">アカウントが削除されることを理解しました</string>
+    <string name="deletion_pending_title">アカウントは削除予定です</string>
+    <string name="deletion_pending_body">アカウントはロックされ、データは非表示になっています。%1$s まで取り消せます。完全な削除は %2$s に予定されています。</string>
+    <string name="deletion_pending_purging">完全な削除が始まっており、取り消せません。</string>
+    <string name="deletion_pending_refresh">状況を確認</string>
+    <string name="deletion_pending_cancel">削除を取り消す</string>
+    <string name="deletion_pending_cancel_hint">取り消すにはパスワードを入力してください。その後、もう一度ログインしてください。</string>
+    <string name="err_deletion_unavailable">現在アカウントを削除できません。しばらくしてからもう一度お試しください。</string>
+    <string name="err_deletion_irreversible">取り消しには遅すぎます。削除はすでに始まっています。</string>
+    <string name="err_deletion_pending">このアカウントは削除予定です。リクエストを取り消すまでログインできません。</string>
+    <string name="err_account_deleted">このアカウントは削除されました。</string>
+    <string name="err_deletion_owner_mismatch">この認証情報は、この端末でログイン中のアカウントとは別のアカウントのものです。</string>
+    <string name="account_stale_note">最後に取得した情報をオフラインで表示しています。セキュリティの変更とアカウント削除には接続が必要です。</string>
+    <string name="err_google_challenge">Google ログインの有効期限が切れました。もう一度お試しください。</string>
+    <string name="err_google_account_mismatch">ここに連携されている Google アカウントではありません。正しいアカウントを選んでください。</string>
+    <string name="err_google_already_linked">このアカウントはすでに Google と連携しています。</string>
+    <string name="err_google_link_unavailable">この Google アカウントはこのアカウントと連携できません。</string>
+    <string name="err_google_not_linked">このアカウントは Google と連携していません。</string>
+    <string name="err_google_sign_in_conflict">このメールアドレスのアカウントはすでに存在します。パスワードでログインし、設定で Google を連携してください。</string>
+    <string name="err_google_unavailable">Google の確認が一時的に利用できません。しばらくしてからもう一度お試しください。</string>
+    <string name="err_password_already_set">このアカウントにはすでにパスワードがあります。</string>
+    <string name="account_link_google">Google を連携</string>
+    <string name="account_link_google_hint">%1$s に 2 つ目のログイン方法として Google を追加します。メールアドレスは変わらず、アカウントも統合されません。他の端末はログアウトされます。現在のパスワードを確認してから、Google アカウントを選んでください。</string>
+    <string name="account_link_google_done">Google を連携しました。他の端末はログアウトされました。</string>
+    <string name="account_add_password">パスワードを追加</string>
+    <string name="account_add_password_hint">15 文字以上。先に Google アカウントで確認します。他の端末はログアウトされます。</string>
+    <string name="account_password_added">パスワードを追加しました。他の端末はログアウトされました。</string>
+    <string name="account_google_confirm_hint">Google アカウントでの確認が求められます。</string>
+    <string name="sync_title">同期</string>
+    <string name="sync_headline_idle">同期の準備ができました</string>
+    <string name="sync_headline_syncing">同期中…</string>
+    <string name="sync_headline_synced">すべての変更が同期されました</string>
+    <string name="sync_headline_saved_locally">この端末に保存しました。同期を待っています</string>
+    <string name="sync_headline_offline">接続がありません</string>
+    <string name="sync_headline_offline_pending">接続がありません。変更はこの端末に保存されています</string>
+    <string name="sync_headline_partial">まだ送信されていない変更があります</string>
+    <string name="sync_headline_sign_in">同期するには再度ログインしてください</string>
+    <string name="sync_headline_verification">同期するにはメールアドレスを確認してください</string>
+    <string name="sync_headline_consent">同期するには更新された規約に同意してください</string>
+    <string name="sync_headline_attention">判断が必要な変更があります</string>
+    <string name="sync_details_show">同期の詳細を表示</string>
+    <string name="sync_details_hide">同期の詳細を非表示</string>
+    <string name="sync_detail_waiting">送信待ち: %1$d</string>
+    <string name="sync_detail_blocked">判断が必要: %1$d</string>
+    <string name="sync_detail_needs_review">確認する単語: %1$d</string>
+    <string name="sync_detail_last_complete">最後の完全同期: %1$s</string>
+    <string name="sync_action_retry">再試行</string>
+    <string name="sync_blocked_title">判断が必要です</string>
+    <string name="sync_item_review">学習の復習</string>
+    <string name="sync_item_move">カードの移動</string>
+    <string name="sync_item_undo">操作の取り消し</string>
+    <string name="sync_item_profile_update">プロフィール設定の変更</string>
+    <string name="sync_item_profile_update_for">%1$s の設定の変更</string>
+    <string name="sync_item_other">送信待ちの変更</string>
+    <string name="sync_reason_conflict">このプロフィールは、その間に別の場所で変更されました。</string>
+    <string name="sync_reason_not_found">このプロフィールは存在しなくなりました。</string>
+    <string name="sync_reason_invalid">この設定は無効です。</string>
+    <string name="sync_reason_pair_exists">この言語の組み合わせはすでに存在します。</string>
+    <string name="sync_reason_generic">この変更を送信できませんでした。</string>
+    <string name="sync_action_apply_mine">自分の変更を適用</string>
+    <string name="sync_action_accept_server">サーバーの内容を使う</string>
+    <string name="sync_action_discard">破棄</string>
+    <string name="sync_notice_needs_network">変更を適用するにはインターネットに接続してください。</string>
+    <string name="legal_adult_confirm">私は18歳以上です。</string>
+    <string name="legal_terms_accept">利用規約に同意します。</string>
+    <string name="legal_read_terms">利用規約を読む</string>
+    <string name="legal_read_privacy">プライバシーポリシーを読む</string>
+    <string name="legal_privacy_info">データの取り扱いについては、プライバシーポリシーをご覧ください。</string>
+    <string name="legal_loading">最新の文書を読み込んでいます…</string>
+    <string name="legal_gate_title">規約が更新されました</string>
+    <string name="legal_gate_body">Vocabulario を引き続き使うには、年齢を確認し、最新の利用規約に同意してください。</string>
+    <string name="legal_gate_accept">同意して続ける</string>
+    <string name="legal_gate_data_kept">データはこの端末に残ります。</string>
+    <string name="legal_google_title">新しいアカウント</string>
+    <string name="legal_google_body">この Google アカウントには、まだ Vocabulario のアカウントがありません。作成するには、以下の内容を確認してください。</string>
+    <string name="legal_continue">続ける</string>
+    <string name="settings_legal">情報</string>
+    <string name="err_terms_required">続けるには利用規約に同意してください。</string>
+    <string name="err_adult_required">18歳以上であることを確認してください。</string>
+    <string name="err_legal_changed">規約が更新されました。内容を読んで、もう一度同意してください。</string>
+    <string name="err_legal_load">最新の文書を読み込めませんでした。もう一度お試しください。</string>
+    <string name="report_action">コンテンツを報告</string>
+    <string name="report_title">このコンテンツの問題を報告</string>
+    <string name="report_reason_incorrect">誤りまたは誤解を招く内容</string>
+    <string name="report_reason_offensive">不快または不適切な内容</string>
+    <string name="report_reason_privacy">個人情報を含む</string>
+    <string name="report_reason_other">その他</string>
+    <string name="report_note_label">メモ（任意）</string>
+    <string name="report_preview_label">次のテキストが送信されます：</string>
+    <string name="report_warning">メモにパスワードなどの機密情報を書かないでください。</string>
+    <string name="report_send">報告を送信</string>
+    <string name="report_sent">ありがとうございます。報告を送信しました。</string>
+    <string name="report_resolved">この報告はすでに確認済みです。</string>
+    <string name="report_queued">この端末に保存されました。まだ送信されていません。</string>
+    <string name="report_discard">破棄</string>
+    <string name="report_rejected">この報告はもう送信できません。</string>
+    <string name="report_failed">報告を送信できませんでした。もう一度お試しください。</string>
+    <string name="support_title">ヘルプ</string>
+    <string name="support_email_label">サポート用メールアドレス</string>
+    <string name="support_copy">アドレスをコピー</string>
+    <string name="support_open_site">サポートページを開く</string>
+    <string name="support_no_email">サポート用アドレスはまだ利用できません。</string>
+    <string name="notif_blocked_hint">システム設定で通知がブロックされているため、リマインダーは表示されません。</string>
+    <string name="notif_open_settings">システム設定を開く</string>
+    <string name="err_ai_budget">新しいコンテンツの作成は一時的に停止しています。保存した単語は安全です。しばらくしてからもう一度お試しください。</string>
+    <string name="err_restore_recovery">安全のため、パスワードをリセットするか Google でログインして続行してください。</string>
+    <string name="update_required_title">アップデートが必要です</string>
+    <string name="update_required_body">このバージョンの Vocabulario はサポートが終了しました。続けるには Google Play でアプリを更新してください。データはこの端末に残ります。</string>
+    <string name="update_required_action">更新</string>
+    <string name="account_link_verify_title">メールアドレスの確認</string>
+    <string name="account_link_verify_intro">下のボタンを押して、Vocabulario アカウントのメールアドレスであることを確認してください。</string>
+    <string name="account_link_verify_button">アドレスを確認</string>
+    <string name="account_link_verify_done">完了しました。メールアドレスが確認されました。アプリに戻ってください。</string>
+    <string name="account_link_reset_title">新しいパスワードの設定</string>
+    <string name="account_link_reset_intro">Vocabulario アカウントの新しいパスワードを決めてください。保存すると、すべての端末でログアウトされます。</string>
+    <string name="account_link_reset_button">新しいパスワードを保存</string>
+    <string name="account_link_reset_done">パスワードを変更しました。新しいパスワードでアプリにログインしてください。</string>
+    <string name="account_link_missing_token">このリンクは不完全です。メールから開き直すか、アプリで新しいリンクをリクエストしてください。</string>
+    <string name="account_link_invalid">このリンクは無効になっています。アプリで新しいリンクをリクエストしてください。</string>
+    <string name="account_link_expired">このリンクは有効期限が切れています。アプリで新しいリンクをリクエストしてください。</string>
+    <string name="account_link_used">このリンクはすでに使用されています。ご自身の操作であれば、変更は保存済みです。</string>
+    <string name="account_link_network">接続できませんでした。インターネット接続を確認して、もう一度お試しください。</string>
+    <string name="account_link_rate_limited">試行回数が多すぎます。しばらく待ってからもう一度お試しください。</string>
+    <string name="account_link_error">問題が発生しました。しばらくしてからもう一度お試しください。</string>
+    <string name="settings_invalid_time">有効な時刻を入力してください（例：19:00）。</string>
+    <string name="settings_notifications_on">オン</string>
+    <string name="settings_notifications_off">オフ</string>
+    <plurals name="settings_card_content_count">
+        <item quantity="other">%1$d 項目</item>
+    </plurals>
+    <string name="import_info_title">情報</string>
+    <string name="import_paste_info">別のアプリから書き出したテキストを貼り付けるか、学習中の言語で単語を入力してください。</string>
+    <string name="import_analysis_description">スペル、言語、リストに登録済みの単語を確認しています。</string>
+    <string name="import_analysis_wait">少し時間がかかる場合があります。</string>
+    <string name="import_analysis_result">分析結果</string>
+    <string name="import_stat_all">すべて</string>
+    <string name="import_stat_ready">追加可能</string>
+    <string name="import_stat_duplicate">重複</string>
+    <string name="import_stat_check">要確認</string>
+    <string name="import_stat_added">追加済み</string>
+    <string name="import_stat_skipped">選択せずに省略</string>
+    <string name="import_review_select">追加する単語を選択</string>
+    <string name="import_copy_check">確認する単語をコピー（%1$d）</string>
+    <string name="import_copy_done">コピーしました</string>
+    <string name="import_done">完了！</string>
+    <string name="import_details_error">インポートの詳細を読み込めませんでした。再試行しています。</string>
 </resources>

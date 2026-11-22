@@ -5,6 +5,7 @@ import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.LookupCandidate
 import com.vocabulario.app.data.api.LookupResponse
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.session.AccountResetHooks
 import com.vocabulario.app.data.sync.BackgroundJobScheduler
 import com.vocabulario.app.i18n.UiStrings
 import kotlinx.coroutines.CancellationException
@@ -55,6 +56,7 @@ class LookupCoordinator @Inject constructor(
     strings: UiStrings,
     private val persistence: LookupQueryPersistence,
     private val backgroundJobs: BackgroundJobScheduler,
+    resetHooks: AccountResetHooks,
 ) {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private data class PersistenceWrite(
@@ -86,6 +88,7 @@ class LookupCoordinator @Inject constructor(
     val state: StateFlow<LookupSessionState> get() = session.state
 
     init {
+        resetHooks.register { clear() }
         appScope.launch {
             for (write in writes) {
                 try {

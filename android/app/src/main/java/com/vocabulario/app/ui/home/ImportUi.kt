@@ -1,11 +1,16 @@
 package com.vocabulario.app.ui.home
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -14,7 +19,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -22,6 +28,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -39,12 +46,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.vocabulario.app.R
 import com.vocabulario.app.data.api.ImportJobItemResponse
 import com.vocabulario.app.data.api.WordListResponse
@@ -58,6 +69,7 @@ import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.AppDialogAction
 import com.vocabulario.app.ui.components.AppDialogButtonRow
 import com.vocabulario.app.ui.components.AppGrayField
+import com.vocabulario.app.ui.components.AppToggle
 import com.vocabulario.app.ui.theme.LocalVocabExtraColors
 
 @Composable
@@ -73,11 +85,14 @@ fun ImportStatusPanel(
         modifier = modifier
             .fillMaxWidth()
             .testTag(TestTags.IMPORT_STATUS_PANEL)
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.Center,
     ) {
         CircularProgressIndicator(color = scheme.primary, strokeWidth = 3.dp)
+        Spacer(Modifier.height(16.dp))
         Text(
             text = if (writing) {
                 stringResource(R.string.import_stage_write)
@@ -88,23 +103,41 @@ fun ImportStatusPanel(
             fontWeight = FontWeight.SemiBold,
             color = scheme.onSurface,
         )
-        if (source.isNotBlank()) {
-            Text(source, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+        Spacer(Modifier.height(12.dp))
+        if (!writing) {
+            Text(
+                stringResource(R.string.import_analysis_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(12.dp))
         }
+        if (source.isNotBlank()) {
+            Surface(shape = AppButtonShape, color = scheme.primaryContainer) {
+                Text(source, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelMedium, color = scheme.onSurface)
+            }
+        }
+        Spacer(Modifier.height(16.dp))
         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        Button(
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.import_analysis_wait), style = MaterialTheme.typography.bodySmall,
+            color = scheme.onSurfaceVariant)
+        state.notice?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = scheme.error, textAlign = TextAlign.Center)
+        }
+        Spacer(Modifier.height(20.dp))
+        OutlinedButton(
             onClick = onAbort,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
                 .testTag(TestTags.IMPORT_BTN_ABORT),
             shape = AppButtonShape,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = scheme.error,
-                contentColor = scheme.onError,
-            ),
         ) {
-            Text(stringResource(R.string.import_abandon), fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.action_cancel), fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -157,72 +190,67 @@ fun ImportReviewAccordion(
     onExpand: (String?) -> Unit,
     onAbort: () -> Unit,
     onCommit: () -> Unit,
-    onCopyErrors: () -> Unit,
     onToggleReady: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val clipboard = LocalClipboardManager.current
     val scheme = MaterialTheme.colorScheme
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = modifier.fillMaxWidth(),
     ) {
-        state.notice?.let {
-            Text(it, color = scheme.onSurfaceVariant)
-        }
-        if (state.failedItems.isNotEmpty()) {
-            Text(
-                stringResource(R.string.import_section_failed, state.failedCount),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+        Column(
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(stringResource(R.string.import_analysis_result), style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold)
+            state.targetListName?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant) }
+            ImportStats(
+                listOf(
+                    (state.readyCount + state.duplicateCount + state.failedCount) to R.string.import_stat_all,
+                    state.readyCount to R.string.import_stat_ready,
+                    state.duplicateCount to R.string.import_stat_duplicate,
+                    state.failedCount to R.string.import_stat_check,
+                ),
             )
-            state.failedItems.forEach { item ->
-                ImportJobItemRow(item)
+            state.notice?.let { Text(it, color = scheme.onSurfaceVariant) }
+            if (state.readyItems.isNotEmpty()) {
+                Surface(shape = RoundedCornerShape(10.dp), color = scheme.surface) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(stringResource(R.string.import_review_select), fontWeight = FontWeight.SemiBold)
+                            Text("${state.selectedReadyCount} / ${state.readyCount}", color = scheme.onSurfaceVariant)
+                        }
+                        state.readyItems.forEach { item ->
+                            ReadyImportItemRow(item, item.id in state.selectedItemIds) { onToggleReady(item.id) }
+                        }
+                    }
+                }
+            } else if (state.readyCount > 0) {
+                Text(stringResource(R.string.import_review_loading), style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant)
             }
-        }
-        if (state.duplicateItems.isNotEmpty()) {
-            Text(
-                stringResource(R.string.import_section_duplicates, state.duplicateCount),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+            if (state.selectedReadyCount > state.dailyRemaining) {
+                Text(stringResource(R.string.import_quota_exceeded), color = scheme.error)
+            }
+            ImportReviewSection(
+                title = "${stringResource(R.string.import_stat_check)} (${state.failedCount})",
+                tag = TestTags.IMPORT_ACCORDION_FAIL,
+                expanded = state.expandedSection == "failed",
+                onClick = { onExpand("failed") },
+                items = state.failedItems,
+                clipboard = state.errorClipboard,
+                clipboardCount = state.errorClipboardCount,
             )
-            state.duplicateItems.forEach { item ->
-                ImportJobItemRow(item)
-            }
-        }
-        if (state.readyItems.isNotEmpty()) {
-            Text(
-                stringResource(R.string.import_section_ready, state.readyCount),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            state.readyItems.forEach { item ->
-                ReadyImportItemRow(
-                    item = item,
-                    checked = item.id in state.selectedItemIds,
-                    onToggle = { onToggleReady(item.id) },
-                )
-            }
-        } else if (state.readyCount > 0) {
-            Text(
-                stringResource(R.string.import_review_loading),
-                style = MaterialTheme.typography.bodySmall,
-                color = scheme.onSurfaceVariant,
+            ImportReviewSection(
+                title = stringResource(R.string.import_section_duplicates, state.duplicateCount),
+                tag = TestTags.IMPORT_ACCORDION_DUP,
+                expanded = state.expandedSection == "duplicate",
+                onClick = { onExpand("duplicate") },
+                items = state.duplicateItems,
             )
         }
-        if (state.failedCount > 0) {
-            TextButton(onClick = {
-                clipboard.setText(AnnotatedString(state.errorClipboard))
-                onCopyErrors()
-            }) {
-                Text(stringResource(R.string.import_copy_errors))
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             OutlinedButton(
@@ -244,8 +272,91 @@ fun ImportReviewAccordion(
                     .testTag(TestTags.BTN_IMPORT_CONFIRM),
                 shape = AppButtonShape,
             ) {
-                Text(stringResource(R.string.import_confirm) + " ${state.selectedReadyCount}")
+                Text(stringResource(R.string.action_add) + " ${state.selectedReadyCount}")
             }
+        }
+    }
+}
+
+@Composable
+private fun ImportStats(stats: List<Pair<Int, Int>>) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val columns = if (stats.size > 2 && maxWidth.value / LocalDensity.current.fontScale < 300f) 2 else stats.size
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            stats.chunked(columns).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    row.forEach { (count, label) ->
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                        ) {
+                            Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("$count", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(stringResource(label), style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImportReviewSection(
+    title: String,
+    tag: String,
+    expanded: Boolean,
+    onClick: () -> Unit,
+    items: List<ImportJobItemResponse>,
+    clipboard: String = "",
+    clipboardCount: Int = 0,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(shape = RoundedCornerShape(10.dp), color = scheme.surface) {
+        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().testTag(tag).clickable(onClick = onClick).heightIn(min = 40.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(if (expanded) "⌃" else "⌄", color = scheme.onSurfaceVariant)
+            }
+            if (expanded) {
+                if (clipboard.isNotBlank()) {
+                    Text(stringResource(R.string.import_errors_hint), style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
+                }
+                items.forEach {
+                    HorizontalDivider(color = scheme.outlineVariant)
+                    ImportJobItemRow(it)
+                }
+                if (clipboard.isNotBlank()) ImportCopyButton(clipboard, clipboardCount)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImportCopyButton(text: String, count: Int) {
+    val clipboard = LocalClipboardManager.current
+    var copied by remember(text) { mutableStateOf(false) }
+    TextButton(
+        onClick = {
+            clipboard.setText(AnnotatedString(text))
+            copied = true
+        },
+        modifier = Modifier.testTag(TestTags.IMPORT_COPY_ERRORS),
+        contentPadding = PaddingValues(0.dp),
+    ) {
+        Text(stringResource(R.string.import_copy_check, count))
+        if (copied) {
+            Spacer(Modifier.size(6.dp))
+            Icon(Icons.Default.Check, contentDescription = stringResource(R.string.import_copy_done),
+                modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -263,14 +374,15 @@ private fun ReadyImportItemRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle)
+            .toggleable(value = checked, role = Role.Switch, onValueChange = { onToggle() })
+            .heightIn(min = 48.dp)
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        androidx.compose.material3.Checkbox(
+        AppToggle(
             checked = checked,
-            onCheckedChange = { onToggle() },
+            onCheckedChange = null,
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -284,83 +396,6 @@ private fun ReadyImportItemRow(
                     it,
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AccordionSection(
-    title: String,
-    expanded: Boolean,
-    tag: String,
-    items: List<ImportJobItemResponse>,
-    onClick: () -> Unit,
-    hint: String? = null,
-    emptyLabel: String? = null,
-    onCopy: (() -> Unit)? = null,
-) {
-    val scheme = MaterialTheme.colorScheme
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .testTag(tag)
-                .clickable(onClick = onClick),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                if (expanded) "▾ $title" else "▸ $title",
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = scheme.onSurface,
-            )
-            if (onCopy != null) {
-                IconButton(
-                    onClick = onCopy,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .testTag(TestTags.IMPORT_COPY_ERRORS),
-                ) {
-                    Icon(
-                        Icons.Outlined.ContentCopy,
-                        contentDescription = stringResource(R.string.import_copy_errors),
-                        modifier = Modifier.size(20.dp),
-                        tint = scheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-        if (expanded && (hint != null || emptyLabel != null || items.isNotEmpty())) {
-            if (hint != null) {
-                Text(
-                    hint,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = scheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 20.dp, end = 4.dp, bottom = 8.dp),
-                )
-            }
-            if (items.isNotEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 280.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items.forEach { item ->
-                        ImportJobItemRow(item)
-                    }
-                }
-            } else if (emptyLabel != null) {
-                Text(
-                    emptyLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = scheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 20.dp, end = 4.dp, bottom = 8.dp),
                 )
             }
         }
@@ -389,14 +424,15 @@ private fun ImportJobItemRow(item: ImportJobItemResponse) {
             }
         else -> item.gloss?.takeIf { it.isNotBlank() }
     }
-    Column(modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(
             word,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = LocalVocabExtraColors.current.importLemma,
+            color = scheme.onSurface,
         )
         if (!detail.isNullOrBlank()) {
+            Spacer(Modifier.height(3.dp))
             Text(
                 detail,
                 style = MaterialTheme.typography.bodySmall,
@@ -423,89 +459,114 @@ fun ImportOutcomePanel(
     state: ImportJobState,
     onOk: () -> Unit,
     onShowList: () -> Unit,
-    onCopyErrors: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val clipboard = LocalClipboardManager.current
     val created = state.result?.created ?: state.createdCount
     val duplicates = state.result?.duplicates ?: state.duplicateCount
     val failed = state.result?.failed ?: state.failedCount
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = AppButtonShape,
-        color = scheme.surfaceVariant,
+        shape = RoundedCornerShape(24.dp),
+        color = scheme.surface,
         contentColor = scheme.onSurface,
     ) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(
-            when (state.status) {
-                ImportStatus.Cancelled -> stringResource(R.string.import_cancelled)
-                ImportStatus.Failed, ImportStatus.Error ->
-                    state.error ?: stringResource(R.string.import_result_title)
-                else -> stringResource(R.string.import_result_title)
-            },
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = scheme.onSurface,
-        )
-        if (state.status == ImportStatus.Done || created + duplicates + failed > 0) {
-            Text(
-                if (failed > 0) {
-                    stringResource(
-                        R.string.import_result_body_failed,
-                        created,
-                        duplicates,
-                        failed,
-                    )
-                } else {
-                    stringResource(
-                        R.string.import_result_body,
-                        created,
-                        duplicates,
-                    )
-                },
-                style = MaterialTheme.typography.bodyLarge,
-                color = scheme.onSurface,
-            )
-        }
-        if (state.failedCount > 0 && state.errorClipboard.isNotBlank()) {
-            TextButton(
-                onClick = {
-                    clipboard.setText(AnnotatedString(state.errorClipboard))
-                    onCopyErrors()
-                },
-                modifier = Modifier.testTag(TestTags.IMPORT_COPY_ERRORS),
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Column(
+                modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(stringResource(R.string.import_copy_errors))
+                if (state.status == ImportStatus.Done) {
+                    Surface(shape = AppButtonShape, color = scheme.tertiaryContainer) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.padding(10.dp).size(24.dp),
+                            tint = scheme.onSurface,
+                        )
+                    }
+                }
+                Text(
+                    when (state.status) {
+                        ImportStatus.Cancelled -> stringResource(R.string.import_cancelled)
+                        ImportStatus.Failed, ImportStatus.Error ->
+                            state.error ?: stringResource(R.string.import_result_title)
+                        else -> stringResource(R.string.import_done)
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = scheme.onSurface,
+                )
+                if (state.status == ImportStatus.Done) {
+                    state.targetListName?.let { listName ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text("${stringResource(R.string.list_fallback)}:", color = scheme.onSurfaceVariant)
+                            Surface(shape = AppButtonShape, color = scheme.primaryContainer) {
+                                Text(
+                                    listName,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            }
+                        }
+                    }
+                    ImportStats(listOf(created to R.string.import_stat_added, state.skippedCount to R.string.import_stat_skipped))
+                    ImportStats(listOf(duplicates to R.string.import_stat_duplicate, failed to R.string.import_stat_check))
+                } else if (created + duplicates + failed > 0) {
+                    Text(
+                        if (failed > 0) {
+                            stringResource(
+                                R.string.import_result_body_failed,
+                                created,
+                                duplicates,
+                                failed,
+                            )
+                        } else {
+                            stringResource(
+                                R.string.import_result_body,
+                                created,
+                                duplicates,
+                            )
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = scheme.onSurface,
+                    )
+                }
+                if (state.failedItems.isNotEmpty() && state.errorClipboard.isNotBlank()) {
+                    HorizontalDivider(color = scheme.outlineVariant)
+                    ImportCopyButton(state.errorClipboard, state.errorClipboardCount)
+                }
+                state.notice?.let { Text(it, color = scheme.onSurfaceVariant) }
             }
-        }
-        state.notice?.let { Text(it, color = scheme.onSurfaceVariant) }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            if (state.status == ImportStatus.Done && !state.targetListId.isNullOrBlank()) {
-                OutlinedButton(
-                    onClick = onShowList,
-                    modifier = Modifier.weight(1f).height(48.dp),
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            ) {
+                if (state.status == ImportStatus.Done && !state.targetListId.isNullOrBlank()) {
+                    OutlinedButton(
+                        onClick = onShowList,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                        shape = AppButtonShape,
+                    ) {
+                        Text(stringResource(R.string.action_show_list))
+                    }
+                }
+                Button(
+                    onClick = onOk,
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .testTag(TestTags.IMPORT_RESULT_OK),
                     shape = AppButtonShape,
                 ) {
-                    Text(stringResource(R.string.action_show_list))
+                    Text(stringResource(R.string.action_ok))
                 }
             }
-            Button(
-                onClick = onOk,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .testTag(TestTags.IMPORT_RESULT_OK),
-                shape = AppButtonShape,
-            ) {
-                Text(stringResource(R.string.action_ok))
-            }
         }
-    }
     }
 }
 
@@ -584,6 +645,7 @@ fun ImportStartDialog(
     }
     var creatingNew by remember { mutableStateOf(false) }
     var newListName by remember { mutableStateOf("") }
+    var showPasteInfo by remember { mutableStateOf(false) }
 
     val hasFile = sourceLabel != null
     val hasPaste = pasteDraft.isNotBlank()
@@ -593,7 +655,16 @@ fun ImportStartDialog(
     AppAlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag(TestTags.IMPORT_START_DIALOG),
-        title = stringResource(R.string.import_start_title),
+        titleContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.import_paste), style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold)
+                IconButton(onClick = { showPasteInfo = true }) {
+                    Icon(Icons.Outlined.Info, contentDescription = stringResource(R.string.import_info_title),
+                        tint = scheme.onSurfaceVariant)
+                }
+            }
+        },
         text = {
             Column(
                 modifier = Modifier
@@ -608,7 +679,6 @@ fun ImportStartDialog(
                         .height(140.dp)
                         .testTag(TestTags.IMPORT_PASTE_INPUT),
                     enabled = !hasFile,
-                    placeholder = stringResource(R.string.import_paste_hint),
                     singleLine = false,
                     minLines = 5,
                     maxLines = 8,
@@ -724,5 +794,19 @@ fun ImportStartDialog(
             )
         },
     )
+    if (showPasteInfo) {
+        AppAlertDialog(
+            onDismissRequest = { showPasteInfo = false },
+            title = stringResource(R.string.import_info_title),
+            text = { Text(stringResource(R.string.import_paste_info)) },
+            buttons = {
+                AppDialogButtonRow(
+                    primaryText = stringResource(R.string.action_ok),
+                    onPrimary = { showPasteInfo = false },
+                    primaryKind = AppDialogAction.Neutral,
+                )
+            },
+        )
+    }
 }
 

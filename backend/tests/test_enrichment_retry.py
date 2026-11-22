@@ -14,6 +14,7 @@ from app.services.card_jobs import (
     _apply_enrich_retry,
     _clear_enrich_retry,
 )
+from app.services.llm import LLMService, ProviderRefusal
 
 
 def _card(**kwargs):
@@ -30,6 +31,38 @@ def _card(**kwargs):
     }
     defaults.update(kwargs)
     return SimpleNamespace(**defaults)
+
+
+def test_provider_refusal_is_final_and_never_retried():
+    card = _card()
+    _apply_enrich_retry(card, ProviderRefusal())
+    assert card.enrichment_status == STATUS_FAILED
+    assert card.enrichment_error == "content_refused"
+    assert card.enrichment_retry_at is None
+    assert card.enrichment_auto_retry_used is True
+
+
+def test_provider_refusal_keeps_learnable_card_without_side_retries():
+    card = _card(enrichment_status=STATUS_LEARNABLE, enrichment_manual_triggered=True)
+    _apply_enrich_retry(card, ProviderRefusal())
+    assert card.enrichment_status == STATUS_LEARNABLE
+    assert card.enrichment_retry_at is None
+    assert card.enrichment_manual_triggered is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("refusal,finish", [("I can't help with that", "stop"), (None, "content_filter")])
+async def test_openai_refusal_raises_provider_refusal(refusal, finish):
+    service = LLMService()
+    service.mock = False
+
+    async def create(**_kwargs):
+        message = SimpleNamespace(content=None, refusal=refusal)
+        return SimpleNamespace(choices=[SimpleNamespace(message=message, finish_reason=finish)], usage=None)
+
+    service.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+    with pytest.raises(ProviderRefusal):
+        await service._chat_json_openai("gpt-4o-mini", "hi", None)
 
 
 def test_first_fail_schedules_single_auto_retry():
@@ -201,7 +234,7 @@ async def test_get_card_enrichment_active_follows_claim(pg, pg_client):
             content={"lemma": "mesa"},
         )
         await session.commit()
-        headers = auth_headers(user)
+        headers = await auth_headers(session, user)
         card_id = card.id
         profile_id = profile.id
     url = f"/api/v1/cards/{card_id}?profile_id={profile_id}"
@@ -213,3 +246,4 @@ async def test_get_card_enrichment_active_follows_claim(pg, pg_client):
     idle = await pg_client.get(url, headers=headers)
     assert idle.status_code == 200
     assert idle.json()["enrichment_active"] is False
+

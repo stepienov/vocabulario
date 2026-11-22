@@ -670,8 +670,8 @@ class LexicalService:
             return self._raw_to_candidates(
                 raw, query=text, learning_lang=profile.learning_lang
             )
-        except Exception:
-            logger.warning("lookup draft failed for %r", text, exc_info=True)
+        except Exception as exc:
+            logger.warning("lookup draft failed (%s)", type(exc).__name__)
             return []
 
     async def lookup_cached_fast(
@@ -737,6 +737,7 @@ class LexicalService:
             return LookupOutcome([], "db", False, lang_pair=pair)
         row = await self._fetch_query_cache(pair, key)
         if row is not None and (row.candidates or row.ai_complete):
+            # Ranked like lookup_cached_fast, so one row looks the same on both paths.
             return await self._present_lookup(
                 user,
                 profile,
@@ -748,7 +749,6 @@ class LexicalService:
                 cache_row_id=row.id,
                 lang_pair=pair,
                 suggestions_exhausted=bool(row.more_exhausted),
-                preserve_order=True,
             )
         empty_row_id = row.id if row is not None else None
         await self.db.commit()

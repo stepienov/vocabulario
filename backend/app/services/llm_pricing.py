@@ -38,6 +38,12 @@ _MODEL_RATES_USD_PER_M: dict[str, tuple[Decimal, Decimal, Decimal, Decimal]] = {
         Decimal("5.00"),
         Decimal("20.00"),
     ),
+    "gpt-6-sol": (
+        Decimal("2.00"),
+        Decimal("0.20"),
+        Decimal("2.50"),
+        Decimal("10.00"),
+    ),
 }
 
 
@@ -118,6 +124,28 @@ def parse_anthropic_usage(response: Any) -> TokenUsage:
 def _rates_for_model(model: str) -> tuple[Decimal, Decimal, Decimal, Decimal] | None:
     key = (model or "").strip().lower()
     return _MODEL_RATES_USD_PER_M.get(key)
+
+
+def has_pricing(model: str) -> bool:
+    return _rates_for_model(model) is not None
+
+
+def estimate_max_cost_usd(model: str, prompt_chars: int, max_output_tokens: int) -> Decimal | None:
+    """Upper bound of one call, for the budget reservation; None for a model without a price.
+
+    Input is counted at two characters per token (heavier than real text) at the dearest input
+    rate; output at the full cap, which for reasoning models also covers hidden reasoning.
+    """
+    rates = _rates_for_model(model)
+    if rates is None:
+        return None
+    input_rate, _cached, cache_write_rate, output_rate = rates
+    prompt_tokens = (max(0, prompt_chars) + 1) // 2 + 64
+    cost = (
+        Decimal(prompt_tokens) * max(input_rate, cache_write_rate)
+        + Decimal(max(0, max_output_tokens)) * output_rate
+    ) / _MILLION
+    return cost.quantize(_COST_QUANT, rounding=ROUND_HALF_UP)
 
 
 def estimate_cost_usd(model: str, usage: TokenUsage) -> Decimal | None:

@@ -8,6 +8,24 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      # Syntetyczna baza tylko na czas jobu; conftest wymaga localhost i nazwy *_test.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vocabulario
+          POSTGRES_PASSWORD: vocabulario_ci
+          POSTGRES_DB: vocabulario_ci_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vocabulario -d vocabulario_ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://vocabulario:vocabulario_ci@localhost:5432/vocabulario_ci_test
+      REQUIRE_PG_TESTS: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -17,8 +35,59 @@ jobs:
           cache: pip
           cache-dependency-path: backend/pyproject.toml
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Install backend (dev)
         run: pip install -e "./backend[dev]"
 
       - name: UI strings, LSP sync, backend tests
         run: python scripts/ci_check.py
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: gradle/actions/wrapper-validation@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests, lint, debug build and instrumentation test compilation
+        run: ./gradlew --console=plain :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+
+      - name: Test release build and 16 KB alignment
+        env:
+          UPLOAD_KEYSTORE_FILE: ${{ runner.temp }}/vocabulario-ci.jks
+          UPLOAD_KEYSTORE_PASSWORD: testonly123
+          UPLOAD_KEY_ALIAS: test
+          UPLOAD_KEY_PASSWORD: testonly123
+        run: |
+          keytool -genkeypair -keystore "$UPLOAD_KEYSTORE_FILE" -storepass "$UPLOAD_KEYSTORE_PASSWORD" \
+            -keypass "$UPLOAD_KEY_PASSWORD" -alias "$UPLOAD_KEY_ALIAS" -dname "CN=CI test" \
+            -keyalg RSA -keysize 2048 -validity 1 -storetype PKCS12 -noprompt
+          ./gradlew --console=plain :app:lintRelease :app:bundleRelease \
+            -Prelease.application.id=io.vocabulario.app -Prelease.version.code=1 \
+            -Prelease.version.name=0.1.0-test -Papi.base.url=https://vocabulario.io/api/v1
+          python ../scripts/check_aab_16kb.py app/build/outputs/bundle/release/app-release.aab
+          python ../scripts/check_aab_16kb.py app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload test and lint reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-reports
+          path: |
+            android/app/build/reports/
+            android/app/build/test-results/
+          retention-days: 7

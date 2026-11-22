@@ -1,3 +1,4 @@
+import hashlib
 import random
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -7,10 +8,10 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, get_current_user_id, lang_pair_key, normalize_text
+from app.core.deps import get_verified_user, get_verified_user_id, lang_pair_key, normalize_text
 from app.core.http_errors import api_error
 from app.db.session import get_db
-from app.models import CardCorrection, CardHistoryEvent, LanguageProfile, LearningCard, LexicalEntry, ReviewLog, SrsState, User, UserSettings, WordList
+from app.models import AppliedReviewUndo, CardCorrection, CardHistoryEvent, LanguageProfile, LearningCard, LexicalEntry, ListCreationReceipt, ReviewLog, SrsState, User, UserSettings, WordList
 from app.schemas import (
     CardCreateRequest,
     CardCorrectionCreate,
@@ -45,6 +46,7 @@ from app.schemas import (
 )
 from app.schemas.practice import CheckAnswerRequest, CheckAnswerResponse, ChoiceOption, DistractorsRequest, DistractorsResponse
 from app.services.answer_check import check_answer, collect_acceptable_answers
+from app.services.ai_budget import AiBudgetExhausted, AiBudgetUnavailable
 from app.services.card_corrections import (
     CORRECTION_DAILY_LIMIT,
     count_corrections_today,
@@ -136,7 +138,7 @@ async def _owned_source_card(
 @router.post("/lookup", response_model=LookupResponse)
 async def lookup(
     body: LookupRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = LexicalService(db)
@@ -175,7 +177,7 @@ def _schedule_cached_history(user_id: UUID, body: LookupRequest, outcome: Lookup
 @router.post("/lookup/cached", response_model=LookupResponse)
 async def lookup_cached(
     body: LookupRequest,
-    user_id: UUID = Depends(get_current_user_id),
+    user_id: UUID = Depends(get_verified_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     service = LexicalService(db)
@@ -210,7 +212,7 @@ async def lookup_cached(
 @router.post("/lookup/expand", response_model=LookupResponse)
 async def lookup_expand(
     body: LookupRequest,
-    user_id: UUID = Depends(get_current_user_id),
+    user_id: UUID = Depends(get_verified_user_id),
 ):
     """Expand jest odpięty od HTTP — zabicie apki nie kasuje LLM ani cache."""
     from app.db import session as db_session
@@ -234,7 +236,7 @@ async def lookup_expand(
 @router.post("/lookup/category/cached", response_model=LookupResponse)
 async def lookup_category_cached(
     body: LookupRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = LexicalService(db)
@@ -259,7 +261,7 @@ async def lookup_category_cached(
 @router.post("/lookup/category/expand", response_model=LookupResponse)
 async def lookup_category_expand(
     body: LookupRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     from app.services.lexical import AssocRoundNotReady
@@ -344,7 +346,7 @@ def _import_validate_response(valid_raw: list[dict], invalid: list[str]) -> Impo
 @router.post("/imports/validate", response_model=ImportValidateResponse)
 async def validate_import_words(
     body: ImportValidateRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Exact L1/L2 headwords only — no typo tolerance / autocorrect."""
@@ -362,7 +364,7 @@ async def validate_import_words(
 @router.post("/imports/ingest")
 async def ingest_import_text(
     body: ImportIngestRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Wklejka: URL Quizlet/AnkiWeb albo tekst → karty Vocabulario (enrichment)."""
@@ -400,7 +402,7 @@ async def ingest_import_text(
 async def ingest_import_file(
     profile_id: UUID = Form(...),
     file: UploadFile = File(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Import z pliku → karty Vocabulario (enrichment)."""
@@ -427,7 +429,7 @@ async def ingest_import_file(
 @router.post("/cards", response_model=CardResponse, status_code=201)
 async def create_card(
     body: CardCreateRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Zapisuje kartę od razu; pełną treść dociąga zadanie w tle."""
@@ -442,6 +444,8 @@ async def create_card(
             entry = await service.get_or_create_entry(
                 user, profile, body.lemma, body.pos, body.lexical_entry_id
             )
+        except (AiBudgetExhausted, AiBudgetUnavailable):
+            raise
         except Exception as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         return CardResponse(
@@ -505,7 +509,7 @@ async def create_card(
 @router.get("/cards", response_model=list[CardResponse])
 async def list_cards(
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -522,7 +526,7 @@ async def list_cards(
 async def get_card(
     card_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Pojedyncza karta — poll enrichment bez ściągania całej listy."""
@@ -563,7 +567,7 @@ def _resolve_direction(settings: UserSettings) -> str:
 @router.get("/srs/queue", response_model=SrsQueueResponse)
 async def srs_queue(
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     now = datetime.now(UTC)
@@ -666,7 +670,7 @@ async def srs_queue(
 @router.post("/srs/distractors", response_model=DistractorsResponse)
 async def srs_distractors(
     body: DistractorsRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -724,7 +728,7 @@ async def srs_distractors(
 @router.post("/srs/review", response_model=ReviewResponse)
 async def srs_review(
     body: ReviewRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -733,8 +737,10 @@ async def srs_review(
         .where(
             LearningCard.id == body.card_id,
             LearningCard.user_id == user.id,
+            LearningCard.deleted_at.is_(None),
             SrsState.scope == "main",
         )
+        .with_for_update(of=(LearningCard, SrsState))
     )
     row = result.one_or_none()
     if row is None:
@@ -749,6 +755,8 @@ async def srs_review(
         correct, _, _, _ = check_answer(body.answer, answers, tolerance)
 
     state = apply_review(state, body.grade, correct)
+    await db.flush()
+    await db.refresh(state, ["review_revision"])
     log = ReviewLog(
         card_id=card.id,
         user_id=user.id,
@@ -756,6 +764,7 @@ async def srs_review(
         mode=body.mode,
         direction=body.direction,
         correct=correct,
+        applied_revision=state.review_revision,
     )
     db.add(log)
     await db.commit()
@@ -802,7 +811,7 @@ def _srs_state_to_sync(card_id: UUID, state: SrsState) -> SyncSrsState:
 @router.post("/srs/undo", response_model=SrsUndoResponse)
 async def srs_undo(
     body: SrsUndoRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     card_id = body.previous_srs.card_id
@@ -812,27 +821,41 @@ async def srs_undo(
         .where(
             LearningCard.id == card_id,
             LearningCard.user_id == user.id,
+            LearningCard.deleted_at.is_(None),
             SrsState.scope == "main",
         )
+        .with_for_update(of=(LearningCard, SrsState))
     )
     row = result.one_or_none()
     if row is None:
         raise api_error(404, "card_not_found", "Card not found")
     card, state = row
 
-    log_result = await db.execute(
-        select(ReviewLog).where(
-            ReviewLog.client_id == body.client_id,
-            ReviewLog.user_id == user.id,
+    marker = await db.get(AppliedReviewUndo, body.client_id)
+    if marker is not None:
+        if marker.user_id != user.id or marker.card_id != card.id:
+            raise api_error(409, "operation_id_conflict", "client_id belongs to another operation")
+        # Ponowienie wykonanego undo: zwraca aktualny stan, nigdy nie nadpisuje nowszych ocen.
+        return SrsUndoResponse(srs=_srs_state_to_sync(card.id, state))
+
+    log = (
+        await db.execute(
+            select(ReviewLog).where(
+                ReviewLog.client_id == body.client_id,
+                ReviewLog.user_id == user.id,
+            )
         )
-    )
-    log = log_result.scalar_one_or_none()
+    ).scalar_one_or_none()
     if log is not None:
         if log.card_id != card.id:
             raise HTTPException(status_code=400, detail="client_id does not match card")
+        # Snapshot wolno przywrócić tylko, gdy nic nie zmieniło SRS po tej ocenie.
+        if log.applied_revision is None or log.applied_revision != state.review_revision:
+            raise api_error(409, "undo_conflict", "A newer review exists for this card")
         await db.delete(log)
-
-    _apply_sync_srs_to_state(state, body.previous_srs)
+        _apply_sync_srs_to_state(state, body.previous_srs)
+    # Brak loga: zapisujemy tylko anulowanie ID (opóźniony push oceny dostanie `superseded`).
+    db.add(AppliedReviewUndo(client_id=body.client_id, user_id=user.id, card_id=card.id))
     await db.commit()
     await db.refresh(state)
     return SrsUndoResponse(srs=_srs_state_to_sync(card.id, state))
@@ -841,7 +864,7 @@ async def srs_undo(
 @router.post("/srs/check-answer", response_model=CheckAnswerResponse)
 async def check_typed_answer(
     body: CheckAnswerRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     card_id = UUID(body.card_id)
@@ -873,7 +896,7 @@ async def check_typed_answer(
 @router.get("/lists", response_model=list[WordListResponse])
 async def get_lists(
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     await _active_profile(db, user.id, profile_id)
@@ -895,7 +918,7 @@ async def get_lists(
 @router.post("/lists/pending-inbox/ensure", response_model=WordListResponse)
 async def ensure_pending_inbox(
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, profile_id)
@@ -925,7 +948,7 @@ async def ensure_pending_inbox(
 @router.post("/lists", response_model=WordListResponse, status_code=201)
 async def create_list(
     body: WordListCreate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, body.profile_id)
@@ -935,6 +958,11 @@ async def create_list(
         raise api_error(400, "empty_list_name", "List name is required")
     if name.lower() in RESERVED_LIST_NAMES:
         raise api_error(400, "list_name_reserved", "This name is reserved")
+    fingerprint = hashlib.sha256(f"list|{profile.id}|{name.lower()}".encode()).hexdigest()
+    if body.client_op_id is not None:
+        replay = await _list_creation_replay(db, user.id, body.client_op_id, fingerprint)
+        if replay is not None:
+            return replay
     existing = await db.execute(
         select(WordList).where(
             WordList.profile_id == profile.id,
@@ -952,7 +980,26 @@ async def create_list(
         is_pending_inbox=False,
     )
     db.add(wl)
-    await db.commit()
+    if body.client_op_id is not None:
+        await db.flush()
+        db.add(
+            ListCreationReceipt(
+                client_op_id=body.client_op_id,
+                user_id=user.id,
+                fingerprint=fingerprint,
+                list_id=wl.id,
+            )
+        )
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Równoległe ponowienie z tym samym client_op_id wygrało: zwracamy jego wynik.
+        await db.rollback()
+        if body.client_op_id is not None:
+            replay = await _list_creation_replay(db, user.id, body.client_op_id, fingerprint)
+            if replay is not None:
+                return replay
+        raise api_error(409, "list_name_taken", "A list with this name already exists") from None
     await db.refresh(wl)
     return WordListResponse(
         id=wl.id,
@@ -964,12 +1011,39 @@ async def create_list(
     )
 
 
+async def _list_creation_replay(
+    db: AsyncSession, user_id: UUID, client_op_id: UUID, fingerprint: str
+) -> WordListResponse | None:
+    receipt = await db.get(ListCreationReceipt, client_op_id)
+    if receipt is None:
+        return None
+    if receipt.user_id != user_id or receipt.fingerprint != fingerprint:
+        raise api_error(409, "operation_id_conflict", "client_op_id belongs to another operation")
+    wl = await db.get(WordList, receipt.list_id)
+    if wl is None or wl.deleted_at is not None or wl.user_id != user_id:
+        # Usunięta lista nie powstaje ponownie przy retry.
+        raise api_error(410, "list_already_deleted", "The list created by this operation was deleted")
+    count = await db.execute(
+        select(func.count()).select_from(LearningCard).where(
+            LearningCard.deck_id == wl.id, LearningCard.deleted_at.is_(None)
+        )
+    )
+    return WordListResponse(
+        id=wl.id,
+        name=wl.name,
+        is_system=wl.is_system,
+        is_pending_inbox=wl.is_pending_inbox,
+        word_count=int(count.scalar_one()),
+        created_at=wl.created_at,
+    )
+
+
 @router.patch("/lists/{list_id}", response_model=WordListResponse)
 async def rename_list(
     list_id: UUID,
     body: WordListUpdate,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, profile_id)
@@ -1028,7 +1102,7 @@ async def rename_list(
 async def delete_list(
     list_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, profile_id)
@@ -1068,7 +1142,7 @@ async def delete_list(
 async def retry_card_enrichment(
     card_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Ręczne ponowienie enrichmentu (max 3×) gdy status=prep_problem."""
@@ -1106,7 +1180,7 @@ async def retry_card_enrichment(
 async def delete_card(
     card_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, profile_id)
@@ -1136,7 +1210,7 @@ async def delete_card(
 async def move_card(
     card_id: UUID,
     body: WordMoveRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, body.profile_id)
@@ -1209,7 +1283,7 @@ def _card_response(card: LearningCard, srs: SrsState | None = None) -> CardRespo
 async def list_words(
     list_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, profile_id)
@@ -1263,7 +1337,7 @@ async def list_words(
 async def add_word_to_list(
     list_id: UUID,
     body: WordListAddWordRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, body.profile_id)
@@ -1363,7 +1437,7 @@ async def add_word_to_list(
 async def dashboard_stats(
     profile_id: UUID = Query(...),
     days: int = Query(1, ge=1, le=90),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     profile = await _active_profile(db, user.id, profile_id)
@@ -1577,7 +1651,7 @@ async def _user_card(
 
 @router.get("/corrections/quota", response_model=CorrectionQuotaResponse)
 async def correction_quota(
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     used = await count_corrections_today(db, user.id)
@@ -1594,7 +1668,7 @@ async def create_card_correction(
     body: CardCorrectionCreate,
     background_tasks: BackgroundTasks,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     card = await _user_card(db, user.id, card_id, profile_id)
@@ -1639,7 +1713,7 @@ async def create_card_correction(
 async def latest_card_correction(
     card_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     await _user_card(db, user.id, card_id, profile_id)
@@ -1663,7 +1737,7 @@ async def escalate_card_correction(
     card_id: UUID,
     correction_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     card = await _user_card(db, user.id, card_id, profile_id)
@@ -1689,7 +1763,7 @@ async def escalate_card_correction(
 async def card_history(
     card_id: UUID,
     profile_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     await _user_card(db, user.id, card_id, profile_id)

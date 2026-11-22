@@ -126,15 +126,15 @@
         <string name="settings_langs_hint">Язык приложения — язык интерфейса и переводов на карточках. Язык изучения — тот, который вы учите.</string>
 <string name="settings_theme">Тема</string>
 
-    <string name="settings_mode">Режим учёбы</string>
+    <string name="settings_mode">Способ обучения</string>
 
-    <string name="settings_group_study">УЧЁБА</string>
+    <string name="settings_group_study">ОБУЧЕНИЕ</string>
 
-    <string name="settings_group_general">ОБЩИЕ</string>
+    <string name="settings_group_general">ПРИЛОЖЕНИЕ</string>
 
     <string name="settings_mode_choice">Quiz</string>
 
-    <string name="settings_mode_type">Ввести слово</string>
+    <string name="settings_mode_type">Введите ответ</string>
 
     <string name="settings_mode_flash">Карточки</string>
 
@@ -144,7 +144,7 @@
 
     <string name="settings_tolerate_typos_sub">Орфография и диакритика</string>
 
-    <string name="settings_direction">Направление учёбы</string>
+    <string name="settings_direction">Что показывать сначала?</string>
 
     <string name="settings_direction_first">Сначала %1$s</string>
 
@@ -152,25 +152,25 @@
 
     <string name="settings_direction_sub">Что показывать сначала: %1$s</string>
 
-    <string name="settings_card_layout">Макет карточки</string>
+    <string name="settings_card_layout">Содержимое карточки</string>
 
     <string name="settings_card_layout_sub">Настроить содержимое карточки</string>
 
-    <string name="settings_examples">Предложения</string>
+    <string name="settings_examples">Примеры предложений</string>
 
-    <string name="settings_usages">Выражения</string>
+    <string name="settings_usages">Выражения и употребление</string>
 
     <string name="settings_periphrases">Конструкции</string>
 
-    <string name="settings_syn_ant">Вокруг слова</string>
+    <string name="settings_syn_ant">Синонимы и антонимы</string>
     <string name="settings_word_family">Родственные слова</string>
     <string name="settings_associations">Ассоциации</string>
 
-    <string name="settings_conjugation">Спряжение</string>
+    <string name="settings_conjugation">Формы глагола</string>
 
     <string name="settings_all_tenses">Все времена</string>
 
-    <string name="settings_limits">Лимиты</string>
+    <string name="settings_limits">Новых слов в день</string>
 
     <string name="settings_new_limit">Дневной лимит новых слов</string>
 
@@ -354,7 +354,7 @@
     <string name="import_reason_unknown">Это слово сейчас нельзя импортировать.</string>
     <string name="import_ready_hint">Эти слова будут добавлены в список.</string>
     <string name="import_review_loading">Загрузка слов…</string>
-    <string name="import_errors_hint">Эти слова не попадут в список.</string>
+    <string name="import_errors_hint">Эти слова не будут добавлены. Проверьте написание или язык.</string>
     <string name="import_item_untitled">Неизвестное слово</string>
     <string name="import_reason_write_failed">Не удалось сохранить это слово (после 3 попыток).</string>
     <string name="import_cancelled">Отменено. Ничего не добавлено.</string>
@@ -624,13 +624,49 @@
 
     <string name="err_password_required">Введите пароль</string>
 
-    <string name="err_password_short">Пароль должен быть не короче 8 символов</string>
+    <string name="err_password_short">Пароль должен быть не короче 15 символов</string>
 
     <string name="err_login">Ошибка входа</string>
 
     <string name="err_login_email_unknown">Нет аккаунта с этим email</string>
     <string name="err_login_wrong_password">Неверный пароль</string>
     <string name="err_login_use_google">Этот аккаунт через Google. Войдите через Google.</string>
+    <string name="err_session_ended">Сеанс завершён. Войдите снова.</string>
+    <string name="err_login_other_account">На этом устройстве хранятся данные другого аккаунта. Войдите в этот аккаунт, чтобы продолжить.</string>
+    <string name="legacy_data_title">Неназначенные данные на устройстве</string>
+    <string name="legacy_data_message">На этом устройстве есть данные из более ранней версии приложения, которые нельзя связать с аккаунтом. Неотправленные изменения: %1$d. Данные сохранены. Обратитесь в поддержку за помощью со входом.</string>
+    <string name="legacy_data_discard">Удалить локальные данные</string>
+    <string name="legacy_data_discard_confirm_title">Удалить безвозвратно?</string>
+    <string name="legacy_data_discard_confirm">Неотправленные изменения (%1$d) будут потеряны без возможности восстановления.</string>
+    <string name="legacy_data_discarded">Локальные данные удалены. Войдите снова.</string>
+    <string name="legacy_data_discard_failed">Не удалось удалить локальные данные. Попробуйте ещё раз.</string>
+    <string name="auth_notice_reauth_title">Войдите снова</string>
+    <string name="auth_notice_reauth">Войдите в тот же аккаунт, чтобы продолжить. Данные на этом устройстве сохраняются.</string>
+    <string name="auth_notice_recovery_title">Не удалось восстановить сессию</string>
+    <string name="auth_notice_recovery">Не удалось прочитать сохранённый вход на этом устройстве. Попробуйте ещё раз или войдите в тот же аккаунт. Данные на этом устройстве сохраняются.</string>
+    <string name="auth_notice_local_data_title">Данные вашего аккаунта</string>
+    <string name="auth_notice_local_data">На этом устройстве остались учебные данные из предыдущей сессии. Войдите в тот же аккаунт, чтобы сохранить их.</string>
+    <string name="auth_notice_unsent">Изменения, ещё не отправленные на сервер: %1$d</string>
+    <string name="auth_sign_out_device">Выйти на этом устройстве</string>
+    <string name="auth_sign_out_device_confirm_title">Удалить данные с этого устройства?</string>
+    <string name="auth_sign_out_device_confirm">Учебные данные, сохранённые на этом устройстве, будут удалены. Данные, уже сохранённые на сервере, не затрагиваются.</string>
+    <string name="auth_signed_out_device">Вы вышли. Данные удалены с этого устройства.</string>
+    <string name="auth_sign_out_device_failed">Не удалось выйти. Попробуйте ещё раз.</string>
+    <string name="auth_recovery_retry_failed">Сохранённую сессию по-прежнему не удаётся прочитать. Войдите снова.</string>
+    <string name="loading_slow_title">Это занимает больше времени, чем обычно</string>
+    <string name="loading_slow_message">Приложение ещё запускается. Проверьте подключение или попробуйте ещё раз.</string>
+    <string name="auth_revocation_pending">Вы вышли на этом устройстве. Сервер подтвердит выход, когда появится подключение.</string>
+    <string name="auth_revocation_unconfirmed">Сеансы без подтверждения сервера: %1$d. Они больше не используются на этом устройстве, но могут оставаться активными на сервере.</string>
+    <string name="auth_revocation_confirmed">Выход выполнен и на сервере.</string>
+    <string name="auth_revocation_queue_full">Слишком много выходов ожидают сервера. Подключитесь к интернету, подождите немного и попробуйте снова.</string>
+    <string name="logout_unsent_title">Неотправленные изменения</string>
+    <string name="logout_unsent_message">Синхронизируйте изменения перед выходом, чтобы не потерять их.</string>
+    <string name="logout_unsent_sync_incomplete">Не удалось отправить все изменения. Проверьте подключение и попробуйте снова или удалите их.</string>
+    <string name="logout_unsent_changed">Тем временем появились новые неотправленные изменения. Примите решение ещё раз.</string>
+    <string name="logout_discard_confirm_title">Удалить неотправленные изменения?</string>
+    <string name="logout_discard_confirm_message">Изменения, которые будут безвозвратно удалены с этого устройства: %1$d. Это действие нельзя отменить.</string>
+    <string name="action_sync_and_logout">Синхронизировать и выйти</string>
+    <string name="action_discard_and_logout">Удалить и выйти</string>
 
 
     <string name="err_register">Ошибка регистрации</string>
@@ -674,8 +710,8 @@
         <string name="list_clear_all">Удалить все слова</string>
     <string name="list_clear_all_title">Удалить все слова?</string>
     <string name="list_clear_all_body">Вы удалите все слова из «%1$s». Сам список останется.</string>
-    <string name="settings_level">Уровень</string>
-    <string name="settings_selected_tenses">Выбранные времена</string>
+    <string name="settings_level">Уровень языка</string>
+    <string name="settings_selected_tenses">Выбрать времена</string>
     <string name="action_edit">Изменить</string>
     <string name="import_cards_count">Импортированные карточки (%1$d)</string>
     <string name="import_flashcards_count">Карточки: %1$d</string>
@@ -721,8 +757,8 @@
     <string name="settings_notifications_summary">Напоминания об учёбе и статус карточек</string>
     <string name="settings_notif_study">Напоминания об учёбе</string>
     <string name="settings_notif_cards">Карточки готовы</string>
-    <string name="settings_notif_enabled">Хочу уведомления</string>
-    <string name="settings_study_hour">Время занятий</string>
+    <string name="settings_notif_enabled">Включить уведомления</string>
+    <string name="settings_study_hour">Время напоминания</string>
     <string name="notif_offline_ready_title">Все карточки готовы!</string>
     <string name="notif_offline_ready_body">Пора заниматься!</string>
     <string name="notif_import_ready_title">Все карточки готовы!</string>
@@ -841,5 +877,207 @@
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 
+    <string name="settings_account">Аккаунт</string>
+    <string name="account_loading">Загрузка данных аккаунта…</string>
+    <string name="account_unavailable">Данные аккаунта недоступны офлайн. Попробуйте снова, когда будете в сети.</string>
+    <string name="account_email_verified">Email подтверждён</string>
+    <string name="account_email_unverified">Email ещё не подтверждён</string>
+    <string name="account_change_password">Сменить пароль</string>
+    <string name="account_current_password">Текущий пароль</string>
+    <string name="account_new_password">Новый пароль</string>
+    <string name="account_repeat_password">Повторите новый пароль</string>
+    <string name="account_new_password_hint">Не менее 15 символов. На других устройствах будет выполнен выход.</string>
+    <string name="account_password_changed">Пароль изменён. На других устройствах выполнен выход.</string>
+    <string name="auth_forgot_password">Забыли пароль?</string>
+    <string name="auth_forgot_password_title">Сброс пароля</string>
+    <string name="auth_forgot_password_body">Введите email аккаунта. Мы отправим ссылку для создания нового пароля.</string>
+    <string name="auth_forgot_password_send">Отправить ссылку</string>
+    <string name="auth_forgot_password_sent">Если для %1$s существует аккаунт с паролем, мы отправили ссылку. Проверьте входящие и папку «Спам».</string>
+    <string name="auth_forgot_password_google_hint">Если вы зарегистрировались через Google, просто войдите через Google — пароль не нужен.</string>
+    <string name="err_account_request_failed">Не удалось выполнить запрос. Проверьте подключение и попробуйте снова.</string>
+    <string name="err_current_password_invalid">Текущий пароль неверен.</string>
+    <string name="err_email_verification_required">Подтвердите адрес email, чтобы продолжить.</string>
+    <string name="err_mail_rate_limited">Отправлено слишком много писем. Подождите немного и попробуйте снова.</string>
+    <string name="err_mail_unavailable">Отправка писем временно недоступна. Попробуйте позже.</string>
+    <string name="err_new_password_short">Новый пароль должен содержать не менее 15 символов.</string>
+    <string name="err_password_too_long">Пароль может содержать не более 128 символов.</string>
+    <string name="err_password_invalid_chars">Пароль содержит недопустимые символы.</string>
+    <string name="err_password_not_set">У этого аккаунта нет пароля — войдите через Google.</string>
+    <string name="err_passwords_mismatch">Пароли не совпадают.</string>
+    <string name="verify_email_title">Подтвердите email</string>
+    <string name="verify_email_body">Мы отправили ссылку для подтверждения на %1$s. Откройте её на этом или другом устройстве и вернитесь сюда.</string>
+    <string name="verify_email_body_no_address">Мы отправили ссылку для подтверждения на ваш email. Откройте её и вернитесь сюда.</string>
+    <string name="verify_email_check">Я подтвердил — проверить</string>
+    <string name="verify_email_resend">Отправить письмо ещё раз</string>
+    <string name="verify_email_resend_in">Отправить снова через %1$d с</string>
+    <string name="verify_email_sent">Письмо отправлено. Доставка может занять несколько минут.</string>
+    <string name="verify_email_not_yet">Ваш адрес email ещё не подтверждён.</string>
+    <string name="verify_email_status_sending">Письмо в пути.</string>
+    <string name="verify_email_status_sent">Письмо дошло до почтового сервера.</string>
+    <string name="verify_email_status_delayed">Доставка занимает больше времени, чем обычно. Подождите или отправьте письмо снова.</string>
+    <string name="verify_email_status_failed">Не удалось доставить письмо. Проверьте адрес или отправьте снова.</string>
+    <string name="verify_email_spam_hint">Не нашли? Проверьте папки «Спам» и «Промоакции».</string>
+    <string name="verify_email_data_kept">Ваши учебные данные на этом устройстве в безопасности и синхронизируются после подтверждения.</string>
+    <string name="verify_email_wrong_address">Неверный адрес? Выйдите и создайте аккаунт с правильным email.</string>
+    <string name="err_login_invalid_credentials">Неверный адрес почты или пароль</string>
+    <string name="err_rate_limited">Слишком много попыток. Подождите немного и повторите.</string>
+    <string name="err_auth_unavailable">Вход временно недоступен. Повторите попытку чуть позже.</string>
+    <string name="account_password_reset_needed">Пароль нужно задать заново. Мы отправим ссылку на вашу почту.</string>
+    <string name="account_password_reset_send">Отправить ссылку для сброса</string>
+    <string name="err_email_unavailable">Этот адрес нельзя использовать. Попробуйте другой.</string>
+    <string name="err_recent_auth">Подтвердите пароль ещё раз и повторите попытку.</string>
+    <string name="account_delete">Удалить аккаунт</string>
+    <string name="account_delete_scope">Это навсегда удалит ваш аккаунт и всё, что с ним связано: профили, карточки слов, списки, прогресс обучения и настройки. Вы сразу выйдете на всех устройствах.</string>
+    <string name="account_delete_grace">Отменить можно в течение 7 дней. Через 14 дней всё будет удалено безвозвратно.</string>
+    <string name="account_delete_unsent">Неотправленные изменения на этом устройстве: %1$d. Они будут потеряны. Другие устройства не проверяются.</string>
+    <string name="account_delete_confirm_check">Я понимаю, что мой аккаунт будет удалён</string>
+    <string name="deletion_pending_title">Аккаунт ожидает удаления</string>
+    <string name="deletion_pending_body">Аккаунт заблокирован, ваши данные скрыты. Отменить можно до %1$s. Окончательное удаление запланировано на %2$s.</string>
+    <string name="deletion_pending_purging">Окончательное удаление уже началось, и его нельзя отменить.</string>
+    <string name="deletion_pending_refresh">Проверить статус</string>
+    <string name="deletion_pending_cancel">Отменить удаление</string>
+    <string name="deletion_pending_cancel_hint">Введите пароль, чтобы отменить. Затем войдите снова.</string>
+    <string name="err_deletion_unavailable">Удаление аккаунта сейчас недоступно. Попробуйте позже.</string>
+    <string name="err_deletion_irreversible">Слишком поздно отменять: удаление уже началось.</string>
+    <string name="err_deletion_pending">Этот аккаунт ожидает удаления. Вход заблокирован, пока запрос не отменён.</string>
+    <string name="err_account_deleted">Этот аккаунт удалён.</string>
+    <string name="err_deletion_owner_mismatch">Эти данные для входа относятся к другому аккаунту, не к тому, в который выполнен вход на этом устройстве.</string>
+    <string name="account_stale_note">Последние известные данные, показаны офлайн. Для изменений безопасности и удаления аккаунта нужно подключение.</string>
+    <string name="err_google_challenge">Вход через Google истёк. Попробуйте ещё раз.</string>
+    <string name="err_google_account_mismatch">Это не тот аккаунт Google, который привязан здесь. Выберите нужный.</string>
+    <string name="err_google_already_linked">Google уже привязан к этому аккаунту.</string>
+    <string name="err_google_link_unavailable">Этот аккаунт Google нельзя привязать к этому аккаунту.</string>
+    <string name="err_google_not_linked">Google не привязан к этому аккаунту.</string>
+    <string name="err_google_sign_in_conflict">Аккаунт с таким адресом уже существует. Войдите с паролем, а затем привяжите Google в настройках.</string>
+    <string name="err_google_unavailable">Проверка Google временно недоступна. Повторите попытку чуть позже.</string>
+    <string name="err_password_already_set">У этого аккаунта уже есть пароль.</string>
+    <string name="account_link_google">Привязать Google</string>
+    <string name="account_link_google_hint">Добавляет Google как второй способ входа в %1$s. Адрес e-mail не меняется, аккаунты не объединяются. На других устройствах будет выполнен выход. Подтвердите текущий пароль и выберите аккаунт Google.</string>
+    <string name="account_link_google_done">Google привязан. На других устройствах выполнен выход.</string>
+    <string name="account_add_password">Добавить пароль</string>
+    <string name="account_add_password_hint">Не менее 15 символов. Сначала вы подтвердите действие аккаунтом Google. На других устройствах будет выполнен выход.</string>
+    <string name="account_password_added">Пароль добавлен. На других устройствах выполнен выход.</string>
+    <string name="account_google_confirm_hint">Потребуется подтверждение аккаунтом Google.</string>
+    <string name="sync_title">Синхронизация</string>
+    <string name="sync_headline_idle">Готово к синхронизации</string>
+    <string name="sync_headline_syncing">Синхронизация…</string>
+    <string name="sync_headline_synced">Все изменения синхронизированы</string>
+    <string name="sync_headline_saved_locally">Сохранено на устройстве. Ожидает синхронизации</string>
+    <string name="sync_headline_offline">Нет соединения</string>
+    <string name="sync_headline_offline_pending">Нет соединения. Изменения сохранены на устройстве</string>
+    <string name="sync_headline_partial">Часть изменений ещё не отправлена</string>
+    <string name="sync_headline_sign_in">Войдите снова, чтобы синхронизировать</string>
+    <string name="sync_headline_verification">Подтвердите e-mail, чтобы синхронизировать</string>
+    <string name="sync_headline_consent">Примите обновлённые условия, чтобы синхронизировать</string>
+    <string name="sync_headline_attention">Некоторые изменения требуют вашего решения</string>
+    <string name="sync_details_show">Показать сведения о синхронизации</string>
+    <string name="sync_details_hide">Скрыть сведения о синхронизации</string>
+    <string name="sync_detail_waiting">Ожидает отправки: %1$d</string>
+    <string name="sync_detail_blocked">Требуют решения: %1$d</string>
+    <string name="sync_detail_needs_review">Слов для проверки: %1$d</string>
+    <string name="sync_detail_last_complete">Последняя полная синхронизация: %1$s</string>
+    <string name="sync_action_retry">Повторить</string>
+    <string name="sync_blocked_title">Требуется ваше решение</string>
+    <string name="sync_item_review">Повторение при обучении</string>
+    <string name="sync_item_move">Перемещение карточки</string>
+    <string name="sync_item_undo">Отмена действия</string>
+    <string name="sync_item_profile_update">Изменение настроек профиля</string>
+    <string name="sync_item_profile_update_for">Изменение настроек для %1$s</string>
+    <string name="sync_item_other">Изменение ожидает отправки</string>
+    <string name="sync_reason_conflict">Этот профиль тем временем изменили в другом месте.</string>
+    <string name="sync_reason_not_found">Этого профиля больше нет.</string>
+    <string name="sync_reason_invalid">Эти настройки недопустимы.</string>
+    <string name="sync_reason_pair_exists">Такая пара языков уже существует.</string>
+    <string name="sync_reason_generic">Не удалось отправить это изменение.</string>
+    <string name="sync_action_apply_mine">Применить мои</string>
+    <string name="sync_action_accept_server">Использовать версию с сервера</string>
+    <string name="sync_action_discard">Отклонить</string>
+    <string name="sync_notice_needs_network">Подключитесь к интернету, чтобы применить свои изменения.</string>
+    <string name="legal_adult_confirm">Мне есть 18 лет.</string>
+    <string name="legal_terms_accept">Я принимаю Условия использования.</string>
+    <string name="legal_read_terms">Прочитать Условия использования</string>
+    <string name="legal_read_privacy">Прочитать Политику конфиденциальности</string>
+    <string name="legal_privacy_info">Сведения об обработке ваших данных есть в Политике конфиденциальности.</string>
+    <string name="legal_loading">Загружаем актуальные документы…</string>
+    <string name="legal_gate_title">Обновлённые условия</string>
+    <string name="legal_gate_body">Чтобы продолжить пользоваться Vocabulario, подтвердите возраст и примите актуальные Условия использования.</string>
+    <string name="legal_gate_accept">Принять и продолжить</string>
+    <string name="legal_gate_data_kept">Ваши данные остаются на этом устройстве.</string>
+    <string name="legal_google_title">Новый аккаунт</string>
+    <string name="legal_google_body">У этого аккаунта Google пока нет аккаунта в Vocabulario. Чтобы создать его, подтвердите заявления ниже.</string>
+    <string name="legal_continue">Продолжить</string>
+    <string name="settings_legal">Информация</string>
+    <string name="err_terms_required">Примите Условия использования, чтобы продолжить.</string>
+    <string name="err_adult_required">Подтвердите, что вам есть 18 лет.</string>
+    <string name="err_legal_changed">Условия обновлены. Прочитайте их и примите снова.</string>
+    <string name="err_legal_load">Не удалось загрузить актуальные документы. Повторите попытку.</string>
+    <string name="report_action">Пожаловаться на содержимое</string>
+    <string name="report_title">Сообщить о проблеме с этим содержимым</string>
+    <string name="report_reason_incorrect">Неверное или вводящее в заблуждение</string>
+    <string name="report_reason_offensive">Оскорбительное или неуместное</string>
+    <string name="report_reason_privacy">Содержит личные данные</string>
+    <string name="report_reason_other">Другое</string>
+    <string name="report_note_label">Примечание (необязательно)</string>
+    <string name="report_preview_label">Будет отправлен этот текст:</string>
+    <string name="report_warning">Не указывайте в примечании пароли и другие секретные данные.</string>
+    <string name="report_send">Отправить жалобу</string>
+    <string name="report_sent">Спасибо. Жалоба отправлена.</string>
+    <string name="report_resolved">Эта жалоба уже рассмотрена.</string>
+    <string name="report_queued">Сохранено на этом устройстве, ещё не отправлено.</string>
+    <string name="report_discard">Удалить</string>
+    <string name="report_rejected">Эту жалобу больше нельзя отправить.</string>
+    <string name="report_failed">Не удалось отправить жалобу. Попробуйте ещё раз.</string>
+    <string name="support_title">Помощь</string>
+    <string name="support_email_label">Электронная почта поддержки</string>
+    <string name="support_copy">Копировать адрес</string>
+    <string name="support_open_site">Открыть страницу поддержки</string>
+    <string name="support_no_email">Адрес поддержки пока недоступен.</string>
+    <string name="notif_blocked_hint">Уведомления заблокированы в настройках системы, поэтому напоминания не появятся.</string>
+    <string name="notif_open_settings">Открыть настройки системы</string>
+    <string name="err_ai_budget">Создание нового контента временно приостановлено. Ваши сохранённые слова в безопасности. Попробуйте позже.</string>
+    <string name="err_restore_recovery">В целях безопасности сбросьте пароль или войдите через Google, чтобы продолжить.</string>
+    <string name="update_required_title">Требуется обновление</string>
+    <string name="update_required_body">Эта версия Vocabulario больше не поддерживается. Обновите приложение в Google Play, чтобы продолжить. Ваши данные остаются на этом устройстве.</string>
+    <string name="update_required_action">Обновить</string>
+    <string name="account_link_verify_title">Подтвердите адрес электронной почты</string>
+    <string name="account_link_verify_intro">Нажмите кнопку ниже, чтобы подтвердить, что это адрес электронной почты вашего аккаунта Vocabulario.</string>
+    <string name="account_link_verify_button">Подтвердить адрес</string>
+    <string name="account_link_verify_done">Готово! Адрес электронной почты подтверждён. Можно вернуться в приложение.</string>
+    <string name="account_link_reset_title">Задайте новый пароль</string>
+    <string name="account_link_reset_intro">Придумайте новый пароль для аккаунта Vocabulario. После сохранения вы выйдете из аккаунта на всех устройствах.</string>
+    <string name="account_link_reset_button">Сохранить новый пароль</string>
+    <string name="account_link_reset_done">Пароль изменён. Войдите в приложение с новым паролем.</string>
+    <string name="account_link_missing_token">Ссылка неполная. Откройте её ещё раз из письма или запросите новую в приложении.</string>
+    <string name="account_link_invalid">Эта ссылка больше не действует. Запросите новую в приложении.</string>
+    <string name="account_link_expired">Срок действия ссылки истёк. Запросите новую в приложении.</string>
+    <string name="account_link_used">Эта ссылка уже использована. Если это были вы, изменение уже сохранено.</string>
+    <string name="account_link_network">Не удалось подключиться. Проверьте подключение к интернету и повторите попытку.</string>
+    <string name="account_link_rate_limited">Слишком много попыток. Подождите немного и повторите попытку.</string>
+    <string name="account_link_error">Что-то пошло не так. Повторите попытку чуть позже.</string>
+    <string name="settings_invalid_time">Введите корректное время, например 19:00.</string>
+    <string name="settings_notifications_on">Включены</string>
+    <string name="settings_notifications_off">Выключены</string>
+    <plurals name="settings_card_content_count">
+        <item quantity="one">%1$d элемент</item>
+        <item quantity="few">%1$d элемента</item>
+        <item quantity="many">%1$d элементов</item>
+        <item quantity="other">%1$d элемента</item>
+    </plurals>
+    <string name="import_info_title">Информация</string>
+    <string name="import_paste_info">Вставьте текст, экспортированный из другого приложения, или введите свои слова на изучаемом языке.</string>
+    <string name="import_analysis_description">Проверяем написание, язык и слова, которые уже есть в ваших списках.</string>
+    <string name="import_analysis_wait">Это может занять некоторое время.</string>
+    <string name="import_analysis_result">Результат анализа</string>
+    <string name="import_stat_all">Все</string>
+    <string name="import_stat_ready">Готовы</string>
+    <string name="import_stat_duplicate">Дубликаты</string>
+    <string name="import_stat_check">Проверить</string>
+    <string name="import_stat_added">Добавлено</string>
+    <string name="import_stat_skipped">Не выбрано</string>
+    <string name="import_review_select">Выберите слова для добавления</string>
+    <string name="import_copy_check">Копировать слова для проверки (%1$d)</string>
+    <string name="import_copy_done">Скопировано</string>
+    <string name="import_done">Готово!</string>
+    <string name="import_details_error">Не удалось загрузить данные импорта. Повторяем попытку.</string>
 </resources>
 

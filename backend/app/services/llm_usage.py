@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import delete, update
 
 from app.core.config import get_settings
+from app.db.lifecycle import LifecycleBlocked
 from app.services.app_log import profile_id_var, request_id_var, user_id_var
 from app.services.llm_pricing import PRICING_VERSION, TokenUsage, estimate_cost_usd
 
@@ -155,6 +156,9 @@ async def record_llm_usage(
         usage = usage or TokenUsage()
         cost = estimate_cost_usd(model, usage) if status == "ok" else None
         row_id = uuid4()
+        settings = get_settings()
+        # Content stays out of the metric unless diagnostics are explicitly on (synthetic data).
+        keep_content = bool(settings.llm_store_payloads)
         row = LlmUsage(
             id=row_id,
             provider=(provider or "openai")[:16],
@@ -162,9 +166,9 @@ async def record_llm_usage(
             purpose=(purpose or "chat_json")[:32],
             operation_id=ctx.operation_id,
             operation_kind=_clip(ctx.operation_kind, 32),
-            query=_clip(ctx.query, 200),
-            lemma=_clip(ctx.lemma, 255),
-            pos=_clip(ctx.pos, 32),
+            query=_clip(ctx.query, 200) if keep_content else None,
+            lemma=_clip(ctx.lemma, 255) if keep_content else None,
+            pos=_clip(ctx.pos, 32) if keep_content else None,
             lang_pair=_clip(ctx.lang_pair, 16),
             card_id=_as_uuid(ctx.card_id),
             user_id=_as_uuid(ctx.user_id) or user_id_var.get(),
@@ -183,10 +187,7 @@ async def record_llm_usage(
             status=(status or "ok")[:16],
             lookup_event_id=_as_uuid(ctx.lookup_event_id),
         )
-        settings = get_settings()
-        store = bool(settings.llm_store_payloads) and (
-            request_json is not None or response_json is not None
-        )
+        store = keep_content and (request_json is not None or response_json is not None)
         from app.models import LlmCallPayload
 
         # Flush the parent before the child. A combined flush can insert the
@@ -215,6 +216,8 @@ async def record_llm_usage(
                         model,
                     )
             await db.commit()
+    except LifecycleBlocked:
+        return None  # the owner is being deleted: no private usage record
     except Exception:
         logger.exception("llm_usage write failed purpose=%s model=%s", purpose, model)
         return None

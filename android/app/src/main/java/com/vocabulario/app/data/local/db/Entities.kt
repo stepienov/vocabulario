@@ -40,6 +40,7 @@ data class CachedCardEntity(
     val contentReviewStatus: String? = null,
     val cardActivityStatus: String? = null,
     val hasContentChanges: Boolean = false,
+    val createdAt: String? = null,
     val updatedAt: Long = 0L,
 )
 
@@ -90,6 +91,8 @@ data class PendingReviewEntity(
     val correct: Boolean,
     val answer: String?,
     val createdAt: Long,
+    /** Przyczyna z ACK serwera; wiersz czeka na decyzję użytkownika i nie jest wysyłany ponownie. */
+    val blockedReason: String? = null,
 )
 
 @Entity(tableName = "pending_moves")
@@ -99,6 +102,7 @@ data class PendingMoveEntity(
     /** Null = system Learning list (deck_id NULL on server). */
     val targetListId: String?,
     val movedAt: Long,
+    val blockedReason: String? = null,
 )
 
 @Entity(tableName = "pending_lookups")
@@ -118,6 +122,7 @@ data class PendingLookupEntity(
 data class PendingUndoEntity(
     @PrimaryKey val clientId: String,
     val srsJson: String,
+    val blockedReason: String? = null,
 )
 
 @Entity(tableName = "local_settings")
@@ -136,6 +141,12 @@ data class SyncMetaEntity(
     @PrimaryKey val profileId: String,
     val lastPulledAt: String? = null,
     val lastSyncedAt: Long = 0L,
+    /** Kursor serwera; przesuwany wyłącznie w transakcji zastosowania całego pull. */
+    val cursor: String? = null,
+    val lastAttemptAt: Long? = null,
+    /** Tylko pełny udany zakres profilu (push + outbox + pull). */
+    val lastSuccessAt: Long? = null,
+    val lastError: String? = null,
 )
 
 /** Cached active language profile for offline practice. */
@@ -149,3 +160,33 @@ data class CachedProfileEntity(
     val isActive: Boolean = true,
     val jsonBlob: String = "{}",
 )
+
+/**
+ * Jedyny rekord właściciela lokalnej bazy (E-001/F-003/T-002). Nie jest kasowany przy logout;
+ * generation rośnie przy każdym loginie/reauth/logout, więc stary kontekst nie pasuje ponownie.
+ */
+@Entity(tableName = "session_owner")
+data class SessionOwnerEntity(
+    @PrimaryKey val id: Int = 0,
+    val ownerUserId: String? = null,
+    val generation: Long = 0,
+    val phase: String = OwnerPhase.SIGNED_OUT,
+    val transitionId: String? = null,
+    /** Zgoda zapisana razem z `logging_out`; recovery nie wywodzi jej z samej fazy. */
+    val logoutDisposition: String? = null,
+    /** Fingerprint kolejek, których utratę użytkownik potwierdził (tylko `discard_confirmed`). */
+    val acceptedUnsentFingerprint: String? = null,
+)
+
+object LogoutDisposition {
+    const val REQUIRE_EMPTY = "require_empty"
+    const val DISCARD_CONFIRMED = "discard_confirmed"
+}
+
+object OwnerPhase {
+    const val SIGNED_OUT = "signed_out"
+    const val INSTALLING = "installing"
+    const val ACTIVE = "active"
+    const val LOGGING_OUT = "logging_out"
+    const val LEGACY_UNCLAIMED = "legacy_unclaimed"
+}

@@ -29,13 +29,16 @@ class LookupPollWorker @AssistedInject constructor(
         val active = persistence.loadActive() ?: return Result.success()
         if (active.byCategory) return Result.success()
         return try {
-            val expanded = when {
-                active.more && active.operationId != null ->
-                    repository.lookupExpand(active.query, more = true, operationId = active.operationId)
-                active.more -> repository.lookupCached(active.query)
-                else -> repository.lookupExpand(active.query)
+            repository.asCurrentOwner {
+                val expanded = when {
+                    active.more && active.operationId != null ->
+                        repository.lookupExpand(active.query, more = true, operationId = active.operationId)
+                    active.more -> repository.lookupCached(active.query)
+                    else -> repository.lookupExpand(active.query)
+                }
+                repository.ensureOwnerCurrent()
+                lookupCoordinator.acceptServerResult(active.query, expanded, active.operationId)
             }
-            lookupCoordinator.acceptServerResult(active.query, expanded, active.operationId)
             Result.success()
         } catch (e: CancellationException) {
             throw e

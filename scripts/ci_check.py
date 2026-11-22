@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lokalne sprawdzenia CI — UI strings, synchronizacja LSP, testy backendu."""
+"""Lokalne sprawdzenia CI — UI strings, LSP, kontrola artefaktów i testy backendu."""
 
 from __future__ import annotations
 
@@ -23,9 +23,10 @@ def run(cmd: list[str], *, cwd: Path | None = None) -> int:
 
 def main() -> int:
     steps = [
-        (["python", str(ROOT / "scripts" / "check_ui_strings.py")], ROOT),
-        (["python", str(ROOT / "scripts" / "lsp_sync.py")], ROOT),
-        (["python", "-m", "pytest", "-q"], ROOT / "backend"),
+        ([sys.executable, str(ROOT / "scripts" / "check_ui_strings.py")], ROOT),
+        ([sys.executable, str(ROOT / "scripts" / "lsp_sync.py")], ROOT),
+        ([sys.executable, "-m", "pytest", "-q", str(ROOT / "scripts" / "tests")], ROOT),
+        ([sys.executable, "-m", "pytest", "-q"], ROOT / "backend"),
     ]
     failed = 0
     for cmd, cwd in steps:

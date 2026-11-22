@@ -2,6 +2,17 @@
 
 Aplikacja Android do nauki słówek (PL ↔ ES i inne pary) z AI i SRS.
 
+## Bieżąca praca: przygotowanie bety
+
+**Punkt wyjścia: [E-001 · Beta Google Play](docs/epics/E-001-google-play-beta/README.md).**
+To bieżący kierunek pracy, z założeniami biznesowymi, features, zadaniami i kryteriami gotowości — nie deklaracja gotowej aplikacji.
+
+- [Rejestr epików](docs/epics/README.md) i [zasady numeracji](docs/epics/zasady.md) — stały układ epic → feature → task; po zakończeniu zmienia się status, nie lokalizacja.
+- [Mapa dokumentacji](docs/README.md) — aktualne instrukcje, referencje i archiwum.
+- [Zasady pracy i publikowania](CONTRIBUTING.md) — co trafia do Git, jak aktualizować dokumentację.
+- [Katalog skryptów](scripts/README.md) — kontrole CI, narzędzia i operacje utrzymaniowe.
+- [E2E](e2e/README.md) — konfiguracja i uruchamianie Maestro.
+
 ## Szybki start (lokalnie)
 
 ### 1. Baza danych
@@ -68,16 +79,29 @@ Sekrety w pliku `.env` w katalogu głównym repo (nie commituj). Szablon: `.env.
 ```
 ENVIRONMENT=production
 DEBUG=false
-JWT_SECRET=<losowy-długi-string>
+JWT_SECRET=<losowy-długi-string, min. 32 znaki>
+AUTH_REFRESH_RETRY_KEY=<klucz Fernet, inny niż JWT_SECRET>
 OPENAI_API_KEY=sk-...
 LLM_PROVIDER=openai
 LLM_MOCK=false
 PERSIST_WORDS=true
+GOOGLE_OAUTH_CLIENT_ID=<web client ID>
+ALLOWED_ORIGINS=<puste albo publiczne https://… po przecinku>
 ```
 
-`DATABASE_URL` i `PORT` ustawia Railway. Po deployu sprawdź `https://<twoja-domena>/health`.
+`DATABASE_URL` i `PORT` ustawia Railway. Po deployu sprawdź `https://<twoja-domena>/health` (proces żyje) i `https://<twoja-domena>/health/ready` (konfiguracja, schemat i baza). Przy 503 log startu wymienia nazwy błędnych ustawień, bez ich wartości; reguły w [E-001/F-008/T-002](docs/epics/E-001-google-play-beta/features/F-008-jakosc-i-operacje/tasks/T-002-srodowiska-i-konfiguracja.md#postęp).
 
-Lokalny dostęp agenta do statusu/logów: [docs/railway-cli.md](docs/railway-cli.md) (CLI + `RAILWAY_API_TOKEN` / `RAILWAY_TOKEN` w `.env`).
+Status/logi i zasady operacji na produkcji: [Railway CLI](docs/setup/railway-cli.md). Zmiany produkcji wymagają osobnego zlecenia.
+
+## Sprawdzenia
+
+W środowisku z zainstalowanymi zależnościami backendu:
+
+```powershell
+python scripts\ci_check.py
+```
+
+Komenda sprawdza napisy UI, spójność LSP i testy backendu. Testy oznaczone `pg` wymagają **oddzielnej lokalnej bazy** z `TEST_DATABASE_URL`, o nazwie kończącej się na `_test`; fixture czyści jej tabele. Lokalnie bez bazy są pomijane z ostrzeżeniem, a taki wynik nie potwierdza integracji z bazą. CI uruchamia PostgreSQL i ustawia `REQUIRE_PG_TESTS=1`: brak bazy albo pominięty test `pg` kończy się błędem. Tę samą flagę można ustawić lokalnie. Osobny job CI dla Androida uruchamia `testDebugUnitTest`, `lintDebug` i `assembleDebug` (komenda w [CONTRIBUTING](CONTRIBUTING.md)). Szczegóły: [kontrakt testów PostgreSQL](docs/epics/E-002-szybka-nauka/features/F-001-fundamenty/tasks/T-001-testy-postgresql.md) i [bramki jakości](docs/epics/E-001-google-play-beta/features/F-008-jakosc-i-operacje/tasks/T-001-bramki-jakosci.md).
 
 ## Struktura
 
@@ -87,11 +111,12 @@ vocabulario/
 ├── backend/          # API FastAPI (+ Dockerfile, railway.toml)
 ├── e2e/              # Maestro E2E
 ├── infra/            # docker-compose (Postgres + Redis)
-├── scripts/          # CI, i18n, e2e
-├── docs/             # instalacja APK, epiki, szablon LSP
-└── doc/              # notatki robocze (lokalnie, nie na GitHub)
+├── scripts/          # utrzymywane narzędzia CI, i18n, E2E i backfill
+├── docs/             # epiki/features/taski, instrukcje, referencje i audyty
+└── .local/           # prywatne notatki i eksperymenty (ignorowane przez Git)
 ```
 
+Archiwum dokumentacji nadal jest publiczne. `.local/`, sekrety, buildy i surowe raporty nie należą do publikowanej zawartości. Wyjątkiem przejściowym pozostaje opisany wyżej klucz **debug**; klucze produkcyjne nigdy nie trafiają do repozytorium.
 
 ## Diagnostyka importu (admin)
 

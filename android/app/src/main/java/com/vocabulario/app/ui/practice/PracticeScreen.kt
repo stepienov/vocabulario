@@ -72,6 +72,8 @@ import com.vocabulario.app.ui.card.CorrectionActivityColor
 import com.vocabulario.app.ui.card.cardActivityStatusLabel
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.data.langDisplayName
+import com.vocabulario.app.i18n.languageDisplayName
+import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.ui.card.FlashcardBackContent
 import com.vocabulario.app.ui.card.StickyLemmaBar
 import com.vocabulario.app.ui.components.AddToListSheet
@@ -86,6 +88,8 @@ import com.vocabulario.app.ui.components.GradeRow
 import com.vocabulario.app.ui.components.PracticeProgressBar
 import com.vocabulario.app.ui.components.PromptCard
 import com.vocabulario.app.ui.home.listNameConflictMessage
+import com.vocabulario.app.ui.report.ReportContentButton
+import com.vocabulario.app.ui.report.ReportTarget
 import com.vocabulario.app.ui.theme.GradeAgain
 import com.vocabulario.app.ui.theme.GradeKnown
 import com.vocabulario.app.ui.theme.GradeLearning
@@ -128,6 +132,9 @@ fun PracticeScreen(
     val direction = item?.direction ?: "l2_to_l1"
     val prompt = item?.let {
         if (direction == "l2_to_l1") it.lemma_l2 else (it.gloss_primary ?: "?")
+    }
+    val promptLanguage = state.activeProfile?.let {
+        languageDisplayName(practicePromptLanguage(direction, it), it.appLang)
     }
     val progress = if (state.queue.isEmpty()) 0f else (state.currentIndex + 1f) / state.queue.size
 
@@ -252,7 +259,9 @@ fun PracticeScreen(
                                             verticalArrangement = Arrangement.Center,
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                         ) {
-                                            prompt?.let { PromptCard(it, modifier = Modifier.fillMaxWidth()) }
+                                            prompt?.let {
+                                                PromptCard(it, modifier = Modifier.fillMaxWidth(), languageLabel = promptLanguage)
+                                            }
                                             Spacer(Modifier.height(24.dp))
                                             Button(
                                                 onClick = viewModel::revealFlashcard,
@@ -264,7 +273,7 @@ fun PracticeScreen(
                                         }
                                     }
                                     AnswerMode.CHOICE -> {
-                                        prompt?.let { PromptCard(it) }
+                                        prompt?.let { PromptCard(it, languageLabel = promptLanguage) }
                                         Spacer(Modifier.height(20.dp))
                                         if (state.loadingChoices) {
                                             Box(
@@ -318,7 +327,7 @@ fun PracticeScreen(
                                         }
                                     }
                                     AnswerMode.TYPE -> {
-                                        prompt?.let { PromptCard(it) }
+                                        prompt?.let { PromptCard(it, languageLabel = promptLanguage) }
                                         Spacer(Modifier.height(20.dp))
                                         Column(
                                             modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -402,6 +411,16 @@ fun PracticeScreen(
                                                     )
                                                 }
                                             }
+                                            ReportContentButton(
+                                                ReportTarget(
+                                                    kind = "practice",
+                                                    targetId = item.card_id,
+                                                    field = "answer",
+                                                    excerpt = listOfNotNull(item.lemma_l2, item.gloss_primary)
+                                                        .filter { it.isNotBlank() }
+                                                        .joinToString(" — "),
+                                                ),
+                                            )
                                             if (item.has_content_changes) {
                                                 IconButton(
                                                     onClick = viewModel::openCardHistory,

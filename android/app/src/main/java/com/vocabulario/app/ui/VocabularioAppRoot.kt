@@ -2,9 +2,16 @@ package com.vocabulario.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -14,6 +21,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -21,12 +31,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import android.net.Uri
+import com.vocabulario.app.R
 import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.PairSession
 import com.vocabulario.app.data.imports.ImportController
 import com.vocabulario.app.ui.auth.AuthScreen
 import com.vocabulario.app.ui.auth.AuthViewModel
+import com.vocabulario.app.ui.auth.LegalGateScreen
+import com.vocabulario.app.ui.auth.LogoutUnsentDialog
+import com.vocabulario.app.ui.auth.UpdateRequiredScreen
+import com.vocabulario.app.ui.auth.VerifyEmailScreen
+import com.vocabulario.app.ui.deletion.DeletionPendingScreen
+import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.BusyOverlayHost
+import com.vocabulario.app.ui.components.ButtonLabel
 import com.vocabulario.app.ui.home.HomeScreen
 import com.vocabulario.app.ui.learning.LearningScreen
 import com.vocabulario.app.ui.onboarding.OnboardingScreen
@@ -43,6 +61,9 @@ import dagger.hilt.components.SingletonComponent
 
 object Routes {
     const val AUTH = "auth"
+    const val VERIFY_EMAIL = "verify_email"
+    const val LEGAL = "legal"
+    const val DELETION_PENDING = "deletion_pending"
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
     const val PRACTICE = "practice"
@@ -77,6 +98,7 @@ fun VocabularioAppRoot(
     authViewModel: AuthViewModel = hiltViewModel(),
 ) {
     val startRoute by appViewModel.startRoute.collectAsState()
+    val updateRequired by appViewModel.updateRequired.collectAsState()
     val pairSession = rememberPairSession()
     val blockingBusy = rememberBlockingBusy()
     rememberImportController()
@@ -87,13 +109,22 @@ fun VocabularioAppRoot(
     LaunchedEffect(Unit) { appViewModel.bootstrap() }
 
     if (startRoute == AppStartRoute.LOADING) {
+        if (updateRequired) {
+            UpdateRequiredScreen(onCheckAgain = appViewModel::recheckUpdate)
+            return
+        }
+        val loadingSlow by appViewModel.loadingSlow.collectAsState()
         Box(
             Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background),
             contentAlignment = Alignment.Center,
         ) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            if (loadingSlow) {
+                SlowStartPanel(onRetry = { appViewModel.retryBootstrap() })
+            } else {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
         }
         return
     }
@@ -119,6 +150,9 @@ fun VocabularioAppRoot(
                 }
                 val graphStart = when (startRoute) {
                     AppStartRoute.AUTH -> Routes.AUTH
+                    AppStartRoute.VERIFY_EMAIL -> Routes.VERIFY_EMAIL
+                    AppStartRoute.LEGAL -> Routes.LEGAL
+                    AppStartRoute.DELETION_PENDING -> Routes.DELETION_PENDING
                     AppStartRoute.ONBOARDING -> Routes.ONBOARDING
                     AppStartRoute.HOME -> Routes.HOME
                     AppStartRoute.LOADING -> Routes.AUTH
@@ -134,6 +168,19 @@ fun VocabularioAppRoot(
                                 appViewModel.completeAuthenticated(needsOnboarding = true)
                             },
                         )
+                    }
+                    composable(Routes.VERIFY_EMAIL) {
+                        val onLoggedOut: suspend () -> Unit = { appViewModel.onLogout() }
+                        LogoutPromptHost(authViewModel, onLoggedOut)
+                        VerifyEmailScreen(onLogout = { authViewModel.requestLogout(onLoggedOut) })
+                    }
+                    composable(Routes.LEGAL) {
+                        val onLoggedOut: suspend () -> Unit = { appViewModel.onLogout() }
+                        LogoutPromptHost(authViewModel, onLoggedOut)
+                        LegalGateScreen(onLogout = { authViewModel.requestLogout(onLoggedOut) })
+                    }
+                    composable(Routes.DELETION_PENDING) {
+                        DeletionPendingScreen()
                     }
                     composable(Routes.ONBOARDING) {
                         OnboardingScreen(
@@ -187,13 +234,11 @@ fun VocabularioAppRoot(
                         )
                     }
                     composable(Routes.SETTINGS) {
+                        val onLoggedOut: suspend () -> Unit = { appViewModel.onLogout() }
+                        LogoutPromptHost(authViewModel, onLoggedOut)
                         SettingsScreen(
                             onBack = { navController.popBackStack() },
-                            onLogout = {
-                                authViewModel.logout {
-                                    appViewModel.onLogout()
-                                }
-                            },
+                            onLogout = { authViewModel.requestLogout(onLoggedOut) },
                         )
                     }
                     composable(Routes.PROFILE) {
@@ -211,6 +256,22 @@ fun VocabularioAppRoot(
                 }
             }
         }
+        // Nad nawigacją, żeby stan ekranów i kolejki przetrwały blokadę.
+        if (updateRequired) {
+            UpdateRequiredScreen(onCheckAgain = appViewModel::recheckUpdate)
+        }
+    }
+}
+
+@Composable
+private fun LogoutPromptHost(authViewModel: AuthViewModel, onLoggedOut: suspend () -> Unit) {
+    val logoutPrompt by authViewModel.logoutPrompt.collectAsState()
+    logoutPrompt?.let { prompt ->
+        LogoutUnsentDialog(
+            prompt = prompt,
+            onSyncAndLogout = { authViewModel.syncAndLogout(onLoggedOut) },
+            onCancel = authViewModel::cancelLogout,
+        )
     }
 }
 
@@ -236,5 +297,33 @@ private fun rememberImportController(): ImportController {
     return remember {
         EntryPointAccessors.fromApplication(context, ImportControllerEntryPoint::class.java)
             .importController()
+    }
+}
+
+@Composable
+private fun SlowStartPanel(onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            stringResource(R.string.loading_slow_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(R.string.loading_slow_message),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(20.dp))
+        Button(onClick = onRetry, shape = AppButtonShape) {
+            ButtonLabel(stringResource(R.string.action_retry))
+        }
     }
 }

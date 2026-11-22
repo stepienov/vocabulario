@@ -13,8 +13,10 @@ tags:
 - assertVisible:
     id: settings_mode_choice
 - tapOn:
-    id: settings_section_theme
+    id: settings_section_notifications
 - assertVisible:
-    id: settings_theme_system
+    id: settings_notif_study
+- assertNotVisible:
+    id: settings_mode_choice
 - tapOn:
     id: btn_back

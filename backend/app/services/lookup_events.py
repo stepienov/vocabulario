@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import lang_pair_key, normalize_text
 from app.core.lemma_keys import canonical_lemma
 from app.db import session as db_session
+from app.db.lifecycle import LifecycleBlocked
 from app.models import LanguageProfile, LookupEvent, LookupQueryCache
 from app.services.app_log import request_id_var
 from app.services.background import spawn_background
@@ -148,8 +149,10 @@ def record_lookup_event_background(
                     )
                 )
                 await db.commit()
+        except LifecycleBlocked:
+            return
         except Exception:
-            logger.exception("lookup_event background failed user=%s query=%r", user_id, query)
+            logger.exception("lookup_event background failed user=%s", user_id)
 
     spawn_background(_write, name="lookup_event")
 
@@ -197,6 +200,8 @@ async def record_lookup_event(
         db.add(row)
         await db.flush()
         return row
+    except LifecycleBlocked:
+        return None
     except Exception:
-        logger.exception("lookup_event write failed user=%s query=%r", user_id, query)
+        logger.exception("lookup_event write failed user=%s", user_id)
         return None

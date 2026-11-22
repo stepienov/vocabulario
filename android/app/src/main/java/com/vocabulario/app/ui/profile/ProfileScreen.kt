@@ -6,13 +6,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vocabulario.app.R
@@ -37,6 +39,7 @@ import com.vocabulario.app.data.CEFR_LEVELS
 import com.vocabulario.app.data.LanguagePacks
 import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.data.tenseHeadingsForPicker
+import com.vocabulario.app.ui.components.AppToggle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -147,12 +150,22 @@ fun ProfileScreen(
                 Spacer(Modifier.height(20.dp))
                 Text(stringResource(R.string.profile_tenses), style = MaterialTheme.typography.titleMedium)
                 tenseHeadingsForPicker(state.activeProfile).forEach { (key, heading) ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .toggleable(
+                                value = key in state.selectedTenses,
+                                role = Role.Switch,
+                                onValueChange = { viewModel.toggleTense(key) },
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AppToggle(
                             checked = key in state.selectedTenses,
-                            onCheckedChange = { viewModel.toggleTense(key) },
+                            onCheckedChange = null,
                         )
-                        Column {
+                        Column(modifier = Modifier.padding(start = 12.dp)) {
                             Text(heading.original)
                             heading.translation?.let { translation ->
                                 Text(

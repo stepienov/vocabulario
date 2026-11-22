@@ -3,6 +3,7 @@ package com.vocabulario.app.data.lookup
 import com.vocabulario.app.R
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.userMessage
+import com.vocabulario.app.data.session.AccountResetHooks
 import com.vocabulario.app.i18n.UiStrings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,7 @@ class CategoryLookupCoordinator @Inject constructor(
     repository: LearningRepository,
     strings: UiStrings,
     private val persistence: LookupQueryPersistence,
+    resetHooks: AccountResetHooks,
 ) {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val session = AssociationSession(
@@ -32,6 +34,7 @@ class CategoryLookupCoordinator @Inject constructor(
     val state: StateFlow<AssociationState> get() = session.state
 
     init {
+        resetHooks.register { clear() }
         appScope.launch {
             val stored = persistence.loadQuery() ?: return@launch
             if (!persistence.loadByCategory()) return@launch

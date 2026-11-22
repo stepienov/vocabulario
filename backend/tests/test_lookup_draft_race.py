@@ -56,7 +56,7 @@ async def _caller(pg):
         user = await create_user(session)
         profile = await create_profile(session, user, "pl", "es")
         await session.commit()
-        return auth_headers(user), str(profile.id)
+        return await auth_headers(session, user), str(profile.id)
 
 
 async def _cache_rows(pg):
@@ -96,7 +96,7 @@ async def test_lexicon_hit_is_merged_with_one_draft(pg, pg_client, monkeypatch):
             )
         )
         await session.commit()
-        headers = auth_headers(user)
+        headers = await auth_headers(session, user)
         profile_id = str(profile.id)
 
     response = await pg_client.post(

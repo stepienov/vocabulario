@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_verified_user
 from app.db.session import get_db
 from app.models import DeviceToken, User
 from app.schemas import DeviceRegisterRequest
@@ -19,7 +19,7 @@ router = APIRouter(tags=["devices"])
 @router.post("/devices/register", status_code=204)
 async def register_device(
     body: DeviceRegisterRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     existing = await db.get(DeviceToken, body.token)

@@ -66,14 +66,11 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -84,7 +81,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -104,7 +100,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -123,7 +118,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.vocabulario.app.data.normalizePosKey
 import com.vocabulario.app.data.local.LocalDashboard
-import com.vocabulario.app.ui.theme.BrandTeal
 import com.vocabulario.app.ui.theme.LocalVocabExtraColors
 import com.vocabulario.app.ui.components.AddToListSheet
 import com.vocabulario.app.ui.components.AppAlertDialog
@@ -134,12 +128,15 @@ import com.vocabulario.app.ui.components.AppDialogAction
 import com.vocabulario.app.ui.components.AppDialogButtonRow
 import com.vocabulario.app.ui.components.AppDialogShape
 import com.vocabulario.app.ui.components.AppGrayField
+import com.vocabulario.app.ui.components.AppToggle
 import com.vocabulario.app.ui.components.AppDialogWindowChrome
 import com.vocabulario.app.ui.components.BrandLogo
 import com.vocabulario.app.ui.components.ButtonLabel
 import com.vocabulario.app.ui.components.LemmaActionRow
 import com.vocabulario.app.ui.components.LemmaAddButton
 import com.vocabulario.app.ui.components.TagChip
+import com.vocabulario.app.ui.components.PosTagChip
+import com.vocabulario.app.ui.theme.posChipContainer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -158,6 +155,8 @@ import com.vocabulario.app.ui.card.CorrectionActivityColor
 import com.vocabulario.app.ui.card.cardActivityStatusLabel
 import com.vocabulario.app.ui.card.CardActivitySpinner
 import com.vocabulario.app.ui.practice.ListFlashcardSummary
+import com.vocabulario.app.ui.report.ReportContentButton
+import com.vocabulario.app.ui.report.ReportTarget
 
 private val ScreenPad = 20.dp
 private val TileRadius = RoundedCornerShape(28.dp)
@@ -216,6 +215,7 @@ fun HomeScreen(
                     state = state,
                     onPractice = onPractice,
                     onAddFirst = { viewModel.selectTab(HomeTab.ADD) },
+                    onRetry = viewModel::loadStats,
                     onChangeLimit = {
                         viewModel.openSettingsLimits()
                         onSettings()
@@ -239,12 +239,12 @@ fun HomeScreen(
                     onExpandImportSection = viewModel::expandImportSection,
                     onToggleImportReady = viewModel::toggleImportReadyItem,
                     onRefreshImportQuota = viewModel::refreshImportDailyQuota,
-                    onCopyImportErrors = viewModel::onImportErrorsCopied,
                     onDismissImport = { viewModel.dismissImportResult(false) },
                     onShowImportList = { viewModel.dismissImportResult(true) },
                 )
                 HomeTab.LISTS -> ListsTab(
                     state = state,
+                    onRetryPreferences = viewModel::retryListViewPreferences,
                     importTargetListId = importState.targetListId?.takeIf { importState.busy },
                     isOnline = isOnline,
                     onSelectList = viewModel::selectList,
@@ -513,10 +513,33 @@ private fun DashboardTab(
     state: HomeUiState,
     onPractice: () -> Unit,
     onAddFirst: () -> Unit,
+    onRetry: () -> Unit,
     onChangeLimit: () -> Unit,
 ) {
     val stats = state.stats
     val scheme = MaterialTheme.colorScheme
+    val kind = state.homeKind
+
+    if (kind == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            val error = state.dashboardError
+            if (error == null) {
+                CircularProgressIndicator()
+            } else {
+                Column(
+                    modifier = Modifier.padding(ScreenPad),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(error, color = scheme.error, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = onRetry, shape = AppButtonShape) {
+                        Text(stringResource(R.string.action_retry))
+                    }
+                }
+            }
+        }
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -525,7 +548,7 @@ private fun DashboardTab(
             .padding(horizontal = ScreenPad, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        when (state.homeKind) {
+        when (kind) {
             HomeKind.Empty -> {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -552,7 +575,7 @@ private fun DashboardTab(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = TileRadius,
-                    color = scheme.surface,
+                    color = scheme.primaryContainer,
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp)) {
                         Text(
@@ -576,7 +599,7 @@ private fun DashboardTab(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = TileRadius,
-                    color = scheme.surface,
+                    color = scheme.primaryContainer,
                 ) {
                     Row(
                         modifier = Modifier
@@ -599,30 +622,32 @@ private fun DashboardTab(
             }
         }
 
-        if (state.homeKind != HomeKind.Empty) {
+        if (kind != HomeKind.Empty) {
             DashboardProgressStrip(
                 text = stringResource(
                     R.string.home_already_know,
                     state.alreadyKnowCount,
                     state.currentlyLearningCount,
                 ),
+                color = scheme.secondaryContainer,
             )
             DashboardProgressStrip(
                 text = stringResource(
                     R.string.home_left_to_learn,
                     state.remainingToLearnCount,
                 ),
+                color = scheme.tertiaryContainer,
             )
         }
 
         DashboardCta(
-            kind = state.homeKind,
+            kind = kind,
             onPractice = onPractice,
             onAddFirst = onAddFirst,
             onChangeLimit = onChangeLimit,
         )
 
-        if (state.homeKind != HomeKind.Empty) {
+        if (kind != HomeKind.Empty) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = TileRadius,
@@ -708,14 +733,14 @@ private fun DashboardCta(
 }
 
 @Composable
-private fun DashboardProgressStrip(text: String) {
+private fun DashboardProgressStrip(text: String, color: androidx.compose.ui.graphics.Color) {
     val scheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .height(54.dp),
         shape = TileRadius,
-        color = scheme.surface,
+        color = color,
     ) {
         Box(
             modifier = Modifier
@@ -839,7 +864,11 @@ private fun ReviewHeatGrid(
                             n == 0 -> 0.12f
                             else -> 0.22f + (n.toFloat() / maxCount) * 0.78f
                         }
-                        val fill = (if (otherMonth) BrandTeal else scheme.primary).copy(alpha = alpha)
+                        val fill = when {
+                            isToday -> scheme.tertiaryContainer
+                            past || n == 0 -> if (otherMonth) scheme.secondaryContainer else scheme.primaryContainer
+                            else -> (if (otherMonth) scheme.secondary else scheme.primary).copy(alpha = alpha)
+                        }
                         val textColor = when {
                             past || otherMonth -> scheme.onSurfaceVariant
                             else -> scheme.onSurface
@@ -915,7 +944,6 @@ private fun AddTab(
     onExpandImportSection: (String?) -> Unit,
     onToggleImportReady: (String) -> Unit,
     onRefreshImportQuota: () -> Unit,
-    onCopyImportErrors: () -> Unit,
     onDismissImport: () -> Unit,
     onShowImportList: () -> Unit,
 ) {
@@ -1009,28 +1037,29 @@ private fun AddTab(
             if (importBusy) {
                 when {
                     importState.busy ->
-                        ImportStatusPanel(state = importState, onAbort = onAbortImport)
+                        ImportStatusPanel(state = importState, onAbort = onAbortImport, modifier = Modifier.weight(1f))
                     else ->
                         ImportReviewAccordion(
                             state = importState,
                             onExpand = onExpandImportSection,
                             onAbort = onAbortImport,
                             onCommit = onConfirmImport,
-                            onCopyErrors = onCopyImportErrors,
                             onToggleReady = onToggleImportReady,
+                            modifier = Modifier.weight(1f),
                         )
                 }
             } else {
                 if (showImportOutcome) {
-                    ImportOutcomePanel(
-                        state = importState,
-                        onOk = onDismissImport,
-                        onShowList = onShowImportList,
-                        onCopyErrors = onCopyImportErrors,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        ImportOutcomePanel(
+                            state = importState,
+                            onOk = onDismissImport,
+                            onShowList = onShowImportList,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                    }
                 }
-                if (isOnline) {
+                if (isOnline && !showImportOutcome) {
                     val dailyFull = importState.dailyRemaining <= 0
                     Text(
                         if (dailyFull) {
@@ -1148,22 +1177,15 @@ private fun AddTab(
                     .toggleable(
                         value = state.searchByCategory,
                         enabled = isOnline,
-                        role = Role.Checkbox,
+                        role = Role.Switch,
                         onValueChange = onToggleSearchByCategory,
                     )
+                    .heightIn(min = 48.dp)
                     .padding(start = 2.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                    Checkbox(
-                        checked = state.searchByCategory,
-                        onCheckedChange = null,
-                        enabled = isOnline,
-                        modifier = Modifier.size(24.dp),
-                        colors = CheckboxDefaults.colors(checkedColor = scheme.primary),
-                    )
-                }
+                AppToggle(checked = state.searchByCategory, onCheckedChange = null, enabled = isOnline)
                 Text(
                     stringResource(R.string.search_by_category),
                     modifier = Modifier.weight(1f),
@@ -1392,13 +1414,24 @@ private fun CandidateRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 readingLabel?.let { TagChip(it) }
-                candidate.pos?.let { TagChip(localizedPosLabel(it).ifBlank { it }) }
+                candidate.pos?.let {
+                    PosTagChip(it)
+                }
                 if (candidate.onList) {
                     TagChip(
                         text = candidate.list_name ?: stringResource(R.string.list_unnamed),
                         onClick = { onOpenWord(candidate) },
                     )
                 }
+                Spacer(Modifier.weight(1f))
+                ReportContentButton(
+                    ReportTarget(
+                        kind = "lookup",
+                        targetId = null,
+                        field = "meaning",
+                        excerpt = "${candidate.lemma} — ${candidate.gloss}",
+                    ),
+                )
             }
             if (candidate.isCreating && !candidate.membershipUnknown) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -1498,6 +1531,7 @@ private fun HomeAddToListSheet(
 @Composable
 private fun ListsTab(
     state: HomeUiState,
+    onRetryPreferences: () -> Unit,
     importTargetListId: String? = null,
     isOnline: Boolean,
     onSelectList: (String) -> Unit,
@@ -1544,13 +1578,37 @@ private fun ListsTab(
     var showSortSheet by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
     var draftFilter by remember { mutableStateOf(ListFilterState()) }
+    var pendingSortScroll by remember { mutableStateOf<Pair<String?, ListSortOrder>?>(null) }
     val listState = rememberLazyListState()
     val scheme = MaterialTheme.colorScheme
+    if (!state.listViewPreferencesLoaded) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (state.listViewPreferencesError == null) {
+                CircularProgressIndicator()
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(state.listViewPreferencesError, color = scheme.error)
+                    TextButton(onClick = onRetryPreferences) { Text(stringResource(R.string.action_retry)) }
+                }
+            }
+        }
+        return
+    }
     val selectedList = state.lists.firstOrNull { it.id == state.selectedListId }
     val pendingInboxSelected = selectedList?.is_pending_inbox == true
     val moveTargets = state.lists.filter { it.id != state.selectedListId }
     val selectionMode = state.selectionMode
     val visibleWords = state.visibleListWords
+
+    LaunchedEffect(pendingSortScroll, state.selectedListId, state.listSortOrder) {
+        val pending = pendingSortScroll ?: return@LaunchedEffect
+        if (pending.first != state.selectedListId) {
+            pendingSortScroll = null
+        } else if (pending.second == state.listSortOrder) {
+            listState.requestScrollToItem(0)
+            pendingSortScroll = null
+        }
+    }
 
     LaunchedEffect(state.focusWordId, state.focusLemma, state.listWords, state.searchLoading) {
         if (state.searchLoading) return@LaunchedEffect
@@ -1669,6 +1727,11 @@ private fun ListsTab(
                 showFilterSheet = true
             },
         )
+
+        state.listViewPreferencesError?.let {
+            Text(it, color = scheme.error, style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = onRetryPreferences) { Text(stringResource(R.string.action_retry)) }
+        }
 
         when {
             state.listWords.isEmpty() -> {
@@ -2198,6 +2261,7 @@ private fun ListsTab(
                     Surface(
                         onClick = {
                             onSetSort(order)
+                            pendingSortScroll = state.selectedListId to order
                             showSortSheet = false
                         },
                         modifier = Modifier
@@ -2253,6 +2317,7 @@ private fun ListsTab(
                                 localizedPosLabel(key).ifBlank { key }
                             },
                             selected = selected,
+                            unselectedColor = posChipContainer(scheme, key),
                             onClick = {
                                 draftFilter = draftFilter.copy(
                                     pos = if (selected) draftFilter.pos - key else draftFilter.pos + key,
@@ -2274,6 +2339,7 @@ private fun ListsTab(
                         FilterToggleChip(
                             label = st.label(),
                             selected = selected,
+                            unselectedColor = scheme.secondaryContainer,
                             onClick = {
                                 draftFilter = draftFilter.copy(
                                     states = if (selected) draftFilter.states - st else draftFilter.states + st,
@@ -2429,7 +2495,7 @@ private fun ListWordTile(
                         softWrap = false,
                     )
                     if (!creatingWithoutGloss && posLabelText != null) {
-                        ListPosChip(label = posLabelText)
+                        ListPosChip(label = posLabelText, posKey = posKey)
                     }
                 }
                 when {
@@ -2785,11 +2851,11 @@ private fun NumberedGlossRow(
 }
 
 @Composable
-private fun ListPosChip(label: String) {
+private fun ListPosChip(label: String, posKey: String) {
     val colors = LocalVocabExtraColors.current
     Surface(
         shape = AppChipShape,
-        color = colors.chipPosContainer,
+        color = posChipContainer(MaterialTheme.colorScheme, posKey),
         contentColor = colors.chipPosOnContainer,
     ) {
         Text(
@@ -2844,8 +2910,8 @@ private fun ListChip(
     onMenu: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val bg = if (selected) scheme.onBackground else scheme.surfaceVariant
-    val fg = if (selected) scheme.background else scheme.onSurface
+    val bg = if (selected) scheme.primary else scheme.surfaceVariant
+    val fg = if (selected) scheme.onPrimary else scheme.onSurface
     Surface(
         onClick = onClick,
         shape = AppChipShape,
