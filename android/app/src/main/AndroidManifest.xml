@@ -31,6 +31,22 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".AccountLinkActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.Vocabulario.Splash">
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="vocabulario.io" />
+                <data android:path="/account/verify-email" />
+                <data android:path="/account/reset-password" />
+            </intent-filter>
+        </activity>
+
         <receiver
             android:name=".notifications.StudyReminderReceiver"
             android:exported="false">

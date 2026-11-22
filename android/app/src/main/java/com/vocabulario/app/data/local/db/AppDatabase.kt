@@ -19,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         OutboxOpEntity::class,
         SessionOwnerEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -36,6 +36,14 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sessionOwnerDao(): SessionOwnerDao
 
     companion object {
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `cached_cards` ADD COLUMN `createdAt` TEXT")
+                // Existing cards need a single full pull to recover their original creation dates.
+                db.execSQL("UPDATE `sync_meta` SET `cursor` = NULL")
+            }
+        }
+
         /**
          * v6 → v7: dodaje ujednolicony outbox `outbox_ops` oraz kolumny lokalnych list.
          * Migracja NIE kasuje danych — chroni niewysłany outbox przy aktualizacji aplikacji.

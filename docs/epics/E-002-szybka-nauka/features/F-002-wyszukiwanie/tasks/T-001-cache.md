@@ -121,7 +121,7 @@ Testy (`pytest`):
 - Dwa równoczesne `lookup/cached` tego samego hasła: oba 200, `hit_count` wzrósł o 2.
 - Token użytkownika bez wiersza `users`, `local_membership=true`: 404. To samo przy `false`: 401 `user_not_found`.
 
-Produkcja, po tasku 01 i 02, konto `nowy4@test.com`, `prado`, wywołanie z `local_membership=true` (curl z tokenem konta kontrolnego, zanim wyjdzie telefon z taskiem 07):
+Produkcja, po tasku 01 i 02, konto kontrolne, `prado`, wywołanie z `local_membership=true` (curl z tokenem konta kontrolnego, zanim wyjdzie telefon z taskiem 07):
 
 - `app_logs.duration_ms` poniżej 150 ms, krawędź Railway poniżej 600 ms,
 - odpowiedź: trzy propozycje, `ai_complete=true`, bez identyfikatorów kart i list,

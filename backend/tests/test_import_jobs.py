@@ -48,6 +48,21 @@ def test_format_error_lemmas_empty():
     assert format_error_lemmas([_item(verdict="ready", lemma="x")]) == ""
 
 
+def test_format_error_lemmas_excludes_skipped_and_legacy_deselected():
+    items = [
+        _item(ordinal=0, verdict="failed", lemma="invalid"),
+        _item(ordinal=1, verdict="failed", reason_code="deselected", lemma="old"),
+        _item(ordinal=2, verdict="skipped", reason_code="deselected", lemma="new"),
+    ]
+    assert format_error_lemmas(items) == "invalid"
+
+
+def test_load_text_import_removes_nul_before_parsing():
+    deck = load_text_import("casa\x00\nperro\x00")
+    assert deck.notes == [["casa"], ["perro"]]
+    assert "\x00" not in deck.raw_text
+
+
 def test_apply_vocab_item_ready_pending():
     item = _item()
     _apply_vocab_item(
@@ -199,8 +214,9 @@ def test_import_prompts_gate_non_l2():
         IMPORT_VERIFY_LEMMAS_PROMPT_V1,
     )
 
-    assert "innym języku" in IMPORT_CLASSIFY_PROMPT_V1
-    assert "valid=true tylko gdy to L2" in IMPORT_CLASSIFY_PROMPT_V1
+    assert "not junk or text only in another language" in IMPORT_CLASSIFY_PROMPT_V1
+    assert "do not translate L1 into L2" in IMPORT_CLASSIFY_PROMPT_V1
+    assert "not in the learning language" in IMPORT_CLASSIFY_PROMPT_V1
     assert "NOT in the learning language" in IMPORT_VERIFY_LEMMAS_PROMPT_V1
     assert "NIE tłumacz hasła" in IMPORT_ADAPTIVE_PROMPT_V1
     assert "example.l2 TYLKO w L2" in IMPORT_ADAPTIVE_PROMPT_V1

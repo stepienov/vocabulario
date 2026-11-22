@@ -5,24 +5,30 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import com.vocabulario.app.R
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppAlertDialog
@@ -30,169 +36,109 @@ import com.vocabulario.app.ui.components.AppButtonShape
 import com.vocabulario.app.ui.components.AppDialogAction
 import com.vocabulario.app.ui.components.AppDialogButtonRow
 import com.vocabulario.app.ui.components.AppGrayField
+import com.vocabulario.app.ui.components.AppToggle
+import com.vocabulario.app.ui.components.GoogleButton
 
 @Composable
 internal fun AccountSectionBody(
     account: AccountUiState,
     onChangePassword: () -> Unit,
     onSendReset: () -> Unit,
-    onChangeEmail: () -> Unit,
-    onResendChange: () -> Unit,
-    onCancelChange: () -> Unit,
     onDeleteAccount: () -> Unit,
     onLinkGoogle: () -> Unit,
     onAddPassword: () -> Unit,
+    onVerifyEmail: () -> Unit,
+    onLogout: () -> Unit,
     onRetry: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-        if (account.email == null) {
-            Text(
-                stringResource(if (account.unavailable) R.string.account_unavailable else R.string.account_loading),
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
-            )
-            if (account.unavailable) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+        Column(Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 6.dp)) {
+            if (account.email == null) {
+                Text(
+                    stringResource(if (account.unavailable) R.string.account_unavailable else R.string.account_loading),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = scheme.onSurfaceVariant,
+                )
+                if (account.unavailable) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onRetry,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = AppButtonShape,
+                    ) { Text(stringResource(R.string.action_retry)) }
+                }
+                TextButton(onClick = onLogout, modifier = Modifier.heightIn(min = 44.dp).testTag(TestTags.SETTINGS_LOGOUT)) {
+                    Text(stringResource(R.string.action_logout))
+                }
+                return@Column
+            }
+            if (!account.emailVerified) {
+                TextButton(onClick = onVerifyEmail, enabled = !account.stale, modifier = Modifier.heightIn(min = 44.dp)) {
+                    Text(stringResource(R.string.verify_email_title))
+                }
+            }
+            if (account.stale) {
                 Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.account_stale_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.error,
+                )
+                Spacer(Modifier.height(4.dp))
                 OutlinedButton(
                     onClick = onRetry,
                     modifier = Modifier.fillMaxWidth(),
                     shape = AppButtonShape,
                 ) { Text(stringResource(R.string.action_retry)) }
             }
-            return@Column
-        }
-        Text(account.email, style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            stringResource(if (account.emailVerified) R.string.account_email_verified else R.string.account_email_unverified),
-            style = MaterialTheme.typography.bodySmall,
-            color = if (account.emailVerified) scheme.onSurfaceVariant else scheme.error,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            stringResource(R.string.account_profiles_note),
-            style = MaterialTheme.typography.bodySmall,
-            color = scheme.onSurfaceVariant,
-        )
-        if (account.stale) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.account_stale_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = scheme.error,
-            )
-            Spacer(Modifier.height(4.dp))
-            OutlinedButton(
-                onClick = onRetry,
-                modifier = Modifier.fillMaxWidth(),
-                shape = AppButtonShape,
-            ) { Text(stringResource(R.string.action_retry)) }
-        }
-        Spacer(Modifier.height(12.dp))
-        Text(
-            stringResource(R.string.account_methods_title),
-            style = MaterialTheme.typography.labelLarge,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            stringResource(if (account.hasPassword) R.string.account_method_password_set else R.string.account_method_password_none),
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurfaceVariant,
-        )
-        Text(
-            if (account.hasGoogle && account.googleEmail != null) {
-                stringResource(R.string.account_google_linked_email, account.googleEmail)
-            } else {
-                stringResource(if (account.hasGoogle) R.string.account_google_linked else R.string.account_method_google_none)
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurfaceVariant,
-        )
-        if (account.hasPassword && !account.hasGoogle && !account.passwordUpgradeRequired) {
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onLinkGoogle,
-                enabled = !account.stale,
-                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_LINK_GOOGLE),
-                shape = AppButtonShape,
-            ) { Text(stringResource(R.string.account_link_google)) }
-        }
-        if (account.hasGoogle && !account.hasPassword) {
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onAddPassword,
-                enabled = !account.stale,
-                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_ADD_PASSWORD),
-                shape = AppButtonShape,
-            ) { Text(stringResource(R.string.account_add_password)) }
-        }
-        if (account.hasPassword && account.passwordUpgradeRequired) {
-            Spacer(Modifier.height(12.dp))
-            Text(
-                stringResource(R.string.account_password_reset_needed),
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onSendReset,
-                enabled = !account.resetSending && !account.stale,
-                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_CHANGE_PASSWORD),
-                shape = AppButtonShape,
-            ) { Text(stringResource(R.string.account_password_reset_send)) }
-        } else if (account.hasPassword) {
-            Spacer(Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = onChangePassword,
-                enabled = !account.stale,
-                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_CHANGE_PASSWORD),
-                shape = AppButtonShape,
-            ) { Text(stringResource(R.string.account_change_password)) }
-        }
-        // Konto z Google potwierdza zmianę adresu i usunięcie wyborem swojego konta Google.
-        val canManage = (account.hasPassword || account.hasGoogle) && !account.passwordUpgradeRequired
-        if (canManage) {
-            val pending = account.pendingChange
-            Spacer(Modifier.height(8.dp))
-            if (pending == null) {
-                OutlinedButton(
-                    onClick = onChangeEmail,
+            if (account.hasPassword && !account.hasGoogle && !account.passwordUpgradeRequired) {
+                GoogleButton(
+                    text = stringResource(R.string.account_link_google),
+                    onClick = onLinkGoogle,
                     enabled = !account.stale,
-                    modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_CHANGE_EMAIL),
-                    shape = AppButtonShape,
-                ) { Text(stringResource(R.string.account_change_email)) }
-            } else {
+                    modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 12.dp, bottom = 12.dp).height(44.dp).testTag(TestTags.SETTINGS_LINK_GOOGLE),
+                )
+            }
+            if (account.hasGoogle && !account.hasPassword) {
+                TextButton(
+                    onClick = onAddPassword,
+                    enabled = !account.stale,
+                    modifier = Modifier.heightIn(min = 44.dp).testTag(TestTags.SETTINGS_ADD_PASSWORD),
+                ) { Text(stringResource(R.string.account_add_password)) }
+            }
+            if (account.hasPassword && account.passwordUpgradeRequired) {
+                Spacer(Modifier.height(12.dp))
                 Text(
-                    stringResource(R.string.account_email_change_pending, pending.new_email),
+                    stringResource(R.string.account_password_reset_needed),
                     style = MaterialTheme.typography.bodyMedium,
                     color = scheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onResendChange,
-                    enabled = !account.changeBusy,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AppButtonShape,
-                ) { Text(stringResource(R.string.account_email_change_resend)) }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onCancelChange,
-                    enabled = !account.changeBusy,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AppButtonShape,
-                ) { Text(stringResource(R.string.account_email_change_cancel)) }
+                TextButton(
+                    onClick = onSendReset,
+                    enabled = !account.resetSending && !account.stale,
+                    modifier = Modifier.heightIn(min = 44.dp).testTag(TestTags.SETTINGS_CHANGE_PASSWORD),
+                ) { Text(stringResource(R.string.account_password_reset_send)) }
+            } else if (account.hasPassword) {
+                TextButton(
+                    onClick = onChangePassword,
+                    enabled = !account.stale,
+                    modifier = Modifier.heightIn(min = 44.dp).testTag(TestTags.SETTINGS_CHANGE_PASSWORD),
+                ) { Text(stringResource(R.string.account_change_password)) }
             }
-        }
-        if (canManage) {
-            Spacer(Modifier.height(16.dp))
-            OutlinedButton(
-                onClick = onDeleteAccount,
-                enabled = !account.stale,
-                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_DELETE_ACCOUNT),
-                shape = AppButtonShape,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = scheme.error),
-            ) { Text(stringResource(R.string.account_delete)) }
+            TextButton(onClick = onLogout, modifier = Modifier.heightIn(min = 44.dp).testTag(TestTags.SETTINGS_LOGOUT)) {
+                Text(stringResource(R.string.action_logout))
+            }
+            val canManage = (account.hasPassword || account.hasGoogle) && !account.passwordUpgradeRequired
+            if (canManage) {
+                TextButton(
+                    onClick = onDeleteAccount,
+                    enabled = !account.stale,
+                    modifier = Modifier.heightIn(min = 44.dp).testTag(TestTags.SETTINGS_DELETE_ACCOUNT),
+                    colors = ButtonDefaults.textButtonColors(contentColor = scheme.error),
+                ) { Text(stringResource(R.string.account_delete)) }
+            }
         }
     }
 }
@@ -242,15 +188,27 @@ internal fun DeleteAccountDialog(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                     )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .testTag(TestTags.DELETE_ACCOUNT_CONFIRM)
+                        .toggleable(
+                            value = form.confirmed,
+                            enabled = !form.busy,
+                            role = Role.Switch,
+                            onValueChange = onConfirmedChange,
+                        ),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AppToggle(
                         checked = form.confirmed,
-                        onCheckedChange = onConfirmedChange,
+                        onCheckedChange = null,
                         enabled = !form.busy,
-                        modifier = Modifier.testTag(TestTags.DELETE_ACCOUNT_CONFIRM),
                     )
                     Text(
                         stringResource(R.string.account_delete_confirm_check),
+                        modifier = Modifier.padding(start = 12.dp),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -268,61 +226,6 @@ internal fun DeleteAccountDialog(
                 primaryText = stringResource(R.string.account_delete),
                 onPrimary = onSubmit,
                 primaryEnabled = !form.busy && form.confirmed,
-            )
-        },
-    )
-}
-
-@Composable
-internal fun ChangeEmailDialog(
-    form: ChangeEmailUiState,
-    onEmailChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onSubmit: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AppAlertDialog(
-        onDismissRequest = onDismiss,
-        title = stringResource(R.string.account_change_email),
-        dismissOnClickOutside = !form.busy,
-        text = {
-            Column {
-                AppGrayField(
-                    value = form.newEmail,
-                    onValueChange = onEmailChange,
-                    placeholder = stringResource(R.string.account_new_email),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
-                )
-                Spacer(Modifier.height(10.dp))
-                if (!form.usesGoogle) {
-                    AppGrayField(
-                        value = form.password,
-                        onValueChange = onPasswordChange,
-                        placeholder = stringResource(R.string.account_current_password),
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-                Text(
-                    stringResource(if (form.usesGoogle) R.string.account_google_confirm_hint else R.string.account_change_email_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                form.error?.let {
-                    Spacer(Modifier.height(8.dp))
-                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        },
-        buttons = {
-            AppDialogButtonRow(
-                secondaryText = stringResource(R.string.action_cancel),
-                onSecondary = onDismiss,
-                secondaryKind = AppDialogAction.Neutral,
-                primaryText = stringResource(R.string.account_email_change_send),
-                onPrimary = onSubmit,
-                primaryEnabled = !form.busy,
             )
         },
     )

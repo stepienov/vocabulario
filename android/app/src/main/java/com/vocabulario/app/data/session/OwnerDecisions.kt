@@ -75,11 +75,16 @@ sealed interface LoginDecision {
     data class LegacyQuarantine(val unsentCount: Int) : LoginDecision
 }
 
-fun decideLogin(snapshot: OwnerSnapshot, candidateUserId: String): LoginDecision = when {
-    snapshot.phase == OwnerPhase.LEGACY_UNCLAIMED && snapshot.hasOwnedData ->
-        LoginDecision.LegacyQuarantine(snapshot.unsentCount)
-    snapshot.ownerUserId == null && snapshot.hasOwnedData ->
-        LoginDecision.LegacyQuarantine(snapshot.unsentCount)
+fun decideLogin(
+    snapshot: OwnerSnapshot,
+    candidateUserId: String,
+    localProfileIds: Set<String> = emptySet(),
+    verifiedProfileIds: Set<String> = emptySet(),
+): LoginDecision = when {
+    (snapshot.phase == OwnerPhase.LEGACY_UNCLAIMED || snapshot.ownerUserId == null) && snapshot.hasOwnedData ->
+        if (snapshot.unsentCount == 0 && localProfileIds.isNotEmpty() &&
+            verifiedProfileIds.containsAll(localProfileIds)
+        ) LoginDecision.SameOwner else LoginDecision.LegacyQuarantine(snapshot.unsentCount)
     snapshot.ownerUserId == candidateUserId -> LoginDecision.SameOwner
     !snapshot.hasOwnedData -> LoginDecision.Claim
     else -> LoginDecision.OtherAccount(snapshot.unsentCount)
@@ -136,7 +141,7 @@ enum class AuthNoticeKind {
     LOCAL_DATA,
 }
 
-/** Informacja na ekranie logowania; wyjście „wyloguj na tym urządzeniu” usuwa [hasLocalData]. */
+/** Informacja o zachowanych danych i niewysłanej pracy na ekranie logowania. */
 data class AuthNotice(
     val kind: AuthNoticeKind,
     val hasLocalData: Boolean,

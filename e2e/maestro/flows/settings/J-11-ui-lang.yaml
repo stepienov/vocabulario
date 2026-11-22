@@ -4,19 +4,25 @@ tags:
   - settings
   - lang
 ---
-# J-11 · App language (L1) switch — open dropdown, pick a language
+# J-11 · App language (L1) switch — open sheet, pick a language
 - launchApp:
     clearState: false
 - runFlow: ../../helpers/ensure-logged-in.yaml
 - runFlow: ../../helpers/goto-settings.yaml
-- tapOn:
-    id: settings_section_languages
+- scrollUntilVisible:
+    element:
+      id: settings_native_lang
+    direction: DOWN
+    timeout: 15000
 - tapOn:
     id: settings_native_lang
-- extendedWaitUntil:
-    visible: "English|Español|Polski|Français|Deutsch"
+- scrollUntilVisible:
+    element:
+      id: settings_native_lang__en
+    direction: UP
     timeout: 10000
-- tapOn: "English|Inglés|Angielski"
+- tapOn:
+    id: settings_native_lang__en
 - tapOn:
     id: btn_back
 - extendedWaitUntil:

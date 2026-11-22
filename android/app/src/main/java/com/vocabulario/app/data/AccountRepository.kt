@@ -2,8 +2,6 @@ package com.vocabulario.app.data
 
 import com.vocabulario.app.auth.GoogleIdTokenProvider
 import com.vocabulario.app.data.api.AddPasswordRequest
-import com.vocabulario.app.data.api.EmailChangeRequestBody
-import com.vocabulario.app.data.api.EmailChangeResponse
 import com.vocabulario.app.data.api.EmailVerificationStatusResponse
 import com.vocabulario.app.data.api.GoogleLinkChallengeRequest
 import com.vocabulario.app.data.api.GoogleLinkRequest
@@ -119,24 +117,6 @@ class AccountRepository @Inject constructor(
     suspend fun requestPasswordReset(email: String): MailStatusResponse =
         api.passwordResetRequest(PasswordResetRequestBody(email.trim(), mailLocale()))
 
-    /** Hasło jako świeży dowód, potem prośba; ten sam `requestId` przy powtórzeniu tych samych danych. */
-    suspend fun requestEmailChange(newEmail: String, password: String, requestId: String): EmailChangeResponse =
-        submitEmailChange(newEmail, requestId, api.recentAuthPassword(RecentAuthPasswordRequest(password, "change_email")))
-
-    /** Konto bez hasła potwierdza zmianę adresu wyborem tego samego konta Google. */
-    suspend fun requestEmailChangeWithGoogle(
-        newEmail: String,
-        requestId: String,
-        provider: GoogleIdTokenProvider,
-    ): EmailChangeResponse = submitEmailChange(newEmail, requestId, recentAuthGoogle("change_email", provider))
-
-    private suspend fun submitEmailChange(
-        newEmail: String,
-        requestId: String,
-        proof: RecentAuthResponse,
-    ): EmailChangeResponse =
-        api.emailChangeRequest(EmailChangeRequestBody(newEmail.trim(), proof.recent_auth_token, requestId))
-
     /** Nonce od serwera trafia do selektora; anulowanie selektora kończy bez żądania końcowego. */
     private suspend fun recentAuthGoogle(action: String, provider: GoogleIdTokenProvider): RecentAuthResponse {
         val challenge = api.recentAuthGoogleChallenge(RecentAuthGoogleChallengeRequest(action))
@@ -165,15 +145,6 @@ class AccountRepository @Inject constructor(
     private suspend fun installRenewedPair(tokens: TokenResponse) {
         if (!sessionCoordinator.installRenewed(tokens)) throw SessionInstallException("renewed pair not stored")
         runCatching { refreshAccount() }
-    }
-
-    suspend fun currentEmailChange(): EmailChangeResponse? =
-        api.emailChangeCurrent().change?.takeIf { it.status == "pending" }
-
-    suspend fun resendEmailChange(id: String): EmailChangeResponse = api.emailChangeResend(id)
-
-    suspend fun cancelEmailChange(id: String) {
-        api.emailChangeCancel(id)
     }
 
     /** Inne sesje kończą się na serwerze; ta dostaje nową parę tokenów tej samej sesji. */

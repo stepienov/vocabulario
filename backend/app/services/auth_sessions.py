@@ -26,6 +26,7 @@ from app.core.security import (
     TokenClaims,
     TokenError,
     TokenPair,
+    issue_access_token,
     issue_token_pair,
     now_utc,
     read_token,
@@ -96,6 +97,8 @@ def _fernet() -> Fernet:
 
 
 def _issued(pair: TokenPair) -> IssuedSession:
+    if pair.access.expires_at is None:
+        raise ValueError("access token must expire")
     return IssuedSession(
         access_token=pair.access_token,
         refresh_token=pair.refresh_token,
@@ -223,7 +226,7 @@ async def _locked_refresh_session(
         raise SessionAuthError(401, "invalid_refresh_token")
     if session.revoked_at is not None:
         raise SessionAuthError(401, "session_revoked")
-    if session.expires_at <= now:
+    if session.expires_at is not None and session.expires_at <= now:
         raise SessionAuthError(401, "session_expired")
     if session.version != claims.session_version:
         raise SessionAuthError(401, "invalid_refresh_token")
@@ -235,8 +238,10 @@ def _replayed_result(
 ) -> IssuedSession:
     try:
         data = json.loads(_fernet().decrypt(row.response_ciphertext))
-        access = read_token(data["access_token"], ACCESS, now=now)
-        refresh = read_token(data["refresh_token"], REFRESH, now=now)
+        access = read_token(data["access_token"], ACCESS, now=row.created_at)
+        refresh = read_token(
+            data["refresh_token"], REFRESH, now=now, allow_expired_refresh=True
+        )
     except (InvalidToken, TokenError, ValueError, KeyError, TypeError) as exc:
         raise RetryRecordError("refresh retry record is unreadable") from exc
     for claims in (access, refresh):
@@ -248,8 +253,17 @@ def _replayed_result(
             raise RetryRecordError("refresh retry record does not match its session")
     if not _same_hash(token_hash(data["refresh_token"]), row.output_token_hash):
         raise RetryRecordError("refresh retry record does not match its hash")
+    if access.expires_at is None:
+        raise RetryRecordError("refresh retry access token has no expiry")
+    access_token = data["access_token"]
+    if access.expires_at <= now:
+        access_token, access = issue_access_token(
+            session.user_id, session.id, session.version, now
+        )
+        if access.expires_at is None:
+            raise RetryRecordError("new access token has no expiry")
     return IssuedSession(
-        access_token=data["access_token"],
+        access_token=access_token,
         refresh_token=data["refresh_token"],
         user_id=session.user_id,
         session_id=session.id,
@@ -287,7 +301,7 @@ async def _rotate(
             output_token_hash=output_hash,
             response_ciphertext=_fernet().encrypt(payload),
             created_at=now,
-            expires_at=min(now + RETRY_WINDOW, pair.access.expires_at, pair.refresh.expires_at),
+            expires_at=min(now + RETRY_WINDOW, _issued(pair).access_expires_at),
         )
     )
     await db.flush()
@@ -311,14 +325,14 @@ async def refresh_session(
     *,
     now: datetime | None = None,
 ) -> IssuedSession:
-    """Rotate one session or replay its recent result for the same request id.
+    """Rotate one session or recover its still-current result for the same request id.
 
     Raises SessionAuthError; when `commit` is set the caller commits the revocation
     before answering. On success the caller commits before returning tokens.
     """
     now = now or now_utc()
     try:
-        claims = read_token(refresh_token, REFRESH, now=now)
+        claims = read_token(refresh_token, REFRESH, now=now, allow_expired_refresh=True)
     except TokenError as exc:
         raise _token_error(exc, refresh=True) from exc
     session = await _locked_refresh_session(db, claims, now)
@@ -336,8 +350,6 @@ async def refresh_session(
     if row is not None:
         if not _same_hash(row.input_token_hash, input_hash):
             raise SessionAuthError(409, "refresh_conflict")
-        if row.expires_at <= now:
-            raise await _revoke_replayed(db, session, now)
         if row.session_version != session.version or not _same_hash(
             row.output_token_hash, session.refresh_token_hash
         ):
@@ -367,7 +379,7 @@ async def logout_session(
     """Revoke only the session proven by its current refresh token; repeat is a no-op."""
     now = now or now_utc()
     try:
-        claims = read_token(refresh_token, REFRESH, now=now)
+        claims = read_token(refresh_token, REFRESH, now=now, allow_expired_refresh=True)
     except TokenError as exc:
         raise _token_error(exc, refresh=True) from exc
     user = await lock_user(db, claims.user_id)
@@ -377,7 +389,7 @@ async def logout_session(
     if (
         session.user_id != claims.user_id
         or session.version != claims.session_version
-        or session.expires_at <= now
+        or (session.expires_at is not None and session.expires_at <= now)
         or not _same_hash(token_hash(refresh_token), session.refresh_token_hash)
     ):
         raise SessionAuthError(401, "invalid_refresh_token")
@@ -404,7 +416,7 @@ def check_access_session(
         raise SessionAuthError(401, "invalid_token")
     if session.revoked_at is not None:
         raise SessionAuthError(401, "session_revoked")
-    if session.expires_at <= now:
+    if session.expires_at is not None and session.expires_at <= now:
         raise SessionAuthError(401, "session_expired")
     if session.version != claims.session_version:
         raise SessionAuthError(401, "invalid_token")

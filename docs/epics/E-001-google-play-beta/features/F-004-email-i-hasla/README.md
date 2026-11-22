@@ -4,18 +4,19 @@
 
 **Wartość:** użytkownik rejestruje się i odzyskuje dostęp samodzielnie, a zaakceptowane hasło jest sprawdzane w całości.
 
+**Decyzja z 21.11.2026:** zmiana i korekta adresu e-mail nie są dostępne. Inny adres wymaga nowego konta; nie przenosimy automatycznie danych ani profili. Historyczne opisy tej funkcji poniżej i w T-004 nie są obowiązującym zakresem.
+
 ## Zakres i akceptacja
 
 - Migracja hashowania nie odcina istniejących kont i nie obcina długich/Unicode haseł.
 - Weryfikacja e-maila, reset i zmiana hasła działają z prawdziwym dostarczeniem poczty; tokeny jednorazowe i wygasające.
 - Potwierdzenie adresu i ustawienie nowego hasła działają także na prostej stronie HTTPS bez aplikacji; link nie daje dostępu do biblioteki ani sesji WWW.
-- Uzgodniony próg: nowe i dotychczasowe niezweryfikowane konta e-mail nie korzystają w pełni przed potwierdzeniem adresu; mają resend, korektę adresu, wyjście i pomoc. Egzekwowanie także w API, nie tylko przez ukrycie ekranu. Do dopracowania pozostaje techniczna migracja, nie ponowny wybór progu.
+- Uzgodniony próg: nowe i dotychczasowe niezweryfikowane konta e-mail nie korzystają w pełni przed potwierdzeniem adresu; mają resend, wyjście i pomoc. Egzekwowanie także w API, nie tylko przez ukrycie ekranu.
 - Konto Google-only nie trafia do pozornego resetu hasła aplikacji.
-- Zmiana adresu e-mail jest częścią pierwszej bety: potwierdzenie tożsamości i nowego adresu, kontrola konfliktów i spójność metod logowania.
 - Google-only może dodać hasło po ponownym potwierdzeniu tożsamości Google i wymaganym potwierdzeniu adresu aplikacji. Samodzielne odłączanie metod logowania odkładamy poza betę.
 - Konflikty, utrata odpowiedzi, limity prób i formularze dają kontrolowane komunikaty; nowe napisy we wszystkich 17 locale.
 
-## Zatwierdzona polityka konta — 17.11.2026
+## Historyczna polityka konta — 17.11.2026
 
 To wspólny kontrakt biznesowy dla F-003/F-004/F-005/F-006. Szczegóły protokołów pozostają do opracowania; poniższych decyzji nie podejmujemy ponownie przy implementacji każdego taska.
 

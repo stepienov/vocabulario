@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vocabulario.app.R
 import com.vocabulario.app.data.AccountRepository
-import com.vocabulario.app.data.EmailVerificationGate
 import com.vocabulario.app.data.api.EmailVerificationStatusResponse
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.i18n.UiStrings
@@ -23,6 +22,7 @@ enum class MailDelivery { NONE, SENDING, SENT, DELAYED, FAILED }
 
 data class VerifyEmailUiState(
     val email: String? = null,
+    val verified: Boolean = false,
     val delivery: MailDelivery = MailDelivery.NONE,
     /** Zegar urządzenia (ms), od kiedy wolno wysłać ponownie; 0 = od razu. */
     val resendAtMillis: Long = 0L,
@@ -48,12 +48,11 @@ internal fun resendAtFrom(iso: String?, nowMillis: Long): Long {
 
 /**
  * Ekran bramki weryfikacji (F-004/T-002 §5). Bez pollingu: stan czytany przy wejściu,
- * powrocie do aplikacji i na przycisk. Potwierdzenie zdejmuje bramkę w [EmailVerificationGate].
+ * powrocie do aplikacji i na przycisk. Odczyt konta aktualizuje bramkę weryfikacji.
  */
 @HiltViewModel
 class VerifyEmailViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
-    private val gate: EmailVerificationGate,
     private val strings: UiStrings,
 ) : ViewModel() {
 
@@ -67,9 +66,16 @@ class VerifyEmailViewModel @Inject constructor(
             _state.update { it.copy(busy = true, error = null, info = if (userAsked) null else it.info) }
             try {
                 val me = accountRepository.refreshAccount()
-                _state.update { it.copy(email = me.email) }
-                if (gate.isRequired()) {
-                    val status = runCatching { accountRepository.verificationStatus() }.getOrNull()
+                _state.update { it.copy(email = me.email, verified = me.email_verified) }
+                if (!me.email_verified) {
+                    val status = try {
+                        accountRepository.verificationStatus()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        _state.update { it.copy(error = e.userMessage(strings, R.string.err_account_request_failed)) }
+                        null
+                    }
                     _state.update { current ->
                         current.copy(
                             delivery = status?.let(::deliveryOf) ?: current.delivery,
@@ -82,7 +88,7 @@ class VerifyEmailViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (userAsked) _state.update { it.copy(error = e.userMessage(strings, R.string.err_account_request_failed)) }
+                _state.update { it.copy(error = e.userMessage(strings, R.string.err_account_request_failed)) }
             } finally {
                 _state.update { it.copy(busy = false) }
             }
@@ -97,7 +103,8 @@ class VerifyEmailViewModel @Inject constructor(
             try {
                 val result = accountRepository.requestVerificationMail()
                 if (result.status == "already_verified") {
-                    accountRepository.refreshAccount()
+                    val me = accountRepository.refreshAccount()
+                    _state.update { it.copy(email = me.email, verified = me.email_verified) }
                 } else {
                     val waitMs = (result.retry_after_seconds ?: 0) * 1000L
                     _state.update {

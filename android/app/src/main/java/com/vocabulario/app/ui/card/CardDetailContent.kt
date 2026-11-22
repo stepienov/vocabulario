@@ -54,6 +54,7 @@ import com.vocabulario.app.i18n.localizedPosLabel
 import com.vocabulario.app.ui.components.AppCard
 import com.vocabulario.app.ui.components.SpeakIconButton
 import com.vocabulario.app.ui.components.TagChip
+import com.vocabulario.app.ui.components.PosTagChip
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -269,7 +270,7 @@ fun CardDetailContent(
                 val label = localizedPosLabel(pos)
                 if (label.isNotBlank()) {
                     Spacer(modifier = Modifier.height(10.dp))
-                    TagChip(label)
+                    PosTagChip(pos)
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -773,7 +774,7 @@ private fun RelatedWordsSection(
                                 fontWeight = FontWeight.SemiBold,
                             )
                             word.pos?.takeIf { it.isNotBlank() }?.let { pos ->
-                                TagChip(localizedPosLabel(pos).ifBlank { pos })
+                                PosTagChip(pos)
                             }
                             if (hit != null) {
                                 TagChip(

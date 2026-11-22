@@ -166,21 +166,16 @@ class RevocationTest {
     }
 
     @Test
-    fun secretIsPhysicallyPurgedAfterThirtyDays() {
+    fun pendingLogoutIsRetainedAfterLongOfflinePeriod() {
         val clock = FakeClock()
         val persistence = FakeQueuePersistence()
         val store = RevocationStore(persistence, clock)
         store.add(material)
-        clock.now += REVOCATION_SECRET_TTL_MS - 1
-        assertEquals("refresh-1", store.load().requests.single().refreshToken)
-
-        clock.now += 1
+        clock.now += 36525L * 24 * 60 * 60 * 1000
         val reloaded = RevocationStore(persistence, clock).load()
-
         val request = persistence.stored.requests.single()
-        assertEquals(RevocationState.UNCONFIRMED, request.state)
-        assertEquals(REVOCATION_REASON_EXPIRED, request.reason)
-        assertFalse(request.hasSecret)
+        assertEquals(RevocationState.PENDING, request.state)
+        assertTrue(request.hasSecret)
         assertEquals(request, reloaded.requests.single())
     }
 

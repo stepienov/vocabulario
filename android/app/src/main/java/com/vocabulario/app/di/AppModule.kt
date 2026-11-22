@@ -9,6 +9,7 @@ import com.vocabulario.app.data.LegalGate
 import com.vocabulario.app.data.api.EMAIL_VERIFICATION_REQUIRED
 import com.vocabulario.app.data.api.TERMS_ACCEPTANCE_REQUIRED
 import com.vocabulario.app.data.api.TokenAuthenticator
+import com.vocabulario.app.data.api.CandidateProfilesApi
 import com.vocabulario.app.data.api.VocabularioApi
 import com.vocabulario.app.data.api.isPublicAuthPath
 import com.vocabulario.app.data.session.SessionCoordinator
@@ -102,5 +103,30 @@ object AppModule {
       .addConverterFactory(json.asConverterFactory(contentType))
       .build()
       .create(VocabularioApi::class.java)
+  }
+
+  @Provides
+  @Singleton
+  fun provideCandidateProfilesApi(): CandidateProfilesApi = candidateProfilesApi(ApiBaseUrl.resolve())
+
+  internal fun candidateProfilesApi(baseUrl: String): CandidateProfilesApi {
+    val client = OkHttpClient.Builder()
+      .addInterceptor { chain ->
+        chain.proceed(
+          chain.request().newBuilder()
+            .header(CLIENT_VERSION_HEADER, com.vocabulario.app.BuildConfig.VERSION_CODE.toString())
+            .build(),
+        )
+      }
+      .connectTimeout(15, TimeUnit.SECONDS)
+      .readTimeout(15, TimeUnit.SECONDS)
+      .callTimeout(30, TimeUnit.SECONDS)
+      .build()
+    return Retrofit.Builder()
+      .baseUrl(baseUrl)
+      .client(client)
+      .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+      .build()
+      .create(CandidateProfilesApi::class.java)
   }
 }

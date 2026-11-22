@@ -285,34 +285,6 @@ async def test_google_proof_rules_for_accounts_with_and_without_google(pg, pg_cl
     assert (wrong_use.status_code, _code(wrong_use)) == (400, "auth_challenge_invalid")
 
 
-async def test_google_change_email_proof_opens_the_email_change(pg, pg_client):
-    user, issued = await _google_only(pg)
-    headers = {"Authorization": f"Bearer {issued.access_token}"}
-    challenge = await _challenge(
-        pg_client, "/recent-auth/google/challenge", headers, action="change_email"
-    )
-    proof = await pg_client.post(
-        f"{AUTH}/recent-auth/google",
-        json={
-            "challenge_id": challenge["challenge_id"],
-            "action": "change_email",
-            "id_token": google_token(challenge["nonce"], user.google_id, user.email),
-        },
-        headers=headers,
-    )
-    assert proof.status_code == 200, proof.text
-    request = await pg_client.post(
-        f"{AUTH}/email-change/request",
-        json={
-            "new_email": _email("new"),
-            "recent_auth_token": proof.json()["recent_auth_token"],
-            "request_id": str(uuid4()),
-        },
-        headers=headers,
-    )
-    assert request.status_code == 202, request.text
-
-
 async def test_deletion_proof_by_google_uses_the_subject_and_its_own_action(pg, pg_client):
     user, _ = await _google_only(pg)
     api = "/api/v1/account-deletion"

@@ -74,7 +74,7 @@ Lokalnie, wykonawca:
 - `docs/setup/railway-cli.md` ma region API, region bazy i liczbę replik,
 - raport zawiera host `DATABASE_URL` (prywatny albo publiczny) bez hasła i pomiar „przed”.
 
-Po wdrożeniu (odczyt produkcji, konto `nowy4@test.com`, profil polski → hiszpański):
+Po wdrożeniu (odczyt produkcji, konto kontrolne, profil polski → hiszpański):
 
 - `railway status`: jedna aktywna instancja, w regionie bazy,
 - log HTTP Railway z 15 minut ruchu telefonu: jedno `deploymentInstanceId` przy wszystkich żądaniach,

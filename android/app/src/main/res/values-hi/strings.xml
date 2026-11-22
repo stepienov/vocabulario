@@ -126,15 +126,15 @@
         <string name="settings_langs_hint">ऐप की भाषा इंटरफ़ेस और कार्ड अनुवाद की भाषा है। सीखने की भाषा वह है जिसे आप पढ़ते हैं।</string>
 <string name="settings_theme">थीम</string>
 
-    <string name="settings_mode">अध्ययन मोड</string>
+    <string name="settings_mode">सीखने का तरीका</string>
 
     <string name="settings_group_study">अध्ययन</string>
 
-    <string name="settings_group_general">सामान्य</string>
+    <string name="settings_group_general">ऐप</string>
 
     <string name="settings_mode_choice">Quiz</string>
 
-    <string name="settings_mode_type">शब्द टाइप करें</string>
+    <string name="settings_mode_type">उत्तर लिखें</string>
 
     <string name="settings_mode_flash">फ्लैशकार्ड</string>
 
@@ -144,7 +144,7 @@
 
     <string name="settings_tolerate_typos_sub">वर्तनी और चिह्न</string>
 
-    <string name="settings_direction">अध्ययन दिशा</string>
+    <string name="settings_direction">पहले क्या दिखाएँ?</string>
 
     <string name="settings_direction_first">पहले %1$s</string>
 
@@ -152,25 +152,25 @@
 
     <string name="settings_direction_sub">पहले क्या दिखाएँ: %1$s</string>
 
-    <string name="settings_card_layout">कार्ड लेआउट</string>
+    <string name="settings_card_layout">फ्लैशकार्ड पर क्या दिखे</string>
 
     <string name="settings_card_layout_sub">फ्लैशकार्ड सामग्री अनुकूलित करें</string>
 
-    <string name="settings_examples">वाक्य</string>
+    <string name="settings_examples">उदाहरण वाक्य</string>
 
-    <string name="settings_usages">मुहावरे</string>
+    <string name="settings_usages">वाक्यांश और प्रयोग</string>
 
     <string name="settings_periphrases">पैटर्न</string>
 
-    <string name="settings_syn_ant">शब्द के आसपास</string>
+    <string name="settings_syn_ant">पर्यायवाची और विलोम</string>
     <string name="settings_word_family">शब्द परिवार</string>
     <string name="settings_associations">साहचर्य</string>
 
-    <string name="settings_conjugation">क्रिया रूप</string>
+    <string name="settings_conjugation">क्रिया के रूप</string>
 
     <string name="settings_all_tenses">सभी काल</string>
 
-    <string name="settings_limits">सीमाएँ</string>
+    <string name="settings_limits">प्रतिदिन नए शब्द</string>
 
     <string name="settings_new_limit">दैनिक नए शब्दों की सीमा</string>
 
@@ -354,7 +354,7 @@
     <string name="import_reason_unknown">यह शब्द अभी आयात नहीं हो सकता।</string>
     <string name="import_ready_hint">ये शब्द आपकी सूची में जुड़ेंगे।</string>
     <string name="import_review_loading">शब्द लोड हो रहे हैं…</string>
-    <string name="import_errors_hint">ये शब्द आपकी सूची में नहीं जुड़ेंगे।</string>
+    <string name="import_errors_hint">ये शब्द नहीं जोड़े जाएँगे। वर्तनी या भाषा जाँचें।</string>
     <string name="import_item_untitled">अज्ञात शब्द</string>
     <string name="import_reason_write_failed">3 कोशिशों के बाद भी यह शब्द सहेजा नहीं जा सका।</string>
     <string name="import_cancelled">रद्द। कुछ नहीं जोड़ा गया।</string>
@@ -634,14 +634,14 @@
     <string name="err_session_ended">आपका सत्र समाप्त हो गया है। फिर से साइन इन करें।</string>
     <string name="err_login_other_account">इस डिवाइस पर किसी दूसरे खाते का डेटा है। जारी रखने के लिए उसी खाते में साइन इन करें।</string>
     <string name="legacy_data_title">इस डिवाइस पर बिना खाते का डेटा</string>
-    <string name="legacy_data_message">इस डिवाइस पर ऐप के पिछले संस्करण का डेटा है, जिसे किसी खाते से नहीं जोड़ा जा सकता। न भेजे गए बदलाव: %1$d. साइन इन करने के लिए यह डेटा हटाएँ। जो पहले से सिंक हो चुका है, वह साइन इन के बाद फिर से डाउनलोड होगा।</string>
+    <string name="legacy_data_message">इस डिवाइस पर ऐप के पिछले संस्करण का डेटा है, जिसे किसी खाते से नहीं जोड़ा जा सकता। न भेजे गए बदलाव: %1$d. आपका डेटा सुरक्षित रहेगा। साइन इन करने में मदद के लिए सहायता से संपर्क करें।</string>
     <string name="legacy_data_discard">स्थानीय डेटा हटाएँ</string>
     <string name="legacy_data_discard_confirm_title">स्थायी रूप से हटाएँ?</string>
     <string name="legacy_data_discard_confirm">न भेजे गए बदलाव (%1$d) खो जाएँगे और वापस नहीं मिलेंगे।</string>
     <string name="legacy_data_discarded">स्थानीय डेटा हटा दिया गया। फिर से साइन इन करें।</string>
     <string name="legacy_data_discard_failed">स्थानीय डेटा नहीं हटाया जा सका। फिर से कोशिश करें।</string>
     <string name="auth_notice_reauth_title">फिर से साइन इन करें</string>
-    <string name="auth_notice_reauth">आपका सत्र समाप्त हो गया है। जारी रखने के लिए उसी खाते से साइन इन करें। इस डिवाइस पर आपका डेटा सुरक्षित रहता है।</string>
+    <string name="auth_notice_reauth">जारी रखने के लिए उसी खाते से साइन इन करें। इस डिवाइस पर आपका डेटा सुरक्षित रहता है।</string>
     <string name="auth_notice_recovery_title">सत्र बहाल नहीं हो सका</string>
     <string name="auth_notice_recovery">इस डिवाइस पर सहेजा गया साइन-इन पढ़ा नहीं जा सका। फिर से कोशिश करें या उसी खाते से साइन इन करें। इस डिवाइस पर आपका डेटा सुरक्षित रहता है।</string>
     <string name="auth_notice_local_data_title">आपके खाते का डेटा</string>
@@ -656,11 +656,11 @@
     <string name="loading_slow_title">इसमें सामान्य से अधिक समय लग रहा है</string>
     <string name="loading_slow_message">ऐप अभी भी शुरू हो रहा है। अपना कनेक्शन जाँचें या फिर से कोशिश करें।</string>
     <string name="auth_revocation_pending">इस डिवाइस पर साइन आउट हो गया। ऑनलाइन होने पर सर्वर साइन आउट की पुष्टि करेगा।</string>
-    <string name="auth_revocation_unconfirmed">सर्वर पुष्टि के बिना सत्र: %1$d. ये अब इस डिवाइस पर उपयोग नहीं होते और 30 दिनों के भीतर अपने आप समाप्त हो जाएंगे।</string>
+    <string name="auth_revocation_unconfirmed">सर्वर पुष्टि के बिना सत्र: %1$d. ये अब इस डिवाइस पर उपयोग नहीं होते, लेकिन सर्वर पर सक्रिय हो सकते हैं।</string>
     <string name="auth_revocation_confirmed">सर्वर पर भी साइन आउट हो गया।</string>
     <string name="auth_revocation_queue_full">बहुत सारे साइन आउट सर्वर की प्रतीक्षा में हैं। इंटरनेट से कनेक्ट करें, थोड़ा रुकें और फिर से कोशिश करें।</string>
     <string name="logout_unsent_title">न भेजे गए बदलाव</string>
-    <string name="logout_unsent_message">लॉग आउट करने से इस खाते का डेटा इस डिवाइस से हट जाता है। जो बदलाव अभी तक सर्वर पर नहीं भेजे गए हैं, वे खो जाएंगे।</string>
+    <string name="logout_unsent_message">बदलावों को खोने से बचाने के लिए लॉग आउट करने से पहले उन्हें सिंक करें।</string>
     <string name="logout_unsent_sync_incomplete">सभी बदलाव नहीं भेजे जा सके। अपना कनेक्शन जांचें और फिर से कोशिश करें, या उन्हें हटा दें।</string>
     <string name="logout_unsent_changed">इस बीच नए न भेजे गए बदलाव आ गए हैं। कृपया फिर से चुनें।</string>
     <string name="logout_discard_confirm_title">न भेजे गए बदलाव हटाएं?</string>
@@ -710,8 +710,8 @@
         <string name="list_clear_all">सभी शब्द हटाएँ</string>
     <string name="list_clear_all_title">सभी शब्द हटाएँ?</string>
     <string name="list_clear_all_body">आप «%1$s» से हर शब्द हटा देंगे। सूची बनी रहेगी।</string>
-    <string name="settings_level">स्तर</string>
-    <string name="settings_selected_tenses">चुने हुए काल</string>
+    <string name="settings_level">भाषा का स्तर</string>
+    <string name="settings_selected_tenses">काल चुनें</string>
     <string name="action_edit">संपादित करें</string>
     <string name="import_cards_count">आयातित कार्ड (%1$d)</string>
     <string name="import_flashcards_count">फ्लैशकार्ड: %1$d</string>
@@ -757,8 +757,8 @@
     <string name="settings_notifications_summary">अध्ययन अनुस्मारक और कार्ड स्थिति</string>
     <string name="settings_notif_study">अध्ययन अनुस्मारक</string>
     <string name="settings_notif_cards">कार्ड तैयार</string>
-    <string name="settings_notif_enabled">मुझे सूचनाएँ चाहिए</string>
-    <string name="settings_study_hour">अध्ययन समय</string>
+    <string name="settings_notif_enabled">सूचनाएँ चालू करें</string>
+    <string name="settings_study_hour">अनुस्मारक का समय</string>
     <string name="notif_offline_ready_title">सभी कार्ड तैयार हैं!</string>
     <string name="notif_offline_ready_body">पढ़ने का समय!</string>
     <string name="notif_import_ready_title">सभी कार्ड तैयार हैं!</string>
@@ -877,13 +877,11 @@
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 
-    <string name="settings_group_account">खाता</string>
     <string name="settings_account">आपका खाता</string>
     <string name="account_loading">खाते की जानकारी लोड हो रही है…</string>
     <string name="account_unavailable">ऑफ़लाइन होने पर खाते की जानकारी उपलब्ध नहीं है। ऑनलाइन होने पर फिर से कोशिश करें।</string>
     <string name="account_email_verified">ईमेल की पुष्टि हो गई</string>
     <string name="account_email_unverified">ईमेल की पुष्टि अभी नहीं हुई</string>
-    <string name="account_google_linked">आप Google से साइन इन करते हैं</string>
     <string name="account_change_password">पासवर्ड बदलें</string>
     <string name="account_current_password">मौजूदा पासवर्ड</string>
     <string name="account_new_password">नया पासवर्ड</string>
@@ -926,18 +924,6 @@
     <string name="err_auth_unavailable">साइन-इन अस्थायी रूप से उपलब्ध नहीं है। थोड़ी देर बाद फिर कोशिश करें।</string>
     <string name="account_password_reset_needed">आपका पासवर्ड दोबारा सेट करना होगा। हम आपके ईमेल पर एक लिंक भेजेंगे।</string>
     <string name="account_password_reset_send">रीसेट लिंक भेजें</string>
-    <string name="account_change_email">ईमेल पता बदलें</string>
-    <string name="account_new_email">नया ईमेल पता</string>
-    <string name="account_change_email_hint">हम नए पते पर पुष्टि का लिंक भेजेंगे। पुष्टि के बाद आप सभी डिवाइस पर साइन आउट हो जाएँगे और नए पते से साइन इन करेंगे।</string>
-    <string name="account_email_change_pending">बदलाव की पुष्टि के लिए %1$s पर भेजा गया लिंक खोलें। लिंक 24 घंटे तक मान्य है।</string>
-    <string name="account_email_change_send">लिंक भेजें</string>
-    <string name="account_email_change_resend">लिंक फिर से भेजें</string>
-    <string name="account_email_change_cancel">बदलाव रद्द करें</string>
-    <string name="account_email_change_sent">लिंक %1$s पर भेजा गया।</string>
-    <string name="account_email_change_resent">लिंक फिर से भेजा गया।</string>
-    <string name="account_email_change_cancelled">ईमेल बदलाव रद्द किया गया।</string>
-    <string name="account_email_change_expired">ईमेल बदलने का लिंक समाप्त हो गया है। फिर से शुरू करें।</string>
-    <string name="err_email_unchanged">यह पहले से आपका ईमेल पता है।</string>
     <string name="err_email_unavailable">यह पता उपयोग नहीं किया जा सकता। कोई दूसरा आज़माएँ।</string>
     <string name="err_recent_auth">पासवर्ड की फिर से पुष्टि करें और दोबारा कोशिश करें।</string>
     <string name="account_delete">खाता हटाएं</string>
@@ -956,12 +942,7 @@
     <string name="err_deletion_pending">यह खाता हटाने के लिए निर्धारित है। अनुरोध रद्द होने तक साइन-इन बंद है।</string>
     <string name="err_account_deleted">यह खाता हटा दिया गया है।</string>
     <string name="err_deletion_owner_mismatch">ये क्रेडेंशियल उस खाते के नहीं हैं जो इस डिवाइस पर साइन इन है।</string>
-    <string name="account_profiles_note">आपकी भाषा प्रोफ़ाइल इसी एक खाते की हैं।</string>
     <string name="account_stale_note">आखिरी बार मिली जानकारी, ऑफ़लाइन दिखाई जा रही है। सुरक्षा बदलाव और खाता हटाने के लिए कनेक्शन चाहिए।</string>
-    <string name="account_methods_title">साइन-इन के तरीके</string>
-    <string name="account_method_password_set">पासवर्ड: सेट है</string>
-    <string name="account_method_password_none">पासवर्ड: सेट नहीं है</string>
-    <string name="account_method_google_none">Google: जुड़ा नहीं है</string>
     <string name="err_google_challenge">Google साइन-इन की समय-सीमा समाप्त हो गई। कृपया फिर से कोशिश करें।</string>
     <string name="err_google_account_mismatch">यह वह Google खाता नहीं है जो यहाँ जुड़ा है। सही खाता चुनें।</string>
     <string name="err_google_already_linked">इस खाते से Google पहले से जुड़ा है।</string>
@@ -970,7 +951,6 @@
     <string name="err_google_sign_in_conflict">इस ईमेल से खाता पहले से मौजूद है। पासवर्ड से साइन इन करें, फिर सेटिंग में Google जोड़ें।</string>
     <string name="err_google_unavailable">Google सत्यापन अभी उपलब्ध नहीं है। थोड़ी देर बाद फिर कोशिश करें।</string>
     <string name="err_password_already_set">इस खाते में पहले से पासवर्ड है।</string>
-    <string name="account_google_linked_email">आप Google से साइन इन करते हैं (%1$s)</string>
     <string name="account_link_google">Google जोड़ें</string>
     <string name="account_link_google_hint">%1$s में साइन इन करने का दूसरा तरीका जोड़ने के लिए Google जोड़ता है। आपका ईमेल पता नहीं बदलेगा और खाते मर्ज नहीं होंगे। दूसरे डिवाइस साइन आउट हो जाएँगे। अपना मौजूदा पासवर्ड पुष्ट करें, फिर Google खाता चुनें।</string>
     <string name="account_link_google_done">Google जुड़ गया। दूसरे डिवाइस साइन आउट कर दिए गए।</string>
@@ -1026,7 +1006,7 @@
     <string name="legal_google_title">नया खाता</string>
     <string name="legal_google_body">इस Google खाते का अभी Vocabulario में खाता नहीं है। खाता बनाने के लिए नीचे दिए कथनों की पुष्टि करें।</string>
     <string name="legal_continue">आगे बढ़ें</string>
-    <string name="settings_legal">गोपनीयता और शर्तें</string>
+    <string name="settings_legal">जानकारी</string>
     <string name="err_terms_required">आगे बढ़ने के लिए उपयोग की शर्तें स्वीकार करें।</string>
     <string name="err_adult_required">पुष्टि करें कि आपकी उम्र कम से कम 18 वर्ष है।</string>
     <string name="err_legal_changed">शर्तें अपडेट हो गई हैं। उन्हें पढ़ें और फिर से स्वीकार करें।</string>
@@ -1047,7 +1027,7 @@
     <string name="report_discard">हटाएँ</string>
     <string name="report_rejected">यह रिपोर्ट अब नहीं भेजी जा सकती।</string>
     <string name="report_failed">रिपोर्ट नहीं भेजी जा सकी। फिर से कोशिश करें।</string>
-    <string name="support_title">सहायता और संपर्क</string>
+    <string name="support_title">मदद</string>
     <string name="support_email_label">सहायता ईमेल</string>
     <string name="support_copy">पता कॉपी करें</string>
     <string name="support_open_site">सहायता पेज खोलें</string>
@@ -1059,5 +1039,43 @@
     <string name="update_required_title">अपडेट ज़रूरी है</string>
     <string name="update_required_body">Vocabulario का यह संस्करण अब समर्थित नहीं है। जारी रखने के लिए Google Play से ऐप अपडेट करें। आपका डेटा इसी डिवाइस पर रहेगा।</string>
     <string name="update_required_action">अपडेट करें</string>
+    <string name="account_link_verify_title">अपने ईमेल पते की पुष्टि करें</string>
+    <string name="account_link_verify_intro">पुष्टि करने के लिए नीचे दिया गया बटन दबाएँ कि यह आपके Vocabulario खाते का ईमेल पता है।</string>
+    <string name="account_link_verify_button">पते की पुष्टि करें</string>
+    <string name="account_link_verify_done">हो गया! आपके ईमेल पते की पुष्टि हो गई है। अब आप ऐप पर लौट सकते हैं।</string>
+    <string name="account_link_reset_title">नया पासवर्ड सेट करें</string>
+    <string name="account_link_reset_intro">अपने Vocabulario खाते के लिए नया पासवर्ड चुनें। सेव करने के बाद आप सभी डिवाइस से साइन आउट हो जाएँगे।</string>
+    <string name="account_link_reset_button">नया पासवर्ड सेव करें</string>
+    <string name="account_link_reset_done">आपका पासवर्ड बदल दिया गया है। नए पासवर्ड से ऐप में साइन इन करें।</string>
+    <string name="account_link_missing_token">यह लिंक अधूरा है। इसे ईमेल से दोबारा खोलें या ऐप में नए लिंक का अनुरोध करें।</string>
+    <string name="account_link_invalid">यह लिंक अब मान्य नहीं है। ऐप में नए लिंक का अनुरोध करें।</string>
+    <string name="account_link_expired">इस लिंक की समय-सीमा समाप्त हो गई है। ऐप में नए लिंक का अनुरोध करें।</string>
+    <string name="account_link_used">इस लिंक का उपयोग पहले ही हो चुका है। अगर यह आपने किया था, तो बदलाव सेव हो चुका है।</string>
+    <string name="account_link_network">कनेक्ट नहीं हो सका। अपना इंटरनेट कनेक्शन जाँचें और फिर से कोशिश करें।</string>
+    <string name="account_link_rate_limited">बहुत अधिक प्रयास। थोड़ी देर रुकें और फिर से कोशिश करें।</string>
+    <string name="account_link_error">कुछ गलत हो गया। थोड़ी देर में फिर से कोशिश करें।</string>
+    <string name="settings_invalid_time">सही समय लिखें, जैसे 19:00।</string>
+    <string name="settings_notifications_on">चालू</string>
+    <string name="settings_notifications_off">बंद</string>
+    <plurals name="settings_card_content_count">
+        <item quantity="one">%1$d तत्व</item>
+        <item quantity="other">%1$d तत्व</item>
+    </plurals>
+    <string name="import_info_title">जानकारी</string>
+    <string name="import_paste_info">किसी दूसरे ऐप से निर्यात किया गया पाठ पेस्ट करें या सीखी जा रही भाषा में अपने शब्द लिखें।</string>
+    <string name="import_analysis_description">हम वर्तनी, भाषा और आपकी सूचियों में पहले से मौजूद शब्दों की जाँच कर रहे हैं।</string>
+    <string name="import_analysis_wait">इसमें थोड़ा समय लग सकता है।</string>
+    <string name="import_analysis_result">विश्लेषण का परिणाम</string>
+    <string name="import_stat_all">सभी</string>
+    <string name="import_stat_ready">तैयार</string>
+    <string name="import_stat_duplicate">डुप्लिकेट</string>
+    <string name="import_stat_check">जाँच करें</string>
+    <string name="import_stat_added">जोड़े गए</string>
+    <string name="import_stat_skipped">चयन से छोड़े गए</string>
+    <string name="import_review_select">जोड़ने के लिए शब्द चुनें</string>
+    <string name="import_copy_check">जाँच वाले शब्द कॉपी करें (%1$d)</string>
+    <string name="import_copy_done">कॉपी हुआ</string>
+    <string name="import_done">हो गया!</string>
+    <string name="import_details_error">आयात का विवरण लोड नहीं हो सका। फिर से प्रयास किया जा रहा है।</string>
 </resources>
 

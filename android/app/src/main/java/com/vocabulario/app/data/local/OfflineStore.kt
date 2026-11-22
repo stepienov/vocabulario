@@ -70,11 +70,8 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@Singleton
-class OfflineStore @Inject constructor(
-    @ApplicationContext context: Context,
-) {
-    private val db = Room.databaseBuilder(context, AppDatabase::class.java, "vocabulario.db")
+internal fun buildOfflineDatabase(context: Context, name: String): AppDatabase =
+    Room.databaseBuilder(context, AppDatabase::class.java, name)
         .addMigrations(
             AppDatabase.MIGRATION_6_7,
             AppDatabase.MIGRATION_7_8,
@@ -82,11 +79,16 @@ class OfflineStore @Inject constructor(
             AppDatabase.MIGRATION_9_10,
             AppDatabase.MIGRATION_10_11,
             AppDatabase.MIGRATION_11_12,
+            AppDatabase.MIGRATION_12_13,
         )
-        // Zachowaj dane (w tym niewysłany outbox) przy aktualizacji z v6.
-        // Twardy reset tylko dla prehistorycznych wersji, których w praktyce nie ma w terenie.
-        .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5)
         .build()
+
+@Singleton
+class OfflineStore internal constructor(
+    private val db: AppDatabase,
+) {
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(buildOfflineDatabase(context, "vocabulario.db"))
     private val cardDao = db.cachedCardDao()
     private val listDao = db.cachedListDao()
     private val reviewDao = db.pendingReviewDao()
@@ -354,10 +356,15 @@ class OfflineStore @Inject constructor(
     suspend fun ownerSnapshot(): OwnerSnapshot = db.withTransaction { ownerSnapshotLocked() }
 
     /** Decyzja loginu i zapis zamiaru instalacji w jednej transakcji; inne decyzje niczego nie zmieniają. */
-    suspend fun beginInstall(candidateUserId: String, transitionId: String): LoginDecision =
+    suspend fun beginInstall(
+        candidateUserId: String,
+        transitionId: String,
+        verifiedProfileIds: Set<String> = emptySet(),
+    ): LoginDecision =
         db.withTransaction {
             val snapshot = ownerSnapshotLocked()
-            val decision = decideLogin(snapshot, candidateUserId)
+            val localProfileIds = if (verifiedProfileIds.isNotEmpty()) ownerDao.localProfileIds().toSet() else emptySet()
+            val decision = decideLogin(snapshot, candidateUserId, localProfileIds, verifiedProfileIds)
             when (decision) {
                 LoginDecision.Claim -> {
                     deleteOwnedDataLocked()
@@ -448,17 +455,6 @@ class OfflineStore @Inject constructor(
         logoutDisposition = null,
         acceptedUnsentFingerprint = null,
     )
-
-    /** Świadome odrzucenie danych bez właściciela; inne fazy pozostają nietknięte. */
-    suspend fun discardUnclaimedData(): Boolean = db.withTransaction {
-        val snapshot = ownerSnapshotLocked()
-        val unclaimed = snapshot.phase == OwnerPhase.LEGACY_UNCLAIMED ||
-            (snapshot.ownerUserId == null && snapshot.phase != OwnerPhase.LOGGING_OUT)
-        if (!unclaimed) return@withTransaction false
-        deleteOwnedDataLocked()
-        writeOwnerLocked(snapshot, null, OwnerPhase.SIGNED_OUT, null)
-        true
-    }
 
     private suspend fun ownerSnapshotLocked(): OwnerSnapshot {
         val row = ownerDao.get() ?: SessionOwnerEntity()
@@ -584,6 +580,7 @@ class OfflineStore @Inject constructor(
                 contentReviewStatus = card.content_review_status,
                 cardActivityStatus = card.card_activity_status,
                 hasContentChanges = card.has_content_changes,
+                createdAt = card.created_at.ifBlank { existing?.createdAt },
                 status = card.srs_status?.takeIf { it.isNotBlank() } ?: existing?.status ?: "new",
                 nextReviewAt = card.srs_next_review_at?.toEpochMillis() ?: existing?.nextReviewAt,
                 lastReviewedAt = card.srs_last_reviewed_at?.toEpochMillis() ?: existing?.lastReviewedAt,
@@ -1590,6 +1587,7 @@ class OfflineStore @Inject constructor(
                 contentReviewStatus = card.content_review_status,
                 cardActivityStatus = card.card_activity_status,
                 hasContentChanges = card.has_content_changes,
+                createdAt = card.created_at.ifBlank { existing?.createdAt },
                 status = card.srs_status?.takeIf { it.isNotBlank() } ?: existing?.status ?: "",
                 nextReviewAt = card.srs_next_review_at?.toEpochMillis() ?: existing?.nextReviewAt,
                 lastReviewedAt = card.srs_last_reviewed_at?.toEpochMillis() ?: existing?.lastReviewedAt,
@@ -1624,6 +1622,7 @@ class OfflineStore @Inject constructor(
             contentReviewStatus = content_review_status,
             cardActivityStatus = card_activity_status,
             hasContentChanges = has_content_changes,
+            createdAt = created_at,
             status = srs?.status?.takeIf { it.isNotBlank() } ?: "",
             nextReviewAt = srs?.next_review_at?.toEpochMillis(),
             lastReviewedAt = srs?.last_reviewed_at?.toEpochMillis(),
@@ -1677,7 +1676,7 @@ class OfflineStore @Inject constructor(
         gloss_primary = glossPrimary,
         content = parseContent(contentJson),
         lexical_entry_id = null,
-        created_at = "",
+        created_at = createdAt.orEmpty(),
         enrichment_status = enrichmentStatus,
         content_review_status = contentReviewStatus,
         card_activity_status = cardActivityStatus,

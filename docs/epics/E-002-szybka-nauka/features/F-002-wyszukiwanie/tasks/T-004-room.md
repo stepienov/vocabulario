@@ -195,7 +195,7 @@ Testy (`./gradlew testDebugUnitTest`):
   - `showMore` z nowym hasłem: stare kafelki zostają, nowe dochodzą.
 - `CandidateMatchesCardTest` zaktualizowany do nowej reguły.
 
-Telefon z serwerem po taskach 04–06, konto `nowy4@test.com`:
+Telefon z serwerem po taskach 04–06, konto kontrolne:
 
 - `prado`, karty pobrane: jedno `POST /lookup/cached` w logu HTTP Railway z tego urządzenia, zero `lookup/expand`, zero `GET /cards/{id}` z powodu kafelków bez kart. Kafelek przy karcie ma ikonę i nazwę listy, inne mają przycisk dodania. Pod listą „Pokaż więcej propozycji”.
 - Świeża instalacja przed pierwszą synchronizacją: kafelki od razu, po prawej kółko bez „Tworzę kartę…”, bez `GET /cards/{id}`. Po synchronizacji ikona albo przycisk, bez drugiego szukania.

@@ -103,7 +103,6 @@ class RevocationStore @Inject constructor(
     private val _summary = MutableStateFlow(RevocationSummary())
     val summary: StateFlow<RevocationSummary> = _summary.asStateFlow()
 
-    /** Odczyt z purge sekretów starszych niż 30 dni. */
     fun load(): RevocationQueue = synchronized(lock) { queueLocked() }
 
     fun reserve(activeSession: Boolean): RevocationReservation = synchronized(lock) {
@@ -172,13 +171,10 @@ class RevocationStore @Inject constructor(
     }
 
     private fun queueLocked(): RevocationQueue {
-        val base = cached ?: persistence.read()
-        val purged = base.purgeExpired(clock.nowMs())
-        // Wygasły sekret znika z pamięci od razu; nieudany zapis na dysk nadpisze najbliższa zmiana kolejki.
-        if (purged != base) runCatching { persistence.write(purged) }
-        cached = purged
-        _summary.value = purged.summary()
-        return purged
+        val queue = cached ?: persistence.read()
+        cached = queue
+        _summary.value = queue.summary()
+        return queue
     }
 
     private fun writeLocked(queue: RevocationQueue) {

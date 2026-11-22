@@ -68,7 +68,6 @@ def test_unknown_environment_is_an_error():
         ({"jwt_secret": "short-secret"}, "jwt_secret"),
         ({"jwt_algorithm": "HS512"}, "jwt_algorithm"),
         ({"access_token_expire_minutes": 0}, "token_expiry"),
-        ({"refresh_token_expire_days": 0}, "token_expiry"),
         ({"auth_refresh_retry_key": ""}, "auth_refresh_retry_key"),
         ({"auth_refresh_retry_key": "not-a-fernet-key"}, "auth_refresh_retry_key"),
         ({"jwt_secret": RETRY_KEY}, "auth_refresh_retry_key"),

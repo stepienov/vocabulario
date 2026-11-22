@@ -1310,14 +1310,14 @@ class LLMService:
         prompt = IMPORT_CLASSIFY_PROMPT_V1.format(
             native_name=lang_name_en(native),
             learning_name=lang_name_en(learning),
-            notes_json=json.dumps(compact, ensure_ascii=False, indent=2),
+            notes_json=json.dumps(compact, ensure_ascii=False),
         )
         _log_import_llm(
-            f"IMPORT CLASSIFY → PROMPT (model={self.lookup_model}, n={len(notes)})",
+            f"IMPORT CLASSIFY → PROMPT (model={LOOKUP_DRAFT_MODEL}, n={len(notes)})",
             f"--- SYSTEM ---\n{IMPORT_CLASSIFY_SYSTEM_V1}\n\n--- USER ---\n{prompt}",
         )
         result = await self._chat_json(
-            self.lookup_model,
+            LOOKUP_DRAFT_MODEL,
             prompt,
             system=IMPORT_CLASSIFY_SYSTEM_V1,
             json_schema=import_classify_schema(),

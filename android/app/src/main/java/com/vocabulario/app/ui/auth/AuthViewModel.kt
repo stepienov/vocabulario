@@ -202,25 +202,6 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun askDiscardConfirmation() {
-        _logoutPrompt.value = _logoutPrompt.value?.copy(confirmDiscard = true)
-    }
-
-    /** Odrzuca tylko snapshot z ostrzeżenia; nowa praca wymaga ponownej decyzji. */
-    fun discardAndLogout(onDone: suspend () -> Unit) {
-        val prompt = _logoutPrompt.value ?: return
-        viewModelScope.launch {
-            blockingBusy.run {
-                _logoutPrompt.value = null
-                attemptLogout(
-                    LogoutConsent.DiscardConfirmed(prompt.fingerprint),
-                    LogoutPromptReason.CHANGED,
-                    onDone,
-                )
-            }
-        }
-    }
-
     fun cancelLogout() {
         _logoutPrompt.value = null
     }
@@ -235,7 +216,7 @@ class AuthViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: UnsentChangesException) {
-            _logoutPrompt.value = LogoutPrompt(e.unsentCount, e.fingerprint, reasonIfUnsent)
+            _logoutPrompt.value = LogoutPrompt(e.unsentCount, reasonIfUnsent)
             return
         } catch (_: Exception) {
             // Nieudany trwały zapis wylogowania nie może udawać sukcesu.
@@ -266,45 +247,6 @@ class AuthViewModel @Inject constructor(
 
     fun dismissUnclaimedData() {
         _unclaimedData.value = null
-    }
-
-    fun discardUnclaimedData() {
-        viewModelScope.launch {
-            blockingBusy.run {
-                val discarded = try {
-                    authRepository.discardUnclaimedLocalData()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    false
-                }
-                _unclaimedData.value = null
-                noticeRefresh.value++
-                _errorMessage.value = strings.get(
-                    if (discarded) R.string.legacy_data_discarded else R.string.legacy_data_discard_failed,
-                )
-            }
-        }
-    }
-
-    /** Jawne wyjście z sesji wymagającej reauth/odzyskania: usuwa pokazane w ostrzeżeniu dane. */
-    fun signOutOnDevice(acceptedFingerprint: String) {
-        viewModelScope.launch {
-            blockingBusy.run {
-                val message = try {
-                    logoutAndTrack(LogoutConsent.DiscardConfirmed(acceptedFingerprint))
-                    R.string.auth_signed_out_device
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: UnsentChangesException) {
-                    R.string.logout_unsent_changed
-                } catch (_: Exception) {
-                    R.string.auth_sign_out_device_failed
-                }
-                noticeRefresh.value++
-                _errorMessage.value = strings.get(message)
-            }
-        }
     }
 
     fun retrySessionRecovery(onRecovered: suspend (needsOnboarding: Boolean) -> Unit) {
@@ -500,15 +442,11 @@ enum class LogoutPromptReason {
     /** Po synchronizacji nadal zostały niewysłane zmiany (brak sieci, błąd, zmiany do decyzji). */
     SYNC_INCOMPLETE,
 
-    /** Od potwierdzenia pojawiła się nowa praca; zgoda jej nie obejmowała. */
-    CHANGED,
 }
 
 data class LogoutPrompt(
     val unsentCount: Int,
-    val fingerprint: String,
     val reason: LogoutPromptReason,
-    val confirmDiscard: Boolean = false,
 )
 
 data class ForgotPasswordState(

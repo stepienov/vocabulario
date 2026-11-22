@@ -29,7 +29,6 @@ enum class SettingsSection {
     DIRECTION,
     CARD_LAYOUT,
     LIMITS,
-    THEME,
     LANGUAGES,
     CEFR,
     NOTIFICATIONS,

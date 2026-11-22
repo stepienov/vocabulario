@@ -87,7 +87,7 @@ def format_error_lemmas(items: list[ImportJobItem]) -> str:
     """Schowek: `lemat1; lemat2; lemat3`."""
     parts: list[str] = []
     for it in sorted(items, key=lambda x: x.ordinal):
-        if it.verdict != "failed":
+        if it.verdict != "failed" or it.reason_code == "deselected":
             continue
         label = (it.lemma or it.input_label or "").strip()
         if label:
@@ -142,7 +142,7 @@ async def _touch(
 async def _refresh_counts(job: ImportJob, items: list[ImportJobItem]) -> None:
     job.ready_count = sum(1 for i in items if i.verdict == "ready")
     job.duplicate_count = sum(1 for i in items if i.verdict == "duplicate")
-    job.failed_count = sum(1 for i in items if i.verdict == "failed")
+    job.failed_count = sum(1 for i in items if i.verdict == "failed" and i.reason_code != "deselected")
 
 
 async def find_active_job(
@@ -169,6 +169,7 @@ async def create_job_from_text(
     text: str,
     mode: str,
 ) -> ImportJob:
+    text = text.replace("\x00", "")
     mode_n = "vocabulario"
     url = detect_import_url(text)
     source_kind = "url" if url else "paste"
@@ -546,7 +547,7 @@ async def request_commit(db: AsyncSession, job: ImportJob, item_ids: list[UUID] 
         raise ImportDailyLimitError(used, remaining=remaining)
     for i in items:
         if i.verdict == "ready" and i not in ready:
-            i.verdict = "failed"
+            i.verdict = "skipped"
             i.reason_code = "deselected"
             i.verdict_phase = "commit"
     await _touch(

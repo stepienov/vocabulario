@@ -34,6 +34,8 @@ def test_limits_constants():
 async def test_analyze_import_classify_params(monkeypatch):
     from unittest.mock import AsyncMock, MagicMock
 
+    from app.ai.prompts.v1 import LOOKUP_DRAFT_MODEL
+    from app.ai.schemas.import_classify import import_classify_schema
     from app.services.llm import LLMService
 
     svc = LLMService()
@@ -50,12 +52,18 @@ async def test_analyze_import_classify_params(monkeypatch):
         return SimpleNamespace(choices=[choice], usage=None)
 
     svc.client.chat.completions.create = AsyncMock(side_effect=fake_create)
-    await svc.analyze_import_classify(native="pl", learning="es", notes=[["casa"]])
+    await svc.analyze_import_classify(native="pl", learning="es", notes=[["cerrada"], ["casa"]])
     assert len(captured) == 1
-    assert captured[0]["model"] == "gpt-5.6-terra"
+    assert captured[0]["model"] == LOOKUP_DRAFT_MODEL
     assert captured[0]["reasoning_effort"] == "none"
     assert captured[0]["max_completion_tokens"] == 2500
     assert "temperature" not in captured[0]
+    assert captured[0]["response_format"]["json_schema"]["schema"] == import_classify_schema()["schema"]
+    prompt = captured[0]["messages"][1]["content"]
+    assert "adjective masculine singular" in prompt
+    assert "Do not copy inflection" in prompt
+    assert "Keep full phrases and constructions" in prompt
+    assert '[["cerrada"], ["casa"]]' in prompt
 
 
 def test_import_errors_carry_codes():
@@ -64,6 +72,43 @@ def test_import_errors_carry_codes():
     assert str(ImportDailyLimitError(20, remaining=5)) == "import_quota_exceeded"
     assert ImportDailyLimitError(20, remaining=5).remaining == 5
     assert ImportTooManyError(26).count == 26
+
+
+@pytest.mark.pg
+async def test_import_nul_and_unselected_items_are_not_errors(pg, monkeypatch):
+    from sqlalchemy import select
+
+    from app.models import ImportJobItem
+    from app.services import import_jobs
+    from tests.pg_factories import create_list, create_profile, create_user
+
+    monkeypatch.setattr(import_jobs, "spawn_job", lambda _id: None)
+    async with pg() as session:
+        user = await create_user(session)
+        profile = await create_profile(session, user, "pl", "es")
+        word_list = await create_list(session, profile, "Import")
+        job = await import_jobs.create_job_from_text(
+            session, user=user, profile=profile, word_list=word_list,
+            text="casa\x00\nperro", mode="vocabulario",
+        )
+        assert "\x00" not in job.input_meta["raw_text"]
+        items = (await session.execute(
+            select(ImportJobItem).where(ImportJobItem.job_id == job.id).order_by(ImportJobItem.ordinal)
+        )).scalars().all()
+        for item in items:
+            item.verdict = "ready"
+        items.append(ImportJobItem(job_id=job.id, ordinal=2, verdict="failed", input_label="???"))
+        session.add(items[-1])
+        job.status = "review"
+        await session.flush()
+        await import_jobs.request_commit(session, job, [items[0].id])
+        await import_jobs._refresh_counts(job, items)
+        assert [item.verdict for item in items] == ["ready", "skipped", "failed"]
+        assert job.failed_count == 1
+        assert import_jobs.format_error_lemmas(items) == "???"
+        items[1].verdict = "failed"
+        await import_jobs._refresh_counts(job, items)
+        assert job.failed_count == 1
 
 
 @pytest.mark.asyncio

@@ -5,6 +5,15 @@
 
 ## Postęp
 
+### Zmiana polityki sesji i ochrony danych (21.11.2026)
+
+- Z ekranu logowania usunięto przycisk „Wyloguj na tym urządzeniu”. Nie zastępuje go przycisk usuwania danych. Komunikat reauth nie zakłada, że przyczyną był upływ czasu.
+- Dane starej instalacji z pustymi kolejkami można zachować przy logowaniu, gdy wszystkie identyfikatory lokalnych profili potwierdzi serwer dla logowanego konta. Przy braku potwierdzenia logowanie pozostaje zablokowane, bez usuwania danych; odzyskanie pozostałych przypadków nie jest jeszcze rozwiązane.
+- Przy wylogowaniu z niewysłaną pracą dostępna jest synchronizacja albo anulowanie; nie ma przycisku odrzucenia zmian. Bez udanej synchronizacji wylogowanie nie nastąpi.
+- Ponieważ sesje nie wygasają automatycznie, oczekujące zlecenie wylogowania przechowuje zaszyfrowany dowód do potwierdzenia przez serwer, również po 30 dniach offline. Jest on usuwany po potwierdzeniu albo definitywnym odrzuceniu; brak potwierdzenia nie oznacza, że sesja na serwerze wygasła. Zlecenia, których dowód starszy klient już usunął, nie da się automatycznie odzyskać.
+
+Starsze opisy i wyniki testów poniżej dokumentują poprzednie zachowanie, zastąpione powyższą zmianą.
+
 ### Krok 1 · Zaszyfrowany rekord sesji i wspólny refresh (18.11.2026)
 
 Pakiet [`data/session`](../../../../../../android/app/src/main/java/com/vocabulario/app/data/session/):

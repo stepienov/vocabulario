@@ -3,6 +3,18 @@
 **ID:** `E-001/F-003/T-001` · **Status:** `in_progress` · **Priorytet / rozmiar:** P0 / L.  
 **Feature:** [Sesja i offline](../README.md). **Źródło:** B-02; F-06/F-16 w [analizie](../../../sources/analiza-2026-11-17.md).
 
+## Zmiana polityki sesji (21.11.2026)
+
+Sesja nie wygasa wskutek upływu czasu ani nieaktywności. Access token pozostaje krótkotrwały; refresh jest rotowany, ale bez daty wygaśnięcia. Wylogowanie, reset hasła i inne istniejące operacje bezpieczeństwa nadal odwołują odpowiednie sesje.
+
+Migracja usuwa datę końca tylko sesjom, które w chwili migracji są aktywne i jeszcze nie wygasły. Stary podpisany refresh zachowuje zgodność po upływie swojego dawnego `exp` tylko dla takiej sesji i po sprawdzeniu jej aktualnego hasha oraz wersji. Już odwołane lub wygasłe przed migracją sesje nie są wskrzeszane; klient, który usunął tokeny, wymaga ponownego loginu.
+
+Utracona odpowiedź refresh może być odzyskana tym samym `request_id` także po długim okresie offline, dopóki jej refresh pozostaje aktualny; po wygaśnięciu access serwer wydaje nowy access do tej samej pary. Zaszyfrowany wynik ostatniej rotacji musi więc pozostać dostępny do następnej rotacji lub odwołania sesji; klucz `AUTH_REFRESH_RETRY_KEY` musi przetrwać restart. Próba ponownego użycia poprzedniego tokena z innym ID nadal podlega ochronie przed replay.
+
+**Wdrożenie wymaga osobnego planu:** stare procesy backendu nie obsługują `expires_at = NULL` ani nowych refresh tokenów bez `exp`. Nie uruchamiać starych i nowych replik równolegle; zwykły rollback kodu po migracji nie jest zgodny. Stary Android usuwa dowód oczekującego logout po 30 dniach, więc przed włączeniem bezterminowych sesji trzeba udostępnić poprawiony Android i zaplanować ograniczenie użycia starszych wersji. Przed wdrożeniem ustalić przerwę, backup i sposób bezpiecznego wycofania. Żadnej zmiany produkcyjnej nie wykonano.
+
+Poniższy projekt i historyczne dowody dla 30-dniowego refresh opisują poprzednią politykę, zastąpioną tą sekcją.
+
 ## Cel i zakres
 
 Wprowadzić serwerowy cykl życia sesji: bezpieczne przechowywanie sekretów refresh, rotacja, odwołanie bieżącej/wszystkich sesji i jednoznaczne zachowanie access tokenów. Uzgodnić retry i równoległy refresh przed wyborem mechanizmu. Startup produkcji odrzuca niebezpieczną konfigurację, zamiast osłabiać auth.

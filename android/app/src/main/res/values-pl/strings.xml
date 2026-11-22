@@ -127,15 +127,15 @@
 
     <string name="settings_theme">Motyw</string>
 
-    <string name="settings_mode">Tryb nauki</string>
+    <string name="settings_mode">Sposób nauki</string>
 
-    <string name="settings_group_study">DOSTOSUJ NAUKĘ</string>
+    <string name="settings_group_study">NAUKA</string>
 
-    <string name="settings_group_general">OGÓLNE</string>
+    <string name="settings_group_general">APLIKACJA</string>
 
     <string name="settings_mode_choice">Quiz</string>
 
-    <string name="settings_mode_type">Wpisz słowo</string>
+    <string name="settings_mode_type">Wpisz odpowiedź</string>
 
     <string name="settings_mode_flash">Fiszki</string>
 
@@ -145,7 +145,7 @@
 
     <string name="settings_tolerate_typos_sub">Literówki i diakrytyki</string>
 
-    <string name="settings_direction">Kierunek nauki</string>
+    <string name="settings_direction">Co pokazujemy najpierw?</string>
 
     <string name="settings_direction_first">Najpierw %1$s</string>
 
@@ -153,25 +153,25 @@
 
     <string name="settings_direction_sub">Co pokazywać najpierw: %1$s</string>
 
-    <string name="settings_card_layout">Układ karty</string>
+    <string name="settings_card_layout">Co widać na fiszce</string>
 
     <string name="settings_card_layout_sub">Dostosuj zawartość fiszki</string>
 
-    <string name="settings_examples">Zdania</string>
+    <string name="settings_examples">Przykładowe zdania</string>
 
-    <string name="settings_usages">Zwroty</string>
+    <string name="settings_usages">Zwroty i użycie</string>
 
     <string name="settings_periphrases">Peryfrazy</string>
 
-    <string name="settings_syn_ant">Wokół słowa</string>
+    <string name="settings_syn_ant">Synonimy i antonimy</string>
     <string name="settings_word_family">Wyrazy pokrewne</string>
     <string name="settings_associations">Skojarzenia</string>
 
-    <string name="settings_conjugation">Koniugacja</string>
+    <string name="settings_conjugation">Odmiana czasownika</string>
 
     <string name="settings_all_tenses">Wszystkie czasy</string>
 
-    <string name="settings_limits">Limity</string>
+    <string name="settings_limits">Nowe słowa dziennie</string>
 
     <string name="settings_new_limit">Dzienny limit nowych słówek</string>
 
@@ -357,7 +357,7 @@
     <string name="import_result_body_failed">Dodano %1$d, duplikaty %2$d, błędy %3$d</string>
     <string name="import_review_flagged">Zwroty i konstrukcje</string>
     <string name="action_show_list">Pokaż listę</string>
-    <string name="import_paste_source">Wklejka</string>
+    <string name="import_paste_source">Wklejony tekst</string>
     <string name="import_interrupted">Import przerwany — spróbuj ponownie</string>
     <string name="import_review_ready">Do zaimportowania</string>
     <string name="import_new_list_option">+ Nowa lista</string>
@@ -375,7 +375,7 @@
     <string name="import_reason_unknown">Tego hasła nie da się teraz zaimportować.</string>
     <string name="import_ready_hint">Te hasła wejdą na listę.</string>
     <string name="import_review_loading">Wczytywanie haseł…</string>
-    <string name="import_errors_hint">Te hasła nie wejdą na listę.</string>
+    <string name="import_errors_hint">Tych haseł nie dodamy. Sprawdź pisownię lub język.</string>
     <string name="import_item_untitled">Nieznane hasło</string>
     <string name="import_reason_write_failed">Nie udało się zapisać tego hasła (po 3 próbach).</string>
     <string name="import_cancelled">Przerwano. Nic nie zostało dodane.</string>
@@ -669,14 +669,14 @@
     <string name="err_session_ended">Sesja wygasła. Zaloguj się ponownie.</string>
     <string name="err_login_other_account">Na tym urządzeniu są dane innego konta. Zaloguj się na to konto, aby kontynuować.</string>
     <string name="legacy_data_title">Nieprzypisane dane na urządzeniu</string>
-    <string name="legacy_data_message">Na tym urządzeniu są dane z wcześniejszej wersji aplikacji, których nie można przypisać do konta. Niewysłane zmiany: %1$d. Aby się zalogować, usuń te dane. To, co zostało już zsynchronizowane, pobierze się ponownie po zalogowaniu.</string>
+    <string name="legacy_data_message">Na tym urządzeniu są dane z wcześniejszej wersji aplikacji, których nie można przypisać do konta. Niewysłane zmiany: %1$d. Dane pozostają zachowane. Skontaktuj się z pomocą, aby uzyskać pomoc z logowaniem.</string>
     <string name="legacy_data_discard">Usuń dane lokalne</string>
     <string name="legacy_data_discard_confirm_title">Usunąć na stałe?</string>
     <string name="legacy_data_discard_confirm">Niewysłane zmiany (%1$d) zostaną utracone bez możliwości odzyskania.</string>
     <string name="legacy_data_discarded">Dane lokalne usunięte. Zaloguj się ponownie.</string>
     <string name="legacy_data_discard_failed">Nie udało się usunąć danych lokalnych. Spróbuj ponownie.</string>
     <string name="auth_notice_reauth_title">Zaloguj się ponownie</string>
-    <string name="auth_notice_reauth">Sesja wygasła. Zaloguj się na to samo konto, aby kontynuować. Dane na tym urządzeniu zostają zachowane.</string>
+    <string name="auth_notice_reauth">Zaloguj się na to samo konto, aby kontynuować. Dane na tym urządzeniu zostają zachowane.</string>
     <string name="auth_notice_recovery_title">Nie udało się przywrócić sesji</string>
     <string name="auth_notice_recovery">Nie można odczytać zapisanego logowania na tym urządzeniu. Spróbuj ponownie albo zaloguj się na to samo konto. Dane na tym urządzeniu zostają zachowane.</string>
     <string name="auth_notice_local_data_title">Dane Twojego konta</string>
@@ -691,11 +691,11 @@
     <string name="loading_slow_title">Trwa to dłużej niż zwykle</string>
     <string name="loading_slow_message">Aplikacja wciąż się uruchamia. Sprawdź połączenie lub spróbuj ponownie.</string>
     <string name="auth_revocation_pending">Wylogowano na tym urządzeniu. Serwer potwierdzi wylogowanie, gdy będziesz online.</string>
-    <string name="auth_revocation_unconfirmed">Sesje bez potwierdzenia serwera: %1$d. Nie są już używane na tym urządzeniu i wygasną automatycznie w ciągu 30 dni.</string>
+    <string name="auth_revocation_unconfirmed">Sesje bez potwierdzenia serwera: %1$d. Nie są już używane na tym urządzeniu, ale mogą nadal być aktywne na serwerze.</string>
     <string name="auth_revocation_confirmed">Wylogowano także na serwerze.</string>
     <string name="auth_revocation_queue_full">Zbyt wiele wylogowań czeka na serwer. Połącz się z internetem, odczekaj chwilę i spróbuj ponownie.</string>
     <string name="logout_unsent_title">Niewysłane zmiany</string>
-    <string name="logout_unsent_message">Wylogowanie usuwa dane tego konta z urządzenia. Zmiany, których serwer jeszcze nie ma, zostaną utracone.</string>
+    <string name="logout_unsent_message">Zsynchronizuj zmiany przed wylogowaniem, aby ich nie utracić.</string>
     <string name="logout_unsent_sync_incomplete">Nie udało się wysłać wszystkich zmian. Sprawdź połączenie i spróbuj ponownie albo je odrzuć.</string>
     <string name="logout_unsent_changed">W międzyczasie pojawiły się nowe niewysłane zmiany. Zdecyduj ponownie.</string>
     <string name="logout_discard_confirm_title">Odrzucić niewysłane zmiany?</string>
@@ -748,9 +748,9 @@
 
     <string name="list_clear_all_body">Usuniesz wszystkie słowa z listy „%1$s”. Sama lista zostanie.</string>
 
-    <string name="settings_level">Poziom</string>
+    <string name="settings_level">Poziom języka</string>
 
-    <string name="settings_selected_tenses">Wybrane czasy</string>
+    <string name="settings_selected_tenses">Wybierz czasy</string>
 
     <string name="action_edit">Edytuj</string>
 
@@ -861,8 +861,8 @@
     <string name="settings_notifications_summary">Przypomnienia o nauce i status kart</string>
     <string name="settings_notif_study">Przypomnienia o nauce</string>
     <string name="settings_notif_cards">Karty gotowe</string>
-    <string name="settings_notif_enabled">Chcę powiadomienia</string>
-    <string name="settings_study_hour">Godzina nauki</string>
+    <string name="settings_notif_enabled">Włącz powiadomienia</string>
+    <string name="settings_study_hour">Godzina przypomnienia</string>
     <string name="notif_offline_ready_title">Wszystkie karty gotowe!</string>
     <string name="notif_offline_ready_body">Pora na naukę!</string>
     <string name="notif_import_ready_title">Wszystkie karty gotowe!</string>
@@ -899,13 +899,11 @@
     <string name="err_no_inbox">Nie udało się otworzyć listy oczekujących</string>
     <string name="err_email_taken">Ten e-mail jest już zarejestrowany</string>
 
-    <string name="settings_group_account">KONTO</string>
     <string name="settings_account">Konto</string>
     <string name="account_loading">Wczytywanie danych konta…</string>
     <string name="account_unavailable">Dane konta nie są dostępne offline. Spróbuj ponownie, gdy będziesz online.</string>
     <string name="account_email_verified">Adres e-mail potwierdzony</string>
     <string name="account_email_unverified">Adres e-mail jeszcze niepotwierdzony</string>
-    <string name="account_google_linked">Logujesz się przez Google</string>
     <string name="account_change_password">Zmień hasło</string>
     <string name="account_current_password">Obecne hasło</string>
     <string name="account_new_password">Nowe hasło</string>
@@ -948,18 +946,6 @@
     <string name="err_auth_unavailable">Logowanie jest chwilowo niedostępne. Spróbuj za moment.</string>
     <string name="account_password_reset_needed">Hasło trzeba ustawić na nowo. Wyślemy link na Twój adres e-mail.</string>
     <string name="account_password_reset_send">Wyślij link do resetu</string>
-    <string name="account_change_email">Zmień adres e-mail</string>
-    <string name="account_new_email">Nowy adres e-mail</string>
-    <string name="account_change_email_hint">Wyślemy link potwierdzający na nowy adres. Po potwierdzeniu zostaniesz wylogowany na wszystkich urządzeniach i zalogujesz się nowym adresem.</string>
-    <string name="account_email_change_pending">Otwórz link wysłany na %1$s, aby potwierdzić zmianę. Link jest ważny 24 godziny.</string>
-    <string name="account_email_change_send">Wyślij link</string>
-    <string name="account_email_change_resend">Wyślij link ponownie</string>
-    <string name="account_email_change_cancel">Anuluj zmianę</string>
-    <string name="account_email_change_sent">Link wysłany na %1$s.</string>
-    <string name="account_email_change_resent">Link wysłany ponownie.</string>
-    <string name="account_email_change_cancelled">Zmiana adresu e-mail anulowana.</string>
-    <string name="account_email_change_expired">Link do zmiany adresu e-mail wygasł. Zacznij od nowa.</string>
-    <string name="err_email_unchanged">To już jest Twój adres e-mail.</string>
     <string name="err_email_unavailable">Tego adresu nie można użyć. Wpisz inny.</string>
     <string name="err_recent_auth">Potwierdź hasło jeszcze raz i spróbuj ponownie.</string>
     <string name="account_delete">Usuń konto</string>
@@ -978,12 +964,7 @@
     <string name="err_deletion_pending">To konto czeka na usunięcie. Logowanie jest zablokowane, dopóki wniosek nie zostanie cofnięty.</string>
     <string name="err_account_deleted">To konto zostało usunięte.</string>
     <string name="err_deletion_owner_mismatch">Te dane logowania należą do innego konta niż to, które jest zalogowane na tym urządzeniu.</string>
-    <string name="account_profiles_note">Twoje profile językowe należą do tego jednego konta.</string>
     <string name="account_stale_note">Ostatnio pobrane dane, widoczne offline. Zmiany bezpieczeństwa i usunięcie konta wymagają połączenia.</string>
-    <string name="account_methods_title">Metody logowania</string>
-    <string name="account_method_password_set">Hasło: ustawione</string>
-    <string name="account_method_password_none">Hasło: nieustawione</string>
-    <string name="account_method_google_none">Google: niepodłączone</string>
     <string name="err_google_challenge">Logowanie przez Google wygasło. Spróbuj ponownie.</string>
     <string name="err_google_account_mismatch">To nie jest konto Google powiązane z tym kontem. Wybierz właściwe.</string>
     <string name="err_google_already_linked">Google jest już połączone z tym kontem.</string>
@@ -992,7 +973,6 @@
     <string name="err_google_sign_in_conflict">Konto z tym adresem e-mail już istnieje. Zaloguj się hasłem, a potem połącz Google w Ustawieniach.</string>
     <string name="err_google_unavailable">Weryfikacja Google jest chwilowo niedostępna. Spróbuj za chwilę.</string>
     <string name="err_password_already_set">To konto ma już hasło.</string>
-    <string name="account_google_linked_email">Logujesz się przez Google (%1$s)</string>
     <string name="account_link_google">Połącz z Google</string>
     <string name="account_link_google_hint">Dodaje Google jako drugi sposób logowania do konta %1$s. Adres e-mail się nie zmienia, a konta nie są scalane. Pozostałe urządzenia zostaną wylogowane. Potwierdź obecne hasło, a potem wybierz konto Google.</string>
     <string name="account_link_google_done">Google połączone. Pozostałe urządzenia zostały wylogowane.</string>
@@ -1048,7 +1028,7 @@
     <string name="legal_google_title">Nowe konto</string>
     <string name="legal_google_body">To konto Google nie ma jeszcze konta w Vocabulario. Aby je założyć, potwierdź poniższe oświadczenia.</string>
     <string name="legal_continue">Kontynuuj</string>
-    <string name="settings_legal">Prywatność i warunki</string>
+    <string name="settings_legal">Informacje</string>
     <string name="err_terms_required">Zaakceptuj Warunki korzystania, aby kontynuować.</string>
     <string name="err_adult_required">Potwierdź, że masz co najmniej 18 lat.</string>
     <string name="err_legal_changed">Warunki zostały zaktualizowane. Przeczytaj je i zaakceptuj ponownie.</string>
@@ -1069,7 +1049,7 @@
     <string name="report_discard">Odrzuć</string>
     <string name="report_rejected">Tego zgłoszenia nie można już wysłać.</string>
     <string name="report_failed">Nie udało się wysłać zgłoszenia. Spróbuj ponownie.</string>
-    <string name="support_title">Pomoc i kontakt</string>
+    <string name="support_title">Pomoc</string>
     <string name="support_email_label">Adres e-mail wsparcia</string>
     <string name="support_copy">Skopiuj adres</string>
     <string name="support_open_site">Otwórz stronę wsparcia</string>
@@ -1081,5 +1061,45 @@
     <string name="update_required_title">Wymagana aktualizacja</string>
     <string name="update_required_body">Ta wersja Vocabulario nie jest już obsługiwana. Zaktualizuj aplikację w Google Play, aby kontynuować. Twoje dane zostają na tym urządzeniu.</string>
     <string name="update_required_action">Zaktualizuj</string>
+    <string name="account_link_verify_title">Potwierdź adres e-mail</string>
+    <string name="account_link_verify_intro">Naciśnij przycisk poniżej, aby potwierdzić, że to adres e-mail Twojego konta w Vocabulario.</string>
+    <string name="account_link_verify_button">Potwierdź adres</string>
+    <string name="account_link_verify_done">Gotowe! Twój adres e-mail jest potwierdzony. Możesz wrócić do aplikacji.</string>
+    <string name="account_link_reset_title">Ustaw nowe hasło</string>
+    <string name="account_link_reset_intro">Wybierz nowe hasło do konta w Vocabulario. Po zapisaniu zostaniesz wylogowany na wszystkich urządzeniach.</string>
+    <string name="account_link_reset_button">Zapisz nowe hasło</string>
+    <string name="account_link_reset_done">Hasło zostało zmienione. Zaloguj się w aplikacji nowym hasłem.</string>
+    <string name="account_link_missing_token">Ten link jest niepełny. Otwórz go ponownie z maila albo poproś o nowy w aplikacji.</string>
+    <string name="account_link_invalid">Ten link jest już nieważny. Poproś o nowy w aplikacji.</string>
+    <string name="account_link_expired">Ten link wygasł. Poproś o nowy w aplikacji.</string>
+    <string name="account_link_used">Ten link został już użyty. Jeśli to Ty, zmiana jest już zapisana.</string>
+    <string name="account_link_network">Nie udało się połączyć. Sprawdź połączenie z internetem i spróbuj ponownie.</string>
+    <string name="account_link_rate_limited">Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.</string>
+    <string name="account_link_error">Coś poszło nie tak. Spróbuj ponownie za chwilę.</string>
+    <string name="settings_invalid_time">Wpisz poprawną godzinę, np. 19:00.</string>
+    <string name="settings_notifications_on">Włączone</string>
+    <string name="settings_notifications_off">Wyłączone</string>
+    <plurals name="settings_card_content_count">
+        <item quantity="one">%1$d element</item>
+        <item quantity="few">%1$d elementy</item>
+        <item quantity="many">%1$d elementów</item>
+        <item quantity="other">%1$d elementu</item>
+    </plurals>
+    <string name="import_info_title">Info</string>
+    <string name="import_paste_info">Wklej tekst wyeksportowany z innej aplikacji albo wpisz własne hasła w języku, którego się uczysz.</string>
+    <string name="import_analysis_description">Sprawdzamy pisownię, język i hasła, które są już na Twoich listach.</string>
+    <string name="import_analysis_wait">Może to potrwać chwilę.</string>
+    <string name="import_analysis_result">Wynik analizy</string>
+    <string name="import_stat_all">Wszystkie</string>
+    <string name="import_stat_ready">Gotowe</string>
+    <string name="import_stat_duplicate">Duplikaty</string>
+    <string name="import_stat_check">Do sprawdzenia</string>
+    <string name="import_stat_added">Dodane</string>
+    <string name="import_stat_skipped">Pominięte z wyboru</string>
+    <string name="import_review_select">Wybierz do dodania</string>
+    <string name="import_copy_check">Kopiuj hasła do sprawdzenia (%1$d)</string>
+    <string name="import_copy_done">Skopiowano</string>
+    <string name="import_done">Gotowe!</string>
+    <string name="import_details_error">Nie udało się pobrać szczegółów importu. Ponawiamy próbę.</string>
 </resources>
 

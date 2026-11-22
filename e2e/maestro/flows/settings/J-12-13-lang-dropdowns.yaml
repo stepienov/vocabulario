@@ -4,13 +4,11 @@ tags:
   - settings
   - lang
 ---
-# J-12 / J-13 · Open L1/L2 dropdowns
+# J-12 / J-13 · Open and dismiss L1/L2 language sheets
 - launchApp:
     clearState: false
 - runFlow: ../../helpers/ensure-logged-in.yaml
 - runFlow: ../../helpers/goto-settings.yaml
-- tapOn:
-    id: settings_section_languages
 - scrollUntilVisible:
     element:
       id: settings_native_lang
@@ -26,14 +24,20 @@ tags:
 - tapOn:
     id: settings_native_lang
 - extendedWaitUntil:
-    visible: "English|Spanish|Polish|Español|Polski"
+    visible:
+      id: settings_native_lang__sheet
     timeout: 10000
 - pressKey: Back
+- assertNotVisible:
+    id: settings_native_lang__sheet
 - tapOn:
     id: settings_learning_lang
 - extendedWaitUntil:
-    visible: "English|Spanish|Polish|Español|Polski"
+    visible:
+      id: settings_learning_lang__sheet
     timeout: 10000
 - pressKey: Back
+- assertNotVisible:
+    id: settings_learning_lang__sheet
 - tapOn:
     id: btn_back

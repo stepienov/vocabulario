@@ -34,11 +34,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vocabulario.app.R
 import com.vocabulario.app.data.api.LookupCandidate
-import com.vocabulario.app.i18n.localizedPosLabel
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.ui.components.AppCardShape
 import com.vocabulario.app.ui.components.LemmaActionRow
-import com.vocabulario.app.ui.components.TagChip
+import com.vocabulario.app.ui.components.PosTagChip
 
 /**
  * Modal dla słowa „wymaga sprawdzenia". Dwa scenariusze:
@@ -194,7 +193,7 @@ private fun SuggestionTile(
         belowGloss = {
             candidate.pos?.takeIf { it.isNotBlank() }?.let { pos ->
                 Spacer(Modifier.height(8.dp))
-                TagChip(localizedPosLabel(pos).ifBlank { pos })
+                PosTagChip(pos)
             }
         },
         trailing = {

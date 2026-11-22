@@ -13,7 +13,6 @@ from app.core.passwords import NEW_PASSWORD_MIN_CHARS, PASSWORD_MAX_CHARS
 from app.public_web.texts import PAGE_TEXTS
 from app.services.account_deletion import CANCEL_PATH, REQUEST_PATH
 from app.services.account_recovery import RESET_PATH, VERIFY_PATH
-from app.services.email_change import CHANGE_PATH
 from app.services.mail_templates import (
     APP_NAME,
     DEFAULT_LOCALE,
@@ -50,11 +49,6 @@ _PAGES = {
         "title": "reset_title",
         "intro": "reset_intro",
         "api": "/api/v1/auth/password-reset/confirm",
-    },
-    "change": {
-        "title": "change_title",
-        "intro": "change_intro",
-        "api": "/api/v1/auth/email-change/confirm",
     },
     "delete_start": {
         "title": "del_title",
@@ -149,11 +143,6 @@ async def verify_email_page(request: Request) -> HTMLResponse:
 @router.get(RESET_PATH, response_class=HTMLResponse)
 async def reset_password_page(request: Request) -> HTMLResponse:
     return _render(request, "reset")
-
-
-@router.get(CHANGE_PATH, response_class=HTMLResponse)
-async def change_email_page(request: Request) -> HTMLResponse:
-    return _render(request, "change")
 
 
 @router.get(START_PATH, response_class=HTMLResponse)

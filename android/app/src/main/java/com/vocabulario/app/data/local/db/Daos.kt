@@ -324,6 +324,12 @@ interface SessionOwnerDao {
     suspend fun unsentIds(): List<String>
 
     @Query(
+        "SELECT id FROM cached_profile UNION SELECT profileId FROM cached_cards UNION " +
+            "SELECT profileId FROM cached_lists UNION SELECT profileId FROM sync_meta",
+    )
+    suspend fun localProfileIds(): List<String>
+
+    @Query(
         "SELECT EXISTS(SELECT 1 FROM cached_cards) OR EXISTS(SELECT 1 FROM cached_lists) OR " +
             "EXISTS(SELECT 1 FROM pending_reviews) OR EXISTS(SELECT 1 FROM pending_moves) OR " +
             "EXISTS(SELECT 1 FROM pending_lookups) OR EXISTS(SELECT 1 FROM pending_undos) OR " +

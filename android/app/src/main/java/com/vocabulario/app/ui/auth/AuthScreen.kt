@@ -4,8 +4,6 @@ import com.vocabulario.app.BuildConfig
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,9 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -30,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,7 +51,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -81,14 +75,9 @@ import com.vocabulario.app.ui.components.AppDialogButtonRow
 import com.vocabulario.app.ui.components.AppGrayField
 import com.vocabulario.app.ui.components.BrandLogo
 import com.vocabulario.app.ui.components.ButtonLabel
+import com.vocabulario.app.ui.components.GoogleButton
 import com.vocabulario.app.ui.theme.BrandBlueLight
-import com.vocabulario.app.ui.theme.BrandTeal
 
-private val GoogleButtonShape = RoundedCornerShape(8.dp)
-private val GoogleBlue = Color(0xFF1A73E8)
-private val GoogleButtonBorderLight = Color(0xFFDADCE0)
-private val GoogleButtonFillDark = Color(0xFF131314)
-private val GoogleButtonBorderDark = Color(0xFF8E918F)
 private val AuthFieldBorderLight = Color(0xFFD0D7DE)
 private val DividerLineLight = Color(0xFFD0D7DE)
 private val DividerTextLight = Color(0xFF57606A)
@@ -121,10 +110,8 @@ fun AuthScreen(
     val notice by viewModel.notice.collectAsState()
     val revocations by viewModel.revocations.collectAsState()
     val infoMessage by viewModel.infoMessage.collectAsState()
-    var confirmSignOut by remember { mutableStateOf(false) }
     var supportOpen by remember { mutableStateOf(false) }
     if (supportOpen) SupportHelpDialog(onDismiss = { supportOpen = false })
-    var confirmDiscard by remember { mutableStateOf(false) }
     val forgotPassword by viewModel.forgotPassword.collectAsState()
     val consent by viewModel.consent.collectAsState()
     val googleConsentNeeded by viewModel.googleConsentNeeded.collectAsState()
@@ -147,32 +134,10 @@ fun AuthScreen(
             onDismiss = viewModel::closeForgotPassword,
         )
     }
-    notice?.takeIf { confirmSignOut }?.let { current ->
-        SignOutOnDeviceDialog(
-            unsentCount = current.unsentCount,
-            onDismiss = { confirmSignOut = false },
-            onConfirm = {
-                confirmSignOut = false
-                viewModel.signOutOnDevice(current.unsentFingerprint)
-            },
-        )
-    }
     unclaimedData?.let { unsent ->
         UnclaimedDataDialogs(
             unsentCount = unsent,
-            confirmStep = confirmDiscard,
-            onDismiss = {
-                confirmDiscard = false
-                viewModel.dismissUnclaimedData()
-            },
-            onDiscard = {
-                if (unsent > 0 && !confirmDiscard) {
-                    confirmDiscard = true
-                } else {
-                    confirmDiscard = false
-                    viewModel.discardUnclaimedData()
-                }
-            },
+            onDismiss = viewModel::dismissUnclaimedData,
         )
     }
     val scheme = MaterialTheme.colorScheme
@@ -196,7 +161,7 @@ fun AuthScreen(
     val gradient = if (dark) {
         Brush.verticalGradient(
             colorStops = arrayOf(
-                0.0f to Color(0xFF0A1E33),
+                0.0f to scheme.primaryContainer,
                 0.45f to scheme.background,
                 1.0f to scheme.background,
             ),
@@ -205,7 +170,7 @@ fun AuthScreen(
         Brush.verticalGradient(
             colorStops = arrayOf(
                 0.0f to BrandBlueLight.copy(alpha = 0.22f),
-                0.35f to BrandTeal.copy(alpha = 0.10f),
+                0.35f to scheme.tertiaryContainer.copy(alpha = 0.45f),
                 0.7f to scheme.background,
                 1.0f to scheme.background,
             ),
@@ -279,14 +244,6 @@ fun AuthScreen(
                             hideKeyboard()
                             viewModel.retrySessionRecovery(onAuthenticated)
                         },
-                        onSignOut = {
-                            hideKeyboard()
-                            if (current.hasLocalData) {
-                                confirmSignOut = true
-                            } else {
-                                viewModel.signOutOnDevice(current.unsentFingerprint)
-                            }
-                        },
                     )
                     Spacer(Modifier.height(20.dp))
                 }
@@ -299,12 +256,13 @@ fun AuthScreen(
                     Spacer(Modifier.height(20.dp))
                 }
 
-                GoogleSignInButton(
+                GoogleButton(
+                    text = stringResource(R.string.auth_google),
                     onClick = {
                         hideKeyboard()
                         viewModel.googleSignIn(context, onAuthenticated)
                     },
-                    dark = dark,
+                    modifier = Modifier.testTag(TestTags.AUTH_GOOGLE),
                 )
 
                 Spacer(Modifier.height(20.dp))
@@ -460,31 +418,19 @@ fun AuthScreen(
 @Composable
 private fun UnclaimedDataDialogs(
     unsentCount: Int,
-    confirmStep: Boolean,
     onDismiss: () -> Unit,
-    onDiscard: () -> Unit,
 ) {
     AppAlertDialog(
         onDismissRequest = onDismiss,
-        title = stringResource(if (confirmStep) R.string.legacy_data_discard_confirm_title else R.string.legacy_data_title),
+        title = stringResource(R.string.legacy_data_title),
         text = {
-            Text(
-                if (confirmStep) {
-                    stringResource(R.string.legacy_data_discard_confirm, unsentCount)
-                } else {
-                    stringResource(R.string.legacy_data_message, unsentCount)
-                },
-            )
+            Text(stringResource(R.string.legacy_data_message, unsentCount))
         },
         warning = true,
         buttons = {
             AppDialogButtonRow(
-                secondaryText = stringResource(R.string.action_cancel),
-                onSecondary = onDismiss,
-                secondaryKind = AppDialogAction.Neutral,
-                primaryText = stringResource(R.string.legacy_data_discard),
-                onPrimary = onDiscard,
-                primaryKind = AppDialogAction.Destroy,
+                primaryText = stringResource(R.string.action_ok),
+                onPrimary = onDismiss,
             )
         },
     )
@@ -531,7 +477,6 @@ private fun RevocationStatusCard(
 private fun SessionNoticeCard(
     notice: AuthNotice,
     onRetry: () -> Unit,
-    onSignOut: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val (titleRes, messageRes) = when (notice.kind) {
@@ -562,8 +507,8 @@ private fun SessionNoticeCard(
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            Spacer(Modifier.height(12.dp))
             if (notice.kind == AuthNoticeKind.RECOVERY) {
+                Spacer(Modifier.height(12.dp))
                 Button(
                     onClick = onRetry,
                     modifier = Modifier.fillMaxWidth(),
@@ -571,15 +516,6 @@ private fun SessionNoticeCard(
                 ) {
                     ButtonLabel(stringResource(R.string.action_retry))
                 }
-                Spacer(Modifier.height(8.dp))
-            }
-            OutlinedButton(
-                onClick = onSignOut,
-                modifier = Modifier.fillMaxWidth(),
-                shape = AppButtonShape,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = scheme.error),
-            ) {
-                ButtonLabel(stringResource(R.string.auth_sign_out_device))
             }
         }
     }
@@ -674,78 +610,6 @@ private fun ForgotPasswordDialog(
             }
         },
     )
-}
-
-@Composable
-private fun SignOutOnDeviceDialog(
-    unsentCount: Int,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    AppAlertDialog(
-        onDismissRequest = onDismiss,
-        title = stringResource(R.string.auth_sign_out_device_confirm_title),
-        text = {
-            Column {
-                Text(stringResource(R.string.auth_sign_out_device_confirm))
-                if (unsentCount > 0) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        stringResource(R.string.auth_notice_unsent, unsentCount),
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
-        },
-        warning = true,
-        buttons = {
-            AppDialogButtonRow(
-                secondaryText = stringResource(R.string.action_cancel),
-                onSecondary = onDismiss,
-                secondaryKind = AppDialogAction.Neutral,
-                primaryText = stringResource(R.string.auth_sign_out_device),
-                onPrimary = onConfirm,
-                primaryKind = AppDialogAction.Destroy,
-            )
-        },
-    )
-}
-
-@Composable
-private fun GoogleSignInButton(onClick: () -> Unit, dark: Boolean) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp)
-            .testTag(TestTags.AUTH_GOOGLE),
-        shape = GoogleButtonShape,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (dark) GoogleButtonFillDark else Color.White,
-            contentColor = if (dark) Color(0xFFE3E3E3) else GoogleBlue,
-        ),
-        border = BorderStroke(1.dp, if (dark) GoogleButtonBorderDark else GoogleButtonBorderLight),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp, pressedElevation = 0.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            Image(
-                painter = painterResource(R.drawable.ic_google_g),
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                stringResource(R.string.auth_google),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
 }
 
 @Composable

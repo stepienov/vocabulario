@@ -2,6 +2,7 @@ package com.vocabulario.app.ui.home
 
 import com.vocabulario.app.data.api.DashboardStatsResponse
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class HomeProgressCountsTest {
@@ -40,5 +41,27 @@ class HomeProgressCountsTest {
         assertEquals(0, state.alreadyKnowCount)
         assertEquals(0, state.currentlyLearningCount)
         assertEquals(0, state.remainingToLearnCount)
+    }
+
+    @Test
+    fun dashboardDoesNotClassifyMissingStatsAsEmpty() {
+        assertNull(HomeUiState().homeKind)
+        assertNull(HomeUiState(dashboardError = "error").homeKind)
+        assertEquals(HomeKind.Empty, HomeUiState(stats = DashboardStatsResponse()).homeKind)
+        assertEquals(
+            HomeKind.Session,
+            HomeUiState(stats = DashboardStatsResponse(ready_count = 1, session_new = 1)).homeKind,
+        )
+        assertEquals(
+            HomeKind.CaughtUp,
+            HomeUiState(stats = DashboardStatsResponse(ready_count = 1)).homeKind,
+        )
+        assertEquals(
+            HomeKind.Session,
+            HomeUiState(
+                stats = DashboardStatsResponse(ready_count = 1, session_new = 1),
+                dashboardError = "error",
+            ).homeKind,
+        )
     }
 }

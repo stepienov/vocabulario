@@ -3,6 +3,8 @@
 **ID:** `E-001/F-004/T-004` · **Status:** `done` · **Priorytet:** P0 przed pierwszą zewnętrzną betą.  
 **Feature:** [E-mail i hasła](../README.md). **Źródło:** [decyzje z 17.11.2026](../../F-001-prowadzenie-bety/tasks/T-001-decyzje-i-zakres.md); rozszerzenie pierwotnego zakresu, nie nowy numer B-*.
 
+**Zmiana decyzji 21.11.2026:** funkcję wycofano z aplikacji i publicznych endpointów. Zmiana adresu wymaga utworzenia nowego konta. Poniższy opis zachowano wyłącznie jako historię wcześniejszej implementacji.
+
 ## Uzgodniony rezultat
 
 Użytkownik sam zmienia adres konta już w pierwszej becie, po potwierdzeniu tożsamości i nowego adresu. Nie traci ID konta, postępu, profili ani biblioteki.

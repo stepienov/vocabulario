@@ -61,7 +61,6 @@ import com.vocabulario.app.data.asJsonObject
 import com.vocabulario.app.data.asJsonString
 import com.vocabulario.app.data.examplesForUserLevel
 import com.vocabulario.app.data.resolveVisibleTenseKeys
-import com.vocabulario.app.i18n.localizedPosLabel
 import com.vocabulario.app.ui.components.AppCard
 import com.vocabulario.app.ui.components.AppDialogShape
 import com.vocabulario.app.ui.components.AppDialogWindowChrome
@@ -69,6 +68,7 @@ import com.vocabulario.app.ui.components.LemmaActionRow
 import com.vocabulario.app.ui.components.LemmaAddButton
 import com.vocabulario.app.ui.components.SpeakIconButton
 import com.vocabulario.app.ui.components.TagChip
+import com.vocabulario.app.ui.components.PosTagChip
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -217,7 +217,7 @@ fun FlashcardBackContent(
             }
             if (!pos.isNullOrBlank() && !pos.equals("unknown", ignoreCase = true)) {
                 Spacer(Modifier.height(10.dp))
-                TagChip(localizedPosLabel(pos).ifBlank { pos })
+                PosTagChip(pos)
             }
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(
@@ -572,7 +572,7 @@ private fun RelatedWordsList(
                 belowGloss = {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         word.pos?.takeIf { it.isNotBlank() }?.let { pos ->
-                            TagChip(localizedPosLabel(pos).ifBlank { pos })
+                            PosTagChip(pos)
                         }
                         if (hit != null) {
                             TagChip(

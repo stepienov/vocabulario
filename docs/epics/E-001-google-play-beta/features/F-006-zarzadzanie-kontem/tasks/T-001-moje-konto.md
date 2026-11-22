@@ -5,11 +5,15 @@
 
 ## Cel i zakres
 
-Dodać sekcję konta z e-mailem, weryfikacją, metodami logowania, zmianą hasła lub informacją Google-only, zmianą e-maila, pomocą/prywatnością, usuwaniem i logout. Wyraźnie oddzielić to od profili nauki. Bez obowiązkowego imienia, zdjęcia czy telefonu.
+Dodać sekcję konta z e-mailem, weryfikacją, metodami logowania, zmianą hasła lub informacją Google-only, pomocą/prywatnością, usuwaniem i logout. Wyraźnie oddzielić to od profili nauki. Bez obowiązkowego imienia, zdjęcia czy telefonu.
+
+**Decyzja z 21.11.2026:** nie ma zmiany ani korekty adresu; inny adres wymaga nowego konta. Poniższe wcześniejsze odniesienia do tej funkcji są historyczne.
+
+**Uproszczenie UI z 21.11.2026:** konto znajduje się w grupie ogólnej, a nagłówek zawiera adres. Nie wyświetlamy osobnego opisu własności profili ani listy metod logowania; dostępne akcje nadal zależą od metod konta. Wcześniejsze wymagania dotyczące tych opisów poniżej są historyczne.
+
+**Aktualizacja ustawień z 21.11.2026:** niepotwierdzony adres pokazuje akcję „Potwierdź e-mail” zamiast czerwonego statusu. Otwiera ona istniejący proces sprawdzenia i ponownej wysyłki, z obsługą błędów i ograniczenia czasu; po potwierdzeniu stan konta jest odświeżany. Wymóg weryfikacji nauki nadal zależy od konfiguracji backendu. Układ ustawień i pola czasu zmieniono bez zmiany palety. Wygląd, otwarcie dialogu oraz walidację godziny sprawdzono na emulatorze; rzeczywista wysyłka i odbiór na fizycznym telefonie pozostają do sprawdzenia.
 
 **Start integracji:** [E-001/F-003/T-002](../../F-003-sesja-i-offline/tasks/T-002-sesja-androida.md), [E-001/F-004/T-002](../../F-004-email-i-hasla/tasks/T-002-poczta-i-odzyskiwanie.md), [E-001/F-005/T-001](../../F-005-google/tasks/T-001-google-i-laczenie.md). **Akcja usunięcia:** po [E-001/F-006/T-002](./T-002-usuwanie-konta.md); linki pomocy/prywatności zgodne z E-001/F-007.
-
-**Zmiana adresu:** kontrakt i końcowa integracja z [E-001/F-004/T-004](../../F-004-email-i-hasla/tasks/T-004-zmiana-emaila.md). Projekt ekranu nie musi czekać na gotowe API, ale akceptacja procesu wymaga działającego potwierdzenia.
 
 **Metody logowania:** Google-only widzi osobne „Dodaj hasło” zgodnie z [E-001/F-004/T-005](../../F-004-email-i-hasla/tasks/T-005-dodanie-hasla.md), a nie formularz zmiany nieistniejącego hasła. Pokazać różnicę między adresem aplikacji i podłączonym Google, gdy są różne. W becie brak akcji odłączenia metod. Reguły i macierz stanów są w [F-004](../../F-004-email-i-hasla/README.md#zatwierdzona-polityka-konta--17112026).
 

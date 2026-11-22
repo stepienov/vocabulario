@@ -56,7 +56,6 @@ class Settings(BaseSettings):
     jwt_secret: str = _DEFAULT_JWT_SECRET
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
-    refresh_token_expire_days: int = 30
     # Fernet key for the 5-minute refresh retry results; never the JWT secret.
     auth_refresh_retry_key: str = ""
 
@@ -251,9 +250,7 @@ class Settings(BaseSettings):
         return all(has_pricing(m) for m in models)
 
     def _token_periods_valid(self) -> bool:
-        access = self.access_token_expire_minutes
-        refresh_minutes = self.refresh_token_expire_days * 24 * 60
-        return 0 < access < refresh_minutes
+        return self.access_token_expire_minutes > 0
 
     def erasure_key_ready(self) -> bool:
         key = self.account_erasure_key.strip()

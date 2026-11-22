@@ -87,7 +87,7 @@ def load_raw_import(filename: str | None, data: bytes) -> RawImportDeck:
 
 
 def load_text_import(text: str) -> RawImportDeck:
-    raw = text.replace("\r\n", "\n").replace("\r", "\n")
+    raw = text.replace("\x00", "").replace("\r\n", "\n").replace("\r", "\n")
     lines = raw.split("\n")
     meta: dict[str, str] = {}
     body_start = 0
@@ -770,7 +770,7 @@ def _clean_field(s: str) -> str:
 
 def _sanitize_import_field(s: str) -> str:
     """Zachowaj HTML strukturę (tabele), usuń skrypty / przyciski Anki TTS."""
-    raw = (s or "").strip().strip('"')
+    raw = (s or "").replace("\x00", "").strip().strip('"')
     if not raw:
         return ""
     if "<" not in raw and "[anki:tts" not in raw.lower():

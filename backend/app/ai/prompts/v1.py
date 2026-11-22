@@ -1083,46 +1083,15 @@ WAŻNE:
 - Nie kopiuj CSS/JS Anki. Nie wymyślaj treści spoza próbki.
 """
 
-IMPORT_CLASSIFY_SYSTEM_V1 = (
-    "Klasyfikujesz zaimportowane fiszki pod karty Vocabulario. "
-    "Dla każdej notatki ustalasz entry_kind i headword_l2 (język uczony). "
-    "Cel: wyciągnąć LEMATY słownikowe do pełnych kart Vocabulario (jak lookup). "
-    "Dla zwrotów/konstrukcji podaj base_lemma (goły lemat). "
-    "valid=false przy pustce, śmieciach, braku lematu ORAZ gdy headword nie jest w L2 z profilu. Tylko JSON."
-)
+IMPORT_CLASSIFY_SYSTEM_V1 = "Classify imported vocabulary notes for study. Return JSON only."
 
-IMPORT_CLASSIFY_PROMPT_V1 = """Użytkownik importuje fiszki do Vocabulario (tryb bogatych kart).
-
-Para: L1={native_name}, L2={learning_name}
-
-Notatki (każda = lista pól; zwykle [front L2, back L1]):
-{notes_json}
-
-Dla KAŻDEJ notatki (po indeksie) zwróć wpis:
-- entry_kind:
-  - lemma — pojedyncze hasło słownikowe (fumar, el banco)
-  - construction — peryfraza / wzorzec (volver a hacer algo, dejar de + inf.)
-  - phrase — krótki zwrot (pedir perdón, hacer la cama)
-  - sentence — pełne zdanie / dialog
-  - other — reszta sensowna do nauki
-- headword_l2 — forma w L2 (front jeśli to L2; nie tłumaczenie L1)
-- gloss_l1 — z tyłu fiszki jeśli jest, inaczej null
-- base_lemma — opcjonalnie goły czasownik/rzeczownik bazy (volver)
-- pattern — opcjonalnie wzorzec (volver a + infinitivo)
-- pos — verb|noun|adj|phrase|construction|sentence|…
-- valid — false gdy brak treści do nauki ALBO headword nie jest jednostką L2={learning_name}
-- invalid_reason — gdy valid=false (przy złym języku napisz wprost: nie jest w języku nauki)
-
-WAŻNE:
-- Headword MUSI być w L2 z pary (L2={learning_name}). Prawdziwe słowo/zwrot w innym języku (L1 albo trzeci język) = valid=false. Nie twórz karty i nie tłumacz hasła na L2.
-- Jednopolowa notatka, która wygląda na prawdziwe słowo / article+noun / krótki zwrot w L2 = headword. valid=true tylko gdy to L2.
-- valid=false gdy to NIE jest lemat L2: puste, GUID, CSS/JS, same liczby, symbole, powtórzone litery (ppppppppp), bezsamogłoskowy stek, oczywisty śmieć, albo tekst w złym języku. NIE dopisuj rodzaju (la/el) do śmieci.
-- „volver a hacer algo” = construction; headword zostaje cały zwrot (nie redukuj do „volver”).
-- Zdania bez sensownego lematu: entry_kind=sentence; backend odrzuci je z trybu Vocabulario.
-- Pojedyncze słowa / article+noun = lemma.
-Zwróć entries dla wszystkich indeksów 0..N-1.
-rationale po polsku.
-"""
+IMPORT_CLASSIFY_PROMPT_V1 = """L1: {native_name}. L2: {learning_name}.
+For every note return one entry with its zero-based index.
+Valid entries must be real L2 vocabulary, not junk or text only in another language; do not translate L1 into L2 or invent corrections.
+For single words, headword_l2 is the L2 dictionary citation: verb infinitive, adjective masculine singular where applicable, noun singular with definite article in Spanish, French, Italian, Portuguese and German (plural only for plural-only senses). Do not copy inflection.
+Keep full phrases and constructions as headwords; sentences without a study headword are invalid.
+entry_kind: lemma, phrase, construction, sentence or other. pos: the part of speech. gloss_l1: the imported L1 field or null. base_lemma and pattern: optional for constructions. invalid_reason: explain invalid items, explicitly saying "not in the learning language" for wrong language.
+Notes: {notes_json}"""
 
 IMPORT_VERIFY_LEMMAS_SYSTEM_V1 = (
     "You check a list of flashcard headwords for one learning language. "

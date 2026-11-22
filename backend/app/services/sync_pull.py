@@ -171,6 +171,7 @@ def card_item(card: LearningCard, state: SrsState | None) -> SyncCardItem:
         content_review_status=card.content_review_status,
         card_activity_status=card.card_activity_status,
         has_content_changes=bool(card.has_content_changes),
+        created_at=card.created_at,
         updated_at=card.updated_at,
         srs=srs_payload(card.id, state) if state is not None else None,
     )

@@ -37,6 +37,7 @@ import com.vocabulario.app.ui.card.CorrectionResultsState
 import com.vocabulario.app.ui.card.RelatedWord
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,6 +75,7 @@ data class HomeUiState(
     /** True tylko gdy trwa flush kolejki lookupów (Oczekujące) — spinner na stubie. */
     val pendingLookupFlushInProgress: Boolean = false,
     val stats: DashboardStatsResponse? = null,
+    val dashboardError: String? = null,
     val lists: List<WordListResponse> = emptyList(),
     val selectedListId: String? = null,
     val listWords: List<CardResponse> = emptyList(),
@@ -86,8 +88,10 @@ data class HomeUiState(
     val showCreateListPrompt: Boolean = false,
     /** Multi-select na liście słów. */
     val selectedWordIds: Set<String> = emptySet(),
-    val listSortOrder: ListSortOrder = ListSortOrder.LemmaAsc,
-    val listFilter: ListFilterState = ListFilterState(),
+    val listViews: Map<String, ListViewPreferences> = emptyMap(),
+    val listViewPreferencesLoaded: Boolean = false,
+    val listViewPreferencesError: String? = null,
+    val listFilterOverride: ListFilterState? = null,
     val listQuery: String = "",
     val correctionCardId: String? = null,
     val correctionSubmitting: Boolean = false,
@@ -108,6 +112,10 @@ data class HomeUiState(
     val reviewLoading: Boolean = false,
     val reviewSubmitting: Boolean = false,
 ) {
+    val listSortOrder: ListSortOrder
+        get() = listViews[selectedListId]?.sort ?: ListSortOrder.Newest
+    val listFilter: ListFilterState
+        get() = listFilterOverride ?: listViews[selectedListId]?.filter ?: ListFilterState()
     val selectionMode: Boolean get() = selectedWordIds.isNotEmpty()
     val visibleListWords: List<CardResponse>
         get() = applyListFilterSort(listWords, listFilter, listSortOrder, listQuery)
@@ -125,9 +133,9 @@ data class HomeUiState(
     /** Karty, które nie są jeszcze opanowane. */
     val remainingToLearnCount: Int
         get() = (currentlyLearningCount - alreadyKnowCount).coerceAtLeast(0)
-    val homeKind: HomeKind
+    val homeKind: HomeKind?
         get() {
-            val ready = stats?.ready_count ?: 0
+            val ready = stats?.ready_count ?: return null
             if (ready <= 0) return HomeKind.Empty
             return if (sessionDue == 0 && sessionNew == 0) HomeKind.CaughtUp else HomeKind.Session
         }
@@ -144,6 +152,7 @@ class HomeViewModel @Inject constructor(
     private val categoryLookupCoordinator: CategoryLookupCoordinator,
     private val enrichmentPoller: EnrichmentPoller,
     private val blockingBusy: BlockingBusy,
+    private val listViewPreferencesStore: ListViewPreferencesStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState(isOnline = networkMonitor.isCurrentlyOnline()))
@@ -158,6 +167,7 @@ class HomeViewModel @Inject constructor(
     val enrichmentPollingIds: StateFlow<Set<String>> = enrichmentPoller.pollingIds
 
     private var boundProfileId: String? = null
+    private var pairGeneration = 0L
     private var appliedLookupGeneration: Long = -1L
     private var listsObserverJob: Job? = null
     private var cardsObserverJob: Job? = null
@@ -171,8 +181,10 @@ class HomeViewModel @Inject constructor(
     private var membershipPulledAt: String? = null
     private val inFlightAdds = mutableSetOf<String>()
     private var membershipJob: Job? = null
+    private val unsavedListViews = mutableMapOf<String, ListViewPreferences>()
 
     init {
+        loadListViewPreferences()
         viewModelScope.launch { refreshAll() }
         observeCardMembership()
         viewModelScope.launch {
@@ -298,6 +310,7 @@ class HomeViewModel @Inject constructor(
         selectId: String? = null,
         clearSelection: Boolean = false,
     ) {
+        val generation = pairGeneration
         val lists = runCatching { repository.cachedWordLists() }.getOrNull() ?: return
         if (lists.isEmpty() && _state.value.lists.isNotEmpty()) return
         val visible = visibleLists(lists)
@@ -328,12 +341,23 @@ class HomeViewModel @Inject constructor(
         } else {
             publishedWords
         }
+        if (generation != pairGeneration) return
+        val sameLogicalList = selectedId == _state.value.selectedListId ||
+            (_state.value.lists.any { it.id == _state.value.selectedListId && it.is_pending_inbox } &&
+                visible.any { it.id == selectedId && it.is_pending_inbox })
+        remapListViewPreferences(visible)
         _state.value = _state.value.copy(
             lists = visible,
             selectedListId = selectedId,
+            listFilterOverride = if (sameLogicalList) {
+                _state.value.listFilterOverride
+            } else {
+                null
+            },
             listWords = mergedWords,
             selectedWordIds = if (clearSelection) emptySet() else _state.value.selectedWordIds,
             stats = stats ?: _state.value.stats,
+            dashboardError = if (stats != null) null else _state.value.dashboardError,
             learningLemmas = learningLemmas ?: _state.value.learningLemmas,
             relatedMembership = relatedMembership ?: _state.value.relatedMembership,
             detailCard = syncDetailCard(mergedWords, _state.value.detailCard),
@@ -344,6 +368,7 @@ class HomeViewModel @Inject constructor(
 
     /** Drop pair-scoped UI state immediately, then reload lists/cards/stats. */
     private fun onLanguagePairChanged(wipeUi: Boolean = true) {
+        pairGeneration++
         enrichmentPoller.reset()
         detailCardJob?.cancel()
         detailCardJob = null
@@ -355,7 +380,13 @@ class HomeViewModel @Inject constructor(
         if (wipeUi) {
             val keepTab = _state.value.tab
             val online = networkMonitor.isCurrentlyOnline()
-            _state.value = HomeUiState(tab = keepTab, isOnline = online)
+            _state.value = HomeUiState(
+                tab = keepTab,
+                isOnline = online,
+                listViews = _state.value.listViews,
+                listViewPreferencesLoaded = _state.value.listViewPreferencesLoaded,
+                listViewPreferencesError = _state.value.listViewPreferencesError,
+            )
         }
         refreshAll()
     }
@@ -365,9 +396,13 @@ class HomeViewModel @Inject constructor(
     }
 
     fun refreshAll() {
+        val generation = pairGeneration
         viewModelScope.launch {
             runCatching { repository.getActiveProfile() }
-                .onSuccess { _state.value = _state.value.copy(activeProfile = it) }
+                .onSuccess {
+                    if (generation == pairGeneration) _state.value = _state.value.copy(activeProfile = it)
+                }
+            if (generation != pairGeneration) return@launch
             loadStats()
             loadLists()
         }
@@ -417,19 +452,22 @@ class HomeViewModel @Inject constructor(
 
     fun expandImportSection(section: String?) = importController.expandSection(section)
 
-    fun onImportErrorsCopied() = importController.copiedErrorsNotice()
 
     fun loadStats() {
+        val generation = pairGeneration
         viewModelScope.launch {
+            if (generation != pairGeneration) return@launch
+            _state.value = _state.value.copy(dashboardError = null)
             runCatching { repository.dashboardStats(7) }
                 .onSuccess {
-                    _state.value = _state.value.copy(stats = it, error = null)
+                    if (generation != pairGeneration) return@onSuccess
+                    _state.value = _state.value.copy(stats = it, dashboardError = null, error = null)
                     scheduleNextReviewRefresh(it)
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(
-                        error = e.userMessage(strings, R.string.err_load_stats),
-                    )
+                    if (generation != pairGeneration) return@onFailure
+                    val message = e.userMessage(strings, R.string.err_load_stats)
+                    _state.value = _state.value.copy(dashboardError = message, error = message)
                 }
         }
     }
@@ -479,7 +517,12 @@ class HomeViewModel @Inject constructor(
                     val sameLogicalList = selected != null &&
                         (selected == prevId || (prevIsPendingInbox && newIsPendingInbox))
                     val backgroundRefresh = sameLogicalList && _state.value.listWords.isNotEmpty()
-                    _state.value = _state.value.copy(lists = visible, selectedListId = selected)
+                    remapListViewPreferences(visible)
+                    _state.value = _state.value.copy(
+                        lists = visible,
+                        selectedListId = selected,
+                        listFilterOverride = if (sameLogicalList) _state.value.listFilterOverride else null,
+                    )
                     selected?.let { loadListWords(it, background = backgroundRefresh) }
                 }
                 .onFailure {
@@ -493,18 +536,23 @@ class HomeViewModel @Inject constructor(
         _state.value = _state.value.copy(
             selectedListId = listId,
             selectedWordIds = emptySet(),
-            listFilter = if (switching) ListFilterState() else _state.value.listFilter,
+            listFilterOverride = if (switching) null else _state.value.listFilterOverride,
             listQuery = if (switching) "" else _state.value.listQuery,
         )
         loadListWords(listId)
     }
 
     fun setListSortOrder(order: ListSortOrder) {
-        _state.value = _state.value.copy(listSortOrder = order)
+        val listId = _state.value.selectedListId ?: return
+        val current = _state.value.listViews[listId] ?: ListViewPreferences()
+        saveListViewPreferences(listId, current.copy(sort = order))
     }
 
     fun setListFilter(filter: ListFilterState) {
-        _state.value = _state.value.copy(listFilter = filter)
+        val listId = _state.value.selectedListId ?: return
+        val current = _state.value.listViews[listId] ?: ListViewPreferences()
+        _state.value = _state.value.copy(listFilterOverride = null)
+        saveListViewPreferences(listId, current.copy(filter = filter))
     }
 
     fun setListQuery(query: String) {
@@ -512,13 +560,76 @@ class HomeViewModel @Inject constructor(
     }
 
     fun clearListFilter() {
-        _state.value = _state.value.copy(listFilter = ListFilterState())
+        setListFilter(ListFilterState())
+    }
+
+    private fun loadListViewPreferences() {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(listViewPreferencesError = null)
+            try {
+                val views = listViewPreferencesStore.readAll()
+                _state.value = _state.value.copy(
+                    listViews = views + _state.value.listViews,
+                    listViewPreferencesLoaded = true,
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    listViewPreferencesError = e.userMessage(strings, R.string.err_load_settings),
+                )
+            }
+        }
+    }
+
+    private fun saveListViewPreferences(listId: String, preferences: ListViewPreferences) {
+        _state.value = _state.value.copy(listViews = _state.value.listViews + (listId to preferences))
+        unsavedListViews[listId] = preferences
+        viewModelScope.launch {
+            try {
+                listViewPreferencesStore.save(listId, preferences)
+                if (unsavedListViews[listId] == preferences) unsavedListViews.remove(listId)
+                if (unsavedListViews.isEmpty()) {
+                    _state.value = _state.value.copy(listViewPreferencesError = null)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    listViewPreferencesError = e.userMessage(strings, R.string.err_save),
+                )
+            }
+        }
+    }
+
+    fun retryListViewPreferences() {
+        if (!_state.value.listViewPreferencesLoaded) {
+            loadListViewPreferences()
+        } else {
+            unsavedListViews.toMap().forEach { (listId, preferences) ->
+                saveListViewPreferences(listId, preferences)
+            }
+        }
+    }
+
+    private fun remapListViewPreferences(lists: List<WordListResponse>) {
+        for (previous in _state.value.lists.filter { it.id.startsWith("local") }) {
+            val preferences = _state.value.listViews[previous.id] ?: continue
+            val replacement = lists.firstOrNull {
+                !it.id.startsWith("local") &&
+                    if (previous.is_pending_inbox) it.is_pending_inbox else it.name == previous.name
+            } ?: continue
+            if (replacement.id !in _state.value.listViews) {
+                saveListViewPreferences(replacement.id, preferences)
+            }
+        }
     }
 
     fun openListTab(listId: String) {
         _state.value = _state.value.copy(
             tab = HomeTab.LISTS,
             selectedListId = listId,
+            listFilterOverride = null,
             error = null,
         )
         loadLists(listId)
@@ -552,7 +663,7 @@ class HomeViewModel @Inject constructor(
             listWords = seeded,
             focusWordId = candidate.learning_card_id ?: placeholder.id,
             focusLemma = candidate.lemma.takeIf { candidate.learning_card_id.isNullOrBlank() },
-            listFilter = ListFilterState(),
+            listFilterOverride = ListFilterState(),
             listQuery = "",
             selectedWordIds = emptySet(),
             error = null,
@@ -1210,6 +1321,7 @@ class HomeViewModel @Inject constructor(
                                 selectedWordIds = emptySet(),
                                 listWords = emptyList(),
                                 selectedListId = fallback,
+                                listFilterOverride = null,
                             )
                             loadLists(fallback)
                         }

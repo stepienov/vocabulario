@@ -9,6 +9,12 @@
 
 Dokument źródłowy: `docs/epics/E-002-szybka-nauka/sources/optymalizacja-requestow.md`, punkt 7.
 
+## Aktualizacja zachowania importu
+
+Po zatwierdzeniu niewybrane poprawne pozycje mają werdykt `skipped` i powód `deselected`; nie są błędami ani nie trafiają do kopiowanych haseł. Android uwzględnia również starsze zadania, w których zapisano je jako `failed` z powodem `deselected`. Znak NUL jest usuwany z importowanego tekstu i pól pakietu przed zapisem do PostgreSQL.
+
+Analiza używa modelu szybkiego wyszukiwania i w jednym zbiorczym wywołaniu prosi o formy słownikowe pojedynczych słów; pełne zwroty i konstrukcje pozostają w całości. Dotyczy nowych analiz i nie zmienia wcześniej zapisanych kart.
+
 ## Zakres
 
 Serwer:
@@ -79,7 +85,7 @@ Zatwierdzenie: `len(item_ids zaznaczonych) > 25 - daily_import_used` daje 400 `i
 
 ### Analiza
 
-- `analyze_import_classify`: `reasoning_effort="none"`, `max_tokens=2500` (dziś 6000), bez temperatury. Prompt bez zmian.
+- `analyze_import_classify`: `reasoning_effort="none"`, `max_tokens=2500`, bez temperatury; krótki prompt normalizuje pojedyncze słowa do form słownikowych.
 - `_verify_ready_lemmas` nie jest wołane. Funkcja i `analyze_import_verify_lemmas` do usunięcia, jeśli `rg` nie pokaże innego użycia.
 - Duplikaty: jeden odczyt `select(LearningCard.id, LearningCard.lemma_l2, LearningCard.pos, LearningCard.deck_id)` żywych kart profilu i jeden odczyt list profilu. Dla każdej pozycji `select_live_card_for_lemma` w pamięci. Pozycja duplikatu dostaje `existing_card_id` i nazwę listy (`deck_id` puste: lista systemowa). `ImportJobItemResponse.list_name`.
 - Commit co 10 pozycji zostaje tylko dla postępu. Bez odczytu kart w pętli.

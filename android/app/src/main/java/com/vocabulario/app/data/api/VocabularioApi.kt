@@ -5,6 +5,7 @@ import okhttp3.RequestBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.Multipart
 import retrofit2.http.PATCH
 import retrofit2.http.Part
@@ -12,6 +13,11 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
+
+interface CandidateProfilesApi {
+    @GET("profiles")
+    suspend fun listProfiles(@Header("Authorization") authorization: String): List<LanguageProfileResponse>
+}
 
 interface VocabularioApi {
     @POST("auth/register")
@@ -58,18 +64,6 @@ interface VocabularioApi {
 
     @POST("auth/recent-auth/password")
     suspend fun recentAuthPassword(@Body body: RecentAuthPasswordRequest): RecentAuthResponse
-
-    @POST("auth/email-change/request")
-    suspend fun emailChangeRequest(@Body body: EmailChangeRequestBody): EmailChangeResponse
-
-    @GET("auth/email-change")
-    suspend fun emailChangeCurrent(): EmailChangeCurrentResponse
-
-    @POST("auth/email-change/{id}/resend")
-    suspend fun emailChangeResend(@Path("id") id: String): EmailChangeResponse
-
-    @POST("auth/email-change/{id}/cancel")
-    suspend fun emailChangeCancel(@Path("id") id: String): MailStatusResponse
 
     @POST("account-deletion/proof/password")
     suspend fun deletionProofPassword(@Body body: DeletionProofRequest): DeletionProofResponse

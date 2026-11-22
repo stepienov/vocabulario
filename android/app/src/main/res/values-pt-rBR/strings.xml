@@ -126,15 +126,15 @@
         <string name="settings_langs_hint">O idioma do app é o da interface e das traduções nos cartões. O idioma de estudo é o que você aprende.</string>
 <string name="settings_theme">Tema</string>
 
-    <string name="settings_mode">Modo de estudo</string>
+    <string name="settings_mode">Forma de estudo</string>
 
     <string name="settings_group_study">ESTUDO</string>
 
-    <string name="settings_group_general">GERAL</string>
+    <string name="settings_group_general">APLICATIVO</string>
 
     <string name="settings_mode_choice">Quiz</string>
 
-    <string name="settings_mode_type">Digite a palavra</string>
+    <string name="settings_mode_type">Digite a resposta</string>
 
     <string name="settings_mode_flash">Cartões</string>
 
@@ -144,7 +144,7 @@
 
     <string name="settings_tolerate_typos_sub">Ortografia e acentos</string>
 
-    <string name="settings_direction">Direção do estudo</string>
+    <string name="settings_direction">O que mostramos primeiro?</string>
 
     <string name="settings_direction_first">Primeiro %1$s</string>
 
@@ -152,25 +152,25 @@
 
     <string name="settings_direction_sub">O que mostrar primeiro: %1$s</string>
 
-    <string name="settings_card_layout">Layout do cartão</string>
+    <string name="settings_card_layout">Conteúdo do cartão</string>
 
     <string name="settings_card_layout_sub">Personalize o conteúdo do cartão</string>
 
-    <string name="settings_examples">Frases</string>
+    <string name="settings_examples">Frases de exemplo</string>
 
-    <string name="settings_usages">Expressões</string>
+    <string name="settings_usages">Expressões e uso</string>
 
     <string name="settings_periphrases">Padrões</string>
 
-    <string name="settings_syn_ant">Em torno da palavra</string>
+    <string name="settings_syn_ant">Sinônimos e antônimos</string>
     <string name="settings_word_family">Família de palavras</string>
     <string name="settings_associations">Associações</string>
 
-    <string name="settings_conjugation">Conjugação</string>
+    <string name="settings_conjugation">Conjugação verbal</string>
 
     <string name="settings_all_tenses">Todos os tempos</string>
 
-    <string name="settings_limits">Limites</string>
+    <string name="settings_limits">Novas palavras por dia</string>
 
     <string name="settings_new_limit">Limite diário de palavras novas</string>
 
@@ -354,7 +354,7 @@
     <string name="import_reason_unknown">Esta palavra não pode ser importada agora.</string>
     <string name="import_ready_hint">Estas palavras serão adicionadas à sua lista.</string>
     <string name="import_review_loading">Carregando as palavras…</string>
-    <string name="import_errors_hint">Estas palavras não serão adicionadas à sua lista.</string>
+    <string name="import_errors_hint">Estes termos não serão adicionados. Verifique a escrita ou o idioma.</string>
     <string name="import_item_untitled">Palavra desconhecida</string>
     <string name="import_reason_write_failed">Não foi possível salvar esta palavra (após 3 tentativas).</string>
     <string name="import_cancelled">Cancelado. Nada foi adicionado.</string>
@@ -634,14 +634,14 @@
     <string name="err_session_ended">Sua sessão terminou. Entre novamente.</string>
     <string name="err_login_other_account">Este dispositivo tem dados de outra conta. Entre nessa conta para continuar.</string>
     <string name="legacy_data_title">Dados não atribuídos neste dispositivo</string>
-    <string name="legacy_data_message">Este dispositivo tem dados de uma versão anterior do app que não podem ser vinculados a uma conta. Alterações não enviadas: %1$d. Para entrar, remova esses dados. O que já foi sincronizado será baixado novamente depois que você entrar.</string>
+    <string name="legacy_data_message">Este dispositivo tem dados de uma versão anterior do app que não podem ser vinculados a uma conta. Alterações não enviadas: %1$d. Seus dados são preservados. Entre em contato com o suporte para receber ajuda para entrar.</string>
     <string name="legacy_data_discard">Remover dados locais</string>
     <string name="legacy_data_discard_confirm_title">Remover permanentemente?</string>
     <string name="legacy_data_discard_confirm">As alterações não enviadas (%1$d) serão perdidas e não poderão ser recuperadas.</string>
     <string name="legacy_data_discarded">Dados locais removidos. Entre novamente.</string>
     <string name="legacy_data_discard_failed">Não foi possível remover os dados locais. Tente novamente.</string>
     <string name="auth_notice_reauth_title">Entre novamente</string>
-    <string name="auth_notice_reauth">Sua sessão terminou. Entre com a mesma conta para continuar. Seus dados neste dispositivo são mantidos.</string>
+    <string name="auth_notice_reauth">Entre com a mesma conta para continuar. Seus dados neste dispositivo são mantidos.</string>
     <string name="auth_notice_recovery_title">Não foi possível restaurar a sessão</string>
     <string name="auth_notice_recovery">Não foi possível ler o login salvo neste dispositivo. Tente novamente ou entre com a mesma conta. Seus dados neste dispositivo são mantidos.</string>
     <string name="auth_notice_local_data_title">Dados da sua conta</string>
@@ -656,11 +656,11 @@
     <string name="loading_slow_title">Isso está demorando mais que o normal</string>
     <string name="loading_slow_message">O app ainda está iniciando. Verifique sua conexão ou tente novamente.</string>
     <string name="auth_revocation_pending">Você saiu neste dispositivo. O servidor confirmará a saída quando você estiver online.</string>
-    <string name="auth_revocation_unconfirmed">Sessões sem confirmação do servidor: %1$d. Elas não são mais usadas neste dispositivo e expiram automaticamente em até 30 dias.</string>
+    <string name="auth_revocation_unconfirmed">Sessões sem confirmação do servidor: %1$d. Elas não são mais usadas neste dispositivo, mas ainda podem estar ativas no servidor.</string>
     <string name="auth_revocation_confirmed">Você também saiu no servidor.</string>
     <string name="auth_revocation_queue_full">Há saídas demais aguardando o servidor. Conecte-se à internet, aguarde um momento e tente novamente.</string>
     <string name="logout_unsent_title">Alterações não enviadas</string>
-    <string name="logout_unsent_message">Sair remove os dados desta conta deste dispositivo. As alterações ainda não enviadas ao servidor serão perdidas.</string>
+    <string name="logout_unsent_message">Sincronize suas alterações antes de sair para não perdê-las.</string>
     <string name="logout_unsent_sync_incomplete">Não foi possível enviar todas as alterações. Verifique a conexão e tente novamente, ou descarte-as.</string>
     <string name="logout_unsent_changed">Novas alterações não enviadas surgiram nesse meio-tempo. Decida novamente.</string>
     <string name="logout_discard_confirm_title">Descartar alterações não enviadas?</string>
@@ -710,8 +710,8 @@
         <string name="list_clear_all">Excluir todas as palavras</string>
     <string name="list_clear_all_title">Excluir todas as palavras?</string>
     <string name="list_clear_all_body">Você removerá todas as palavras de «%1$s». A lista permanece.</string>
-    <string name="settings_level">Nível</string>
-    <string name="settings_selected_tenses">Tempos selecionados</string>
+    <string name="settings_level">Nível do idioma</string>
+    <string name="settings_selected_tenses">Escolher tempos</string>
     <string name="action_edit">Editar</string>
     <string name="import_cards_count">Cartões importados (%1$d)</string>
     <string name="import_flashcards_count">Cartões: %1$d</string>
@@ -757,8 +757,8 @@
     <string name="settings_notifications_summary">Lembretes de estudo e status dos cartões</string>
     <string name="settings_notif_study">Lembretes de estudo</string>
     <string name="settings_notif_cards">Cartões prontos</string>
-    <string name="settings_notif_enabled">Quero notificações</string>
-    <string name="settings_study_hour">Hora de estudo</string>
+    <string name="settings_notif_enabled">Ativar notificações</string>
+    <string name="settings_study_hour">Horário do lembrete</string>
     <string name="notif_offline_ready_title">Todos os cartões estão prontos!</string>
     <string name="notif_offline_ready_body">Hora de estudar!</string>
     <string name="notif_import_ready_title">Todos os cartões estão prontos!</string>
@@ -877,13 +877,11 @@
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 
-    <string name="settings_group_account">CONTA</string>
     <string name="settings_account">Conta</string>
     <string name="account_loading">Carregando dados da conta…</string>
     <string name="account_unavailable">Os dados da conta não estão disponíveis offline. Tente novamente quando estiver online.</string>
     <string name="account_email_verified">E-mail confirmado</string>
     <string name="account_email_unverified">E-mail ainda não confirmado</string>
-    <string name="account_google_linked">Você entra com o Google</string>
     <string name="account_change_password">Alterar senha</string>
     <string name="account_current_password">Senha atual</string>
     <string name="account_new_password">Nova senha</string>
@@ -926,18 +924,6 @@
     <string name="err_auth_unavailable">O login está temporariamente indisponível. Tente novamente em instantes.</string>
     <string name="account_password_reset_needed">Sua senha precisa ser definida novamente. Enviaremos um link para o seu e-mail.</string>
     <string name="account_password_reset_send">Enviar link de redefinição</string>
-    <string name="account_change_email">Alterar e-mail</string>
-    <string name="account_new_email">Novo e-mail</string>
-    <string name="account_change_email_hint">Enviaremos um link de confirmação para o novo endereço. Depois de confirmar, você será desconectado de todos os dispositivos e entrará com o novo endereço.</string>
-    <string name="account_email_change_pending">Abra o link enviado para %1$s para confirmar a alteração. O link é válido por 24 horas.</string>
-    <string name="account_email_change_send">Enviar link</string>
-    <string name="account_email_change_resend">Reenviar link</string>
-    <string name="account_email_change_cancel">Cancelar alteração</string>
-    <string name="account_email_change_sent">Link enviado para %1$s.</string>
-    <string name="account_email_change_resent">Link reenviado.</string>
-    <string name="account_email_change_cancelled">Alteração de e-mail cancelada.</string>
-    <string name="account_email_change_expired">O link de alteração de e-mail expirou. Comece de novo.</string>
-    <string name="err_email_unchanged">Este já é o seu e-mail.</string>
     <string name="err_email_unavailable">Este endereço não pode ser usado. Tente outro.</string>
     <string name="err_recent_auth">Confirme sua senha novamente e tente de novo.</string>
     <string name="account_delete">Excluir conta</string>
@@ -956,12 +942,7 @@
     <string name="err_deletion_pending">Esta conta está programada para exclusão. O login fica bloqueado até que a solicitação seja cancelada.</string>
     <string name="err_account_deleted">Esta conta foi excluída.</string>
     <string name="err_deletion_owner_mismatch">Essas credenciais pertencem a uma conta diferente da que está conectada neste dispositivo.</string>
-    <string name="account_profiles_note">Seus perfis de idioma pertencem a esta única conta.</string>
     <string name="account_stale_note">Últimos dados conhecidos, exibidos offline. Alterações de segurança e a exclusão da conta exigem conexão.</string>
-    <string name="account_methods_title">Métodos de login</string>
-    <string name="account_method_password_set">Senha: definida</string>
-    <string name="account_method_password_none">Senha: não definida</string>
-    <string name="account_method_google_none">Google: não vinculado</string>
     <string name="err_google_challenge">O login com o Google expirou. Tente novamente.</string>
     <string name="err_google_account_mismatch">Essa não é a conta Google vinculada aqui. Escolha a correta.</string>
     <string name="err_google_already_linked">O Google já está vinculado a esta conta.</string>
@@ -970,7 +951,6 @@
     <string name="err_google_sign_in_conflict">Já existe uma conta com este e-mail. Entre com sua senha e depois vincule o Google em Configurações.</string>
     <string name="err_google_unavailable">A verificação do Google está temporariamente indisponível. Tente novamente em instantes.</string>
     <string name="err_password_already_set">Esta conta já tem uma senha.</string>
-    <string name="account_google_linked_email">Você entra com o Google (%1$s)</string>
     <string name="account_link_google">Vincular Google</string>
     <string name="account_link_google_hint">Adiciona o Google como segunda forma de entrar em %1$s. Seu e-mail não muda e as contas não são mescladas. Os outros dispositivos serão desconectados. Confirme sua senha atual e escolha uma conta Google.</string>
     <string name="account_link_google_done">Google vinculado. Os outros dispositivos foram desconectados.</string>
@@ -1026,7 +1006,7 @@
     <string name="legal_google_title">Conta nova</string>
     <string name="legal_google_body">Esta conta Google ainda não tem uma conta no Vocabulario. Para criá-la, confirme as declarações abaixo.</string>
     <string name="legal_continue">Continuar</string>
-    <string name="settings_legal">Privacidade e termos</string>
+    <string name="settings_legal">Informações</string>
     <string name="err_terms_required">Aceite os Termos de Uso para continuar.</string>
     <string name="err_adult_required">Confirme que você tem pelo menos 18 anos.</string>
     <string name="err_legal_changed">Os termos foram atualizados. Leia-os e aceite novamente.</string>
@@ -1047,7 +1027,7 @@
     <string name="report_discard">Descartar</string>
     <string name="report_rejected">Esta denúncia não pode mais ser enviada.</string>
     <string name="report_failed">Não foi possível enviar a denúncia. Tente novamente.</string>
-    <string name="support_title">Ajuda e contato</string>
+    <string name="support_title">Ajuda</string>
     <string name="support_email_label">E-mail de suporte</string>
     <string name="support_copy">Copiar endereço</string>
     <string name="support_open_site">Abrir a página de suporte</string>
@@ -1059,5 +1039,43 @@
     <string name="update_required_title">Atualização necessária</string>
     <string name="update_required_body">Esta versão do Vocabulario não é mais compatível. Atualize o app pelo Google Play para continuar. Seus dados continuam neste dispositivo.</string>
     <string name="update_required_action">Atualizar</string>
+    <string name="account_link_verify_title">Confirme seu endereço de e-mail</string>
+    <string name="account_link_verify_intro">Toque no botão abaixo para confirmar que este é o e-mail da sua conta do Vocabulario.</string>
+    <string name="account_link_verify_button">Confirmar endereço</string>
+    <string name="account_link_verify_done">Pronto! Seu e-mail foi confirmado. Você já pode voltar para o app.</string>
+    <string name="account_link_reset_title">Defina uma nova senha</string>
+    <string name="account_link_reset_intro">Escolha uma nova senha para sua conta do Vocabulario. Depois de salvar, você será desconectado de todos os dispositivos.</string>
+    <string name="account_link_reset_button">Salvar nova senha</string>
+    <string name="account_link_reset_done">Sua senha foi alterada. Entre no app com a nova senha.</string>
+    <string name="account_link_missing_token">Este link está incompleto. Abra-o novamente pelo e-mail ou solicite um novo no app.</string>
+    <string name="account_link_invalid">Este link não é mais válido. Solicite um novo no app.</string>
+    <string name="account_link_expired">Este link expirou. Solicite um novo no app.</string>
+    <string name="account_link_used">Este link já foi usado. Se foi você, a alteração já está salva.</string>
+    <string name="account_link_network">Não foi possível conectar. Verifique sua conexão com a internet e tente de novo.</string>
+    <string name="account_link_rate_limited">Muitas tentativas. Aguarde um momento e tente de novo.</string>
+    <string name="account_link_error">Algo deu errado. Tente de novo em instantes.</string>
+    <string name="settings_invalid_time">Digite um horário válido, por exemplo, 19:00.</string>
+    <string name="settings_notifications_on">Ativadas</string>
+    <string name="settings_notifications_off">Desativadas</string>
+    <plurals name="settings_card_content_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d itens</item>
+    </plurals>
+    <string name="import_info_title">Informações</string>
+    <string name="import_paste_info">Cole o texto exportado de outro aplicativo ou digite seus próprios termos no idioma que você estuda.</string>
+    <string name="import_analysis_description">Verificamos a escrita, o idioma e os termos que já estão nas suas listas.</string>
+    <string name="import_analysis_wait">Isso pode levar alguns instantes.</string>
+    <string name="import_analysis_result">Resultado da análise</string>
+    <string name="import_stat_all">Todos</string>
+    <string name="import_stat_ready">Prontos</string>
+    <string name="import_stat_duplicate">Duplicados</string>
+    <string name="import_stat_check">Para verificar</string>
+    <string name="import_stat_added">Adicionados</string>
+    <string name="import_stat_skipped">Não selecionados</string>
+    <string name="import_review_select">Escolha o que adicionar</string>
+    <string name="import_copy_check">Copiar termos para verificar (%1$d)</string>
+    <string name="import_copy_done">Copiado</string>
+    <string name="import_done">Pronto!</string>
+    <string name="import_details_error">Não foi possível carregar os detalhes da importação. Tentando novamente.</string>
 </resources>
 

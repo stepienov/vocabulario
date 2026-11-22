@@ -270,8 +270,6 @@ private fun LogoutPromptHost(authViewModel: AuthViewModel, onLoggedOut: suspend 
         LogoutUnsentDialog(
             prompt = prompt,
             onSyncAndLogout = { authViewModel.syncAndLogout(onLoggedOut) },
-            onAskDiscard = authViewModel::askDiscardConfirmation,
-            onDiscard = { authViewModel.discardAndLogout(onLoggedOut) },
             onCancel = authViewModel::cancelLogout,
         )
     }

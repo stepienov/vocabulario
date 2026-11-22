@@ -338,10 +338,15 @@ fun AppDialogWindowChrome(
 ) {
     val view = LocalView.current
     val density = LocalDensity.current
-    DisposableEffect(view, dimAlpha, blurDp, edgeToEdge) {
+    val lightBars = MaterialTheme.colorScheme.background.luminance() >= 0.5f
+    DisposableEffect(view, dimAlpha, blurDp, edgeToEdge, lightBars) {
         val window = dialogWindowOf(view)
         if (window != null) {
             window.setDimAmount(dimAlpha)
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = lightBars
+                isAppearanceLightNavigationBars = lightBars
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
                 val params = window.attributes

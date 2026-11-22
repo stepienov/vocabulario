@@ -40,6 +40,7 @@ data class CachedCardEntity(
     val contentReviewStatus: String? = null,
     val cardActivityStatus: String? = null,
     val hasContentChanges: Boolean = false,
+    val createdAt: String? = null,
     val updatedAt: Long = 0L,
 )
 

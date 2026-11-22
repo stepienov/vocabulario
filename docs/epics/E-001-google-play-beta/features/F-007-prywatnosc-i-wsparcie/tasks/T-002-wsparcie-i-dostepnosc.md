@@ -95,6 +95,19 @@ Nie dodajemy automatycznego dodatkowego LLM do każdego zapytania/raportu. Same 
 
 ## Dostępność i diagnostyka — projekt
 
+### Uzgodnione zachowanie wyglądu i list
+
+- Jasny motyw: J3 (błękit/koral/turkus), ciemny: C1 (zieleń/lawenda/miód), z przygaszonymi rolami akcentów. Font Inter i geometria pozostają bez zmian; kolory błędów i ocen zachowują znaczenie.
+- Części mowy zachowują te same kolory na liście, w wyszukiwaniu, filtrach i szczegółach kart. Filtry niezaznaczone korzystają z delikatnych kolorów kategorii, a zaznaczone mają główny kolor i znacznik wyboru (nie samą zmianę koloru). Panele Material i tło logowania również korzystają z aktywnego motywu.
+- W fiszkach, quizie, wpisywaniu i fiszkach listy nazwa języka pytania jest w dyskretnej pastylce B5: wyśrodkowana **nad kartą, poza nią**. Etykieta odpowiada kierunkowi danego pytania, również w trybie losowym.
+- Niezmieniona opcja „od najnowszych” jest domyślnym sortowaniem list. Ostatnie sortowanie oraz filtry części mowy/stanu są zapamiętywane na urządzeniu **osobno dla każdej listy**, także po restarcie. Tekst wyszukiwania nie jest trwałą preferencją.
+- Otwarcie konkretnego słowa z wyszukiwania chwilowo odsłania je bez filtrów, ale nie nadpisuje zapamiętanego wyboru. Przy przejściu między listami wracają ich własne ustawienia.
+- Cache Room zachowuje `created_at` z odpowiedzi kart i synchronizacji; zmiana znaczenia lub ocena nie odmładza słowa. Migracja 12→13 jest addytywna i resetuje kursor, aby najbliższa synchronizacja jednorazowo uzupełniła daty starszych kart. Backend musi udostępniać to pole; aktualizacja Androida nie wdraża backendu.
+
+Odbiór: obydwa motywy na panelu/dodaj/listach; dwa kierunki każdego ćwiczenia; dwie listy z różnymi filtrami i sortowaniem; restart/offline; przejście lokalnego ID listy na serwerowy; otwarcie słowa wykluczonego zapisanym filtrem. Błąd odczytu/zapisu preferencji ma jawny komunikat i ponowienie, nie ciche zerowanie filtrów.
+
+Dowód automatyczny: 350 testów jednostkowych Androida bez błędów/pominięć (w tym odtworzenie preferencji z prawdziwego DataStore); lint bez błędów; 3 testy Room/migracji na emulatorze; 12 testów kontraktu synchronizacji na lokalnym PostgreSQL. Daty są sprawdzone po pełnym i przyrostowym pull, nie tylko na enumie sortowania. Nie jest to odbiór całej macierzy dostępności ani wdrożenie backendu produkcyjnego.
+
 Auth/onboarding, konto, usuwanie/cofnięcie, raport i podstawowa nauka: TalkBack z nazwami/rólami i logicznym fokusem, błędy ogłaszane bez ciągłego resetu fokusu, 200% font, mały ekran, IME/klawiatura, jasny/ciemny motyw oraz RTL. Kontrolki min. 48 dp, tekst/stan nie tylko kolorem; ważne przyciski i zgody nie znikają pod klawiaturą.
 
 Oczekiwanie ma anulowanie/wyjście i jawny wynik nieznany; obrót/background/restart nie powtarza submit ani nie gubi szkicu. Timeout nie zamienia się w nieudane hasło lub zakończony raport.

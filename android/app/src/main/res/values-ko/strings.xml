@@ -149,15 +149,15 @@
 
     <string name="settings_theme">테마</string>
 
-    <string name="settings_mode">학습 모드</string>
+    <string name="settings_mode">학습 방식</string>
 
     <string name="settings_group_study">학습</string>
 
-    <string name="settings_group_general">일반</string>
+    <string name="settings_group_general">앱</string>
 
     <string name="settings_mode_choice">Quiz</string>
 
-    <string name="settings_mode_type">단어 입력</string>
+    <string name="settings_mode_type">답변 입력</string>
 
     <string name="settings_mode_flash">플래시카드</string>
 
@@ -167,7 +167,7 @@
 
     <string name="settings_tolerate_typos_sub">철자 및 발음 기호</string>
 
-    <string name="settings_direction">학습 방향</string>
+    <string name="settings_direction">무엇을 먼저 표시할까요?</string>
 
     <string name="settings_direction_first">%1$s 먼저</string>
 
@@ -175,25 +175,25 @@
 
     <string name="settings_direction_sub">먼저 보여줄 내용: %1$s</string>
 
-    <string name="settings_card_layout">카드 레이아웃</string>
+    <string name="settings_card_layout">카드에 표시할 내용</string>
 
     <string name="settings_card_layout_sub">카드 내용 맞춤 설정</string>
 
-    <string name="settings_examples">문장</string>
+    <string name="settings_examples">예문</string>
 
-    <string name="settings_usages">표현</string>
+    <string name="settings_usages">표현과 사용법</string>
 
     <string name="settings_periphrases">패턴</string>
 
-    <string name="settings_syn_ant">단어 주변</string>
+    <string name="settings_syn_ant">동의어와 반의어</string>
     <string name="settings_word_family">어족</string>
     <string name="settings_associations">연상</string>
 
-    <string name="settings_conjugation">활용</string>
+    <string name="settings_conjugation">동사 활용</string>
 
     <string name="settings_all_tenses">모든 시제</string>
 
-    <string name="settings_limits">제한</string>
+    <string name="settings_limits">하루 새 단어 수</string>
 
     <string name="settings_new_limit">일일 신규 단어 제한</string>
 
@@ -386,7 +386,7 @@
     <string name="import_reason_unknown">지금은 이 단어를 가져올 수 없습니다.</string>
     <string name="import_ready_hint">이 단어들이 목록에 추가됩니다.</string>
     <string name="import_review_loading">단어를 불러오는 중…</string>
-    <string name="import_errors_hint">이 단어들은 목록에 추가되지 않습니다.</string>
+    <string name="import_errors_hint">이 단어들은 추가되지 않습니다. 철자나 언어를 확인하세요.</string>
     <string name="import_item_untitled">알 수 없는 단어</string>
     <string name="import_reason_write_failed">3번 시도 후에도 이 단어를 저장하지 못했습니다.</string>
     <string name="import_cancelled">취소됨. 추가된 항목이 없습니다.</string>
@@ -666,14 +666,14 @@
     <string name="err_session_ended">세션이 종료되었습니다. 다시 로그인하세요.</string>
     <string name="err_login_other_account">이 기기에 다른 계정의 데이터가 있습니다. 계속하려면 해당 계정으로 로그인하세요.</string>
     <string name="legacy_data_title">이 기기의 할당되지 않은 데이터</string>
-    <string name="legacy_data_message">이 기기에 계정과 연결할 수 없는 이전 버전 앱의 데이터가 있습니다. 전송되지 않은 변경 사항: %1$d개. 로그인하려면 이 데이터를 삭제하세요. 이미 동기화된 내용은 로그인 후 다시 다운로드됩니다.</string>
+    <string name="legacy_data_message">이 기기에 계정과 연결할 수 없는 이전 버전 앱의 데이터가 있습니다. 전송되지 않은 변경 사항: %1$d개. 데이터는 보존됩니다. 로그인에 대한 도움이 필요하면 지원팀에 문의하세요.</string>
     <string name="legacy_data_discard">로컬 데이터 삭제</string>
     <string name="legacy_data_discard_confirm_title">영구적으로 삭제할까요?</string>
     <string name="legacy_data_discard_confirm">전송되지 않은 변경 사항(%1$d개)은 사라지며 복구할 수 없습니다.</string>
     <string name="legacy_data_discarded">로컬 데이터를 삭제했습니다. 다시 로그인하세요.</string>
     <string name="legacy_data_discard_failed">로컬 데이터를 삭제하지 못했습니다. 다시 시도하세요.</string>
     <string name="auth_notice_reauth_title">다시 로그인하세요</string>
-    <string name="auth_notice_reauth">세션이 종료되었습니다. 계속하려면 같은 계정으로 로그인하세요. 이 기기의 데이터는 유지됩니다.</string>
+    <string name="auth_notice_reauth">계속하려면 같은 계정으로 로그인하세요. 이 기기의 데이터는 유지됩니다.</string>
     <string name="auth_notice_recovery_title">세션을 복원할 수 없습니다</string>
     <string name="auth_notice_recovery">이 기기에 저장된 로그인 정보를 읽을 수 없습니다. 다시 시도하거나 같은 계정으로 로그인하세요. 이 기기의 데이터는 유지됩니다.</string>
     <string name="auth_notice_local_data_title">계정 데이터</string>
@@ -688,11 +688,11 @@
     <string name="loading_slow_title">평소보다 오래 걸리고 있습니다</string>
     <string name="loading_slow_message">앱이 아직 시작 중입니다. 연결을 확인하거나 다시 시도하세요.</string>
     <string name="auth_revocation_pending">이 기기에서 로그아웃했습니다. 온라인 상태가 되면 서버가 로그아웃을 확인합니다.</string>
-    <string name="auth_revocation_unconfirmed">서버 확인이 없는 세션: %1$d. 이 기기에서는 더 이상 사용되지 않으며 30일 이내에 자동으로 만료됩니다.</string>
+    <string name="auth_revocation_unconfirmed">서버 확인이 없는 세션: %1$d. 이 기기에서는 더 이상 사용되지 않지만 서버에서는 여전히 활성 상태일 수 있습니다.</string>
     <string name="auth_revocation_confirmed">서버에서도 로그아웃했습니다.</string>
     <string name="auth_revocation_queue_full">서버를 기다리는 로그아웃이 너무 많습니다. 인터넷에 연결한 뒤 잠시 기다렸다가 다시 시도하세요.</string>
     <string name="logout_unsent_title">전송되지 않은 변경 사항</string>
-    <string name="logout_unsent_message">로그아웃하면 이 계정의 데이터가 이 기기에서 삭제됩니다. 아직 서버로 전송되지 않은 변경 사항은 사라집니다.</string>
+    <string name="logout_unsent_message">변경 사항을 잃지 않도록 로그아웃하기 전에 동기화하세요.</string>
     <string name="logout_unsent_sync_incomplete">모든 변경 사항을 전송하지 못했습니다. 연결을 확인하고 다시 시도하거나 변경 사항을 삭제하세요.</string>
     <string name="logout_unsent_changed">그 사이에 전송되지 않은 새 변경 사항이 생겼습니다. 다시 선택하세요.</string>
     <string name="logout_discard_confirm_title">전송되지 않은 변경 사항을 삭제할까요?</string>
@@ -745,9 +745,9 @@
 
     <string name="list_clear_all_body">“%1$s”에서 모든 단어를 제거합니다. 목록 자체는 유지됩니다.</string>
 
-    <string name="settings_level">레벨</string>
+    <string name="settings_level">언어 수준</string>
 
-    <string name="settings_selected_tenses">선택된 시제</string>
+    <string name="settings_selected_tenses">시제 선택</string>
 
     <string name="action_edit">편집</string>
 
@@ -832,9 +832,9 @@
     <string name="settings_notif_cards">카드 준비 완료</string>
 
 
-    <string name="settings_notif_enabled">알림을 받겠습니다</string>
+    <string name="settings_notif_enabled">알림 켜기</string>
 
-    <string name="settings_study_hour">학습 시간</string>
+    <string name="settings_study_hour">알림 시간</string>
 
     <string name="notif_offline_ready_title">모든 카드가 준비되었습니다!</string>
 
@@ -965,13 +965,11 @@
     <string name="lookup_reading_learning">%1$s</string>
     <string name="lookup_reading_native">%1$s: %2$s</string>
 
-    <string name="settings_group_account">계정</string>
     <string name="settings_account">내 계정</string>
     <string name="account_loading">계정 정보를 불러오는 중…</string>
     <string name="account_unavailable">오프라인에서는 계정 정보를 볼 수 없습니다. 온라인 상태에서 다시 시도하세요.</string>
     <string name="account_email_verified">이메일 확인됨</string>
     <string name="account_email_unverified">이메일 미확인</string>
-    <string name="account_google_linked">Google로 로그인 중입니다</string>
     <string name="account_change_password">비밀번호 변경</string>
     <string name="account_current_password">현재 비밀번호</string>
     <string name="account_new_password">새 비밀번호</string>
@@ -1014,18 +1012,6 @@
     <string name="err_auth_unavailable">로그인을 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도하세요.</string>
     <string name="account_password_reset_needed">비밀번호를 다시 설정해야 합니다. 이메일 주소로 링크를 보내 드립니다.</string>
     <string name="account_password_reset_send">재설정 링크 보내기</string>
-    <string name="account_change_email">이메일 주소 변경</string>
-    <string name="account_new_email">새 이메일 주소</string>
-    <string name="account_change_email_hint">새 주소로 확인 링크를 보내 드립니다. 확인하면 모든 기기에서 로그아웃되며 새 주소로 로그인하게 됩니다.</string>
-    <string name="account_email_change_pending">%1$s(으)로 보낸 링크를 열어 변경을 확인하세요. 링크는 24시간 동안 유효합니다.</string>
-    <string name="account_email_change_send">링크 보내기</string>
-    <string name="account_email_change_resend">링크 다시 보내기</string>
-    <string name="account_email_change_cancel">변경 취소</string>
-    <string name="account_email_change_sent">%1$s(으)로 링크를 보냈습니다.</string>
-    <string name="account_email_change_resent">링크를 다시 보냈습니다.</string>
-    <string name="account_email_change_cancelled">이메일 변경이 취소되었습니다.</string>
-    <string name="account_email_change_expired">이메일 변경 링크가 만료되었습니다. 처음부터 다시 시작하세요.</string>
-    <string name="err_email_unchanged">이미 사용 중인 이메일 주소입니다.</string>
     <string name="err_email_unavailable">이 주소는 사용할 수 없습니다. 다른 주소를 입력하세요.</string>
     <string name="err_recent_auth">비밀번호를 다시 확인한 후 다시 시도하세요.</string>
     <string name="account_delete">계정 삭제</string>
@@ -1044,12 +1030,7 @@
     <string name="err_deletion_pending">이 계정은 삭제 예정입니다. 요청을 취소할 때까지 로그인할 수 없습니다.</string>
     <string name="err_account_deleted">이 계정은 삭제되었습니다.</string>
     <string name="err_deletion_owner_mismatch">이 인증 정보는 이 기기에 로그인된 계정이 아닌 다른 계정의 것입니다.</string>
-    <string name="account_profiles_note">언어 프로필은 모두 이 하나의 계정에 속합니다.</string>
     <string name="account_stale_note">오프라인에서 마지막으로 불러온 정보를 표시합니다. 보안 변경과 계정 삭제에는 연결이 필요합니다.</string>
-    <string name="account_methods_title">로그인 방법</string>
-    <string name="account_method_password_set">비밀번호: 설정됨</string>
-    <string name="account_method_password_none">비밀번호: 설정 안 됨</string>
-    <string name="account_method_google_none">Google: 연결 안 됨</string>
     <string name="err_google_challenge">Google 로그인이 만료되었습니다. 다시 시도해 주세요.</string>
     <string name="err_google_account_mismatch">여기에 연결된 Google 계정이 아닙니다. 올바른 계정을 선택해 주세요.</string>
     <string name="err_google_already_linked">이 계정에는 이미 Google이 연결되어 있습니다.</string>
@@ -1058,7 +1039,6 @@
     <string name="err_google_sign_in_conflict">이 이메일로 만든 계정이 이미 있습니다. 비밀번호로 로그인한 뒤 설정에서 Google을 연결하세요.</string>
     <string name="err_google_unavailable">Google 확인을 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.</string>
     <string name="err_password_already_set">이 계정에는 이미 비밀번호가 있습니다.</string>
-    <string name="account_google_linked_email">Google로 로그인 중입니다(%1$s)</string>
     <string name="account_link_google">Google 연결</string>
     <string name="account_link_google_hint">%1$s 계정에 두 번째 로그인 방법으로 Google을 추가합니다. 이메일 주소는 바뀌지 않으며 계정이 합쳐지지도 않습니다. 다른 기기는 로그아웃됩니다. 현재 비밀번호를 확인한 뒤 Google 계정을 선택하세요.</string>
     <string name="account_link_google_done">Google이 연결되었습니다. 다른 기기는 로그아웃되었습니다.</string>
@@ -1114,7 +1094,7 @@
     <string name="legal_google_title">새 계정</string>
     <string name="legal_google_body">이 Google 계정에는 아직 Vocabulario 계정이 없습니다. 계정을 만들려면 아래 내용을 확인해 주세요.</string>
     <string name="legal_continue">계속</string>
-    <string name="settings_legal">개인정보 및 약관</string>
+    <string name="settings_legal">정보</string>
     <string name="err_terms_required">계속하려면 이용약관에 동의해 주세요.</string>
     <string name="err_adult_required">만 18세 이상임을 확인해 주세요.</string>
     <string name="err_legal_changed">약관이 업데이트되었습니다. 읽어 보고 다시 동의해 주세요.</string>
@@ -1135,7 +1115,7 @@
     <string name="report_discard">삭제</string>
     <string name="report_rejected">이 신고는 더 이상 전송할 수 없습니다.</string>
     <string name="report_failed">신고를 보내지 못했습니다. 다시 시도하세요.</string>
-    <string name="support_title">도움말 및 문의</string>
+    <string name="support_title">도움말</string>
     <string name="support_email_label">지원 이메일</string>
     <string name="support_copy">주소 복사</string>
     <string name="support_open_site">지원 페이지 열기</string>
@@ -1147,4 +1127,41 @@
     <string name="update_required_title">업데이트 필요</string>
     <string name="update_required_body">이 버전의 Vocabulario는 더 이상 지원되지 않습니다. 계속하려면 Google Play에서 앱을 업데이트하세요. 데이터는 이 기기에 그대로 남아 있습니다.</string>
     <string name="update_required_action">업데이트</string>
+    <string name="account_link_verify_title">이메일 주소 확인</string>
+    <string name="account_link_verify_intro">아래 버튼을 눌러 이 주소가 Vocabulario 계정의 이메일 주소인지 확인해 주세요.</string>
+    <string name="account_link_verify_button">주소 확인</string>
+    <string name="account_link_verify_done">완료되었습니다! 이메일 주소가 확인되었습니다. 이제 앱으로 돌아가세요.</string>
+    <string name="account_link_reset_title">새 비밀번호 설정</string>
+    <string name="account_link_reset_intro">Vocabulario 계정의 새 비밀번호를 정해 주세요. 저장하면 모든 기기에서 로그아웃됩니다.</string>
+    <string name="account_link_reset_button">새 비밀번호 저장</string>
+    <string name="account_link_reset_done">비밀번호가 변경되었습니다. 새 비밀번호로 앱에 로그인해 주세요.</string>
+    <string name="account_link_missing_token">링크가 완전하지 않습니다. 이메일에서 다시 열거나 앱에서 새 링크를 요청해 주세요.</string>
+    <string name="account_link_invalid">이 링크는 더 이상 유효하지 않습니다. 앱에서 새 링크를 요청해 주세요.</string>
+    <string name="account_link_expired">이 링크는 만료되었습니다. 앱에서 새 링크를 요청해 주세요.</string>
+    <string name="account_link_used">이 링크는 이미 사용되었습니다. 본인이 사용했다면 변경 사항은 이미 저장되었습니다.</string>
+    <string name="account_link_network">연결할 수 없습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.</string>
+    <string name="account_link_rate_limited">시도 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요.</string>
+    <string name="account_link_error">문제가 발생했습니다. 잠시 후 다시 시도해 주세요.</string>
+    <string name="settings_invalid_time">올바른 시간을 입력하세요. 예: 19:00</string>
+    <string name="settings_notifications_on">켜짐</string>
+    <string name="settings_notifications_off">꺼짐</string>
+    <plurals name="settings_card_content_count">
+        <item quantity="other">%1$d개 항목</item>
+    </plurals>
+    <string name="import_info_title">안내</string>
+    <string name="import_paste_info">다른 앱에서 내보낸 텍스트를 붙여 넣거나 학습 중인 언어로 단어를 직접 입력하세요.</string>
+    <string name="import_analysis_description">철자, 언어 및 목록에 이미 있는 단어를 확인합니다.</string>
+    <string name="import_analysis_wait">잠시 걸릴 수 있습니다.</string>
+    <string name="import_analysis_result">분석 결과</string>
+    <string name="import_stat_all">전체</string>
+    <string name="import_stat_ready">추가 가능</string>
+    <string name="import_stat_duplicate">중복</string>
+    <string name="import_stat_check">확인 필요</string>
+    <string name="import_stat_added">추가됨</string>
+    <string name="import_stat_skipped">선택하지 않음</string>
+    <string name="import_review_select">추가할 단어 선택</string>
+    <string name="import_copy_check">확인할 단어 복사 (%1$d)</string>
+    <string name="import_copy_done">복사됨</string>
+    <string name="import_done">완료!</string>
+    <string name="import_details_error">가져오기 세부 정보를 불러오지 못했습니다. 다시 시도하고 있습니다.</string>
 </resources>

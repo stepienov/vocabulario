@@ -53,11 +53,14 @@ class OwnerDecisionsTest {
     }
 
     @Test
-    fun legacyDataIsNeverAssignedAutomatically() {
+    fun legacyDataRequiresMatchingServerProfilesAndEmptyQueues() {
         val legacy = snapshot(phase = OwnerPhase.LEGACY_UNCLAIMED, hasData = true, unsent = 5)
-        assertEquals(LoginDecision.LegacyQuarantine(5), decideLogin(legacy, "A"))
+        assertEquals(LoginDecision.LegacyQuarantine(5), decideLogin(legacy, "A", setOf("p1"), setOf("p1")))
         val ownerless = snapshot(phase = OwnerPhase.SIGNED_OUT, hasData = true, unsent = 0)
         assertEquals(LoginDecision.LegacyQuarantine(0), decideLogin(ownerless, "A"))
+        assertEquals(LoginDecision.SameOwner, decideLogin(ownerless, "A", setOf("p1"), setOf("p1", "p2")))
+        assertEquals(LoginDecision.LegacyQuarantine(0), decideLogin(ownerless, "A", setOf("p1", "p2"), setOf("p1")))
+        assertEquals(LoginDecision.LegacyQuarantine(0), decideLogin(ownerless, "A", emptySet(), setOf("p1")))
     }
 
     @Test

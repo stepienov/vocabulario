@@ -9,9 +9,6 @@ const val REVOCATION_QUEUE_VERSION = 1
 /** Miejsca na zlecenia z sekretem, łącznie z rezerwacjami i miejscem aktywnej sesji (T-002 §5). */
 const val REVOCATION_CAPACITY = 32
 
-/** Najpóźniej po tym czasie sekret zlecenia jest fizycznie usuwany (F-007, retencja techniczna). */
-const val REVOCATION_SECRET_TTL_MS = 30L * 24 * 60 * 60 * 1000
-
 /** Ile zakończonych bez potwierdzenia wpisów (bez sekretów) trzymamy do pokazania użytkownikowi. */
 internal const val REVOCATION_UNCONFIRMED_KEPT = 32
 
@@ -70,18 +67,6 @@ internal fun SessionRecord.revocationMaterial(): RevocationMaterial? {
     return RevocationMaterial(ownerUserId, sessionId, refreshToken, pendingRefresh)
 }
 
-/** Po 30 dniach sekret znika; zostaje tylko stan niepotwierdzenia (to nie dowód zakończenia sesji). */
-internal fun RevocationQueue.purgeExpired(nowMs: Long): RevocationQueue {
-    val purged = requests.map { request ->
-        if (request.state == RevocationState.PENDING && nowMs - request.createdAtMs >= REVOCATION_SECRET_TTL_MS) {
-            request.unconfirmed(REVOCATION_REASON_EXPIRED)
-        } else {
-            request
-        }
-    }
-    return copy(requests = trimUnconfirmed(purged))
-}
-
 /** Usuwa tylko najstarsze wpisy bez sekretu; oczekujących zleceń nigdy nie wyrzucamy. */
 internal fun trimUnconfirmed(requests: List<RevocationRequest>): List<RevocationRequest> {
     val unconfirmed = requests.filter { it.state == RevocationState.UNCONFIRMED }
@@ -99,7 +84,6 @@ internal fun canReserve(pending: Int, reservations: Int, activeSession: Boolean)
     return used + 1 <= REVOCATION_CAPACITY
 }
 
-internal const val REVOCATION_REASON_EXPIRED = "secret_expired"
 internal const val REVOCATION_REASON_INVALID = "invalid_proof"
 
 sealed interface LogoutHttpResult {

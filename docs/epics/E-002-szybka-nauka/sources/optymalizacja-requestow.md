@@ -6,7 +6,7 @@
 
 Dokument roboczy na sesję 7–8 listopada 2026. Zbiera fakty z produkcji, opis tego, co użytkownik czeka, i zamknięte decyzje naprawy. Opis kolejki jest kompletny. Kod ruszamy dopiero na osobne polecenie.
 
-Pomiary pochodzą z produkcji `https://vocabulario.up.railway.app`, bazy Postgres na Railway i logów `app_logs` / `lookup_events` / `llm_usage`. Konto kontrolne: `nowy4@test.com`, włączony profil polski → hiszpański (`pl>es`). Deploy, na którym to mierzono: 2 listopada 2026, commit `33a3b6d` (deploy `6b584601`).
+Pomiary pochodzą z produkcji `https://vocabulario.up.railway.app`, bazy Postgres na Railway i logów `app_logs` / `lookup_events` / `llm_usage`. Konto kontrolne miało włączony profil polski → hiszpański (`pl>es`). Deploy, na którym to mierzono: 2 listopada 2026, commit `33a3b6d` (deploy `6b584601`).
 
 8 listopada 2026 dokument przeszedł weryfikację z kodem backendu i Androida, z produkcją i z gołym API modeli. Poprawki są w tekście, a lista zmian z powodami jest na końcu, w „Rejestrze zmian”. Instrukcje implementacji w kolejności wdrażania są w `docs/epics/E-002-szybka-nauka/`.
 
@@ -285,7 +285,7 @@ Zanim pomiar uznamy za wynik naprawy, sprawdzamy, że task 01 jest wdrożony: je
 
 ### Jak sprawdzimy
 
-Konto `nowy4@test.com`, profil polski → hiszpański, wpisane samo `prado`, karty tego profilu już pobrane na telefon:
+Konto kontrolne, profil polski → hiszpański, wpisane samo `prado`, karty tego profilu już pobrane na telefon:
 
 - Jedno `POST /api/v1/lookup/cached` w `app_logs`, bez pary z workera. `duration_ms` poniżej 150 ms. Na krawędzi Railway (`totalDuration`) poniżej 600 ms: zostaje droga Europa–Kalifornia, około 150 ms w jedną stronę. Powyżej sekundy wracamy do taska 01.
 - Odpowiedź: trzy propozycje, `ai_complete=true`, bez identyfikatorów kart i list.

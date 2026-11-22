@@ -15,6 +15,8 @@ Projekt: **UptimeRobot Free**, sprawdzanie publicznego HTTPS `/health/ready` co 
 
 Diagnostyka Androida: raporty pre-launch, Android vitals/crash/ANR tam, gdzie Play udostępnia dane dla danego tracka/próbki, własne testy i świadome raporty F-007. Brak nowego Crashlytics/Sentry/analytics SDK w tej becie. Brak danych Vitals nie oznacza zera crashy; przy 5–30 osobach konieczne ręczne potwierdzenia. Mapowanie obfuskacji/symboli zachować przy buildzie.
 
+**Decyzja z 21.11.2026:** nie pokazujemy użytkownikowi statusu synchronizacji. Problemy z zapisem wymagają alertu dla operatora zamiast obsługi przez użytkownika. Istniejące alerty backendu nie wykrywają błędów występujących wyłącznie na urządzeniu; dostarczenie i test takiego alertu pozostają do wykonania.
+
 Backend: własne logi do 7 dni i metryki bez treści 30 dni; panel operatora i alarmy nie zawierają adresu/tekstu biblioteki. Jeśli hosting trzyma stdout dłużej, nie wysyłać tam danych użytkownika/identyfikatorów; ewentualny nieusuwalny osobowy log dostawcy wymaga ujawnionego wyjątku prawnego przed startem, nie cichego odstępstwa od decyzji.
 
 Maintenance backendu co 15 min wylicza tanie agregaty z indeksów/stanów, bez wywołań LLM i N+1 per karta. Lokalny deduplikowany alert trafia do operatora; publiczny health nie ujawnia szczegółów. Dla utraty heartbeat samego maintenance/readiness zewnętrzny monitor musi zobaczyć degradację, nie wieczne 200 martwego procesu.

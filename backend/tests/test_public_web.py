@@ -9,7 +9,7 @@ from app.main import create_app
 from app.public_web.texts import KEYS, PAGE_TEXTS
 from app.services.mail_templates import SUPPORTED_LOCALES
 
-PAGES = ("/account/verify-email", "/account/reset-password", "/account/change-email")
+PAGES = ("/account/verify-email", "/account/reset-password")
 
 
 @pytest.fixture
@@ -102,6 +102,12 @@ async def test_pages_accept_only_get(client):
     response = await client.post("/account/reset-password", json={})
     assert response.status_code == 405
     assert (await client.post("/account/delete-account", json={})).status_code == 405
+
+
+async def test_email_change_is_not_available(client):
+    assert (await client.get("/account/change-email")).status_code == 404
+    assert (await client.post("/api/v1/auth/email-change/confirm", json={"token": "old"})).status_code == 404
+    assert (await client.post("/api/v1/auth/email-change/request", json={})).status_code == 404
 
 
 DELETION_PAGES = (

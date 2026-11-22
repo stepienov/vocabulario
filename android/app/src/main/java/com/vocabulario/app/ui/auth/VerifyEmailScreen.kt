@@ -184,7 +184,7 @@ fun VerifyEmailScreen(
 }
 
 @Composable
-private fun deliveryText(delivery: MailDelivery): String? = when (delivery) {
+internal fun deliveryText(delivery: MailDelivery): String? = when (delivery) {
     MailDelivery.NONE -> null
     MailDelivery.SENDING -> stringResource(R.string.verify_email_status_sending)
     MailDelivery.SENT -> stringResource(R.string.verify_email_status_sent)

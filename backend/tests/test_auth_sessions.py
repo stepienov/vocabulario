@@ -12,6 +12,8 @@ from sqlalchemy import func, select
 
 from app.core.config import get_settings
 from app.core.security import ACCESS, REFRESH, TokenError, now_utc, read_token
+from app.db.base import Base
+from app.db.migrations import apply_schema
 from app.models import AuthRefreshRetry, AuthSession
 from app.services import auth_sessions as svc
 from app.services.auth_sessions import RetryRecordError, SessionAuthError
@@ -124,18 +126,23 @@ async def test_conflicting_retries_are_409_and_keep_the_session(pg):
     assert (await _session(pg, issued.session_id)).revoked_at is None
 
 
-async def test_retry_window_ends_after_five_minutes_and_replay_revokes_only_that_session(pg):
+async def test_lost_refresh_response_can_be_recovered_after_a_century(pg):
     now = now_utc()
     user, issued = await _user_with_session(pg, now=now)
     async with pg() as db:
         other = await svc.create_session(db, user.id, now=now)
         await db.commit()
     request_id = uuid4()
-    await _refresh(pg, issued.refresh_token, request_id, now=now)
+    original = await _refresh(pg, issued.refresh_token, request_id, now=now)
     edge = now + svc.RETRY_WINDOW - timedelta(seconds=1)
-    await _refresh(pg, issued.refresh_token, request_id, now=edge)
-    late = now + svc.RETRY_WINDOW
-    assert await _code(_refresh(pg, issued.refresh_token, request_id, now=late)) == (
+    retry = await _refresh(pg, issued.refresh_token, request_id, now=edge)
+    assert retry.access_token == original.access_token
+    late = now + timedelta(days=36525)
+    recovered = await _refresh(pg, issued.refresh_token, request_id, now=late)
+    assert recovered.refresh_token == original.refresh_token
+    assert recovered.access_token != original.access_token
+    assert read_token(recovered.access_token, ACCESS, now=late).session_id == issued.session_id
+    assert await _code(_refresh(pg, issued.refresh_token, uuid4(), now=late)) == (
         401,
         "session_revoked",
     )
@@ -206,17 +213,55 @@ async def test_revoke_all_except_current_and_renew_invalidate_old_tokens(pg):
     await _refresh(pg, renewed.refresh_token, uuid4())
 
 
-async def test_expired_session_and_expired_refresh_are_session_expired(pg):
+async def test_session_can_refresh_after_a_century_and_still_be_revoked(pg):
     now = now_utc()
     _, issued = await _user_with_session(pg, now=now)
-    later = now + timedelta(days=get_settings().refresh_token_expire_days, seconds=1)
-    assert await _code(_refresh(pg, issued.refresh_token, uuid4(), now=later)) == (
-        401,
-        "session_expired",
+    later = now + timedelta(days=36525)
+    assert read_token(issued.refresh_token, REFRESH, now=later).expires_at is None
+    with pytest.raises(TokenError, match="expired"):
+        read_token(issued.access_token, ACCESS, now=later)
+    rotated = await _refresh(pg, issued.refresh_token, uuid4(), now=later)
+    async with pg() as db:
+        await svc.logout_session(db, rotated.refresh_token, now=later)
+        await db.commit()
+    assert await _code(_refresh(pg, rotated.refresh_token, uuid4(), now=later)) == (
+        401, "session_revoked"
     )
-    stored = await _session(pg, issued.session_id)
-    claims = read_token(issued.access_token, ACCESS, now=now)
-    assert await _code(_check(stored, claims, later)) == (401, "session_expired")
+
+
+async def test_migration_preserves_live_old_sessions_without_reviving_expired_or_revoked(pg):
+    now = now_utc()
+    _, live = await _user_with_session(pg, now=now)
+    _, expired = await _user_with_session(pg, now=now)
+    _, revoked = await _user_with_session(pg, now=now)
+    old_claims = jwt.get_unverified_claims(live.refresh_token)
+    old_claims["exp"] = int((now + timedelta(days=30)).timestamp())
+    old_token = _encode(old_claims)
+    async with pg() as db:
+        live_row = await db.get(AuthSession, live.session_id)
+        live_row.refresh_token_hash = svc.token_hash(old_token)
+        live_row.expires_at = now + timedelta(days=30)
+        expired_row = await db.get(AuthSession, expired.session_id)
+        expired_row.expires_at = now - timedelta(seconds=1)
+        revoked_row = await db.get(AuthSession, revoked.session_id)
+        revoked_row.expires_at = now + timedelta(days=30)
+        revoked_row.revoked_at = now
+        revoked_row.revocation_reason = "logout"
+        await db.commit()
+    await apply_schema(pg.kw["bind"], Base.metadata)
+    await apply_schema(pg.kw["bind"], Base.metadata)
+    assert (await _session(pg, live.session_id)).expires_at is None
+    assert (await _session(pg, expired.session_id)).expires_at is not None
+    assert (await _session(pg, revoked.session_id)).expires_at is not None
+    later = now + timedelta(days=36525)
+    rotated = await _refresh(pg, old_token, uuid4(), now=later)
+    assert rotated.session_id == live.session_id
+    assert await _code(_refresh(pg, expired.refresh_token, uuid4(), now=now)) == (
+        401, "session_expired"
+    )
+    assert await _code(_refresh(pg, revoked.refresh_token, uuid4(), now=now)) == (
+        401, "session_revoked"
+    )
 
 
 async def test_tampered_retry_record_is_a_server_error(pg):

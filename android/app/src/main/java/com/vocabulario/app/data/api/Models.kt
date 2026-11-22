@@ -126,25 +126,6 @@ data class RecentAuthPasswordRequest(val password: String, val action: String)
 @Serializable
 data class RecentAuthResponse(val recent_auth_token: String, val action: String, val expires_at: String)
 
-@Serializable
-data class EmailChangeRequestBody(val new_email: String, val recent_auth_token: String, val request_id: String)
-
-/** `status`: pending / expired / cancelled / confirmed / replaced; `mode`: change albo correction. */
-@Serializable
-data class EmailChangeResponse(
-    val change_id: String,
-    val mode: String,
-    val status: String,
-    val new_email: String,
-    val expires_at: String,
-    val resend_available_at: String? = null,
-    val delivery_status: String = "queued",
-    val delivery_delayed: Boolean = false,
-)
-
-@Serializable
-data class EmailChangeCurrentResponse(val change: EmailChangeResponse? = null)
-
 /** `action`: `request` albo `cancel`. Dowód nie wymaga sesji (konto po wniosku jest zablokowane). */
 @Serializable
 data class DeletionProofRequest(val email: String, val password: String, val action: String)
@@ -593,6 +574,7 @@ data class SyncCardItem(
     val content_review_status: String? = null,
     val card_activity_status: String? = null,
     val has_content_changes: Boolean = false,
+    val created_at: String? = null,
     val updated_at: String? = null,
     val srs: SyncSrsState? = null,
 )

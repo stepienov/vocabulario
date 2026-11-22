@@ -3,7 +3,7 @@
 import asyncio
 import base64
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -43,6 +43,7 @@ async def test_full_pull_then_empty_delta_and_srs_only_change(pg, pg_client):
     _, profile, card, headers = await _setup(pg)
     first = (await _pull(pg_client, headers, profile)).json()
     assert [c["id"] for c in first["cards"]] == [str(card.id)]
+    assert datetime.fromisoformat(first["cards"][0]["created_at"]) == card.created_at
     assert first["cursor"]
 
     again = (await _pull(pg_client, headers, profile, first["cursor"])).json()
@@ -55,6 +56,7 @@ async def test_full_pull_then_empty_delta_and_srs_only_change(pg, pg_client):
     delta = (await _pull(pg_client, headers, profile, again["cursor"])).json()
     assert [c["id"] for c in delta["cards"]] == [str(card.id)]
     assert delta["cards"][0]["srs"]["interval_days"] == 9
+    assert delta["cards"][0]["created_at"] == first["cards"][0]["created_at"]
 
 
 async def test_open_transaction_with_older_xid_shows_up_after_commit(pg, pg_client):

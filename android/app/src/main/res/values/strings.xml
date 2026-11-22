@@ -127,15 +127,15 @@
 
     <string name="settings_theme">Theme</string>
 
-    <string name="settings_mode">Study mode</string>
+    <string name="settings_mode">Study method</string>
 
     <string name="settings_group_study">STUDY</string>
 
-    <string name="settings_group_general">GENERAL</string>
+    <string name="settings_group_general">APP</string>
 
     <string name="settings_mode_choice">Quiz</string>
 
-    <string name="settings_mode_type">Type the word</string>
+    <string name="settings_mode_type">Type your answer</string>
 
     <string name="settings_mode_flash">Flashcards</string>
 
@@ -145,7 +145,7 @@
 
     <string name="settings_tolerate_typos_sub">Spelling and diacritics</string>
 
-    <string name="settings_direction">Study direction</string>
+    <string name="settings_direction">What do we show first?</string>
 
     <string name="settings_direction_first">%1$s first</string>
 
@@ -153,25 +153,25 @@
 
     <string name="settings_direction_sub">What to show first: %1$s</string>
 
-    <string name="settings_card_layout">Card layout</string>
+    <string name="settings_card_layout">What appears on a flashcard</string>
 
     <string name="settings_card_layout_sub">Customize flashcard content</string>
 
-    <string name="settings_examples">Sentences</string>
+    <string name="settings_examples">Example sentences</string>
 
-    <string name="settings_usages">Phrases</string>
+    <string name="settings_usages">Phrases and usage</string>
 
     <string name="settings_periphrases">Patterns</string>
 
-    <string name="settings_syn_ant">Around the word</string>
+    <string name="settings_syn_ant">Synonyms and antonyms</string>
     <string name="settings_word_family">Word family</string>
     <string name="settings_associations">Associations</string>
 
-    <string name="settings_conjugation">Conjugation</string>
+    <string name="settings_conjugation">Verb forms</string>
 
     <string name="settings_all_tenses">All tenses</string>
 
-    <string name="settings_limits">Limits</string>
+    <string name="settings_limits">New words per day</string>
 
     <string name="settings_new_limit">Daily new-word limit</string>
 
@@ -375,7 +375,7 @@
     <string name="import_reason_unknown">This word could not be imported.</string>
     <string name="import_ready_hint">These words will be added to your list.</string>
     <string name="import_review_loading">Loading the word list…</string>
-    <string name="import_errors_hint">These words will not be added to your list.</string>
+    <string name="import_errors_hint">These terms will not be added. Check their spelling or language.</string>
     <string name="import_item_untitled">Unknown word</string>
     <string name="import_reason_write_failed">This word could not be saved after 3 tries.</string>
     <string name="import_cancelled">Cancelled. Nothing was added.</string>
@@ -669,14 +669,14 @@
     <string name="err_session_ended">Your session has ended. Please sign in again.</string>
     <string name="err_login_other_account">This device holds data from a different account. Sign in to that account to continue.</string>
     <string name="legacy_data_title">Unassigned data on this device</string>
-    <string name="legacy_data_message">This device has data from an earlier app version that can’t be linked to an account. Unsent changes: %1$d. To sign in, remove this data. Anything already synced will download again after you sign in.</string>
+    <string name="legacy_data_message">This device has data from an earlier app version that can’t be linked to an account. Unsent changes: %1$d. Your data is preserved. Contact support for help signing in.</string>
     <string name="legacy_data_discard">Remove local data</string>
     <string name="legacy_data_discard_confirm_title">Remove permanently?</string>
     <string name="legacy_data_discard_confirm">Unsent changes (%1$d) will be lost and can’t be recovered.</string>
     <string name="legacy_data_discarded">Local data removed. Sign in again.</string>
     <string name="legacy_data_discard_failed">Couldn’t remove local data. Try again.</string>
     <string name="auth_notice_reauth_title">Sign in again</string>
-    <string name="auth_notice_reauth">Your session has ended. Sign in with the same account to continue. Your data on this device is kept.</string>
+    <string name="auth_notice_reauth">Sign in with the same account to continue. Your data on this device is kept.</string>
     <string name="auth_notice_recovery_title">Couldn’t restore your session</string>
     <string name="auth_notice_recovery">The saved sign-in on this device couldn’t be read. Try again or sign in with the same account. Your data on this device is kept.</string>
     <string name="auth_notice_local_data_title">Data from your account</string>
@@ -691,11 +691,11 @@
     <string name="loading_slow_title">This is taking longer than usual</string>
     <string name="loading_slow_message">The app is still starting. Check your connection or try again.</string>
     <string name="auth_revocation_pending">Signed out on this device. The server will confirm the sign-out once you’re online.</string>
-    <string name="auth_revocation_unconfirmed">Sessions without server confirmation: %1$d. They’re no longer used on this device and expire automatically within 30 days.</string>
+    <string name="auth_revocation_unconfirmed">Sessions without server confirmation: %1$d. They’re no longer used on this device, but may still be active on the server.</string>
     <string name="auth_revocation_confirmed">Signed out on the server too.</string>
     <string name="auth_revocation_queue_full">Too many sign-outs are waiting for the server. Connect to the internet, wait a moment and try again.</string>
     <string name="logout_unsent_title">Unsent changes</string>
-    <string name="logout_unsent_message">Logging out removes this account’s data from this device. Changes not yet sent to the server will be lost.</string>
+    <string name="logout_unsent_message">Sync your changes before logging out so they are not lost.</string>
     <string name="logout_unsent_sync_incomplete">Not all changes could be sent. Check your connection and try again, or discard them.</string>
     <string name="logout_unsent_changed">New unsent changes appeared in the meantime. Please decide again.</string>
     <string name="logout_discard_confirm_title">Discard unsent changes?</string>
@@ -748,9 +748,9 @@
 
     <string name="list_clear_all_body">You’ll remove every word from “%1$s”. The list itself stays.</string>
 
-    <string name="settings_level">Level</string>
+    <string name="settings_level">Language level</string>
 
-    <string name="settings_selected_tenses">Selected tenses</string>
+    <string name="settings_selected_tenses">Choose tenses</string>
 
     <string name="action_edit">Edit</string>
 
@@ -861,8 +861,8 @@
     <string name="settings_notifications_summary">Study reminders and card status</string>
     <string name="settings_notif_study">Study reminders</string>
     <string name="settings_notif_cards">Cards ready</string>
-    <string name="settings_notif_enabled">I want notifications</string>
-    <string name="settings_study_hour">Study time</string>
+    <string name="settings_notif_enabled">Enable notifications</string>
+    <string name="settings_study_hour">Reminder time</string>
     <string name="notif_offline_ready_title">All cards are ready!</string>
     <string name="notif_offline_ready_body">Time to study!</string>
     <string name="notif_import_ready_title">All cards are ready!</string>
@@ -899,13 +899,11 @@
     <string name="err_no_inbox">Couldn’t open the pending list</string>
     <string name="err_email_taken">This email is already registered</string>
 
-    <string name="settings_group_account">ACCOUNT</string>
     <string name="settings_account">Account</string>
     <string name="account_loading">Loading account details…</string>
     <string name="account_unavailable">Account details aren’t available offline. Try again when you’re online.</string>
     <string name="account_email_verified">Email confirmed</string>
     <string name="account_email_unverified">Email not confirmed yet</string>
-    <string name="account_google_linked">You sign in with Google</string>
     <string name="account_change_password">Change password</string>
     <string name="account_current_password">Current password</string>
     <string name="account_new_password">New password</string>
@@ -948,18 +946,6 @@
     <string name="err_auth_unavailable">Sign-in is temporarily unavailable. Try again in a moment.</string>
     <string name="account_password_reset_needed">Your password has to be set again. We’ll email a link to your address.</string>
     <string name="account_password_reset_send">Send reset link</string>
-    <string name="account_change_email">Change email address</string>
-    <string name="account_new_email">New email address</string>
-    <string name="account_change_email_hint">We’ll send a confirmation link to the new address. After you confirm, you’ll be signed out on all devices and sign in with the new address.</string>
-    <string name="account_email_change_pending">Open the link we sent to %1$s to confirm the change. The link is valid for 24 hours.</string>
-    <string name="account_email_change_send">Send link</string>
-    <string name="account_email_change_resend">Resend link</string>
-    <string name="account_email_change_cancel">Cancel change</string>
-    <string name="account_email_change_sent">Link sent to %1$s.</string>
-    <string name="account_email_change_resent">Link sent again.</string>
-    <string name="account_email_change_cancelled">Email change cancelled.</string>
-    <string name="account_email_change_expired">The email change link has expired. Start again.</string>
-    <string name="err_email_unchanged">This is already your email address.</string>
     <string name="err_email_unavailable">This address can’t be used. Try a different one.</string>
     <string name="err_recent_auth">Confirm your password again and retry.</string>
     <string name="account_delete">Delete account</string>
@@ -978,12 +964,7 @@
     <string name="err_deletion_pending">This account is scheduled for deletion. Sign-in is blocked until the request is cancelled.</string>
     <string name="err_account_deleted">This account has been deleted.</string>
     <string name="err_deletion_owner_mismatch">These credentials belong to a different account than the one signed in on this device.</string>
-    <string name="account_profiles_note">Your language profiles belong to this one account.</string>
     <string name="account_stale_note">Last known details, shown offline. Security changes and account deletion need a connection.</string>
-    <string name="account_methods_title">Sign-in methods</string>
-    <string name="account_method_password_set">Password: set</string>
-    <string name="account_method_password_none">Password: not set</string>
-    <string name="account_method_google_none">Google: not linked</string>
     <string name="err_google_challenge">Google sign-in expired. Please try again.</string>
     <string name="err_google_account_mismatch">That isn’t the Google account linked here. Choose the right one.</string>
     <string name="err_google_already_linked">Google is already linked to this account.</string>
@@ -992,7 +973,6 @@
     <string name="err_google_sign_in_conflict">An account with this email already exists. Sign in with your password, then link Google in Settings.</string>
     <string name="err_google_unavailable">Google verification is temporarily unavailable. Try again in a moment.</string>
     <string name="err_password_already_set">This account already has a password.</string>
-    <string name="account_google_linked_email">You sign in with Google (%1$s)</string>
     <string name="account_link_google">Link Google</string>
     <string name="account_link_google_hint">Adds Google as a second way to sign in to %1$s. Your email address stays the same and accounts aren’t merged. Other devices will be signed out. Confirm your current password, then choose a Google account.</string>
     <string name="account_link_google_done">Google linked. Other devices have been signed out.</string>
@@ -1048,7 +1028,7 @@
     <string name="legal_google_title">New account</string>
     <string name="legal_google_body">This Google account doesn’t have a Vocabulario account yet. To create one, confirm the statements below.</string>
     <string name="legal_continue">Continue</string>
-    <string name="settings_legal">Privacy and terms</string>
+    <string name="settings_legal">Information</string>
     <string name="err_terms_required">Accept the Terms of Use to continue.</string>
     <string name="err_adult_required">Confirm that you are at least 18 years old.</string>
     <string name="err_legal_changed">The terms were updated. Read them and accept again.</string>
@@ -1069,7 +1049,7 @@
     <string name="report_discard">Discard</string>
     <string name="report_rejected">This report can no longer be sent.</string>
     <string name="report_failed">Couldn’t send the report. Try again.</string>
-    <string name="support_title">Help and contact</string>
+    <string name="support_title">Help</string>
     <string name="support_email_label">Support email</string>
     <string name="support_copy">Copy address</string>
     <string name="support_open_site">Open the support page</string>
@@ -1081,5 +1061,43 @@
     <string name="update_required_title">Update required</string>
     <string name="update_required_body">This version of Vocabulario is no longer supported. Update the app from Google Play to continue. Your data stays on this device.</string>
     <string name="update_required_action">Update</string>
+    <string name="account_link_verify_title">Confirm your email address</string>
+    <string name="account_link_verify_intro">Press the button below to confirm that this is the email address of your Vocabulario account.</string>
+    <string name="account_link_verify_button">Confirm address</string>
+    <string name="account_link_verify_done">Done! Your email address is confirmed. You can go back to the app.</string>
+    <string name="account_link_reset_title">Set a new password</string>
+    <string name="account_link_reset_intro">Choose a new password for your Vocabulario account. After saving, you will be signed out on all devices.</string>
+    <string name="account_link_reset_button">Save new password</string>
+    <string name="account_link_reset_done">Your password has been changed. Sign in to the app with your new password.</string>
+    <string name="account_link_missing_token">This link is incomplete. Open it again from the email or request a new one in the app.</string>
+    <string name="account_link_invalid">This link is no longer valid. Request a new one in the app.</string>
+    <string name="account_link_expired">This link has expired. Request a new one in the app.</string>
+    <string name="account_link_used">This link has already been used. If it was you, the change is already saved.</string>
+    <string name="account_link_network">Could not connect. Check your internet connection and try again.</string>
+    <string name="account_link_rate_limited">Too many attempts. Wait a moment and try again.</string>
+    <string name="account_link_error">Something went wrong. Try again in a moment.</string>
+    <string name="settings_invalid_time">Enter a valid time, e.g. 19:00.</string>
+    <string name="settings_notifications_on">On</string>
+    <string name="settings_notifications_off">Off</string>
+    <plurals name="settings_card_content_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="import_info_title">Information</string>
+    <string name="import_paste_info">Paste text exported from another app or enter your own terms in the language you are learning.</string>
+    <string name="import_analysis_description">We are checking spelling, language and terms already on your lists.</string>
+    <string name="import_analysis_wait">This may take a moment.</string>
+    <string name="import_analysis_result">Analysis results</string>
+    <string name="import_stat_all">All</string>
+    <string name="import_stat_ready">Ready</string>
+    <string name="import_stat_duplicate">Duplicates</string>
+    <string name="import_stat_check">Check</string>
+    <string name="import_stat_added">Added</string>
+    <string name="import_stat_skipped">Skipped by choice</string>
+    <string name="import_review_select">Choose terms to add</string>
+    <string name="import_copy_check">Copy terms to check (%1$d)</string>
+    <string name="import_copy_done">Copied</string>
+    <string name="import_done">Done!</string>
+    <string name="import_details_error">Could not load import details. Retrying.</string>
 </resources>
 

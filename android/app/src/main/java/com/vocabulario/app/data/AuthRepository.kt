@@ -2,6 +2,7 @@ package com.vocabulario.app.data
 
 import com.vocabulario.app.auth.GoogleIdTokenProvider
 import com.vocabulario.app.data.api.GoogleAuthRequest
+import com.vocabulario.app.data.api.CandidateProfilesApi
 import com.vocabulario.app.data.api.LegalAcceptanceBody
 import com.vocabulario.app.data.api.LoginRequest
 import com.vocabulario.app.data.api.LogoutRequest
@@ -49,6 +50,7 @@ class UnclaimedLocalDataException(val unsentCount: Int) : Exception("unclaimed_l
 @Singleton
 class AuthRepository @Inject constructor(
     private val api: VocabularioApi,
+    private val candidateProfilesApi: CandidateProfilesApi,
     private val tokenStore: TokenStore,
     private val offlineStore: OfflineStore,
     private val importStatePersistence: ImportStatePersistence,
@@ -107,7 +109,28 @@ class AuthRepository @Inject constructor(
             throw SessionInstallException("missing user_id")
         }
         val transitionId = UUID.randomUUID().toString()
-        when (val decision = offlineStore.beginInstall(candidateUserId, transitionId)) {
+        val snapshot = offlineStore.ownerSnapshot()
+        val savedOwner = when (val state = sessionCoordinator.awaitLoaded()) {
+            is SessionState.Active -> state.ownerUserId
+            is SessionState.ReauthRequired -> state.ownerUserId
+            else -> null
+        }
+        val verifiedProfiles = if (
+            snapshot.hasOwnedData && snapshot.ownerUserId == null && snapshot.unsentCount == 0 &&
+            (savedOwner == null || savedOwner == candidateUserId)
+        ) {
+            try {
+                candidateProfilesApi.listProfiles("Bearer ${tokens.access_token}").map { it.id }.toSet()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                revokeCandidate(tokens, slot)
+                throw e
+            }
+        } else {
+            emptySet()
+        }
+        when (val decision = offlineStore.beginInstall(candidateUserId, transitionId, verifiedProfiles)) {
             is LoginDecision.OtherAccount -> {
                 revokeCandidate(tokens, slot)
                 throw OtherAccountDataException(decision.unsentCount)
@@ -185,17 +208,6 @@ class AuthRepository @Inject constructor(
 
     suspend fun dismissUnconfirmedRevocations() {
         withContext(Dispatchers.IO) { runCatching { revocationStore.dismissUnconfirmed() } }
-    }
-
-    /** Świadome odrzucenie danych, których nie można przypisać do konta (stara instalacja). */
-    suspend fun discardUnclaimedLocalData(): Boolean {
-        val discarded = offlineStore.discardUnclaimedData()
-        if (discarded) {
-            tokenStore.clear()
-            importStatePersistence.saveJobId(null)
-            signOutCleanup.afterOwnerDataRemoved()
-        }
-        return discarded
     }
 
     suspend fun ownerSnapshot(): OwnerSnapshot = offlineStore.ownerSnapshot()

@@ -831,6 +831,7 @@ class SyncCardItem(BaseModel):
     content_review_status: str | None = None
     card_activity_status: str | None = None
     has_content_changes: bool = False
+    created_at: datetime | None = None
     updated_at: datetime | None = None
     srs: SyncSrsState | None = None
 

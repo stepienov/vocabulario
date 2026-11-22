@@ -8,8 +8,11 @@ tags:
     clearState: false
 - runFlow: ../../helpers/ensure-logged-in.yaml
 - runFlow: ../../helpers/goto-settings.yaml
-- tapOn:
-    id: settings_section_languages
+- scrollUntilVisible:
+    element:
+      id: settings_native_lang
+    direction: DOWN
+    timeout: 15000
 - tapOn:
     id: settings_native_lang
 - runFlow:
@@ -26,8 +29,11 @@ tags:
 - assertVisible:
     id: btn_learn
 - runFlow: ../../helpers/goto-settings.yaml
-- tapOn:
-    id: settings_section_languages
+- scrollUntilVisible:
+    element:
+      id: settings_native_lang
+    direction: DOWN
+    timeout: 15000
 - tapOn:
     id: settings_native_lang
 - runFlow:

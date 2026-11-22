@@ -541,6 +541,10 @@ _STATEMENTS = (
     "END IF; END $$",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
     "restore_recovery_required BOOLEAN NOT NULL DEFAULT false",
+    # Previously live sessions keep working after their original refresh TTL.
+    "ALTER TABLE auth_sessions ALTER COLUMN expires_at DROP NOT NULL",
+    "UPDATE auth_sessions SET expires_at = NULL "
+    "WHERE revoked_at IS NULL AND expires_at > NOW()",
     # E-001/F-007/T-003: terms acceptance proof; old accounts stay NULL (never "accepted").
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS accepted_terms_version VARCHAR(32)",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS accepted_privacy_version VARCHAR(32)",

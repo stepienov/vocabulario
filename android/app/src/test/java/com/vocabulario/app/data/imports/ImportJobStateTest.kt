@@ -40,9 +40,39 @@ class ImportJobStateTest {
                 item(2, "failed", "gamma", "g"),
                 item(1, "failed", null, "alpha"),
                 item(3, "failed", "delta", "d"),
+                item(4, "failed", null, ""),
             ),
         )
         assertEquals("alpha; gamma; delta", state.errorClipboard)
+        assertEquals(3, state.errorClipboardCount)
+    }
+
+    @Test
+    fun outcome_excludes_skipped_and_legacy_deselected_from_errors() {
+        val state = ImportJobProgressResponse(
+            status = "done",
+            job_id = "job",
+            failed_count = 3,
+            created_count = 1,
+            items = listOf(
+                item(0, "ready", "queso", "queso"),
+                item(1, "failed", "invalid", "invalid"),
+                item(2, "failed", "old", "old").copy(reason_code = "deselected"),
+                item(3, "skipped", "new", "new").copy(reason_code = "deselected"),
+            ),
+        ).toState()
+        assertEquals(1, state.failedCount)
+        assertEquals(1, state.result?.failed)
+        assertEquals(2, state.skippedCount)
+        assertEquals("invalid", state.errorClipboard)
+    }
+
+    @Test
+    fun progress_preserves_items_but_empty_details_replace_them() {
+        val previous = ImportJobState(items = listOf(item(0, "failed", "old", "old")))
+        val response = ImportJobProgressResponse(status = "failed", job_id = "job")
+        assertEquals(1, response.toState(previous, includeItems = false).items.size)
+        assertTrue(response.toState(previous, includeItems = true).items.isEmpty())
     }
 
     @Test

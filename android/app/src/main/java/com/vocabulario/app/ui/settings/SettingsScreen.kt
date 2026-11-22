@@ -14,6 +14,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,24 +25,47 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Style
+import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.outlined.ViewAgenda
+import androidx.compose.material.icons.outlined.TrackChanges
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -52,28 +76,38 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vocabulario.app.R
 import com.vocabulario.app.ui.report.SupportHelpDialog
+import com.vocabulario.app.ui.auth.VerifyEmailViewModel
+import com.vocabulario.app.ui.auth.deliveryText
 import com.vocabulario.app.ui.TestTags
 import com.vocabulario.app.data.CEFR_LEVELS
 import com.vocabulario.app.data.ApiBaseUrl
@@ -84,36 +118,37 @@ import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.data.langDisplayName
 import com.vocabulario.app.data.TenseHeading
 import com.vocabulario.app.data.tenseHeadingsForPicker
-import com.vocabulario.app.ui.components.AppButtonShape
+import com.vocabulario.app.ui.components.AppAlertDialog
 import com.vocabulario.app.ui.components.AppCard
 import com.vocabulario.app.ui.components.AppDialogButtonRow
 import com.vocabulario.app.ui.components.AppDialogShape
 import com.vocabulario.app.ui.components.AppDialogWindowChrome
 import com.vocabulario.app.notifications.NotificationHelper
-import com.vocabulario.app.ui.components.AppPillDropdown
 import com.vocabulario.app.ui.components.AppScreenScaffold
+import com.vocabulario.app.ui.components.AppToggle
 import com.vocabulario.app.ui.components.SettingsCheckRow
 import com.vocabulario.app.ui.components.SettingsRadioRow
 import com.vocabulario.app.ui.components.SettingsValueSlider
-import com.vocabulario.app.ui.components.WheelTimePicker
-import com.vocabulario.app.ui.sync.SyncStatusCard
+import com.vocabulario.app.ui.theme.usesDarkTheme
 import kotlinx.coroutines.delay
+import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
     accountViewModel: AccountSettingsViewModel = hiltViewModel(),
+    verifyEmailViewModel: VerifyEmailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
     val account by accountViewModel.account.collectAsState()
     val changePassword by accountViewModel.changePassword.collectAsState()
-    val changeEmail by accountViewModel.changeEmail.collectAsState()
     val deleteAccount by accountViewModel.deleteAccount.collectAsState()
     val linkGoogle by accountViewModel.linkGoogle.collectAsState()
     val addPassword by accountViewModel.addPassword.collectAsState()
+    val verification by verifyEmailViewModel.state.collectAsState()
     val context = LocalContext.current
     deleteAccount?.let { form ->
         DeleteAccountDialog(
@@ -140,15 +175,6 @@ fun SettingsScreen(
             onRepeatChange = { accountViewModel.updateAddPassword(repeat = it) },
             onSubmit = { accountViewModel.submitAddPassword(context) },
             onDismiss = accountViewModel::closeAddPassword,
-        )
-    }
-    changeEmail?.let { form ->
-        ChangeEmailDialog(
-            form = form,
-            onEmailChange = { accountViewModel.updateChangeEmail(newEmail = it) },
-            onPasswordChange = { accountViewModel.updateChangeEmail(password = it) },
-            onSubmit = { accountViewModel.submitChangeEmail(context) },
-            onDismiss = accountViewModel::closeChangeEmail,
         )
     }
     changePassword?.let { form ->
@@ -179,13 +205,24 @@ fun SettingsScreen(
     }
     var systemBlocked by remember { mutableStateOf(!NotificationHelper.canPost(context)) }
     var supportOpen by remember { mutableStateOf(false) }
+    var verifyOpen by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) systemBlocked = !NotificationHelper.canPost(context)
+            if (event == Lifecycle.Event.ON_RESUME) {
+                systemBlocked = !NotificationHelper.canPost(context)
+                if (verifyOpen) verifyEmailViewModel.check(userAsked = false)
+                else accountViewModel.load()
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(verifyOpen, verification.verified) {
+        if (verifyOpen && verification.verified) {
+            verifyOpen = false
+            accountViewModel.load()
+        }
     }
     LaunchedEffect(state.expanded, state.notificationsEnabled) {
         if (state.expanded == SettingsSection.NOTIFICATIONS &&
@@ -213,7 +250,25 @@ fun SettingsScreen(
         tenseModalOpen = true
     }
 
-    AppScreenScaffold(title = stringResource(R.string.settings_title), onBack = onBack) { paddingModifier ->
+    val darkTheme = usesDarkTheme(state.theme, isSystemInDarkTheme())
+    val nextTheme = if (darkTheme) "light" else "dark"
+    AppScreenScaffold(
+        title = stringResource(R.string.settings_title),
+        onBack = onBack,
+        actions = {
+            IconButton(
+                onClick = { viewModel.setTheme(nextTheme) },
+                enabled = !state.loading,
+                modifier = Modifier.testTag(TestTags.SETTINGS_THEME_TOGGLE),
+            ) {
+                Icon(
+                    if (darkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
+                    contentDescription = "${stringResource(R.string.settings_theme)}: " +
+                        stringResource(if (darkTheme) R.string.settings_theme_light else R.string.settings_theme_dark),
+                )
+            }
+        },
+    ) { paddingModifier ->
         if (state.loading) {
             CircularProgressIndicator(modifier = paddingModifier.padding(24.dp))
             return@AppScreenScaffold
@@ -222,346 +277,359 @@ fun SettingsScreen(
             modifier = paddingModifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             SettingsGroupLabel(stringResource(R.string.settings_group_study))
-
-            AccordionSection(
-                title = stringResource(R.string.settings_mode),
-                subtitle = modeSummary(state.practiceInputPref),
-                expanded = state.expanded == SettingsSection.MODE,
-                onHeaderClick = { viewModel.toggleSection(SettingsSection.MODE) },
-                testTag = TestTags.SETTINGS_SECTION_MODE,
-            ) {
-                SettingsRadioRow(
-                    stringResource(R.string.settings_mode_flash),
-                    selected = state.practiceInputPref == "flashcard",
-                    onSelect = { viewModel.setInputPref("flashcard") },
-                    testTag = TestTags.SETTINGS_MODE_FLASH,
-                )
-                SettingsRadioRow(
-                    stringResource(R.string.settings_mode_choice),
-                    subtitle = stringResource(R.string.settings_mode_vocabulario_only),
-                    selected = state.practiceInputPref == "choice",
-                    onSelect = { viewModel.setInputPref("choice") },
-                    testTag = TestTags.SETTINGS_MODE_CHOICE,
-                )
-                SettingsRadioRow(
-                    stringResource(R.string.settings_mode_type),
-                    subtitle = stringResource(R.string.settings_mode_vocabulario_only),
-                    selected = state.practiceInputPref == "type",
-                    onSelect = { viewModel.setInputPref("type") },
-                    showDivider = false,
-                    testTag = TestTags.SETTINGS_MODE_TYPE,
-                )
-            }
-
-            AccordionSection(
-                title = stringResource(R.string.settings_direction),
-                subtitleAnnotated = directionSubtitle(
-                    state.practiceDirection,
-                    state.activeProfile?.appLang,
-                    state.activeProfile?.learning_lang,
-                ),
-                expanded = state.expanded == SettingsSection.DIRECTION,
-                onHeaderClick = { viewModel.toggleSection(SettingsSection.DIRECTION) },
-                testTag = TestTags.SETTINGS_SECTION_DIRECTION,
-            ) {
-                val native = langDisplayName(state.activeProfile?.appLang ?: "en")
-                val learning = langDisplayName(state.activeProfile?.learning_lang ?: "en")
-                SettingsRadioRow(
-                    stringResource(R.string.settings_direction_first, native),
-                    selected = state.practiceDirection == "l1_to_l2",
-                    onSelect = { viewModel.setDirection("l1_to_l2") },
-                    testTag = TestTags.SETTINGS_DIR_L1_TO_L2,
-                )
-                SettingsRadioRow(
-                    stringResource(R.string.settings_direction_first, learning),
-                    selected = state.practiceDirection == "l2_to_l1",
-                    onSelect = { viewModel.setDirection("l2_to_l1") },
-                    testTag = TestTags.SETTINGS_DIR_L2_TO_L1,
-                )
-                SettingsRadioRow(
-                    stringResource(R.string.settings_direction_random),
-                    selected = state.practiceDirection == "random",
-                    onSelect = { viewModel.setDirection("random") },
-                    showDivider = false,
-                    testTag = TestTags.SETTINGS_DIR_RANDOM,
-                )
-            }
-
-            AccordionSection(
-                title = stringResource(R.string.settings_card_layout),
-                subtitle = stringResource(R.string.settings_card_layout_sub),
-                expanded = state.expanded == SettingsSection.CARD_LAYOUT,
-                onHeaderClick = { viewModel.toggleSection(SettingsSection.CARD_LAYOUT) },
-                testTag = TestTags.SETTINGS_SECTION_CARD_LAYOUT,
-            ) {
-                SettingsCheckRow(
-                    label = stringResource(R.string.settings_examples),
-                    checked = state.showExampleSentences,
-                    onCheckedChange = viewModel::setShowExampleSentences,
-                    testTag = TestTags.SETTINGS_CHECK_EXAMPLES,
-                )
-                SettingsCheckRow(
-                    label = stringResource(R.string.settings_usages),
-                    checked = state.showUsages,
-                    onCheckedChange = viewModel::setShowUsages,
-                    testTag = TestTags.SETTINGS_CHECK_USAGES,
-                )
-                SettingsCheckRow(
-                    label = stringResource(R.string.settings_periphrases),
-                    checked = state.showPeriphrases,
-                    onCheckedChange = viewModel::setShowPeriphrases,
-                    testTag = TestTags.SETTINGS_CHECK_PERIPHRASES,
-                )
-                SettingsCheckRow(
-                    label = stringResource(R.string.settings_syn_ant),
-                    checked = state.showSynonyms && state.showAntonyms,
-                    onCheckedChange = viewModel::setShowSynonymsAndAntonyms,
-                    testTag = TestTags.SETTINGS_CHECK_SYN_ANT,
-                )
-                SettingsCheckRow(
-                    label = stringResource(R.string.settings_word_family),
-                    checked = state.showWordFamily,
-                    onCheckedChange = viewModel::setShowWordFamily,
-                    testTag = TestTags.SETTINGS_CHECK_WORD_FAMILY,
-                )
-                SettingsCheckRow(
-                    label = stringResource(R.string.settings_associations),
-                    checked = state.showAssociations,
-                    onCheckedChange = viewModel::setShowAssociations,
-                    testTag = TestTags.SETTINGS_CHECK_ASSOCIATIONS,
-                )
-                SettingsCheckRow(
-                    label = stringResource(R.string.settings_conjugation),
-                    checked = state.showConjugation,
-                    onCheckedChange = viewModel::setShowConjugation,
-                    showDivider = state.showConjugation && showTensePicker,
-                    testTag = TestTags.SETTINGS_CHECK_CONJUGATION,
-                )
-                AnimatedVisibility(visible = state.showConjugation && showTensePicker) {
-                    Column(modifier = Modifier.padding(start = 8.dp)) {
+            AppCard {
+                Column {
+                    AccordionSection(
+                        title = stringResource(R.string.settings_mode),
+                        icon = Icons.Outlined.Style,
+                        subtitle = modeSummary(state.practiceInputPref),
+                        expanded = state.expanded == SettingsSection.MODE,
+                        onHeaderClick = { viewModel.toggleSection(SettingsSection.MODE) },
+                        testTag = TestTags.SETTINGS_SECTION_MODE,
+                    ) {
                         SettingsRadioRow(
-                            label = stringResource(R.string.settings_all_tenses),
-                            selected = !customTenses,
-                            onSelect = { viewModel.setAllTenses() },
+                            stringResource(R.string.settings_mode_flash),
+                            selected = state.practiceInputPref == "flashcard",
+                            onSelect = { viewModel.setInputPref("flashcard") },
+                            testTag = TestTags.SETTINGS_MODE_FLASH,
                         )
-                        CustomTensesRadioRow(
-                            selected = customTenses,
-                            showEdit = customTenses,
-                            onSelect = {
-                                if (viewModel.selectCustomTenses()) openTenseModal()
-                            },
-                            onEdit = { openTenseModal() },
+                        SettingsRadioRow(
+                            stringResource(R.string.settings_mode_choice),
+                            selected = state.practiceInputPref == "choice",
+                            onSelect = { viewModel.setInputPref("choice") },
+                            testTag = TestTags.SETTINGS_MODE_CHOICE,
+                        )
+                        SettingsRadioRow(
+                            stringResource(R.string.settings_mode_type),
+                            selected = state.practiceInputPref == "type",
+                            onSelect = { viewModel.setInputPref("type") },
+                            showDivider = false,
+                            testTag = TestTags.SETTINGS_MODE_TYPE,
+                        )
+                    }
+
+                    AccordionSection(
+                        title = stringResource(R.string.settings_direction),
+                        icon = Icons.Outlined.SwapHoriz,
+                        subtitle = directionChoice(
+                            state.practiceDirection,
+                            state.activeProfile?.appLang,
+                            state.activeProfile?.learning_lang,
+                        ),
+                        expanded = state.expanded == SettingsSection.DIRECTION,
+                        onHeaderClick = { viewModel.toggleSection(SettingsSection.DIRECTION) },
+                        testTag = TestTags.SETTINGS_SECTION_DIRECTION,
+                    ) {
+                        val native = langDisplayName(state.activeProfile?.appLang ?: "en")
+                        val learning = langDisplayName(state.activeProfile?.learning_lang ?: "en")
+                        SettingsRadioRow(
+                            native,
+                            selected = state.practiceDirection == "l1_to_l2",
+                            onSelect = { viewModel.setDirection("l1_to_l2") },
+                            testTag = TestTags.SETTINGS_DIR_L1_TO_L2,
+                        )
+                        SettingsRadioRow(
+                            learning,
+                            selected = state.practiceDirection == "l2_to_l1",
+                            onSelect = { viewModel.setDirection("l2_to_l1") },
+                            testTag = TestTags.SETTINGS_DIR_L2_TO_L1,
+                        )
+                        SettingsRadioRow(
+                            stringResource(R.string.settings_direction_random),
+                            selected = state.practiceDirection == "random",
+                            onSelect = { viewModel.setDirection("random") },
+                            showDivider = false,
+                            testTag = TestTags.SETTINGS_DIR_RANDOM,
+                        )
+                    }
+
+                    val contentCount = listOf(
+                        state.showExampleSentences, state.showUsages, state.showPeriphrases,
+                        state.showSynonyms && state.showAntonyms, state.showWordFamily,
+                        state.showAssociations, state.showConjugation,
+                    ).count { it }
+                    AccordionSection(
+                        title = stringResource(R.string.settings_card_layout),
+                        icon = Icons.Outlined.ViewAgenda,
+                        subtitle = pluralStringResource(R.plurals.settings_card_content_count, contentCount, contentCount),
+                        expanded = state.expanded == SettingsSection.CARD_LAYOUT,
+                        onHeaderClick = { viewModel.toggleSection(SettingsSection.CARD_LAYOUT) },
+                        testTag = TestTags.SETTINGS_SECTION_CARD_LAYOUT,
+                    ) {
+                        SettingsCheckRow(
+                            label = stringResource(R.string.settings_examples),
+                            checked = state.showExampleSentences,
+                            onCheckedChange = viewModel::setShowExampleSentences,
+                            testTag = TestTags.SETTINGS_CHECK_EXAMPLES,
+                        )
+                        SettingsCheckRow(
+                            label = stringResource(R.string.settings_usages),
+                            checked = state.showUsages,
+                            onCheckedChange = viewModel::setShowUsages,
+                            testTag = TestTags.SETTINGS_CHECK_USAGES,
+                        )
+                        SettingsCheckRow(
+                            label = stringResource(R.string.settings_periphrases),
+                            checked = state.showPeriphrases,
+                            onCheckedChange = viewModel::setShowPeriphrases,
+                            testTag = TestTags.SETTINGS_CHECK_PERIPHRASES,
+                        )
+                        SettingsCheckRow(
+                            label = stringResource(R.string.settings_syn_ant),
+                            checked = state.showSynonyms && state.showAntonyms,
+                            onCheckedChange = viewModel::setShowSynonymsAndAntonyms,
+                            testTag = TestTags.SETTINGS_CHECK_SYN_ANT,
+                        )
+                        SettingsCheckRow(
+                            label = stringResource(R.string.settings_word_family),
+                            checked = state.showWordFamily,
+                            onCheckedChange = viewModel::setShowWordFamily,
+                            testTag = TestTags.SETTINGS_CHECK_WORD_FAMILY,
+                        )
+                        SettingsCheckRow(
+                            label = stringResource(R.string.settings_associations),
+                            checked = state.showAssociations,
+                            onCheckedChange = viewModel::setShowAssociations,
+                            testTag = TestTags.SETTINGS_CHECK_ASSOCIATIONS,
+                        )
+                        SettingsCheckRow(
+                            label = stringResource(R.string.settings_conjugation),
+                            checked = state.showConjugation,
+                            onCheckedChange = viewModel::setShowConjugation,
+                            showDivider = state.showConjugation && showTensePicker,
+                            testTag = TestTags.SETTINGS_CHECK_CONJUGATION,
+                        )
+                        AnimatedVisibility(visible = state.showConjugation && showTensePicker) {
+                            Column(modifier = Modifier.padding(start = 8.dp)) {
+                                SettingsRadioRow(
+                                    label = stringResource(R.string.settings_all_tenses),
+                                    selected = !customTenses,
+                                    onSelect = { viewModel.setAllTenses() },
+                                )
+                                CustomTensesRadioRow(
+                                    selected = customTenses,
+                                    onSelect = {
+                                        if (viewModel.selectCustomTenses()) openTenseModal()
+                                    },
+                                    onEdit = { openTenseModal() },
+                                )
+                            }
+                        }
+                    }
+
+                    AccordionSection(
+                        title = stringResource(R.string.settings_limits),
+                        icon = Icons.Outlined.TrackChanges,
+                        subtitle = if (state.expanded == SettingsSection.LIMITS) null else state.newCardsPerDay.toString(),
+                        expanded = state.expanded == SettingsSection.LIMITS,
+                        onHeaderClick = { viewModel.toggleSection(SettingsSection.LIMITS) },
+                        testTag = TestTags.SETTINGS_SECTION_LIMITS,
+                        showDivider = false,
+                    ) {
+                        SettingsValueSlider(
+                            value = state.newCardsPerDay.coerceIn(5, 50),
+                            onValueChange = viewModel::setNewCardsPerDay,
+                            valueRange = 5..50,
                         )
                     }
                 }
-            }
-
-            AccordionSection(
-                title = stringResource(R.string.settings_limits),
-                subtitle = stringResource(R.string.settings_new_per_day, state.newCardsPerDay),
-                expanded = state.expanded == SettingsSection.LIMITS,
-                onHeaderClick = { viewModel.toggleSection(SettingsSection.LIMITS) },
-                testTag = TestTags.SETTINGS_SECTION_LIMITS,
-            ) {
-                SettingsValueSlider(
-                    value = state.newCardsPerDay.coerceIn(5, 50),
-                    onValueChange = viewModel::setNewCardsPerDay,
-                    valueRange = 5..50,
-                )
             }
 
             Spacer(Modifier.height(8.dp))
             SettingsGroupLabel(stringResource(R.string.settings_group_general))
 
-            AccordionSection(
-                title = stringResource(R.string.settings_theme),
-                expanded = state.expanded == SettingsSection.THEME,
-                onHeaderClick = { viewModel.toggleSection(SettingsSection.THEME) },
-                testTag = TestTags.SETTINGS_SECTION_THEME,
-            ) {
-                SettingsRadioRow(
-                    stringResource(R.string.settings_theme_light),
-                    selected = state.theme == "light",
-                    onSelect = { viewModel.setTheme("light") },
-                    testTag = TestTags.SETTINGS_THEME_LIGHT,
-                )
-                SettingsRadioRow(
-                    stringResource(R.string.settings_theme_dark),
-                    selected = state.theme == "dark",
-                    onSelect = { viewModel.setTheme("dark") },
-                    testTag = TestTags.SETTINGS_THEME_DARK,
-                )
-                SettingsRadioRow(
-                    stringResource(R.string.settings_theme_system),
-                    selected = state.theme == "system",
-                    onSelect = { viewModel.setTheme("system") },
-                    showDivider = false,
-                    testTag = TestTags.SETTINGS_THEME_SYSTEM,
-                )
-            }
-
-            AccordionSection(
-                title = stringResource(R.string.settings_notifications),
-                expanded = state.expanded == SettingsSection.NOTIFICATIONS,
-                onHeaderClick = { viewModel.toggleSection(SettingsSection.NOTIFICATIONS) },
-                testTag = TestTags.SETTINGS_SECTION_NOTIFICATIONS,
-            ) {
-                SettingsCheckRow(
-                    label = stringResource(R.string.settings_notif_enabled),
-                    checked = state.notificationsEnabled,
-                    onCheckedChange = { enabled ->
-                        if (enabled) onRequestNotificationPermission()
-                        else viewModel.setNotificationsEnabled(false)
-                    },
-                    showDivider = false,
-                    testTag = TestTags.SETTINGS_NOTIF_STUDY,
-                )
-                AnimatedVisibility(
-                    visible = state.notificationsEnabled,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut(),
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        if (systemBlocked) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                                    .testTag(TestTags.SETTINGS_NOTIF_BLOCKED),
-                            ) {
-                                Text(
-                                    stringResource(R.string.notif_blocked_hint),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                                TextButton(
-                                    onClick = {
-                                        context.startActivity(
-                                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            AppCard {
+                Column {
+                    AccordionSection(
+                        title = stringResource(R.string.settings_notifications),
+                        icon = Icons.Outlined.Notifications,
+                        subtitle = if (state.notificationsEnabled) {
+                            "${stringResource(R.string.settings_notifications_on)} · ${formatReminderTime(state.reminderHour, state.reminderMinute)}"
+                        } else {
+                            stringResource(R.string.settings_notifications_off)
+                        },
+                        expanded = state.expanded == SettingsSection.NOTIFICATIONS,
+                        onHeaderClick = { viewModel.toggleSection(SettingsSection.NOTIFICATIONS) },
+                        testTag = TestTags.SETTINGS_SECTION_NOTIFICATIONS,
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(stringResource(R.string.settings_notif_enabled), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            AppToggle(
+                                checked = state.notificationsEnabled,
+                                onCheckedChange = { enabled ->
+                                    if (enabled) onRequestNotificationPermission()
+                                    else viewModel.setNotificationsEnabled(false)
+                                },
+                                modifier = Modifier.testTag(TestTags.SETTINGS_NOTIF_STUDY),
+                            )
+                        }
+                        AnimatedVisibility(
+                            visible = state.notificationsEnabled,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut(),
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                if (systemBlocked) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                                            .testTag(TestTags.SETTINGS_NOTIF_BLOCKED),
+                                    ) {
+                                        Text(
+                                            stringResource(R.string.notif_blocked_hint),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.error,
                                         )
-                                    },
-                                ) { Text(stringResource(R.string.notif_open_settings)) }
+                                        TextButton(
+                                            onClick = {
+                                                context.startActivity(
+                                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                                )
+                                            },
+                                        ) { Text(stringResource(R.string.notif_open_settings)) }
+                                    }
+                                }
+                                ReminderTimeInput(
+                                    hour = state.reminderHour,
+                                    minute = state.reminderMinute,
+                                    onTimeChange = viewModel::setReminderTime,
+                                )
                             }
                         }
-                        Text(
-                            stringResource(R.string.settings_study_hour),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 4.dp),
+                    }
+
+                    Column(Modifier.testTag(TestTags.SETTINGS_SECTION_LANGUAGES)) {
+                        SettingsLanguageRow(
+                            label = stringResource(R.string.settings_native_lang),
+                            options = SUPPORTED_LEARNING_LANGS,
+                            selectedCode = state.activeProfile?.appLang ?: "en",
+                            excludedCode = state.activeProfile?.learning_lang,
+                            icon = Icons.Outlined.Language,
+                            onSelect = viewModel::setAppLang,
+                            testTag = TestTags.SETTINGS_NATIVE_LANG,
                         )
-                        WheelTimePicker(
-                            hour = state.reminderHour,
-                            minute = state.reminderMinute,
-                            onHourChange = viewModel::setReminderHour,
-                            onMinuteChange = viewModel::setReminderMinute,
-                            testTag = TestTags.SETTINGS_NOTIF_TIME,
+                        SettingsLanguageRow(
+                            label = stringResource(R.string.settings_i_learn),
+                            options = SUPPORTED_LEARNING_LANGS,
+                            selectedCode = state.activeProfile?.learning_lang ?: "en",
+                            excludedCode = state.activeProfile?.appLang,
+                            icon = Icons.Outlined.Style,
+                            onSelect = viewModel::setLearningLang,
+                            testTag = TestTags.SETTINGS_LEARNING_LANG,
+                        )
+                    }
+
+                    AccordionSection(
+                        title = stringResource(R.string.settings_level),
+                        icon = Icons.Outlined.School,
+                        subtitle = state.cefrLevel,
+                        expanded = state.expanded == SettingsSection.CEFR,
+                        onHeaderClick = { viewModel.toggleSection(SettingsSection.CEFR) },
+                        testTag = TestTags.SETTINGS_SECTION_CEFR,
+                    ) {
+                        androidx.compose.foundation.layout.FlowRow(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            CEFR_LEVELS.forEach { level ->
+                                androidx.compose.material3.FilterChip(
+                                    selected = state.cefrLevel == level,
+                                    onClick = { viewModel.setCefr(level) },
+                                    label = { Text(level) },
+                                )
+                            }
+                        }
+                    }
+
+                    state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+
+                    AccordionSection(
+                        title = stringResource(R.string.settings_account),
+                        icon = Icons.Outlined.Person,
+                        subtitle = account.email,
+                        expanded = state.expanded == SettingsSection.ACCOUNT,
+                        onHeaderClick = { viewModel.toggleSection(SettingsSection.ACCOUNT) },
+                        testTag = TestTags.SETTINGS_SECTION_ACCOUNT,
+                        showDivider = false,
+                        bodyIndent = 24.dp,
+                    ) {
+                        AccountSectionBody(
+                            account,
+                            onChangePassword = accountViewModel::openChangePassword,
+                            onSendReset = accountViewModel::sendPasswordReset,
+                            onDeleteAccount = accountViewModel::openDeleteAccount,
+                            onLinkGoogle = accountViewModel::openLinkGoogle,
+                            onAddPassword = accountViewModel::openAddPassword,
+                            onVerifyEmail = {
+                                verifyOpen = true
+                                verifyEmailViewModel.check(userAsked = false)
+                            },
+                            onLogout = onLogout,
+                            onRetry = accountViewModel::load,
                         )
                     }
                 }
             }
-
-            AccordionSection(
-                title = stringResource(R.string.settings_languages),
-                expanded = state.expanded == SettingsSection.LANGUAGES,
-                onHeaderClick = { viewModel.toggleSection(SettingsSection.LANGUAGES) },
-                testTag = TestTags.SETTINGS_SECTION_LANGUAGES,
-            ) {
-                SettingsDropdown(
-                    label = stringResource(R.string.settings_native_lang),
-                    options = SUPPORTED_LEARNING_LANGS,
-                    selectedCode = state.activeProfile?.appLang ?: "en",
-                    onSelect = viewModel::setAppLang,
-                    testTag = TestTags.SETTINGS_NATIVE_LANG,
-                )
-                SettingsDropdown(
-                    label = stringResource(R.string.settings_i_learn),
-                    options = SUPPORTED_LEARNING_LANGS,
-                    selectedCode = state.activeProfile?.learning_lang ?: "en",
-                    onSelect = viewModel::setLearningLang,
-                    testTag = TestTags.SETTINGS_LEARNING_LANG,
-                )
-            }
-
-            AccordionSection(
-                title = stringResource(R.string.settings_level),
-                expanded = state.expanded == SettingsSection.CEFR,
-                onHeaderClick = { viewModel.toggleSection(SettingsSection.CEFR) },
-                testTag = TestTags.SETTINGS_SECTION_CEFR,
-                showDivider = false,
-            ) {
-                val cefrIndex = CEFR_LEVELS.indexOf(state.cefrLevel).coerceAtLeast(0)
-                SettingsValueSlider(
-                    value = cefrIndex,
-                    onValueChange = {},
-                    onValueChangeFinished = { viewModel.setCefr(CEFR_LEVELS[it]) },
-                    valueRange = 0 until CEFR_LEVELS.size,
-                    tickLabels = CEFR_LEVELS,
-                    showValueAbove = false,
-                )
-            }
-
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-
-            SettingsGroupLabel(stringResource(R.string.sync_title))
-            SyncStatusCard()
-
-            SettingsGroupLabel(stringResource(R.string.settings_group_account))
-            AccordionSection(
-                title = stringResource(R.string.settings_account),
-                subtitle = account.email,
-                expanded = state.expanded == SettingsSection.ACCOUNT,
-                onHeaderClick = { viewModel.toggleSection(SettingsSection.ACCOUNT) },
-                testTag = TestTags.SETTINGS_SECTION_ACCOUNT,
-                showDivider = false,
-            ) {
-                AccountSectionBody(
-                    account,
-                    onChangePassword = accountViewModel::openChangePassword,
-                    onSendReset = accountViewModel::sendPasswordReset,
-                    onChangeEmail = accountViewModel::openChangeEmail,
-                    onResendChange = accountViewModel::resendEmailChange,
-                    onCancelChange = accountViewModel::cancelEmailChange,
-                    onDeleteAccount = accountViewModel::openDeleteAccount,
-                    onLinkGoogle = accountViewModel::openLinkGoogle,
-                    onAddPassword = accountViewModel::openAddPassword,
-                    onRetry = accountViewModel::load,
-                )
-            }
             account.info?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 
-            Spacer(Modifier.height(8.dp))
             val uriHandler = LocalUriHandler.current
-            OutlinedButton(
-                onClick = { uriHandler.openUri(publicSiteUrl(ApiBaseUrl.resolve(), "/legal")) },
-                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_LEGAL),
-                shape = AppButtonShape,
-            ) { Text(stringResource(R.string.settings_legal)) }
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = { supportOpen = true },
-                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_SUPPORT),
-                shape = AppButtonShape,
-            ) { Text(stringResource(R.string.support_title)) }
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onLogout,
-                modifier = Modifier.fillMaxWidth().testTag(TestTags.SETTINGS_LOGOUT),
-                shape = AppButtonShape,
-            ) { Text(stringResource(R.string.action_logout)) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                TextButton(
+                    onClick = { uriHandler.openUri(publicSiteUrl(ApiBaseUrl.resolve(), "/legal")) },
+                    modifier = Modifier.testTag(TestTags.SETTINGS_LEGAL),
+                ) { Text(stringResource(R.string.settings_legal)) }
+                TextButton(
+                    onClick = { supportOpen = true },
+                    modifier = Modifier.testTag(TestTags.SETTINGS_SUPPORT),
+                ) { Text(stringResource(R.string.support_title)) }
+            }
             Spacer(Modifier.height(80.dp))
         }
     }
 
     if (supportOpen) SupportHelpDialog(onDismiss = { supportOpen = false })
+    if (verifyOpen) {
+        var now by remember { mutableStateOf(System.currentTimeMillis()) }
+        LaunchedEffect(verification.resendAtMillis) {
+            now = System.currentTimeMillis()
+            while (now < verification.resendAtMillis) {
+                delay(1_000)
+                now = System.currentTimeMillis()
+            }
+        }
+        val waitSeconds = ((verification.resendAtMillis - now + 999) / 1000).coerceAtLeast(0)
+        AppAlertDialog(
+            onDismissRequest = { verifyOpen = false },
+            title = stringResource(R.string.verify_email_title),
+            text = {
+                Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
+                    Text(
+                        account.email?.let { stringResource(R.string.verify_email_body, it) }
+                            ?: stringResource(R.string.verify_email_body_no_address),
+                    )
+                    deliveryText(verification.delivery)?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    verification.info?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    verification.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { verifyEmailViewModel.check(userAsked = true) }, enabled = !verification.busy) {
+                        Text(stringResource(R.string.verify_email_check))
+                    }
+                    TextButton(onClick = verifyEmailViewModel::resend, enabled = !verification.busy && waitSeconds == 0L) {
+                        Text(if (waitSeconds > 0) stringResource(R.string.verify_email_resend_in, waitSeconds.toInt()) else stringResource(R.string.verify_email_resend))
+                    }
+                }
+            },
+            buttons = { TextButton(onClick = { verifyOpen = false }) { Text(stringResource(R.string.action_close)) } },
+        )
+    }
 
     if (tenseModalOpen && tenseOptions.isNotEmpty()) {
         TensePickerDialog(
@@ -601,43 +669,31 @@ private fun SettingsGroupLabel(title: String) {
 @Composable
 private fun CustomTensesRadioRow(
     selected: Boolean,
-    showEdit: Boolean,
     onSelect: () -> Unit,
     onEdit: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                if (selected) MaterialTheme.colorScheme.primaryContainer
-                else Color.Transparent,
-            )
-            .clickable(onClick = onSelect)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            stringResource(R.string.settings_selected_tenses),
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
-        )
-        if (showEdit) {
+        Row(
+            modifier = Modifier.weight(1f, fill = false).heightIn(min = 44.dp).selectable(selected = selected, role = Role.RadioButton, onClick = onSelect),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                RadioButton(selected = selected, onClick = null)
+            }
+            Spacer(Modifier.width(10.dp))
             Text(
-                stringResource(R.string.action_edit),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier
-                    .clickable(onClick = onEdit)
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                stringResource(R.string.settings_selected_tenses),
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
+        Spacer(Modifier.width(12.dp))
         CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-            RadioButton(
-                selected = selected,
-                onClick = onSelect,
-                colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary),
-            )
+            TextButton(onClick = onEdit, enabled = selected) { Text(stringResource(R.string.action_edit)) }
         }
     }
 }
@@ -719,92 +775,240 @@ private fun TensePickerDialog(
 @Composable
 private fun AccordionSection(
     title: String,
+    icon: ImageVector,
     expanded: Boolean,
     onHeaderClick: () -> Unit,
     testTag: String? = null,
     subtitle: String? = null,
-    subtitleAnnotated: AnnotatedString? = null,
     showDivider: Boolean = true,
+    bodyIndent: Dp = 52.dp,
     content: @Composable () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val headerBg = if (expanded) scheme.primaryContainer else Color.Transparent
-    val bodyBg = if (expanded) scheme.surfaceVariant else Color.Transparent
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
-    val subtitleText = subtitleAnnotated ?: subtitle?.let { AnnotatedString(it) }
     LaunchedEffect(expanded) {
         if (expanded) {
             delay(340)
             bringIntoViewRequester.bringIntoView()
         }
     }
-    AppCard(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
-        Column {
-            Row(
+    Column(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
+                .clickable(onClick = onHeaderClick)
+                .heightIn(min = 64.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SettingsGlyph(icon)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                if (subtitle != null) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                }
+            }
+            Icon(
+                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = null,
+                tint = scheme.onSurfaceVariant,
+            )
+        }
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut(),
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(headerBg)
-                    .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
-                    .clickable(onClick = onHeaderClick)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .padding(start = bodyIndent, bottom = 8.dp),
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    if (subtitleText != null) {
-                        Spacer(Modifier.height(2.dp))
-                        Text(subtitleText, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
-                    }
-                }
-                Icon(
-                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
-                    tint = scheme.onSurfaceVariant,
-                )
-            }
-            AnimatedVisibility(
-                visible = expanded,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut(),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(bodyBg)
-                        .padding(bottom = 4.dp),
-                ) {
-                    if (showDivider) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .height(1.dp)
-                                .background(scheme.outline),
-                        )
-                    }
-                    content()
-                }
+                content()
             }
         }
+        if (showDivider) SettingsDivider()
     }
 }
 
 @Composable
-private fun SettingsDropdown(
+private fun SettingsGlyph(icon: ImageVector) {
+    Box(
+        modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+    }
+}
+
+@Composable
+private fun SettingsDivider() {
+    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
+}
+
+internal fun formatReminderTime(hour: Int, minute: Int): String =
+    String.format(Locale.ROOT, "%02d:%02d", hour, minute)
+
+internal fun parseReminderTime(value: String): Pair<Int, Int>? {
+    if (!Regex("^[0-9]{2}:[0-9]{2}$").matches(value)) return null
+    val hour = value.substring(0, 2).toInt()
+    val minute = value.substring(3, 5).toInt()
+    return if (hour in 0..23 && minute in 0..59) hour to minute else null
+}
+
+internal fun formatReminderInput(value: String): String {
+    val digits = value.filter { it in '0'..'9' }.take(4)
+    return if (digits.length > 2) "${digits.take(2)}:${digits.drop(2)}" else digits
+}
+
+@Composable
+private fun ReminderTimeInput(hour: Int, minute: Int, onTimeChange: (Int, Int) -> Unit) {
+    val focusManager = LocalFocusManager.current
+    var value by remember { mutableStateOf(TextFieldValue(formatReminderTime(hour, minute))) }
+    var focused by remember { mutableStateOf(false) }
+    var edited by remember { mutableStateOf(false) }
+    val invalid = edited && parseReminderTime(value.text) == null && (!focused || value.text.length == 5)
+    LaunchedEffect(hour, minute) {
+        if (!focused && !edited) value = TextFieldValue(formatReminderTime(hour, minute))
+    }
+    LaunchedEffect(focused) {
+        if (focused && !edited) {
+            value = TextFieldValue("")
+        } else if (!focused && !edited) {
+            value = TextFieldValue(formatReminderTime(hour, minute))
+        }
+    }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_study_hour), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            OutlinedTextField(
+                value = value,
+                onValueChange = { input ->
+                    if (input.text == value.text) {
+                        value = input
+                    } else {
+                        val formatted = formatReminderInput(input.text)
+                        val digitCount = formatted.count { it in '0'..'9' }
+                        val beforeCursor = input.text.take(input.selection.end).count { it in '0'..'9' }.coerceAtMost(digitCount)
+                        val cursor = beforeCursor + if (beforeCursor > 2) 1 else 0
+                        value = TextFieldValue(formatted, TextRange(cursor.coerceAtMost(formatted.length)))
+                        edited = true
+                        parseReminderTime(formatted)?.let { (newHour, newMinute) ->
+                            if (newHour != hour || newMinute != minute) onTimeChange(newHour, newMinute)
+                            edited = false
+                        }
+                    }
+                },
+                modifier = Modifier.width(88.dp).testTag(TestTags.SETTINGS_NOTIF_TIME).onFocusChanged { focused = it.isFocused },
+                textStyle = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Center),
+                placeholder = { Text("HH:mm", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                singleLine = true,
+                isError = invalid,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            )
+        }
+        if (invalid) {
+            Text(stringResource(R.string.settings_invalid_time), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@Composable
+private fun SettingsLanguageRow(
     label: String,
     options: List<Pair<String, String>>,
     selectedCode: String,
+    excludedCode: String?,
+    icon: ImageVector,
     onSelect: (String) -> Unit,
-    testTag: String? = null,
+    testTag: String,
 ) {
-    AppPillDropdown(
-        options = options,
-        selectedCode = selectedCode,
-        onSelect = onSelect,
-        label = label,
-        testTag = testTag,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-    )
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(testTag)
+            .clickable { expanded = true }
+            .heightIn(min = 64.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsGlyph(icon)
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(2.dp))
+            Text(langDisplayName(selectedCode), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    SettingsDivider()
+
+    if (expanded) {
+        val listState = rememberLazyListState(
+            initialFirstVisibleItemIndex = options.indexOfFirst { it.first.equals(selectedCode, ignoreCase = true) }.coerceAtLeast(0),
+        )
+        ModalBottomSheet(
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .semantics { testTagsAsResourceId = true }
+                .testTag("${testTag}__sheet"),
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            AppDialogWindowChrome()
+            Text(
+                label,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.65f).dp)
+                    .padding(bottom = 16.dp),
+            ) {
+                items(options, key = { it.first }) { (code, name) ->
+                    val selected = code.equals(selectedCode, ignoreCase = true)
+                    val enabled = !code.equals(excludedCode, ignoreCase = true)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("${testTag}__$code")
+                            .selectable(
+                                selected = selected,
+                                enabled = enabled,
+                                role = Role.RadioButton,
+                                onClick = { expanded = false; onSelect(code) },
+                            )
+                            .heightIn(min = 48.dp)
+                            .padding(horizontal = 24.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            name,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                        )
+                        if (selected) {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -822,24 +1026,5 @@ private fun directionChoice(dir: String, native: String?, learning: String?): St
         "l1_to_l2" -> n
         "l2_to_l1" -> l
         else -> stringResource(R.string.settings_direction_random)
-    }
-}
-
-@Composable
-private fun directionSubtitle(dir: String, native: String?, learning: String?): AnnotatedString {
-    val choice = directionChoice(dir, native, learning)
-    val template = stringResource(R.string.settings_direction_sub)
-    val token = "%1\$s"
-    val at = template.indexOf(token)
-    if (at < 0) {
-        return buildAnnotatedString {
-            append(template)
-            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(choice) }
-        }
-    }
-    return buildAnnotatedString {
-        append(template.substring(0, at))
-        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(choice) }
-        append(template.substring(at + token.length))
     }
 }

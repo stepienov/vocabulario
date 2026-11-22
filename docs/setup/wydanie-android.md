@@ -24,13 +24,16 @@ cd android
 python ..\scripts\check_aab_16kb.py app\build\outputs\bundle\release\app-release.aab
 ```
 
-Wynik: `android\app\build\outputs\bundle\release\app-release.aab`. Skrypt sprawdza, czy biblioteki 64-bit są gotowe na strony 16 KB (kod 0 = OK).
+Wynik: `android\app\build\outputs\bundle\release\app-release.aab`. Skrypt sprawdza wyrównanie segmentów ELF bibliotek 64-bit. Dla APK sprawdza dodatkowo wyrównanie ZIP nieskompresowanych bibliotek. Wynik dla AAB nie dowodzi wyrównania wygenerowanego APK ani działania na urządzeniu 16 KB: należy sprawdzić także APK z bundletool i wykonać próbę na obrazie 16 KB.
+
+CI buduje testowy AAB z tymczasowym kluczem, uruchamia lint release i sprawdza wyrównanie bibliotek w AAB oraz debug APK. Nie jest to build podpisany produkcyjnie ani test APK wygenerowanego z AAB.
 
 ## Co robi build release
 
 - Ruch tylko HTTPS (`usesCleartextTraffic=false`); debug nadal dopuszcza lokalny HTTP.
 - Bez kopii zapasowej i transferu danych (sesja, baza i kolejki są związane z kontem i urządzeniem).
 - Schemat bazy Room jest eksportowany do `android\app\schemas\` (podstawa pod testy migracji; same testy wymagają urządzenia).
+- Bazy Room w wersjach 1–5 nie są automatycznie usuwane: bez ścieżki migracji otwarcie bazy zakończy się błędem, a dane pozostaną na urządzeniu. Migracje 6–12 nadal wymagają weryfikacji na urządzeniu.
 - Minifikacja R8 jest wyłączona do czasu testu na urządzeniu; decyzja o jej włączeniu należy do właściciela po próbie na S24.
 
 ## Logowanie Google (klienty OAuth)
@@ -43,6 +46,12 @@ Projekt Google Cloud **Vocabulario** (`vocabulario-515311`), Platforma uwierzyte
 | `480709179447-rc3kmqaeelc5aiq57l1lfu8i851f5jqd` | Android | Pakiet `com.vocabulario.app` + SHA-1 `android\keystore\debug.keystore` (build debug na S24). |
 
 Do zrobienia po pierwszym uploadzie do Play: dodać **drugi klient Android** dla pakietu `io.vocabulario.app` z SHA-1 z Play Console → Integralność aplikacji → certyfikat podpisywania aplikacji (Play App Signing), oraz osobno z SHA-1 klucza uploadu, jeśli testujesz lokalny build release. Bez tego logowanie Google w buildzie z Play zakończy się błędem.
+
+## Linki konta
+
+Android obsługuje linki HTTPS `vocabulario.io/account/verify-email`, `/account/reset-password` i `/account/change-email`. Token zostaje we fragmencie linku i jest wysyłany dopiero po potwierdzeniu użytkownika, bez sesji aktualnie zalogowanego konta. Strony WWW pozostają dostępne również bez aplikacji.
+
+Weryfikacja App Links wymaga poprawnego `ANDROID_PACKAGE` i SHA-256 certyfikatu podpisującego w `ANDROID_CERT_SHA256` na serwerze. Wariant debug ma inny pakiet i certyfikat; nie należy uznawać testu debug za dowód dla Play. Otwarcie linku, fragment tokenu i powrót do sesji trzeba jeszcze sprawdzić na urządzeniu i w wersji z Play.
 
 ## Przejście z buildu debug do Play
 

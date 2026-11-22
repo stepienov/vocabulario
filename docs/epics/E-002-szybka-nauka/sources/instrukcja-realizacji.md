@@ -126,7 +126,7 @@ flowchart LR
 ## Wdrażanie
 
 - Wdraża użytkownik. Backend wychodzi na Railway z `backend/` po wejściu zmian na `main` (`docs/setup/railway-cli.md`). Android nie wdraża się przez Railway. Wersja telefonu wychodzi osobno (`build-apk.ps1`).
-- Każdy task backendu wychodzi osobnym deployem i ma pomiar przed i po na tym samym koncie kontrolnym (`nowy4@test.com`, profil polski → hiszpański).
+- Każdy task backendu wychodzi osobnym deployem i ma pomiar przed i po na tym samym koncie kontrolnym (profil polski → hiszpański).
 - Pomiary czytają `app_logs`, `llm_usage`, `llm_call_payloads`, `lookup_events` i log HTTP Railway (`railway logs --http` albo eksport z panelu). Do bazy produkcji tylko odczyt.
 - Taski 04, 05, 06 i 08 zmieniają odpowiedź serwera tylko dla telefonu, który wyśle nowe pole. Stara wersja telefonu działa jak dziś.
 

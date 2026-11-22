@@ -77,13 +77,14 @@ if (releaseArtifactRequested && !uploadSigningReady) {
 
 android {
     namespace = "com.vocabulario.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         // Debug zostaje na dotychczasowym pakiecie; release dostaje pakiet z -Prelease.application.id (patrz onVariants).
         applicationId = "com.vocabulario.app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = releaseVersionCode ?: 1
         versionName = releaseVersionName ?: "0.1.0"
         // Emulator vs fizyczny telefon — wybór w runtime: ApiBaseUrl.resolve()
@@ -208,4 +209,7 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }

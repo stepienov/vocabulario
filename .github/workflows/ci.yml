@@ -59,8 +59,24 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Unit tests, lint, debug build
-        run: ./gradlew --console=plain :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+      - name: Unit tests, lint, debug build and instrumentation test compilation
+        run: ./gradlew --console=plain :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+
+      - name: Test release build and 16 KB alignment
+        env:
+          UPLOAD_KEYSTORE_FILE: ${{ runner.temp }}/vocabulario-ci.jks
+          UPLOAD_KEYSTORE_PASSWORD: testonly123
+          UPLOAD_KEY_ALIAS: test
+          UPLOAD_KEY_PASSWORD: testonly123
+        run: |
+          keytool -genkeypair -keystore "$UPLOAD_KEYSTORE_FILE" -storepass "$UPLOAD_KEYSTORE_PASSWORD" \
+            -keypass "$UPLOAD_KEY_PASSWORD" -alias "$UPLOAD_KEY_ALIAS" -dname "CN=CI test" \
+            -keyalg RSA -keysize 2048 -validity 1 -storetype PKCS12 -noprompt
+          ./gradlew --console=plain :app:lintRelease :app:bundleRelease \
+            -Prelease.application.id=io.vocabulario.app -Prelease.version.code=1 \
+            -Prelease.version.name=0.1.0-test -Papi.base.url=https://vocabulario.io/api/v1
+          python ../scripts/check_aab_16kb.py app/build/outputs/bundle/release/app-release.aab
+          python ../scripts/check_aab_16kb.py app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload test and lint reports
         if: failure()

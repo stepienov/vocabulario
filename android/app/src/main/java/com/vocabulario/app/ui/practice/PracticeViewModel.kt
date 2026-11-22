@@ -7,6 +7,8 @@ import com.vocabulario.app.data.BlockingBusy
 import com.vocabulario.app.data.EnrichmentPoller
 import com.vocabulario.app.data.LearningRepository
 import com.vocabulario.app.data.api.ChoiceOption
+import com.vocabulario.app.data.api.LanguageProfileResponse
+import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.data.api.SrsQueueItem
 import com.vocabulario.app.data.api.SyncSrsState
 import com.vocabulario.app.data.api.WordListResponse
@@ -44,6 +46,11 @@ enum class AnswerMode {
     TYPE,
     FLASHCARD,
 }
+
+internal fun practicePromptLanguage(
+    direction: String,
+    profile: LanguageProfileResponse,
+): String = if (direction == "l2_to_l1") profile.learning_lang else profile.appLang
 
 data class UndoFrame(
     val clientId: String,

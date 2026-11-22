@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -21,6 +20,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.vocabulario.app.R
 import com.vocabulario.app.ui.TestTags
+import com.vocabulario.app.ui.components.AppToggle
 
 /**
  * Zgody z T-003: osobne, niezaznaczone domyślnie pola „18+” i „warunki”, linki do dokumentów
@@ -90,11 +90,11 @@ private fun ConsentRow(checked: Boolean, label: String, onChange: (Boolean) -> U
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
-            .toggleable(value = checked, role = Role.Checkbox, onValueChange = onChange)
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
             .testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = checked, onCheckedChange = null)
+        AppToggle(checked = checked, onCheckedChange = null)
         Text(
             label,
             modifier = Modifier.padding(start = 12.dp),

@@ -8,8 +8,11 @@ tags:
     clearState: false
 - runFlow: ../../helpers/ensure-logged-in.yaml
 - runFlow: ../../helpers/goto-settings.yaml
-- assertVisible:
-    id: settings_section_languages
+- scrollUntilVisible:
+    element:
+      id: settings_section_languages
+    direction: DOWN
+    timeout: 15000
 - tapOn:
     id: btn_back
 - extendedWaitUntil:
