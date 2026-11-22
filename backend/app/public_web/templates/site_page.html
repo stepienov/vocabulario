@@ -47,7 +47,8 @@
   <p><strong>{{ t.support_contact }}:</strong> {{ contact }}</p>
   <ul class="site-list">
     <li>{{ t.support_report }}</li>
-    <li>{{ t.support_account }} <a href="/delete-account?lang={{ locale }}">{{ t.support_delete }}</a></li>
+    <li>{{ t.support_account }}</li>
+    <li>{% if deletion_enabled %}{{ t.support_delete }}{% else %}{{ t.support_delete_unavailable }}{% endif %} <a href="/delete-account?lang={{ locale }}">{{ t.nav_delete }}</a></li>
     <li>{{ t.support_secrets }}</li>
   </ul>
   <p class="hint">{{ t.support_response }}</p>

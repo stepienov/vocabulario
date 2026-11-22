@@ -156,6 +156,15 @@ async def test_google_is_available_only_when_configured(client, monkeypatch):
     assert "accounts.google.com" not in (await client.get("/account/deletion-status")).headers["content-security-policy"]
 
 
+async def test_deletion_page_reports_unavailable_before_credentials(client, monkeypatch):
+    from app.public_web import router
+
+    monkeypatch.setattr(router, "deletion_enabled", lambda: False)
+    assert "Usuwanie konta jest chwilowo niedostępne" in (await client.get("/delete-account?lang=pl")).text.split("<script")[0]
+    monkeypatch.setattr(router, "deletion_enabled", lambda: True)
+    assert "Usuwanie konta jest chwilowo niedostępne" not in (await client.get("/delete-account?lang=pl")).text.split("<script")[0]
+
+
 def test_deletion_browser_behaviour():
     node = shutil.which("node")
     if not node:

@@ -70,6 +70,15 @@ def test_operator_data_comes_from_settings_never_hardcoded(client, monkeypatch):
     assert "Example Operator" in client.get("/privacy").text
 
 
+def test_support_reports_when_deletion_is_unavailable(client, monkeypatch):
+    from app.public_web import site
+
+    monkeypatch.setattr(site, "deletion_enabled", lambda: False)
+    assert "Usuwanie konta jest obecnie niedostępne" in client.get("/support?lang=pl").text
+    monkeypatch.setattr(site, "deletion_enabled", lambda: True)
+    assert "Usuwanie konta możesz też rozpocząć" in client.get("/support?lang=pl").text
+
+
 def test_assetlinks_lists_only_configured_fingerprints(client, monkeypatch):
     monkeypatch.setattr(get_settings(), "android_cert_sha256", "")
     assert client.get("/.well-known/assetlinks.json").json() == []

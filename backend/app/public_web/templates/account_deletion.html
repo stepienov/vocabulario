@@ -13,6 +13,9 @@
     <p class="brand">{{ app_name }}</p>
     <h1>{{ title }}</h1>
     <p id="intro">{{ intro }}</p>
+    {% if page == "delete_start" and not deletion_enabled %}
+    <p class="status info">{{ texts.del_unavailable }}</p>
+    {% endif %}
 
     <div id="status" class="status" role="status" aria-live="polite" tabindex="-1" hidden></div>
 

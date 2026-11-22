@@ -12,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 from app.core.config import get_settings
 from app.core.passwords import NEW_PASSWORD_MIN_CHARS, PASSWORD_MAX_CHARS
 from app.public_web.texts import PAGE_TEXTS
-from app.services.account_deletion import CANCEL_PATH, REQUEST_PATH
+from app.services.account_deletion import CANCEL_PATH, REQUEST_PATH, deletion_enabled
 from app.services.account_recovery import RESET_PATH, VERIFY_PATH
 from app.services.mail_templates import (
     APP_NAME,
@@ -131,6 +131,7 @@ def _render(request: Request, page: str) -> HTMLResponse:
             "min_chars": NEW_PASSWORD_MIN_CHARS,
             "max_chars": PASSWORD_MAX_CHARS,
             "google_client_id": get_settings().google_oauth_client_id if page == "delete_start" else "",
+            "deletion_enabled": deletion_enabled() if page == "delete_start" else True,
         },
     )
     response.headers.update(SECURITY_HEADERS)

@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.public_web.router import ASSETS_PATH, SECURITY_HEADERS, page_locale, templates
 from app.public_web.site_texts import SITE_TEXTS
 from app.services import legal_docs
+from app.services.account_deletion import deletion_enabled
 from app.services.mail_templates import APP_NAME
 
 site_router = APIRouter(include_in_schema=False)
@@ -118,7 +119,8 @@ async def support_page(request: Request) -> HTMLResponse:
     texts = SITE_TEXTS[locale]
     contact = get_settings().support_email.strip() or texts["not_configured"]
     return _render(
-        request, "support", "support_title", intro=texts["support_intro"], contact=contact
+        request, "support", "support_title", intro=texts["support_intro"], contact=contact,
+        deletion_enabled=deletion_enabled(),
     )
 
 
