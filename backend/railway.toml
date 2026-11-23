@@ -9,5 +9,5 @@ healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
-# Jedna replika w US West, przy Postgresie. Nie wpisywać "sfo": Railway odrzuca ten identyfikator.
-multiRegionConfig = { "us-west2" = { numReplicas = 1 } }
+# Jedna replika w EU West (Amsterdam), w tym samym regionie co PostgreSQL.
+multiRegionConfig = { "europe-west4-drams3a" = { numReplicas = 1 } }

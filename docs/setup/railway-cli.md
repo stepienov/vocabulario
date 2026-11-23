@@ -6,6 +6,7 @@ Instrukcja operacyjna, nie zapis aktualnego stanu produkcji. Bieżące priorytet
 
 - Railway wdraża backend z katalogu `backend`, nie aplikację Androida.
 - Konfiguracja oczekiwana jest w [railway.toml](../../backend/railway.toml); rzeczywisty deploy i regiony należy odczytać z konsoli/CLI.
+- Region PostgreSQL jest konfigurowany osobno od backendu; po zmianie regionu sprawdź obie usługi i kopie wolumenu.
 - Status i ograniczony odczyt logów nie oznaczają zgody na deploy, zmiany zmiennych, regionów ani zapis do bazy.
 - Nie uruchamiaj `railway variables` w logowanym terminalu ani nie wklejaj surowego eksportu zmiennych do raportu — może zawierać sekrety.
 - Stare pomiary infrastruktury są w [archiwum optymalizacji](../epics/E-002-szybka-nauka/sources/optymalizacja-requestow.md), nie należy traktować ich jako aktualnej konfiguracji.
