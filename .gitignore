@@ -58,6 +58,7 @@ Thumbs.db
 # Node (teacher-web later)
 node_modules/
 .next/
+/.railway/.cac-migration.json
 
 # Local build / drop folders
 *.log
