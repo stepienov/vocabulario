@@ -108,7 +108,8 @@ Komenda sprawdza napisy UI, spójność LSP i testy backendu. Testy oznaczone `p
 ```
 vocabulario/
 ├── android/          # aplikacja Android (Kotlin, Compose)
-├── backend/          # API FastAPI (+ Dockerfile, railway.toml)
+├── backend/          # API FastAPI (+ Dockerfile)
+├── .railway/         # konfiguracja infrastruktury Railway
 ├── e2e/              # Maestro E2E
 ├── infra/            # docker-compose (Postgres + Redis)
 ├── scripts/          # utrzymywane narzędzia CI, i18n, E2E i backfill

@@ -5,7 +5,7 @@ Instrukcja operacyjna, nie zapis aktualnego stanu produkcji. Bieżące priorytet
 ## Granice
 
 - Railway wdraża backend z katalogu `backend`, nie aplikację Androida.
-- Obecny deploy korzysta z [railway.toml](../../backend/railway.toml). Przygotowana [konfiguracja IaC](../../.railway/railway.ts) nie jest automatycznie stosowana; rzeczywisty deploy i regiony należy odczytać z konsoli/CLI.
+- Backend opisuje [konfiguracja IaC](../../.railway/railway.ts). Nie jest ona stosowana automatycznie; rzeczywisty deploy i regiony należy odczytać z konsoli/CLI.
 - Region PostgreSQL jest konfigurowany osobno od backendu; po zmianie regionu sprawdź obie usługi i kopie wolumenu.
 - Status i ograniczony odczyt logów nie oznaczają zgody na deploy, zmiany zmiennych, regionów ani zapis do bazy.
 - Nie uruchamiaj `railway variables` w logowanym terminalu ani nie wklejaj surowego eksportu zmiennych do raportu — może zawierać sekrety.
@@ -64,17 +64,17 @@ Invoke-RestMethod https://vocabulario.up.railway.app/health
 
 `/health` nie potwierdza pełnego działania usługi ani SHA wdrożonego kodu. Weryfikacja wdrożenia wymaga zestawienia commita z udanym deploymentem oraz oddzielnych testów funkcjonalnych.
 
-## Przejście na Railway IaC
+## Utrzymanie Railway IaC
 
-Railway [wycofuje Config as Code 1 grudnia 2026](https://docs.railway.com/config-as-code). Przygotowany plik IaC opisuje tylko backend jako nazwany partial, zamiast zalecanego jednego pliku całego projektu, aby nie przejąć zarządzania PostgreSQL, wolumenem ani zmiennymi. Samo dodanie pliku do repozytorium nie zmienia konfiguracji Railway. Nie usuwaj jeszcze `backend/railway.toml`.
+Railway [wycofuje Config as Code 1 grudnia 2026](https://docs.railway.com/config-as-code). Plik IaC opisuje tylko backend jako nazwany partial, zamiast zalecanego jednego pliku całego projektu, aby nie przejąć zarządzania PostgreSQL, wolumenem ani zmiennymi. Samo dodanie lub zmiana pliku w repozytorium nie zmienia ustawień Railway.
 
-Przed przełączeniem, na właściwym projekcie i środowisku:
+Przy zmianie konfiguracji, na właściwym projekcie i środowisku:
 
 1. Sprawdź aktualną kopię bazy, brak cudzych zmian oczekujących w Railway oraz działający deploy i jego konfigurację. Użyj Node.js 22+, Railway CLI 5.75.0 lub nowszego i `npm ci`.
-2. Po zatwierdzeniu pliku IaC w Git utwórz lokalny katalog `.local`, jeśli nie istnieje, i uruchom `railway config plan --out .local\railway-plan.json`. Plik planu jest lokalny i nie służy do publikacji. Nie używaj opcji odszyfrowywania ani wyświetlania wartości zmiennych.
+2. Po zatwierdzeniu zmian IaC w Git utwórz lokalny katalog `.local`, jeśli nie istnieje, i uruchom `railway config plan --out .local\railway-plan.json`. Plik planu jest lokalny i nie służy do publikacji. Nie używaj opcji odszyfrowywania ani wyświetlania wartości zmiennych.
 3. Przejrzyj plan i jego surowy `changeSet`: tylko zamierzone zmiany backendu, bez usuwania usług, wolumenu i zmiennych; docelowo wyłącznie jedna replika EU West. CLI 5.75.0 może pokazać w tekście planu oba regiony jako usuwane, mimo że pole `after.multiRegionConfig` zawiera jedną replikę EU West. Test w osobnym projekcie potwierdził taki wynik zastosowania. Jednak [kod CLI](https://github.com/railwayapp/cli/blob/v5.75.0/src/iac/change_set.rs) normalizuje pojedynczy region z jedną repliką bez uwzględnienia jego nazwy: potwierdzono też, że zmiana między regionami może nie pojawić się w planie. Dlatego niezależnie porównuj obecne i docelowe regiony, nawet gdy plan nie pokazuje zmian, i weryfikuj regiony po wdrożeniu.
 4. Dopiero po osobnej zgodzie zastosuj zweryfikowany, przypięty plan zgodnie z [instrukcją Railway](https://docs.railway.com/infrastructure-as-code). Potwierdź zapis ustawień Railway oraz stan usług. Jeżeli plan się zdezaktualizował, przygotuj i sprawdź nowy.
-5. Dopiero po potwierdzeniu ustawień usuń stary TOML w osobnej zmianie i wdróż ją. Railway może wykrywać plik w katalogu backendu nawet bez jawnej ścieżki Config File. Po deployu sprawdź regiony, SHA, `/health/ready`, działanie bazy i kopie.
+5. Po deployu sprawdź regiony, SHA, `/health/ready`, działanie bazy i kopie. Nie przywracaj starego `backend/railway.toml`: Railway może go wykrywać automatycznie nawet bez jawnej ścieżki Config File.
 
 ## Zmiany produkcji
 
