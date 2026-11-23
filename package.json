@@ -1,0 +1,10 @@
+{
+  "name": "vocabulario-infrastructure",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "railway": "3.17.0"
+  }
+}
