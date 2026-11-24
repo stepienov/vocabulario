@@ -42,6 +42,7 @@ data class CachedCardEntity(
     val hasContentChanges: Boolean = false,
     val createdAt: String? = null,
     val updatedAt: Long = 0L,
+    val learningGeneration: Long = 1L,
 )
 
 @Entity(
@@ -93,6 +94,7 @@ data class PendingReviewEntity(
     val createdAt: Long,
     /** Przyczyna z ACK serwera; wiersz czeka na decyzję użytkownika i nie jest wysyłany ponownie. */
     val blockedReason: String? = null,
+    val learningGeneration: Long = 1L,
 )
 
 @Entity(tableName = "pending_moves")

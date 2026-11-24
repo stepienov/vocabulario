@@ -1066,6 +1066,7 @@
     <string name="sync_action_accept_server">Usa la versione del server</string>
     <string name="sync_action_discard">Scarta</string>
     <string name="sync_notice_needs_network">Connettiti a internet per applicare le tue modifiche.</string>
+    <string name="sync_notice_content_updated">Il contenuto condiviso aggiornato va studiato di nuovo.</string>
     <string name="legal_adult_confirm">Ho almeno 18 anni.</string>
     <string name="legal_terms_accept">Accetto i Termini d’uso.</string>
     <string name="legal_read_terms">Leggi i Termini d’uso</string>

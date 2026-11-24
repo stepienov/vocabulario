@@ -33,7 +33,7 @@ from app.services.llm import ProviderRefusal
 from app.services.app_log import log_event
 from app.services.background import spawn_background
 from app.services.llm_usage import bind_llm_usage_context
-from app.services.pos_normalize import normalize_pos_bucket
+from app.services.pos_normalize import infer_gender_from_lemma, normalize_pos_bucket
 from app.services.similar_words import ensure_similar_words
 from app.services.word_families import attach_card_to_word_family, sync_word_family
 
@@ -287,7 +287,10 @@ async def request_manual_enrichment_retry(db: AsyncSession, card: LearningCard) 
     card.enrichment_error = None
     card.enrichment_retry_at = None
     card.enrichment_manual_triggered = True
+    if card._content is None:
+        card._content = card.content
     card.lexical_entry_id = None
+    card.lexical_entry = None
     await db.flush()
     spawn_enrich(card.id)
 
@@ -463,11 +466,36 @@ def pick_ready_entry(rows: list, pos: str | None, require_lemma: str | None = No
     return None
 
 
-def entry_compatible_with_card(card: LearningCard, entry: LexicalEntry) -> bool:
+def _entry_matches_identity(
+    lemma: str,
+    pos: str | None,
+    requested_content: dict | None,
+    entry: LexicalEntry,
+    learning_lang: str | None,
+) -> bool:
     content = dict(entry.content or {})
-    if not same_pos_bucket(card.pos, content.get("pos") or entry.pos):
+    if not same_pos_bucket(pos, content.get("pos") or entry.pos):
         return False
-    return same_headword(card.lemma_l2, entry.lemma_l2)
+    for headword in (entry.lemma_l2, content.get("lemma") or entry.lemma_l2):
+        if not same_headword(lemma, headword):
+            return False
+        requested_gender = infer_gender_from_lemma(lemma, learning_lang or "")
+        entry_gender = infer_gender_from_lemma(headword, learning_lang or "")
+        if requested_gender and entry_gender and requested_gender != entry_gender:
+            return False
+    if requested_content and requested_content.get("entry_kind"):
+        if resolve_enrichment_entry_kind(requested_content, pos=pos) != resolve_enrichment_entry_kind(
+            content, pos=entry.pos
+        ):
+            return False
+    return True
+
+
+def entry_compatible_with_card(card: LearningCard, entry: LexicalEntry) -> bool:
+    learning_lang = str(getattr(entry, "lang_pair", "") or "").partition(">")[2]
+    return _entry_matches_identity(
+        card.lemma_l2, card.pos, getattr(card, "content", None), entry, learning_lang
+    )
 
 
 async def find_ready_entry(
@@ -532,7 +560,16 @@ async def find_ready_entry(
             name="lexical_cache_miss",
         )
         return None
-    hit = pick_ready_entry(rows, pos, require_lemma=lemma if require_l2 else None)
+    if require_l2:
+        matching = [
+            entry
+            for entry in rows
+            if pick_ready_entry([entry], pos, require_lemma=lemma) is not None
+            and _entry_matches_identity(lemma, pos, None, entry, learning_lang)
+        ]
+        hit = matching[0] if len(matching) == 1 else None
+    else:
+        hit = pick_ready_entry(rows, pos)
     if hit is None:
         logger.info(
             "lexical cache MISS pair=%s keys=%s lemma=%r pos=%r (wrong-POS only)",
@@ -566,7 +603,12 @@ async def hydrate_from_lexical_cache(
                 select(LexicalEntry).where(LexicalEntry.id == card.lexical_entry_id)
             )
         ).scalar_one_or_none()
-        if pinned is not None and entry_compatible_with_card(card, pinned):
+        if (
+            pinned is not None
+            and pinned.lang_pair == pair
+            and content_is_complete(pinned.content, learning_lang=profile.learning_lang)
+            and entry_compatible_with_card(card, pinned)
+        ):
             try:
                 async with db.begin_nested():
                     content = await sync_word_family(
@@ -580,6 +622,10 @@ async def hydrate_from_lexical_cache(
                 return False
             await _log_enrich_pipeline(card, "enrich_cache_hit", source="cache")
             return True
+        if card._content is None:
+            raise LookupError("shared_card_content_unavailable")
+        card.lexical_entry = None
+        card.lexical_entry_id = None
     cached = await find_ready_entry(
         db,
         lang_pair=pair,
@@ -612,12 +658,16 @@ def _apply_entry_to_card(
     profile: LanguageProfile,
 ) -> None:
     content = dict(entry.content or {})
-    card.content = content
-    card.lexical_entry_id = entry.id
     applied_pos = content.get("pos") or entry.pos
     if card.pos and applied_pos and not same_pos_bucket(card.pos, applied_pos):
         applied_pos = card.pos
         content["pos"] = card.pos
+        card.lexical_entry = None
+        card.lexical_entry_id = None
+    else:
+        card.lexical_entry = entry
+        card.lexical_entry_id = entry.id
+        card._content = None
     card.pos = applied_pos or card.pos
     meanings = content.get("meanings") or []
     card.gloss_primary = (
@@ -632,8 +682,8 @@ def _apply_entry_to_card(
             pos=card.pos,
             learning_lang=profile.learning_lang,
         )
-    elif not same_headword(card.lemma_l2, entry.lemma_l2):
-        content["lemma"] = card.lemma_l2
+    if card.lexical_entry is None:
+        card.content = content
     card.enrichment_status = STATUS_READY
     _clear_enrich_retry(card)
 
@@ -675,7 +725,12 @@ async def _store_lexical_entry(
         lemma=final_lemma,
         pos=final_pos,
         learning_lang=profile.learning_lang,
+        require_l2=True,
     )
+    if cached is not None and not _entry_matches_identity(
+        final_lemma, final_pos, content, cached, profile.learning_lang
+    ):
+        cached = None
     if cached is not None:
         cached.usage_count = (cached.usage_count or 0) + 1
         synced = await sync_word_family(db, profile, dict(cached.content or {}), cached)
@@ -710,8 +765,11 @@ async def _store_lexical_entry(
             lemma=final_lemma,
             pos=final_pos,
             learning_lang=profile.learning_lang,
+            require_l2=True,
         )
-        if existing is not None:
+        if existing is not None and _entry_matches_identity(
+            final_lemma, final_pos, content, existing, profile.learning_lang
+        ):
             synced = await sync_word_family(
                 db, profile, dict(existing.content or {}), existing
             )
@@ -738,6 +796,7 @@ async def _resolve_content(
         lemma=lemma,
         pos=pos,
         learning_lang=profile.learning_lang,
+        require_l2=True,
     )
     if cached is not None:
         cached.usage_count = (cached.usage_count or 0) + 1
@@ -1101,9 +1160,12 @@ def _guard_enrichment_lemma(card: LearningCard, content: dict) -> dict:
 
 
 def _apply_content_fields(card: LearningCard, content: dict) -> None:
-    content = _guard_enrichment_lemma(card, content)
+    if card.lexical_entry is None or card._content is not None:
+        content = _guard_enrichment_lemma(card, content)
+        card.content = content
+    else:
+        content = dict(card.lexical_entry.content or {})
     meanings = content.get("meanings") or []
-    card.content = content
     card.pos = content.get("pos") or card.pos
     card.gloss_primary = (
         meanings[0].get("gloss_l1") if meanings else card.gloss_primary
@@ -1128,9 +1190,11 @@ async def _persist_enrichment_result(
             content, entry = await _store_lexical_entry(
                 db, profile, content, user_id=card.user_id, requested_pos=card.pos
             )
-        _apply_content_fields(card, content)
         if entry is not None:
+            card.lexical_entry = entry
             card.lexical_entry_id = entry.id
+            card._content = None
+        _apply_content_fields(card, content)
         card.enrichment_status = STATUS_READY
         _clear_enrich_retry(card)
         await db.commit()

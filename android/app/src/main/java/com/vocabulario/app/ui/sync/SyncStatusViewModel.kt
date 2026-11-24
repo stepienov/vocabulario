@@ -8,6 +8,7 @@ import com.vocabulario.app.data.sync.BlockedAction
 import com.vocabulario.app.data.sync.BlockedItem
 import com.vocabulario.app.data.sync.QueueSnapshot
 import com.vocabulario.app.data.sync.SyncHeadline
+import com.vocabulario.app.data.sync.SyncResult
 import com.vocabulario.app.data.sync.SyncStatus
 import com.vocabulario.app.data.sync.blockedActions
 import com.vocabulario.app.data.sync.syncHeadline
@@ -28,7 +29,7 @@ data class BlockedRow(
     val actions: List<BlockedAction>,
 )
 
-enum class SyncNotice { NEEDS_NETWORK }
+enum class SyncNotice { NEEDS_NETWORK, CONTENT_UPDATED }
 
 data class SyncStatusUi(
     val headline: SyncHeadline = SyncHeadline.IDLE,
@@ -63,12 +64,27 @@ class SyncStatusViewModel @Inject constructor(
         queue,
         notice,
     ) { online, status: SyncStatus, q, note ->
+        val lastReport = when (val last = status.last) {
+            is SyncResult.Complete -> last.report
+            is SyncResult.Partial -> last.report
+            is SyncResult.Offline -> last.report
+            is SyncResult.AuthRequired -> last.report
+            is SyncResult.VerificationRequired -> last.report
+            is SyncResult.LegalAcceptanceRequired -> last.report
+            is SyncResult.UpdateRequired -> last.report
+            is SyncResult.Failed -> last.report
+            else -> null
+        }
         SyncStatusUi(
             headline = syncHeadline(online, status, q.snapshot),
             queue = q.snapshot,
             blocked = q.blocked,
             lastCompleteAt = status.lastCompleteAt,
-            notice = note,
+            notice = note ?: if ((lastReport?.supersededReviews ?: 0) > 0) {
+                SyncNotice.CONTENT_UPDATED
+            } else {
+                null
+            },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SyncStatusUi())
 

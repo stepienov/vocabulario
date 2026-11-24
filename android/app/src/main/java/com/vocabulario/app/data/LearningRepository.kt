@@ -808,6 +808,7 @@ class LearningRepository @Inject constructor(
             gloss_primary = glossPrimary,
             content = offlineStore.parseContent(contentJson),
             status = status,
+            learning_generation = learningGeneration,
             direction = direction ?: dir,
         )
     }
@@ -917,11 +918,13 @@ class LearningRepository @Inject constructor(
         mode: String,
         direction: String,
         correct: Boolean,
+        learningGeneration: Long,
         answer: String? = null,
     ): String {
         val clientId = UUID.randomUUID().toString()
         val nowMs = System.currentTimeMillis()
-        val wasNew = offlineStore.cardSrsSnapshot(cardId)?.status == "new"
+        val srsSnapshot = offlineStore.cardSrsSnapshot(cardId) ?: error("card not in cache")
+        val wasNew = srsSnapshot.status == "new"
         offlineStore.recordReviewLocally(
             PendingReviewEntity(
                 clientId = clientId,
@@ -932,6 +935,7 @@ class LearningRepository @Inject constructor(
                 correct = correct,
                 answer = answer,
                 createdAt = nowMs,
+                learningGeneration = learningGeneration,
             ),
         )
         if (wasNew) {
@@ -956,6 +960,7 @@ class LearningRepository @Inject constructor(
     private class SyncTally {
         var sent = 0
         var confirmed = 0
+        var supersededReviews = 0
     }
 
     /** Wyjątek → Result bez połykania anulowania rodzica; timeout własnego `withTimeout` to zwykła awaria. */
@@ -1097,6 +1102,7 @@ class LearningRepository @Inject constructor(
             sent = tally.sent,
             confirmed = tally.confirmed,
             queue = offlineStore.queueSnapshot(),
+            supersededReviews = tally.supersededReviews,
         )
         return evaluateSyncResult(report)
     }
@@ -1267,17 +1273,26 @@ class LearningRepository @Inject constructor(
                 continue
             }
             tally?.let { it.sent++ }
-            val failure = attempt {
+            val result = attempt {
                 api.srsUndo(SrsUndoRequest(client_id = item.clientId, previous_srs = srs))
-            }.exceptionOrNull()?.toSyncFailure()
-            if (failure == null) {
+            }
+            val response = result.getOrNull()
+            if (response != null) {
                 offlineStore.removePendingUndo(item.clientId)
                 tally?.let { it.confirmed++ }
-            } else if (failure.kind == FailureKind.CLIENT) {
-                // 409 undo_conflict / operation_id_conflict, 404 karty: ponawianie nic nie zmieni.
-                offlineStore.blockPendingUndo(item.clientId, failure.code)
+                if (response.outcome == "superseded" &&
+                    response.reason == "content_generation_superseded"
+                ) {
+                    tally?.let { it.supersededReviews++ }
+                }
             } else {
-                return failure
+                val failure = requireNotNull(result.exceptionOrNull()).toSyncFailure()
+                if (failure.kind == FailureKind.CLIENT) {
+                    // 409 undo_conflict / operation_id_conflict, 404 karty: ponawianie nic nie zmieni.
+                    offlineStore.blockPendingUndo(item.clientId, failure.code)
+                } else {
+                    return failure
+                }
             }
         }
         return null
@@ -1475,6 +1490,7 @@ class LearningRepository @Inject constructor(
                     correct = it.correct,
                     answer = it.answer,
                     reviewed_at = Instant.ofEpochMilli(it.createdAt).toString(),
+                    learning_generation = it.learningGeneration,
                 )
             },
         )
@@ -1490,6 +1506,14 @@ class LearningRepository @Inject constructor(
         )
         val reviews = reviewAck as? AckDecision.Valid
         val movesDecision = moveAck as? AckDecision.Valid
+        tally?.let { syncTally ->
+            val confirmedReviews = reviews?.confirmed.orEmpty()
+            syncTally.supersededReviews += result.review_results.orEmpty().count { ack ->
+                ack.client_id in confirmedReviews &&
+                    ack.outcome == "superseded" &&
+                    ack.reason == "content_generation_superseded"
+            }
+        }
         // Każdy typ operacji jest oceniany osobno; błąd protokołu jednego nie cofa drugiego.
         offlineStore.applyPushAck(
             confirmedReviews = reviews?.confirmed.orEmpty(),

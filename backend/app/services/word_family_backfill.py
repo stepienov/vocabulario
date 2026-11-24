@@ -393,7 +393,6 @@ async def patch_orphan_cards(
         pos = content.get("pos") or card.pos
         content["word_family_l2"] = project_family_items(members, lemma, pos)
         card.content = content
-        flag_modified(card, "content")
         card.updated_at = now
         patched += 1
     return patched

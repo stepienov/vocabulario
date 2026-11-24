@@ -490,6 +490,7 @@ data class CardResponse(
     val gloss_primary: String? = null,
     val content: kotlinx.serialization.json.JsonObject,
     val lexical_entry_id: String? = null,
+    val learning_generation: Long = 1,
     val created_at: String,
     val persisted: Boolean = true,
     val enrichment_status: String = "ready",
@@ -511,6 +512,7 @@ data class SrsQueueItem(
     val gloss_primary: String? = null,
     val content: kotlinx.serialization.json.JsonObject,
     val status: String,
+    val learning_generation: Long = 1,
     val direction: String? = null,
     val enrichment_status: String? = null,
     val card_activity_status: String? = null,
@@ -532,6 +534,7 @@ data class ReviewRequest(
     val direction: String,
     val correct: Boolean,
     val answer: String? = null,
+    val learning_generation: Long? = null,
 )
 
 @Serializable
@@ -543,12 +546,15 @@ data class SrsUndoRequest(
 @Serializable
 data class SrsUndoResponse(
     val srs: SyncSrsState,
+    val outcome: String = "applied",
+    val reason: String? = null,
 )
 
 @Serializable
 data class SyncSrsState(
     val card_id: String,
     val status: String,
+    val learning_generation: Long = 1,
     val ease: Double = 2.5,
     val interval_days: Double = 0.0,
     val repetitions: Int = 0,
@@ -570,6 +576,7 @@ data class SyncCardItem(
     val pos: String? = null,
     val gloss_primary: String? = null,
     val content: kotlinx.serialization.json.JsonObject,
+    val learning_generation: Long = 1,
     val enrichment_status: String = "ready",
     val content_review_status: String? = null,
     val card_activity_status: String? = null,
@@ -617,6 +624,7 @@ data class SyncReviewItem(
     val correct: Boolean,
     val answer: String? = null,
     val reviewed_at: String,
+    val learning_generation: Long = 1,
 )
 
 @Serializable

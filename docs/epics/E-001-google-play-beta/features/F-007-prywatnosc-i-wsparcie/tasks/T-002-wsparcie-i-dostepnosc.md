@@ -30,7 +30,7 @@ Pomoc jest dostępna z auth/weryfikacji/reauth, „Moje konto” i stanu usuwani
 ## Stan faktyczny
 
 - [CardCorrectionFlow](../../../../../../android/app/src/main/java/com/vocabulario/app/ui/card/CardCorrectionFlow.kt) ma `CARD_CORRECTION_ENABLED = false`: nie traktujemy obecnego UI jako dostępnego raportowania.
-- [API korekt](../../../../../../backend/app/api/v1/learning.py) tworzy `CardCorrection`, zmienia stan aktywności/review karty i uruchamia [process_correction](../../../../../../backend/app/services/card_corrections.py). To odrębna ścieżka korekty z limitem i automatyzacją; nowy raport bezpieczeństwa nie może od niej zależeć.
+- Stare API automatycznych korekt i przetwarzanie LLM zostały usunięte. Historyczne dane korekt pozostają dostępne do odczytu i obsługi istniejących eskalacji; zgłoszenie treści nie zmienia karty.
 - [Scheduler](../../../../../../android/app/src/main/java/com/vocabulario/app/notifications/NotificationScheduler.kt) używa `setAlarmClock`, ma fallback oraz osobne okresowe zadanie enrichment. [Receiver](../../../../../../android/app/src/main/java/com/vocabulario/app/notifications/StudyReminderReceiver.kt) sięga po repozytorium i używa OR ustawień/prefs; odczyt nie jest dowodem pracy wyłącznie lokalnej ani izolacji kont.
 - [Helper](../../../../../../android/app/src/main/java/com/vocabulario/app/notifications/NotificationHelper.kt) kontroluje ogólną zgodę, ale blokada kanału i pełny stan sesji/owner wymagają integracji. Nie zmieniamy przypadkiem ścieżki gotowości kart.
 
@@ -52,8 +52,8 @@ Rozszerzyć istniejące FastAPI/PostgreSQL oraz panel administratora, nie tworzy
 
 ### Interfejs i wynik nieznany
 
-- „Zgłoś treść” przy wyniku lookup, podglądzie/sekcji fiszki i wyniku/przykładzie ćwiczenia. Nie tylko przy już zapisanej karcie: wszystkie generowane powierzchnie mają osiągalny entrypoint. Inwentarz powierzchni stanowi listę odbioru.
-- Macierz powierzchni: lookup przed SAVE; znaczenie/definicja; przykład i tłumaczenie; skojarzenie/powiązania; materiał importowanej karty; pytanie/odpowiedź/informacja zwrotna w practice/flashcards/typing. `field` ma zamknięte kody `meaning|definition|example|translation|association|related|question|answer|feedback|other`; lookup/card/practice oznacza źródło, nie ograniczenie raportowania do jednego ekranu.
+- Decyzja właściciela: „Zgłoś treść” wyłącznie w pełnej karcie otwartej z widoku listy, bez przycisków przy wynikach lookup ani podczas nauki. Treści dostępne wyłącznie poza zapisaną kartą nie mają tam bezpośredniego zgłoszenia; wpływ tego ograniczenia na wymagania Google Play wymaga oceny przed publikacją.
+- Istniejące API zachowuje zgodność z dotychczasowymi rodzajami zgłoszeń i polami; aktualny przycisk wysyła cel `card` i pole `other`.
 - Formularz pokazuje powód, fragment, opcjonalną notatkę, jakie dane kontekstu zostaną wysłane, i ostrzeżenie przed sekretami/cudzymi danymi. Przycisk potwierdza wysłanie; nie uruchamia ukrytej diagnostyki.
 - Jeden aktywny submit, 15 s timeout/5 s connect zgodnie z F-004. Lokalny szkic i client_report_id zapisane atomowo **przed HTTP** w istniejącej właścicielskiej Room/outbox, nie globalnych prefs. Bez nowej samodzielnej bazy/kolejki. Ten sam owner+generation i jawna kategoria raportu w liczniku oczekującej pracy F-003.
 - Offline: „Zapisano na tym urządzeniu, jeszcze nie wysłano”, możliwość anulowania. Po niepewnym wyniku retry tego samego requestu; niezmienny payload po pierwszej próbie, edycja tworzy nowy jawny raport. Nie deklarować potwierdzenia człowieka na samym 201.

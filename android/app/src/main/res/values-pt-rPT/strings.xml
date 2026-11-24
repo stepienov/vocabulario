@@ -993,6 +993,7 @@
     <string name="sync_action_accept_server">Usar a versão do servidor</string>
     <string name="sync_action_discard">Descartar</string>
     <string name="sync_notice_needs_network">Ligue-se à internet para aplicar as suas alterações.</string>
+    <string name="sync_notice_content_updated">O conteúdo partilhado atualizado precisa de ser estudado novamente.</string>
     <string name="legal_adult_confirm">Tenho pelo menos 18 anos.</string>
     <string name="legal_terms_accept">Aceito os Termos de Utilização.</string>
     <string name="legal_read_terms">Ler os Termos de Utilização</string>

@@ -1015,6 +1015,7 @@
     <string name="sync_action_accept_server">Użyj wersji z serwera</string>
     <string name="sync_action_discard">Odrzuć</string>
     <string name="sync_notice_needs_network">Połącz się z internetem, aby zastosować swoje zmiany.</string>
+    <string name="sync_notice_content_updated">Poprawiona wspólna treść wymaga ponownego przećwiczenia.</string>
     <string name="legal_adult_confirm">Mam co najmniej 18 lat.</string>
     <string name="legal_terms_accept">Akceptuję Warunki korzystania.</string>
     <string name="legal_read_terms">Przeczytaj Warunki korzystania</string>

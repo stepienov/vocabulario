@@ -79,6 +79,8 @@ android {
     namespace = "com.vocabulario.app"
     compileSdk = 36
 
+    sourceSets.getByName("androidTest").assets.srcDir("$projectDir/schemas")
+
     defaultConfig {
         // Debug zostaje na dotychczasowym pakiecie; release dostaje pakiet z -Prelease.application.id (patrz onVariants).
         applicationId = "com.vocabulario.app"

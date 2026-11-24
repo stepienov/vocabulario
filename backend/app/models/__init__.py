@@ -200,6 +200,13 @@ class LexicalEntry(Base):
     pos: Mapped[str | None] = mapped_column(String(32), nullable=True)
     cefr: Mapped[str | None] = mapped_column(String(8), nullable=True)
     content: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    learning_generation: Mapped[int] = mapped_column(
+        Integer, default=1, server_default=text("1"), nullable=False
+    )
+    write_revision: Mapped[int] = mapped_column(
+        BigInteger, default=1, server_default=text("1"), nullable=False
+    )
+    __mapper_args__ = {"version_id_col": write_revision}
     source: Mapped[str] = mapped_column(String(16), default="ai")
     word_family_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("word_families.id", ondelete="SET NULL"), nullable=True, index=True
@@ -258,6 +265,10 @@ class LearningCard(Base):
     __tablename__ = "learning_cards"
     # Uniqueness only among live cards — soft-deleted rows are tombstones for sync.
     __table_args__ = (
+        CheckConstraint(
+            "content IS NOT NULL OR lexical_entry_id IS NOT NULL",
+            name="ck_learning_card_content_source",
+        ),
         Index(
             "uq_learning_cards_live_lemma_pos",
             "user_id",
@@ -274,12 +285,15 @@ class LearningCard(Base):
     profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("language_profiles.id", ondelete="CASCADE"))
     deck_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
     lexical_entry_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("lexical_entries.id", ondelete="SET NULL"), nullable=True
+        ForeignKey("lexical_entries.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    lexical_entry: Mapped["LexicalEntry | None"] = relationship(lazy="selectin")
     lemma_l2: Mapped[str] = mapped_column(String(255), nullable=False)
     pos: Mapped[str | None] = mapped_column(String(32), nullable=True)
     gloss_primary: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    content: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    _content: Mapped[dict | None] = mapped_column(
+        "content", JSONB(none_as_null=True), nullable=True
+    )
     # pending → enrichment w toku; preparing → czeka na zaplanowany retry;
     # ready → gotowa; failed → 3 nieudane próby.
     enrichment_status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
@@ -319,6 +333,31 @@ class LearningCard(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+
+    @property
+    def content(self) -> dict:
+        if self._content is not None:
+            return dict(self._content)
+        if self.lexical_entry is not None:
+            return dict(self.lexical_entry.content or {})
+        if self.lexical_entry_id is not None:
+            raise LookupError("shared_card_content_unavailable")
+        return {}
+
+    @content.setter
+    def content(self, value: dict | None) -> None:
+        if self._content is None and self.lexical_entry is not None:
+            self.lexical_entry.content = dict(value or {})
+        else:
+            self._content = dict(value or {})
+
+    @property
+    def learning_generation(self) -> int:
+        return (
+            self.lexical_entry.learning_generation or 1
+            if self._content is None and self.lexical_entry is not None
+            else 1
+        )
 
 
 class SrsState(Base):
@@ -364,6 +403,19 @@ class ReviewLog(Base):
     # Rewizja SRS po zastosowaniu oceny i odcisk intencji (ten sam client_id z innym body = konflikt).
     applied_revision: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     intent_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    learning_generation: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class SupersededReviewReceipt(Base):
+    """Idempotent ACK for an offline review from an obsolete learning generation."""
+
+    __tablename__ = "superseded_review_receipts"
+
+    client_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    card_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("learning_cards.id", ondelete="CASCADE"))
+    intent_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class AppliedReviewUndo(Base):
@@ -374,6 +426,9 @@ class AppliedReviewUndo(Base):
     client_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     card_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("learning_cards.id", ondelete="CASCADE"))
+    outcome: Mapped[str] = mapped_column(
+        String(16), default="applied", server_default=text("'applied'"), nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

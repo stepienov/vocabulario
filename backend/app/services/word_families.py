@@ -463,6 +463,8 @@ async def _project_family(db: AsyncSession, family: WordFamily) -> None:
                     ).scalars().all()
                 )
     for card in cards:
+        if card.lexical_entry_id is not None and card._content is None:
+            continue
         key = member_key(card.lemma_l2 or (card.content or {}).get("lemma"), card.pos)
         if not key or key not in member_keys:
             continue
@@ -471,7 +473,6 @@ async def _project_family(db: AsyncSession, family: WordFamily) -> None:
         pos = content.get("pos") or card.pos
         content["word_family_l2"] = project_family_items(members, lemma, pos)
         card.content = content
-        flag_modified(card, "content")
         card.updated_at = _now()
 
 
@@ -610,7 +611,7 @@ def _card_content_for_family(card: LearningCard) -> dict:
 
 
 async def _entry_for_card(db: AsyncSession, card: LearningCard) -> LexicalEntry | None:
-    if card.lexical_entry_id is None:
+    if card.lexical_entry_id is None or card._content is not None:
         return None
     return await db.get(LexicalEntry, card.lexical_entry_id)
 
@@ -646,7 +647,6 @@ async def _seed_family_from_citing_cards(
         entry = await _entry_for_card(db, other)
         synced = await sync_word_family(db, profile, dict(content), entry)
         other.content = synced
-        flag_modified(other, "content")
         other.updated_at = _now()
         citing_head = _head_item(synced, profile.learning_lang)
         citing_key = (
@@ -701,7 +701,6 @@ async def attach_card_to_word_family(
         source_entry = await _entry_for_card(db, source_card)
         synced_source = await sync_word_family(db, profile, source_content, source_entry)
         source_card.content = synced_source
-        flag_modified(source_card, "content")
         source_card.updated_at = _now()
         source_head = _head_item(synced_source, profile.learning_lang)
         source_key = (
@@ -735,7 +734,6 @@ async def attach_card_to_word_family(
                     members, head.get("lemma"), head.get("pos")
                 )
                 card.content = content
-                flag_modified(card, "content")
                 card.updated_at = _now()
                 return
 
@@ -743,7 +741,6 @@ async def attach_card_to_word_family(
     entry = await _entry_for_card(db, card)
     synced = await sync_word_family(db, profile, content, entry)
     card.content = synced
-    flag_modified(card, "content")
     card.updated_at = _now()
 
 
