@@ -89,6 +89,8 @@ Ustalone 11 listopada 2026. Karta jest widoczna od razu po zapisie wiersza. Uczy
 5. Sekcja bez treści pokazuje kółko tylko wtedy, gdy dociąganie tej sekcji jeszcze trwa. Gdy zadanie się skończyło, a sekcja została pusta, kółka nie ma.
 6. Gdy karta jest otwarta i w sekcji widać kółko, treść zastępuje kółko w chwili zapisu tej sekcji. Dotyczy listy, podglądu karty i nauki. Użytkownik nie zamyka karty, żeby zobaczyć nową treść.
 
+W nauce SRS, gdy pytanie jest w języku interfejsu (`l1_to_l2`), fiszka, quiz i wpisywanie pokazują wszystkie dostępne `meanings[].gloss_l1` z lokalnej treści karty, w kolejności z pełnej karty. Jeśli nie ma glos, używana jest `gloss_primary`; w przeciwnym kierunku pytaniem pozostaje hasło. Nie zmienia to warunków dopuszczenia karty do ćwiczeń. Quiz układa dostępne odpowiedzi w dwie kolumny, indywidualnie dopasowuje rozmiar tekstu i zachowuje szczegóły oraz akcje ujawnionej błędnej odpowiedzi; przy braku miejsca można przewijać.
+
 Instrukcja telefonu: `docs/epics/E-002-szybka-nauka/features/F-004-karty/tasks/T-003-nauka-i-powiazane.md`, sekcja „Zachowanie telefonu”. Odpytywanie: `EnrichmentPoller` (scope procesu). Kółka per sekcja: `CardSectionWaiting`. Otwarta karta: `observeCard` z Room.
 
 ## Skąd który fragment

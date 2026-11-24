@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -64,8 +65,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,6 +80,7 @@ import com.vocabulario.app.ui.theme.GradeAgain
 import com.vocabulario.app.ui.theme.GradeHard
 import com.vocabulario.app.ui.theme.GradeKnown
 import com.vocabulario.app.ui.theme.GradeLearning
+import com.vocabulario.app.ui.theme.LocalVocabExtraColors
 import com.vocabulario.app.ui.theme.posChipContainer
 
 val AppCardShape = RoundedCornerShape(18.dp)
@@ -506,7 +511,13 @@ fun PracticeProgressBar(progress: Float, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun PromptCard(text: String, modifier: Modifier = Modifier, languageLabel: String? = null) {
+fun PromptCard(
+    text: String,
+    modifier: Modifier = Modifier,
+    languageLabel: String? = null,
+    meanings: List<String> = listOf(text),
+    highlighted: Boolean = false,
+) {
     val baseStyle = MaterialTheme.typography.displaySmall
     val isSingleWord = remember(text) {
         val trimmed = text.trim()
@@ -529,30 +540,61 @@ fun PromptCard(text: String, modifier: Modifier = Modifier, languageLabel: Strin
             }
             Spacer(Modifier.height(8.dp))
         }
-        AppCard {
+        val extras = LocalVocabExtraColors.current
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = AppCardShape,
+            colors = CardDefaults.cardColors(
+                containerColor = if (highlighted) extras.practicePrompt else MaterialTheme.colorScheme.surface,
+            ),
+            border = BorderStroke(
+                1.dp,
+                if (highlighted) extras.practicePromptBorder else MaterialTheme.colorScheme.outline,
+            ),
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 32.dp, horizontal = 20.dp),
+                    .padding(vertical = if (meanings.size > 1) 12.dp else 32.dp, horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(
-                    text,
-                    style = baseStyle.copy(
-                        fontSize = if (isSingleWord) fontSize else baseStyle.fontSize,
-                        fontWeight = FontWeight.Bold,
-                    ),
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = if (isSingleWord) 1 else Int.MAX_VALUE,
-                    softWrap = !isSingleWord,
-                    overflow = TextOverflow.Clip,
-                    onTextLayout = { layout ->
-                        if (isSingleWord && layout.hasVisualOverflow && fontSize.value > 16f) {
-                            fontSize = (fontSize.value - 2f).coerceAtLeast(16f).sp
+                if (meanings.size > 1) {
+                    meanings.forEachIndexed { index, meaning ->
+                        if (index > 0) {
+                            Spacer(
+                                Modifier
+                                    .padding(vertical = 5.dp)
+                                    .width(29.dp)
+                                    .height(1.dp)
+                                    .background(MaterialTheme.colorScheme.outline),
+                            )
                         }
-                    },
-                )
+                        Text(
+                            meaning,
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                } else {
+                    Text(
+                        text,
+                        style = baseStyle.copy(
+                            fontSize = if (isSingleWord) fontSize else baseStyle.fontSize,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = if (isSingleWord && fontSize.value > 16f) 1 else Int.MAX_VALUE,
+                        softWrap = !isSingleWord || fontSize.value <= 16f,
+                        overflow = TextOverflow.Clip,
+                        onTextLayout = { layout ->
+                            if (isSingleWord && layout.hasVisualOverflow && fontSize.value > 16f) {
+                                fontSize = (fontSize.value - 2f).coerceAtLeast(16f).sp
+                            }
+                        },
+                    )
+                }
             }
         }
     }
@@ -566,6 +608,7 @@ fun ChoiceTile(
     isCorrect: Boolean?,
     enabled: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     dimmed: Boolean = false,
     gloss: String? = null,
     showActions: Boolean = false,
@@ -578,7 +621,7 @@ fun ChoiceTile(
         LemmaActionRow(
             lemma = text,
             gloss = gloss,
-            modifier = Modifier.testTag(TestTags.PRACTICE_CHOICE),
+            modifier = modifier.testTag(TestTags.PRACTICE_CHOICE),
             belowGloss = if (chipText != null) {
                 {
                     Spacer(Modifier.height(8.dp))
@@ -622,24 +665,46 @@ fun ChoiceTile(
     Surface(
         onClick = onClick,
         enabled = enabled && !dimmed,
-        modifier = Modifier.fillMaxWidth().testTag(TestTags.PRACTICE_CHOICE),
+        modifier = modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(TestTags.PRACTICE_CHOICE),
         shape = AppButtonShape,
         color = bgColor,
         contentColor = scheme.onSurface,
         shadowElevation = 0.dp,
         border = BorderStroke(1.dp, borderColor),
     ) {
-        Row(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center,
         ) {
+            val textMeasurer = rememberTextMeasurer()
+            val baseStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+            val width = constraints.maxWidth
+            val fittedSize = remember(text, width, baseStyle, textMeasurer) {
+                var size = baseStyle.fontSize.value
+                while (size > 10f) {
+                    val layout = textMeasurer.measure(
+                        text = text,
+                        style = baseStyle.copy(fontSize = size.sp),
+                        constraints = Constraints(maxWidth = width),
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                    if (!layout.hasVisualOverflow) break
+                    size = (size - 0.5f).coerceAtLeast(10f)
+                }
+                size.sp
+            }
             Text(
                 text,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
+                modifier = Modifier.fillMaxWidth(),
+                style = baseStyle.copy(
+                    fontSize = fittedSize,
+                    lineHeight = (fittedSize.value * 1.25f).sp,
+                    lineBreak = LineBreak.Heading,
+                ),
+                textAlign = TextAlign.Center,
                 color = scheme.onSurface.copy(alpha = if (dimmed) 0.7f else 1f),
             )
         }
