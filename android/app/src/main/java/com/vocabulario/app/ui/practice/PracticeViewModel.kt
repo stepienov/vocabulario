@@ -18,6 +18,7 @@ import com.vocabulario.app.data.RelatedMembershipIndex
 import com.vocabulario.app.data.containsLemma
 import com.vocabulario.app.data.formatLemmaWithArticle
 import com.vocabulario.app.data.lemmaKeys
+import com.vocabulario.app.data.local.CardContentChangedException
 import com.vocabulario.app.data.local.LocalAnswerCheck
 import com.vocabulario.app.data.normalizeTenseKeys
 import com.vocabulario.app.i18n.UiStrings
@@ -243,8 +244,12 @@ class PracticeViewModel @Inject constructor(
                 val idx = _state.value.currentIndex
                 val current = _state.value.queue.getOrNull(idx) ?: return@collect
                 if (current.card_id != updated.id) return@collect
+                val generationChanged = current.learning_generation != updated.learning_generation
                 val merged = current.copy(
+                    lemma_l2 = updated.lemma_l2,
+                    gloss_primary = updated.gloss_primary,
                     content = updated.content,
+                    learning_generation = updated.learning_generation,
                     enrichment_status = updated.enrichment_status ?: current.enrichment_status,
                     // null = idle po zakończeniu korekty — nie trzymaj starego activity.
                     card_activity_status = updated.card_activity_status,
@@ -267,6 +272,11 @@ class PracticeViewModel @Inject constructor(
                 _state.value = _state.value.copy(
                     queue = _state.value.queue.toMutableList().also { it[idx] = merged },
                 )
+                if (generationChanged) {
+                    _state.value = _state.value.copy(lastUndo = null)
+                    prepareCard()
+                    _state.value = _state.value.copy(error = strings.get(R.string.sync_notice_content_updated))
+                }
             }
         }
     }
@@ -746,9 +756,18 @@ class PracticeViewModel @Inject constructor(
                     mode = mode,
                     direction = currentDirection(),
                     correct = correct,
+                    learningGeneration = item.learning_generation,
                     answer = _state.value.typedAnswer.takeIf { mode == "type" },
                 )
             }.onSuccess { clientId ->
+                if (currentItem()?.learning_generation != item.learning_generation) {
+                    _state.value = _state.value.copy(
+                        lastUndo = null,
+                        grading = false,
+                        error = strings.get(R.string.sync_notice_content_updated),
+                    )
+                    return@onSuccess
+                }
                 _state.value = _state.value.copy(
                     lastUndo = undoFrame?.copy(clientId = clientId),
                     grading = false,
@@ -757,7 +776,11 @@ class PracticeViewModel @Inject constructor(
             }.onFailure {
                 _state.value = _state.value.copy(
                     grading = false,
-                    error = it.userMessage(strings, R.string.err_save_grade),
+                    error = if (it is CardContentChangedException) {
+                        strings.get(R.string.sync_notice_content_updated)
+                    } else {
+                        it.userMessage(strings, R.string.err_save_grade)
+                    },
                 )
             }
         }
@@ -790,7 +813,12 @@ class PracticeViewModel @Inject constructor(
             }.onFailure {
                 _state.value = _state.value.copy(
                     grading = false,
-                    error = it.userMessage(strings, R.string.err_save_grade),
+                    lastUndo = if (it is CardContentChangedException) null else _state.value.lastUndo,
+                    error = if (it is CardContentChangedException) {
+                        strings.get(R.string.sync_notice_content_updated)
+                    } else {
+                        it.userMessage(strings, R.string.err_save_grade)
+                    },
                 )
             }
         }

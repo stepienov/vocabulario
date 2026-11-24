@@ -147,9 +147,18 @@ fun SyncStatusCard(viewModel: SyncStatusViewModel = hiltViewModel()) {
             }
             ui.notice?.let {
                 Text(
-                    stringResource(R.string.sync_notice_needs_network),
+                    stringResource(
+                        when (it) {
+                            SyncNotice.NEEDS_NETWORK -> R.string.sync_notice_needs_network
+                            SyncNotice.CONTENT_UPDATED -> R.string.sync_notice_content_updated
+                        },
+                    ),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                    color = if (it == SyncNotice.NEEDS_NETWORK) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                 )
             }
             if (ui.headline.canRetry()) {
@@ -246,8 +255,13 @@ fun SyncStatusLine(onOpen: () -> Unit, viewModel: SyncStatusViewModel = hiltView
     val ui by viewModel.state.collectAsState()
     val quiet = ui.headline == SyncHeadline.IDLE || ui.headline == SyncHeadline.SYNCED ||
         ui.headline == SyncHeadline.OFFLINE
-    if (quiet) return
-    val text = stringResource(headlineRes(ui.headline))
+    val showContentNotice = ui.notice == SyncNotice.CONTENT_UPDATED
+    if (quiet && !showContentNotice) return
+    val text = if (showContentNotice) {
+        stringResource(R.string.sync_notice_content_updated)
+    } else {
+        stringResource(headlineRes(ui.headline))
+    }
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier

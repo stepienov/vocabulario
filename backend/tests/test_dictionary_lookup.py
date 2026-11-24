@@ -230,3 +230,11 @@ def test_different_senses_keep_both_readings():
     assert "auto" in by_reading["learning"]["gloss"]
     assert "ojo" in by_reading["native"]["lemma"].casefold()
     assert by_reading["native"].get("typed_as") == "ter"
+
+
+def test_parse_wiktionary_title_exists():
+    from app.services.dictionary_lookup import parse_wiktionary_title_exists
+
+    assert parse_wiktionary_title_exists({"query": {"pages": {"1": {"pageid": 99, "title": "dom"}}}}) is True
+    assert parse_wiktionary_title_exists({"query": {"pages": {"-1": {"missing": "", "title": "brak"}}}}) is False
+    assert parse_wiktionary_title_exists(None) is None

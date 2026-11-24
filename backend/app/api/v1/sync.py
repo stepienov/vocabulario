@@ -18,6 +18,7 @@ from app.models import (
     LearningCard,
     ReviewLog,
     SrsState,
+    SupersededReviewReceipt,
     User,
     UserSettings,
     WordList,
@@ -37,6 +38,7 @@ from app.schemas import (
 from app.services import sync_pull
 from app.services.answer_check import check_answer, collect_acceptable_answers
 from app.services.srs import apply_review
+from app.services.shared_content import current_learning_generation
 from app.services.sync_pull import srs_payload as _srs_payload
 from app.services.word_lists import ensure_system_list, list_word_lists
 
@@ -56,6 +58,16 @@ def _digest(*parts: object) -> str:
 
 
 def review_fingerprint(item: SyncReviewItem) -> str:
+    parts = [
+        "review", item.card_id, item.grade, item.mode, item.direction,
+        int(item.correct), item.answer or "", _ms(item.reviewed_at),
+    ]
+    if item.learning_generation is not None:
+        parts.append(item.learning_generation)
+    return _digest(*parts)
+
+
+def legacy_review_fingerprint(item: SyncReviewItem) -> str:
     return _digest(
         "review", item.card_id, item.grade, item.mode, item.direction,
         int(item.correct), item.answer or "", _ms(item.reviewed_at),
@@ -286,10 +298,35 @@ async def sync_push(
         ).scalar_one_or_none()
         if existing is not None:
             skipped += 1
-            if _foreign_or_changed(existing.user_id, existing.intent_fingerprint, user, fp):
+            legacy_duplicate = (
+                existing.user_id == user.id
+                and existing.learning_generation is None
+                and item.learning_generation in (None, 1)
+                and existing.intent_fingerprint == legacy_review_fingerprint(item)
+            )
+            if (
+                existing.user_id != user.id
+                or (
+                    existing.intent_fingerprint != fp
+                    and not legacy_duplicate
+                )
+            ):
                 review_acks.append(_result(item, "conflict", "operation_id_conflict"))
             else:
                 review_acks.append(_result(item, "duplicate"))
+            continue
+
+        superseded = await db.get(SupersededReviewReceipt, item.client_id)
+        if superseded is not None:
+            skipped += 1
+            if (
+                superseded.user_id != user.id
+                or superseded.card_id != item.card_id
+                or superseded.intent_fingerprint != fp
+            ):
+                review_acks.append(_result(item, "conflict", "operation_id_conflict"))
+            else:
+                review_acks.append(_result(item, "superseded", "content_generation_superseded"))
             continue
 
         marker = await db.get(AppliedReviewUndo, item.client_id)
@@ -305,6 +342,26 @@ async def sync_push(
         if card is None or card.deleted_at is not None:
             skipped += 1
             review_acks.append(_result(item, "not_found", "card_unavailable"))
+            continue
+
+        try:
+            current_generation = await current_learning_generation(db, card)
+        except LookupError:
+            raise api_error(503, "shared_card_content_unavailable") from None
+        if (
+            item.learning_generation != current_generation
+            and not (item.learning_generation is None and current_generation == 1)
+        ):
+            db.add(
+                SupersededReviewReceipt(
+                    client_id=item.client_id,
+                    user_id=user.id,
+                    card_id=card.id,
+                    intent_fingerprint=fp,
+                )
+            )
+            skipped += 1
+            review_acks.append(_result(item, "superseded", "content_generation_superseded"))
             continue
 
         state = (
@@ -338,6 +395,7 @@ async def sync_push(
                 client_id=item.client_id,
                 applied_revision=state.review_revision,
                 intent_fingerprint=fp,
+                learning_generation=current_generation,
             )
         )
         touched[card.id] = state
@@ -351,7 +409,10 @@ async def sync_push(
     return SyncPushResponse(
         applied=applied,
         skipped=skipped,
-        srs=[_srs_payload(cid, st) for cid, st in touched.items()],
+        srs=[
+            _srs_payload(cid, st, cards[cid].learning_generation)
+            for cid, st in touched.items()
+        ],
         moves_applied=moves_applied,
         moves_skipped=moves_skipped,
         moves=move_results,

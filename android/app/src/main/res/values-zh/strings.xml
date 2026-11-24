@@ -993,6 +993,7 @@
     <string name="sync_action_accept_server">使用服务器版本</string>
     <string name="sync_action_discard">放弃</string>
     <string name="sync_notice_needs_network">请连接互联网以应用你的更改。</string>
+    <string name="sync_notice_content_updated">更新后的共享内容需要重新学习。</string>
     <string name="legal_adult_confirm">我已年满 18 周岁。</string>
     <string name="legal_terms_accept">我接受《使用条款》。</string>
     <string name="legal_read_terms">阅读《使用条款》</string>

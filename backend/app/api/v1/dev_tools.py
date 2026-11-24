@@ -212,6 +212,7 @@ async def dev_add(
             user_id=user.id,
             profile_id=profile.id,
             lexical_entry_id=entry.id,
+            lexical_entry=entry,
             lemma_l2=entry.lemma_l2,
             pos=entry.pos,
             gloss_primary=entry.lemma_l1_primary,

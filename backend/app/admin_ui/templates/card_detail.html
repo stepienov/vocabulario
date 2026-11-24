@@ -15,6 +15,22 @@
     <h2>Karta</h2>
     <p><strong>{{ card.lemma_l2 }}</strong> · {{ card.pos }} · {{ card.gloss_primary }}</p>
     {% if srs %}<p>SRS: {{ srs.status }} · następna: {{ srs.next_review_at|dt }}</p>{% endif %}
+    {% if entry %}
+    <p>Generacja nauki: {{ entry.learning_generation }}</p>
+    <form method="post" action="/admin/cards/{{ card.id }}/publish-content">
+      <label for="content-json"><strong>Opublikuj wspólną treść JSON</strong></label>
+      <textarea id="content-json" name="content_json" rows="24" required>{{ entry.content|tojson }}</textarea>
+      <input type="hidden" name="expected_generation" value="{{ entry.learning_generation }}">
+      <input type="hidden" name="expected_content_revision" value="{{ content_revision }}">
+      <label for="learning-impact">Czy zmiana wpływa na naukę?</label>
+      <select id="learning-impact" name="learning_impact" required>
+        <option value="" selected disabled>Wybierz decyzję</option>
+        <option value="false">Nie — zachowaj postęp</option>
+        <option value="true">Tak — zresetuj postęp tej karty u wszystkich posiadaczy</option>
+      </select>
+      <button type="submit">Zapisz wspólną treść</button>
+    </form>
+    {% endif %}
     <h2>Treść JSON</h2>
     <pre>{{ card.content|tojson }}</pre>
   </div>

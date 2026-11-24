@@ -1081,6 +1081,7 @@
     <string name="sync_action_accept_server">サーバーの内容を使う</string>
     <string name="sync_action_discard">破棄</string>
     <string name="sync_notice_needs_network">変更を適用するにはインターネットに接続してください。</string>
+    <string name="sync_notice_content_updated">更新された共有コンテンツをもう一度学習する必要があります。</string>
     <string name="legal_adult_confirm">私は18歳以上です。</string>
     <string name="legal_terms_accept">利用規約に同意します。</string>
     <string name="legal_read_terms">利用規約を読む</string>

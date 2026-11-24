@@ -106,10 +106,11 @@ async def current_epoch(db: AsyncSession) -> str:
     return str((await db.execute(text("SELECT epoch FROM sync_epoch WHERE id = 1"))).scalar_one())
 
 
-def srs_payload(card_id: UUID, state: SrsState) -> SyncSrsState:
+def srs_payload(card_id: UUID, state: SrsState, learning_generation: int = 1) -> SyncSrsState:
     return SyncSrsState(
         card_id=card_id,
         status=state.status,
+        learning_generation=learning_generation,
         ease=state.ease,
         interval_days=state.interval_days,
         repetitions=state.repetitions,
@@ -166,14 +167,15 @@ def card_item(card: LearningCard, state: SrsState | None) -> SyncCardItem:
         lemma_l2=card.lemma_l2,
         pos=card.pos,
         gloss_primary=card.gloss_primary,
-        content=dict(card.content or {}),
+        content=card.content,
+        learning_generation=card.learning_generation,
         enrichment_status=card.enrichment_status,
         content_review_status=card.content_review_status,
         card_activity_status=card.card_activity_status,
         has_content_changes=bool(card.has_content_changes),
         created_at=card.created_at,
         updated_at=card.updated_at,
-        srs=srs_payload(card.id, state) if state is not None else None,
+        srs=srs_payload(card.id, state, card.learning_generation) if state is not None else None,
     )
 
 

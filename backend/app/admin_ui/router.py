@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -33,6 +34,7 @@ from app.admin_ui.helpers import (
     status_tone,
 )
 from app.db.session import get_db
+from app.models import LearningCard
 
 HERE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(HERE / "templates"))
@@ -213,6 +215,10 @@ async def card_page(
     data = await q.card_detail(db, card_id)
     if data is None:
         raise StarletteHTTPException(404, "Nie znaleziono karty")
+    if data["entry"] is not None:
+        from app.services.shared_content import content_revision
+
+        data["content_revision"] = content_revision(data["entry"].content)
     return templates.TemplateResponse(
         request,
         "card_detail.html",
@@ -246,6 +252,60 @@ async def retry_enrichment(
     card = await q.admin_retry_enrichment(db, card_id)
     if card is None:
         raise StarletteHTTPException(404, "Nie znaleziono karty")
+    return RedirectResponse(f"/admin/cards/{card_id}", status_code=303)
+
+
+@router.post("/cards/{card_id}/publish-content")
+async def publish_card_content(
+    card_id: UUID,
+    content_json: str = Form(...),
+    expected_generation: int = Form(...),
+    expected_content_revision: str = Form(...),
+    learning_impact: bool = Form(...),
+    db: AsyncSession = Depends(get_db),
+    _admin: str = Depends(require_panel),
+):
+    card = await db.get(LearningCard, card_id)
+    if card is None:
+        raise StarletteHTTPException(404, "Nie znaleziono karty")
+    if card.lexical_entry_id is None:
+        raise StarletteHTTPException(409, "Karta nie ma wspólnego wpisu leksykalnego")
+    try:
+        content = json.loads(content_json)
+    except json.JSONDecodeError as exc:
+        raise StarletteHTTPException(422, "Treść musi być poprawnym JSON-em") from exc
+    if not isinstance(content, dict):
+        raise StarletteHTTPException(422, "Treść musi być obiektem JSON")
+
+    from app.services.shared_content import publish_lexical_content
+
+    try:
+        await publish_lexical_content(
+            db,
+            entry_id=card.lexical_entry_id,
+            expected_generation=expected_generation,
+            expected_content_revision=expected_content_revision,
+            content=content,
+            learning_impact=learning_impact,
+        )
+    except ValueError as exc:
+        await db.rollback()
+        message = {
+            "unmigrated_card_content": "Najpierw rozstrzygnij i przenieś wcześniejsze kopie treści tej karty",
+            "content_revision_conflict": "Treść zmieniła się podczas edycji; otwórz ją ponownie",
+            "content_generation_conflict": "Generacja nauki zmieniła się podczas edycji",
+            "content_identity_conflict": "Nie można zmienić tożsamości słowa ani pary języków",
+            "incomplete_shared_content": "Wspólna treść musi być kompletna i zawierać przykłady",
+            "family_edit_requires_reconciliation": "Zmiana rodziny wyrazów wymaga osobnego uzgodnienia",
+        }.get(str(exc), "Nie można opublikować treści lub decyzja o resecie jest niespójna")
+        raise StarletteHTTPException(409, message) from exc
+    except LookupError as exc:
+        await db.rollback()
+        raise StarletteHTTPException(404, "Nie znaleziono wpisu leksykalnego") from exc
+    except IntegrityError as exc:
+        await db.rollback()
+        raise StarletteHTTPException(409, "Poprawione hasło koliduje z istniejącą kartą lub wpisem") from exc
+    await db.commit()
     return RedirectResponse(f"/admin/cards/{card_id}", status_code=303)
 
 

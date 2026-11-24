@@ -993,6 +993,7 @@
     <string name="sync_action_accept_server">استخدام نسخة الخادم</string>
     <string name="sync_action_discard">تجاهل</string>
     <string name="sync_notice_needs_network">اتصل بالإنترنت لتطبيق تغييراتك.</string>
+    <string name="sync_notice_content_updated">يجب دراسة المحتوى المشترك المحدّث من جديد.</string>
     <string name="legal_adult_confirm">عمري 18 عامًا على الأقل.</string>
     <string name="legal_terms_accept">أوافق على شروط الاستخدام.</string>
     <string name="legal_read_terms">اقرأ شروط الاستخدام</string>

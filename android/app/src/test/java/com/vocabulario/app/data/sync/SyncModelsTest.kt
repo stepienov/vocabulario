@@ -1,12 +1,30 @@
 package com.vocabulario.app.data.sync
 
+import com.vocabulario.app.data.api.SrsUndoResponse
 import com.vocabulario.app.data.session.OwnerContext
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SyncModelsTest {
+    @Test
+    fun undoResponsesPreserveSupersededOutcomeAndSupportOlderServers() {
+        val old = Json.decodeFromString(
+            SrsUndoResponse.serializer(),
+            """{"srs":{"card_id":"card","status":"new"}}""",
+        )
+        val superseded = Json.decodeFromString(
+            SrsUndoResponse.serializer(),
+            """{"srs":{"card_id":"card","status":"new","learning_generation":2},"outcome":"superseded","reason":"content_generation_superseded"}""",
+        )
+        assertEquals("applied", old.outcome)
+        assertEquals("superseded", superseded.outcome)
+        assertEquals("content_generation_superseded", superseded.reason)
+        assertEquals(2L, superseded.srs.learning_generation)
+    }
+
     private val ok: PhaseOutcome = PhaseOutcome.Ok
 
     private fun allPhases(outcome: PhaseOutcome): Map<SyncPhase, PhaseOutcome> =
@@ -177,6 +195,13 @@ class SyncModelsTest {
         assertEquals("ack_unknown_id", code(listOf(OpAck("a", "applied", null), OpAck("z", "applied", null))))
         assertEquals("ack_unknown_outcome", code(listOf(OpAck("a", "applied", null), OpAck("b", "weird", null))))
         assertTrue(interpretAck(emptyList(), null) is AckDecision.Valid)
+    }
+
+    @Test
+    fun localSrsOverlayCannotCrossSharedContentGeneration() {
+        assertTrue(canOverlayLocalSrs(localGeneration = 2, serverGeneration = 2))
+        assertFalse(canOverlayLocalSrs(localGeneration = 1, serverGeneration = 2))
+        assertFalse(canOverlayLocalSrs(localGeneration = 3, serverGeneration = 2))
     }
 
     @Test

@@ -3,7 +3,7 @@ import random
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,14 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_verified_user, get_verified_user_id, lang_pair_key, normalize_text
 from app.core.http_errors import api_error
 from app.db.session import get_db
-from app.models import AppliedReviewUndo, CardCorrection, CardHistoryEvent, LanguageProfile, LearningCard, LexicalEntry, ListCreationReceipt, ReviewLog, SrsState, User, UserSettings, WordList
+from app.models import AppliedReviewUndo, CardHistoryEvent, LanguageProfile, LearningCard, LexicalEntry, ListCreationReceipt, ReviewLog, SrsState, User, UserSettings, WordList
 from app.schemas import (
     CardCreateRequest,
-    CardCorrectionCreate,
-    CardCorrectionCreateResponse,
-    CardCorrectionResponse,
-    CorrectionEscalateResponse,
-    CorrectionQuotaResponse,
     CardHistoryEventResponse,
     CardHistoryResponse,
     CardResponse,
@@ -47,15 +42,7 @@ from app.schemas import (
 from app.schemas.practice import CheckAnswerRequest, CheckAnswerResponse, ChoiceOption, DistractorsRequest, DistractorsResponse
 from app.services.answer_check import check_answer, collect_acceptable_answers
 from app.services.ai_budget import AiBudgetExhausted, AiBudgetUnavailable
-from app.services.card_corrections import (
-    CORRECTION_DAILY_LIMIT,
-    count_corrections_today,
-    create_correction_submitted_event,
-    escalate_rejected_correction,
-    history_event_response,
-    process_correction,
-    _validate_sections,
-)
+from app.services.card_corrections import history_event_response
 from app.services.card_jobs import (
     STATUS_PENDING,
     STATUS_PREPARING,
@@ -80,6 +67,7 @@ from app.services.lookup_events import (
 from app.services.lookup_candidates import has_confident_match
 from app.services.similar_words import ensure_similar_words
 from app.services.srs import apply_review
+from app.services.shared_content import current_learning_generation
 from app.services.word_families import backfill_card_word_family
 from app.services.word_lists import (
     RESERVED_LIST_NAMES,
@@ -458,6 +446,7 @@ async def create_card(
             gloss_primary=entry.lemma_l1_primary,
             content=dict(entry.content or {}),
             lexical_entry_id=None,
+            learning_generation=entry.learning_generation,
             created_at=datetime.now(UTC),
             persisted=False,
         )
@@ -607,6 +596,7 @@ async def srs_queue(
                 gloss_primary=card.gloss_primary,
                 content=card.content,
                 status=state.status,
+                learning_generation=card.learning_generation,
                 direction=direction,
                 enrichment_status=card.enrichment_status,
                 card_activity_status=card.card_activity_status,
@@ -660,6 +650,7 @@ async def srs_queue(
                 gloss_primary=card.gloss_primary,
                 content=card.content,
                 status=state.status,
+                learning_generation=card.learning_generation,
                 direction=direction,
                 enrichment_status=card.enrichment_status,
                 card_activity_status=card.card_activity_status,
@@ -699,14 +690,15 @@ async def srs_distractors(
         raise api_error(404, "profile_not_found", "Profile not found")
 
     try:
-        content = await ensure_similar_words(
-            dict(card.content or {}),
-            profile,
-            card.lemma_l2,
-            card.pos,
-        )
-        if content != card.content:
-            card.content = content
+        if card.lexical_entry_id is None or card._content is not None:
+            content = await ensure_similar_words(
+                dict(card.content or {}),
+                profile,
+                card.lemma_l2,
+                card.pos,
+            )
+            if content != card.content:
+                card.content = content
         raw_options = await generate_choice_options(
             db, user.id, body.profile_id, card, body.direction, profile
         )
@@ -750,6 +742,16 @@ async def srs_review(
         raise api_error(404, "card_not_found", "Card not found")
     card, state = row
 
+    try:
+        learning_generation = await current_learning_generation(db, card)
+    except LookupError:
+        raise api_error(503, "shared_card_content_unavailable") from None
+    if (
+        body.learning_generation != learning_generation
+        and not (body.learning_generation is None and learning_generation == 1)
+    ):
+        raise api_error(409, "content_generation_superseded")
+
     tolerance = "tolerate"
 
     correct = body.correct
@@ -768,6 +770,7 @@ async def srs_review(
         direction=body.direction,
         correct=correct,
         applied_revision=state.review_revision,
+        learning_generation=learning_generation,
     )
     db.add(log)
     await db.commit()
@@ -794,10 +797,13 @@ def _apply_sync_srs_to_state(state: SrsState, srs: SyncSrsState) -> SrsState:
     return state
 
 
-def _srs_state_to_sync(card_id: UUID, state: SrsState) -> SyncSrsState:
+def _srs_state_to_sync(
+    card_id: UUID, state: SrsState, learning_generation: int
+) -> SyncSrsState:
     return SyncSrsState(
         card_id=card_id,
         status=state.status,
+        learning_generation=learning_generation,
         ease=state.ease,
         interval_days=state.interval_days,
         repetitions=state.repetitions,
@@ -833,13 +839,37 @@ async def srs_undo(
     if row is None:
         raise api_error(404, "card_not_found", "Card not found")
     card, state = row
+    try:
+        learning_generation = await current_learning_generation(db, card)
+    except LookupError:
+        raise api_error(503, "shared_card_content_unavailable") from None
 
     marker = await db.get(AppliedReviewUndo, body.client_id)
     if marker is not None:
         if marker.user_id != user.id or marker.card_id != card.id:
             raise api_error(409, "operation_id_conflict", "client_id belongs to another operation")
         # Ponowienie wykonanego undo: zwraca aktualny stan, nigdy nie nadpisuje nowszych ocen.
-        return SrsUndoResponse(srs=_srs_state_to_sync(card.id, state))
+        return SrsUndoResponse(
+            srs=_srs_state_to_sync(card.id, state, learning_generation),
+            outcome=marker.outcome,
+            reason="content_generation_superseded" if marker.outcome == "superseded" else None,
+        )
+
+    if body.previous_srs.learning_generation != learning_generation:
+        db.add(
+            AppliedReviewUndo(
+                client_id=body.client_id,
+                user_id=user.id,
+                card_id=card.id,
+                outcome="superseded",
+            )
+        )
+        await db.commit()
+        return SrsUndoResponse(
+            srs=_srs_state_to_sync(card.id, state, learning_generation),
+            outcome="superseded",
+            reason="content_generation_superseded",
+        )
 
     log = (
         await db.execute(
@@ -861,7 +891,7 @@ async def srs_undo(
     db.add(AppliedReviewUndo(client_id=body.client_id, user_id=user.id, card_id=card.id))
     await db.commit()
     await db.refresh(state)
-    return SrsUndoResponse(srs=_srs_state_to_sync(card.id, state))
+    return SrsUndoResponse(srs=_srs_state_to_sync(card.id, state, learning_generation))
 
 
 @router.post("/srs/check-answer", response_model=CheckAnswerResponse)
@@ -1267,6 +1297,7 @@ def _card_response(card: LearningCard, srs: SrsState | None = None) -> CardRespo
         gloss_primary=card.gloss_primary,
         content=dict(card.content or {}),
         lexical_entry_id=card.lexical_entry_id,
+        learning_generation=card.learning_generation,
         created_at=card.created_at,
         persisted=True,
         enrichment_status=card.enrichment_status,
@@ -1650,116 +1681,6 @@ async def _user_card(
     if card is None:
         raise api_error(404, "card_not_found", "Card not found")
     return card
-
-
-@router.get("/corrections/quota", response_model=CorrectionQuotaResponse)
-async def correction_quota(
-    user: User = Depends(get_verified_user),
-    db: AsyncSession = Depends(get_db),
-):
-    used = await count_corrections_today(db, user.id)
-    return CorrectionQuotaResponse(
-        used=used,
-        limit=CORRECTION_DAILY_LIMIT,
-        remaining=max(0, CORRECTION_DAILY_LIMIT - used),
-    )
-
-
-@router.post("/cards/{card_id}/corrections", response_model=CardCorrectionCreateResponse)
-async def create_card_correction(
-    card_id: UUID,
-    body: CardCorrectionCreate,
-    background_tasks: BackgroundTasks,
-    profile_id: UUID = Query(...),
-    user: User = Depends(get_verified_user),
-    db: AsyncSession = Depends(get_db),
-):
-    card = await _user_card(db, user.id, card_id, profile_id)
-    used = await count_corrections_today(db, user.id)
-    if used >= CORRECTION_DAILY_LIMIT:
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "code": "correction_daily_limit",
-                "limit": CORRECTION_DAILY_LIMIT,
-                "message": f"Maximum {CORRECTION_DAILY_LIMIT} reports per day.",
-            },
-        )
-    try:
-        sections = _validate_sections(body.sections)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    correction = CardCorrection(
-        user_id=user.id,
-        card_id=card.id,
-        sections=sections,
-        note=(body.note or "").strip() or None,
-        status="reported",
-    )
-    card.content_review_status = "correction_reported"
-    card.card_activity_status = "correction_processing"
-    db.add(correction)
-    await create_correction_submitted_event(
-        db,
-        card=card,
-        user_id=user.id,
-        sections=sections,
-        note=correction.note,
-    )
-    await db.commit()
-    await db.refresh(correction)
-    background_tasks.add_task(process_correction, correction.id)
-    return CardCorrectionCreateResponse(correction_id=correction.id, status="reported")
-
-
-@router.get("/cards/{card_id}/corrections/latest", response_model=CardCorrectionResponse | None)
-async def latest_card_correction(
-    card_id: UUID,
-    profile_id: UUID = Query(...),
-    user: User = Depends(get_verified_user),
-    db: AsyncSession = Depends(get_db),
-):
-    await _user_card(db, user.id, card_id, profile_id)
-    result = await db.execute(
-        select(CardCorrection)
-        .where(CardCorrection.card_id == card_id, CardCorrection.user_id == user.id)
-        .order_by(CardCorrection.created_at.desc())
-        .limit(1)
-    )
-    correction = result.scalar_one_or_none()
-    if correction is None:
-        return None
-    return CardCorrectionResponse.model_validate(correction)
-
-
-@router.post(
-    "/cards/{card_id}/corrections/{correction_id}/escalate",
-    response_model=CorrectionEscalateResponse,
-)
-async def escalate_card_correction(
-    card_id: UUID,
-    correction_id: UUID,
-    profile_id: UUID = Query(...),
-    user: User = Depends(get_verified_user),
-    db: AsyncSession = Depends(get_db),
-):
-    card = await _user_card(db, user.id, card_id, profile_id)
-    correction = await db.get(CardCorrection, correction_id)
-    if (
-        correction is None
-        or correction.user_id != user.id
-        or correction.card_id != card.id
-    ):
-        raise api_error(404, "correction_not_found", "Correction not found")
-    try:
-        row = await escalate_rejected_correction(
-            db, user_id=user.id, card=card, correction=correction
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    await db.commit()
-    await db.refresh(row)
-    return CorrectionEscalateResponse(id=row.id, status=row.status)
 
 
 @router.get("/cards/{card_id}/history", response_model=CardHistoryResponse)

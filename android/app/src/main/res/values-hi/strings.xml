@@ -993,6 +993,7 @@
     <string name="sync_action_accept_server">सर्वर का संस्करण इस्तेमाल करें</string>
     <string name="sync_action_discard">छोड़ें</string>
     <string name="sync_notice_needs_network">अपने बदलाव लागू करने के लिए इंटरनेट से जुड़ें।</string>
+    <string name="sync_notice_content_updated">अपडेट की गई साझा सामग्री को फिर से पढ़ना होगा।</string>
     <string name="legal_adult_confirm">मेरी उम्र कम से कम 18 वर्ष है।</string>
     <string name="legal_terms_accept">मैं उपयोग की शर्तें स्वीकार करता/करती हूँ।</string>
     <string name="legal_read_terms">उपयोग की शर्तें पढ़ें</string>

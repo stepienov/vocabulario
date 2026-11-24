@@ -1072,6 +1072,7 @@
     <string name="sync_action_accept_server">Dùng phiên bản trên máy chủ</string>
     <string name="sync_action_discard">Bỏ</string>
     <string name="sync_notice_needs_network">Hãy kết nối internet để áp dụng thay đổi của bạn.</string>
+    <string name="sync_notice_content_updated">Nội dung dùng chung đã cập nhật cần được học lại.</string>
     <string name="legal_adult_confirm">Tôi từ 18 tuổi trở lên.</string>
     <string name="legal_terms_accept">Tôi chấp nhận Điều khoản sử dụng.</string>
     <string name="legal_read_terms">Đọc Điều khoản sử dụng</string>

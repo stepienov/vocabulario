@@ -671,6 +671,7 @@ class CardResponse(BaseModel):
     gloss_primary: str | None
     content: dict
     lexical_entry_id: UUID | None
+    learning_generation: int = 1
     created_at: datetime
     persisted: bool = True
     enrichment_status: str = "ready"
@@ -685,50 +686,6 @@ class CardResponse(BaseModel):
     has_content_changes: bool = False
 
     model_config = {"from_attributes": True}
-
-
-class CardCorrectionCreate(BaseModel):
-    sections: list[str] = Field(default_factory=list)
-    note: str | None = Field(default=None, max_length=2000)
-
-    @field_validator("sections")
-    @classmethod
-    def _strip_sections(cls, value: list[str]) -> list[str]:
-        return [s.strip().lower() for s in value if s and s.strip()]
-
-    @model_validator(mode="after")
-    def _sections_or_note(self) -> "CardCorrectionCreate":
-        return self
-
-
-class CardCorrectionCreateResponse(BaseModel):
-    correction_id: UUID
-    status: str = "reported"
-
-
-class CorrectionQuotaResponse(BaseModel):
-    used: int
-    limit: int
-    remaining: int
-
-
-class CardCorrectionResponse(BaseModel):
-    id: UUID
-    card_id: UUID
-    sections: list[str]
-    note: str | None
-    status: str
-    result_code: str | None = None
-    reason: str | None = None
-    created_at: datetime
-    resolved_at: datetime | None = None
-
-    model_config = {"from_attributes": True}
-
-
-class CorrectionEscalateResponse(BaseModel):
-    id: UUID
-    status: str = "pending"
 
 
 class CardHistoryEventResponse(BaseModel):
@@ -758,6 +715,7 @@ class SrsQueueItem(BaseModel):
     gloss_primary: str | None
     content: dict
     status: str
+    learning_generation: int = 1
     direction: str | None = None
     enrichment_status: str | None = None
     card_activity_status: str | None = None
@@ -777,6 +735,7 @@ class ReviewRequest(BaseModel):
     direction: str
     correct: bool
     answer: str | None = None
+    learning_generation: int | None = Field(default=None, ge=1)
 
     @field_validator("grade")
     @classmethod
@@ -798,6 +757,7 @@ class ReviewResponse(BaseModel):
 class SyncSrsState(BaseModel):
     card_id: UUID
     status: str
+    learning_generation: int = 1
     ease: float = 2.5
     interval_days: float = 0
     repetitions: int = 0
@@ -817,6 +777,8 @@ class SrsUndoRequest(BaseModel):
 
 class SrsUndoResponse(BaseModel):
     srs: SyncSrsState
+    outcome: Literal["applied", "superseded"] = "applied"
+    reason: str | None = None
 
 
 class SyncCardItem(BaseModel):
@@ -827,6 +789,7 @@ class SyncCardItem(BaseModel):
     pos: str | None = None
     gloss_primary: str | None = None
     content: dict
+    learning_generation: int = 1
     enrichment_status: str = "ready"
     content_review_status: str | None = None
     card_activity_status: str | None = None
@@ -870,6 +833,7 @@ class SyncReviewItem(BaseModel):
     correct: bool
     answer: str | None = None
     reviewed_at: datetime
+    learning_generation: int | None = Field(default=None, ge=1)
 
     @field_validator("grade")
     @classmethod
@@ -908,7 +872,8 @@ class SyncOperationResult(BaseModel):
     card_id: UUID
     outcome: Literal["applied", "duplicate", "superseded", "not_found", "conflict"]
     reason: Literal[
-        "card_unavailable", "target_unavailable", "undo_already_applied", "operation_id_conflict"
+        "card_unavailable", "target_unavailable", "undo_already_applied",
+        "operation_id_conflict", "content_generation_superseded"
     ] | None = None
 
 

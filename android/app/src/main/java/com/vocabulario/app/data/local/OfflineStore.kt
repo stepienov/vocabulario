@@ -43,6 +43,7 @@ import com.vocabulario.app.data.sync.BlockedKind
 import com.vocabulario.app.data.sync.OP_CONTENT_REPORT
 import com.vocabulario.app.data.sync.OP_PROFILE_ACTIVATE
 import com.vocabulario.app.data.sync.OP_PROFILE_UPDATE
+import com.vocabulario.app.data.sync.canOverlayLocalSrs
 import com.vocabulario.app.data.sync.PROFILE_OP_SENT
 import com.vocabulario.app.data.sync.ProfileEditPlan
 import com.vocabulario.app.data.sync.ProfileFields
@@ -80,8 +81,11 @@ internal fun buildOfflineDatabase(context: Context, name: String): AppDatabase =
             AppDatabase.MIGRATION_10_11,
             AppDatabase.MIGRATION_11_12,
             AppDatabase.MIGRATION_12_13,
+            AppDatabase.MIGRATION_13_14,
         )
         .build()
+
+class CardContentChangedException : IllegalStateException("content_generation_superseded")
 
 @Singleton
 class OfflineStore internal constructor(
@@ -235,6 +239,7 @@ class OfflineStore internal constructor(
     private suspend fun applyOverlayToCards(overlay: PullOverlay) {
         for ((id, local) in overlay.srsCards) {
             val pulled = cardDao.byId(id) ?: continue
+            if (!canOverlayLocalSrs(local.learningGeneration, pulled.learningGeneration)) continue
             cardDao.update(pulled.withSrs(local.toSyncSrsState()).copy(updatedAt = pulled.updatedAt))
         }
         for ((id, local) in overlay.movedCards) {
@@ -568,6 +573,8 @@ class OfflineStore internal constructor(
         if (cards.isEmpty()) return@guardedWrite
         val entities = cards.map { card ->
             val existing = cardDao.byId(card.id)
+            val generationChanged =
+                existing != null && existing.learningGeneration != card.learning_generation
             CachedCardEntity(
                 id = card.id,
                 profileId = profileId,
@@ -581,17 +588,22 @@ class OfflineStore internal constructor(
                 cardActivityStatus = card.card_activity_status,
                 hasContentChanges = card.has_content_changes,
                 createdAt = card.created_at.ifBlank { existing?.createdAt },
-                status = card.srs_status?.takeIf { it.isNotBlank() } ?: existing?.status ?: "new",
-                nextReviewAt = card.srs_next_review_at?.toEpochMillis() ?: existing?.nextReviewAt,
-                lastReviewedAt = card.srs_last_reviewed_at?.toEpochMillis() ?: existing?.lastReviewedAt,
-                intervalDays = card.srs_interval_days ?: existing?.intervalDays ?: 0.0,
-                ease = existing?.ease ?: 2.5,
-                repetitions = existing?.repetitions ?: 0,
-                lapses = existing?.lapses ?: 0,
-                stability = existing?.stability,
-                difficulty = existing?.difficulty,
-                fsrsStep = existing?.fsrsStep,
-                lastGrade = existing?.lastGrade,
+                learningGeneration = card.learning_generation,
+                status = card.srs_status?.takeIf { it.isNotBlank() }
+                    ?: if (generationChanged) "new" else existing?.status ?: "new",
+                nextReviewAt = card.srs_next_review_at?.toEpochMillis()
+                    ?: if (generationChanged) null else existing?.nextReviewAt,
+                lastReviewedAt = card.srs_last_reviewed_at?.toEpochMillis()
+                    ?: if (generationChanged) null else existing?.lastReviewedAt,
+                intervalDays = card.srs_interval_days
+                    ?: if (generationChanged) 0.0 else existing?.intervalDays ?: 0.0,
+                ease = if (generationChanged) 2.5 else existing?.ease ?: 2.5,
+                repetitions = if (generationChanged) 0 else existing?.repetitions ?: 0,
+                lapses = if (generationChanged) 0 else existing?.lapses ?: 0,
+                stability = if (generationChanged) null else existing?.stability,
+                difficulty = if (generationChanged) null else existing?.difficulty,
+                fsrsStep = if (generationChanged) null else existing?.fsrsStep,
+                lastGrade = if (generationChanged) null else existing?.lastGrade,
                 updatedAt = System.currentTimeMillis(),
             )
         }
@@ -943,6 +955,10 @@ class OfflineStore internal constructor(
 
     /** Ocena i jej trwały intent w jednej transakcji: śmierć procesu nie zostawia postępu bez kolejki ani odwrotnie. */
     suspend fun recordReviewLocally(review: PendingReviewEntity): CachedCardEntity? = db.withTransaction {
+        val card = cardDao.byId(review.cardId) ?: error("card not in cache")
+        if (!canOverlayLocalSrs(review.learningGeneration, card.learningGeneration)) {
+            throw CardContentChangedException()
+        }
         val updated = applyReviewLocally(review.cardId, review.grade, review.correct, review.createdAt)
         reviewDao.insert(review)
         updated
@@ -983,6 +999,7 @@ class OfflineStore internal constructor(
                 for (state in srs) {
                     if (state.card_id in protectedIds) continue
                     val card = cardDao.byId(state.card_id) ?: continue
+                    if (!canOverlayLocalSrs(state.learning_generation, card.learningGeneration)) continue
                     cardDao.update(card.withSrs(state))
                 }
             }
@@ -1192,7 +1209,10 @@ class OfflineStore internal constructor(
     }
 
     suspend fun applySrsSnapshot(srs: SyncSrsState) {
-        val card = cardDao.byId(srs.card_id) ?: return
+        val card = cardDao.byId(srs.card_id) ?: error("card not in cache")
+        if (!canOverlayLocalSrs(srs.learning_generation, card.learningGeneration)) {
+            throw CardContentChangedException()
+        }
         cardDao.update(card.withSrs(srs))
     }
 
@@ -1623,6 +1643,7 @@ class OfflineStore internal constructor(
             cardActivityStatus = card_activity_status,
             hasContentChanges = has_content_changes,
             createdAt = created_at,
+            learningGeneration = learning_generation,
             status = srs?.status?.takeIf { it.isNotBlank() } ?: "",
             nextReviewAt = srs?.next_review_at?.toEpochMillis(),
             lastReviewedAt = srs?.last_reviewed_at?.toEpochMillis(),
@@ -1676,6 +1697,7 @@ class OfflineStore internal constructor(
         gloss_primary = glossPrimary,
         content = parseContent(contentJson),
         lexical_entry_id = null,
+        learning_generation = learningGeneration,
         created_at = createdAt.orEmpty(),
         enrichment_status = enrichmentStatus,
         content_review_status = contentReviewStatus,
@@ -1703,6 +1725,7 @@ class OfflineStore internal constructor(
     private fun CachedCardEntity.toSyncSrsState(): SyncSrsState = SyncSrsState(
         card_id = id,
         status = status,
+        learning_generation = learningGeneration,
         ease = ease,
         interval_days = intervalDays,
         repetitions = repetitions,
@@ -1727,6 +1750,7 @@ class OfflineStore internal constructor(
         difficulty = srs.difficulty,
         fsrsStep = srs.fsrs_step,
         lastGrade = srs.last_grade,
+        learningGeneration = srs.learning_generation,
         updatedAt = System.currentTimeMillis(),
     )
 

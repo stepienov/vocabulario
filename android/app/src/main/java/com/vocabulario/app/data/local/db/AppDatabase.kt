@@ -19,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         OutboxOpEntity::class,
         SessionOwnerEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -36,6 +36,17 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sessionOwnerDao(): SessionOwnerDao
 
     companion object {
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `cached_cards` ADD COLUMN `learningGeneration` INTEGER NOT NULL DEFAULT 1",
+                )
+                db.execSQL(
+                    "ALTER TABLE `pending_reviews` ADD COLUMN `learningGeneration` INTEGER NOT NULL DEFAULT 1",
+                )
+            }
+        }
+
         val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `cached_cards` ADD COLUMN `createdAt` TEXT")

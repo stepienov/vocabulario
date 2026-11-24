@@ -71,22 +71,3 @@ async def notify_cards_ready(
         data_type="cards_ready",
         card_id=card_id,
     )
-
-
-async def notify_correction_resolved(
-    db: AsyncSession,
-    user_id: UUID,
-    card_id: UUID,
-    status: str,
-) -> None:
-    if not await _cards_ready_enabled(db, user_id):
-        return
-    body = "Report accepted — card updated" if status == "accepted" else "Report reviewed"
-    await send_push_to_user(
-        db,
-        user_id,
-        title="Correction reviewed",
-        body=body,
-        data_type="correction_resolved",
-        card_id=card_id,
-    )

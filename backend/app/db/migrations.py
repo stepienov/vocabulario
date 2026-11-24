@@ -570,6 +570,30 @@ _STATEMENTS = (
     "ALTER TABLE srs_state ADD COLUMN IF NOT EXISTS review_revision BIGINT NOT NULL DEFAULT 0",
     "ALTER TABLE review_logs ADD COLUMN IF NOT EXISTS applied_revision BIGINT",
     "ALTER TABLE review_logs ADD COLUMN IF NOT EXISTS intent_fingerprint VARCHAR(64)",
+    "ALTER TABLE review_logs ADD COLUMN IF NOT EXISTS learning_generation INTEGER",
+    "ALTER TABLE applied_review_undos ADD COLUMN IF NOT EXISTS "
+    "outcome VARCHAR(16) NOT NULL DEFAULT 'applied'",
+    "ALTER TABLE lexical_entries ADD COLUMN IF NOT EXISTS "
+    "learning_generation INTEGER NOT NULL DEFAULT 1",
+    "ALTER TABLE lexical_entries ADD COLUMN IF NOT EXISTS "
+    "write_revision BIGINT NOT NULL DEFAULT 1",
+    "ALTER TABLE learning_cards ALTER COLUMN content DROP NOT NULL",
+    "DO $$ BEGIN "
+    "IF NOT EXISTS (SELECT 1 FROM pg_constraint "
+    "WHERE conrelid = 'learning_cards'::regclass "
+    "AND conname = 'ck_learning_card_content_source') THEN "
+    "ALTER TABLE learning_cards ADD CONSTRAINT ck_learning_card_content_source "
+    "CHECK (content IS NOT NULL OR lexical_entry_id IS NOT NULL) NOT VALID; "
+    "END IF; END $$",
+    "CREATE INDEX IF NOT EXISTS ix_learning_cards_lexical_entry_id "
+    "ON learning_cards (lexical_entry_id)",
+    "CREATE TABLE IF NOT EXISTS superseded_review_receipts ("
+    "client_id UUID PRIMARY KEY, "
+    "user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, "
+    "card_id UUID NOT NULL REFERENCES learning_cards(id) ON DELETE CASCADE, "
+    "intent_fingerprint VARCHAR(64) NOT NULL, "
+    "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+    ")",
     "ALTER TABLE applied_sync_moves ADD COLUMN IF NOT EXISTS intent_fingerprint VARCHAR(64)",
     # E-001/F-003/T-003 pkt 3: pull z jawnym xid8 i snapshotem PostgreSQL (bez zegara).
     "ALTER TABLE learning_cards ADD COLUMN IF NOT EXISTS sync_xid xid8",
@@ -607,6 +631,15 @@ _STATEMENTS = (
     "UPDATE learning_cards SET sync_xid = pg_current_xact_id() "
     "WHERE id = NEW.card_id AND sync_xid IS DISTINCT FROM pg_current_xact_id(); "
     "RETURN NEW; END $fn$ LANGUAGE plpgsql",
+    "CREATE OR REPLACE FUNCTION vocab_touch_cards_for_lexical_entry() RETURNS trigger AS $fn$ "
+    "BEGIN "
+    "IF ROW(NEW.content, NEW.learning_generation) IS DISTINCT FROM "
+    "ROW(OLD.content, OLD.learning_generation) THEN "
+    "UPDATE learning_cards SET updated_at = NOW() WHERE lexical_entry_id = NEW.id; "
+    "END IF; RETURN NEW; END $fn$ LANGUAGE plpgsql",
+    "CREATE OR REPLACE FUNCTION vocab_bump_lexical_write_revision() RETURNS trigger AS $fn$ "
+    "BEGIN NEW.write_revision = OLD.write_revision + 1; "
+    "RETURN NEW; END $fn$ LANGUAGE plpgsql",
     "CREATE OR REPLACE FUNCTION vocab_bump_srs_revision() RETURNS trigger AS $fn$ "
     "BEGIN "
     "IF ROW(NEW.status, NEW.ease, NEW.interval_days, NEW.repetitions, NEW.lapses, "
@@ -638,6 +671,12 @@ _STATEMENTS = (
     "IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_srs_state_revision') THEN "
     "CREATE TRIGGER trg_srs_state_revision BEFORE UPDATE ON srs_state "
     "FOR EACH ROW EXECUTE FUNCTION vocab_bump_srs_revision(); END IF; "
+    "IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_lexical_entry_touch_cards') THEN "
+    "CREATE TRIGGER trg_lexical_entry_touch_cards AFTER UPDATE OF content, learning_generation "
+    "ON lexical_entries FOR EACH ROW EXECUTE FUNCTION vocab_touch_cards_for_lexical_entry(); END IF; "
+    "IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_lexical_entry_write_revision') THEN "
+    "CREATE TRIGGER trg_lexical_entry_write_revision BEFORE UPDATE ON lexical_entries "
+    "FOR EACH ROW EXECUTE FUNCTION vocab_bump_lexical_write_revision(); END IF; "
     "IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_learning_cards_tombstone') THEN "
     "CREATE TRIGGER trg_learning_cards_tombstone BEFORE DELETE ON learning_cards "
     "FOR EACH ROW EXECUTE FUNCTION vocab_sync_tombstone('card'); END IF; "

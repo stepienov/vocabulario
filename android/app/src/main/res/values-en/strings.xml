@@ -1015,6 +1015,7 @@
     <string name="sync_action_accept_server">Use server version</string>
     <string name="sync_action_discard">Discard</string>
     <string name="sync_notice_needs_network">Connect to the internet to apply your changes.</string>
+    <string name="sync_notice_content_updated">Updated shared content needs to be studied again.</string>
     <string name="legal_adult_confirm">I am at least 18 years old.</string>
     <string name="legal_terms_accept">I accept the Terms of Use.</string>
     <string name="legal_read_terms">Read the Terms of Use</string>

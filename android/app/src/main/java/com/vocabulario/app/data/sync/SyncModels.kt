@@ -119,6 +119,7 @@ data class SyncReport(
     val sent: Int,
     val confirmed: Int,
     val queue: QueueSnapshot,
+    val supersededReviews: Int = 0,
 )
 
 sealed interface SyncResult {
@@ -300,6 +301,9 @@ sealed interface OutboxStep {
 }
 
 enum class BlockedKind { REVIEW, MOVE, UNDO, OUTBOX }
+
+internal fun canOverlayLocalSrs(localGeneration: Long, serverGeneration: Long): Boolean =
+    localGeneration == serverGeneration
 
 /** Zablokowana operacja kolejki (id to clientId, a dla outboxu numer seq) z kodem przyczyny. */
 data class BlockedItem(
