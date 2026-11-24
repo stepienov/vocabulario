@@ -218,7 +218,10 @@ class LookupQueryCache(Base):
     """Shared lookup suggestions keyed by language pair + normalized user query."""
 
     __tablename__ = "lookup_query_cache"
-    __table_args__ = (UniqueConstraint("lang_pair", "input_norm"),)
+    __table_args__ = (
+        UniqueConstraint("lang_pair", "input_norm"),
+        Index("ix_lookup_query_cache_updated_at", "updated_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     lang_pair: Mapped[str] = mapped_column(String(16), nullable=False)
@@ -933,6 +936,14 @@ class ImportJob(Base):
         ),
         Index("ix_import_jobs_user_created", "user_id", "created_at"),
         Index("ix_import_jobs_status", "status"),
+        Index(
+            "ix_import_jobs_retention",
+            text("COALESCE(finished_at, updated_at, created_at)"),
+            postgresql_where=text(
+                "status IN ('done','failed','cancelled') "
+                "AND NOT (input_meta ? 'retention_scrubbed')"
+            ),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

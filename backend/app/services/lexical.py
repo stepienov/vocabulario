@@ -542,6 +542,14 @@ class LexicalService:
     def _query_cache_key(self, text: str) -> str:
         return normalize_lookup_query(text) or (text.strip().casefold()[:200] or "_")
 
+    async def _touch_query_cache(self, ids: list[UUID]) -> None:
+        if ids:
+            await self.db.execute(
+                update(LookupQueryCache)
+                .where(LookupQueryCache.id.in_(ids))
+                .values(updated_at=func.now())
+            )
+
     async def _fetch_query_cache(
         self, lang_pair: str, input_norm: str, *, for_update: bool = False
     ) -> LookupQueryCache | None:
@@ -737,6 +745,7 @@ class LexicalService:
             return LookupOutcome([], "db", False, lang_pair=pair)
         row = await self._fetch_query_cache(pair, key)
         if row is not None and (row.candidates or row.ai_complete):
+            await self._touch_query_cache([row.id])
             # Ranked like lookup_cached_fast, so one row looks the same on both paths.
             return await self._present_lookup(
                 user,
@@ -894,6 +903,7 @@ class LexicalService:
         )
         row = await self._ensure_query_cache_row(pair, key)
         if not more and row.ai_complete:
+            row.updated_at = datetime.now(UTC)
             return LookupOutcome(
                 list(row.candidates or []),
                 "db",
@@ -975,6 +985,7 @@ class LexicalService:
             return LookupOutcome([], "db", False, lang_pair=pair)
         row = await self._fetch_query_cache(pair, key)
         if row is not None and row.candidates:
+            await self._touch_query_cache([row.id])
             return LookupOutcome(
                 list(row.candidates)[:1],
                 "db",
@@ -1033,6 +1044,8 @@ class LexicalService:
         row = await self._fetch_query_cache(pair, key)
         if row is not None and row.candidates:
             words, meaning = _assoc_words_and_meaning(list(row.candidates))
+            await self._touch_query_cache([row.id])
+            await self.db.commit()
             return LookupOutcome(
                 words,
                 "db",
@@ -1079,6 +1092,8 @@ class LexicalService:
         fresh = await self._ensure_query_cache_row(pair, key)
         if fresh.candidates:
             words, stored_meaning = _assoc_words_and_meaning(list(fresh.candidates))
+            fresh.updated_at = datetime.now(UTC)
+            await self.db.commit()
             return LookupOutcome(
                 words,
                 "db",
@@ -1116,6 +1131,7 @@ class LexicalService:
                 )
             )
         ).scalars().all()
+        await self._touch_query_cache([row.id for row in rows])
         seen: set[str] = set()
         for row in rows:
             for item in row.candidates or []:
