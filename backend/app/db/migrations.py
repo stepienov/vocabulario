@@ -222,6 +222,12 @@ _STATEMENTS = (
     "CREATE INDEX IF NOT EXISTS ix_import_jobs_user_created "
     "ON import_jobs (user_id, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_import_jobs_status ON import_jobs (status)",
+    (
+        "CREATE INDEX IF NOT EXISTS ix_import_jobs_retention "
+        "ON import_jobs (COALESCE(finished_at, updated_at, created_at)) "
+        "WHERE status IN ('done','failed','cancelled') "
+        "AND NOT (input_meta ? 'retention_scrubbed')"
+    ),
     "CREATE UNIQUE INDEX IF NOT EXISTS uq_import_jobs_one_active "
     "ON import_jobs (user_id, profile_id) "
     "WHERE status IN ('queued','analyzing','review','committing','cancelling')",
@@ -346,6 +352,10 @@ _STATEMENTS = (
     """,
     "CREATE INDEX IF NOT EXISTS ix_lookup_query_cache_lang_pair "
     "ON lookup_query_cache (lang_pair)",
+    (
+        "CREATE INDEX IF NOT EXISTS ix_lookup_query_cache_updated_at "
+        "ON lookup_query_cache (updated_at)"
+    ),
     """
     CREATE TABLE IF NOT EXISTS llm_usage (
         id UUID PRIMARY KEY,

@@ -286,6 +286,9 @@ async def lookup_category_expand(
             pair, service._assoc_key(letters_of_query(body.text))
         )
         head = list(word.candidates or [])[:1] if word is not None else []
+        if word is not None:
+            await service._touch_query_cache([word.id])
+            await db.commit()
         outcome = LookupOutcome(
             head + list(outcome.candidates),
             outcome.source,

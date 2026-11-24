@@ -26,6 +26,7 @@ Nowy temat opisujemy jako epic z założeniami biznesowymi, dzielimy na features
 | Lookup | [Zasady wyszukiwania](./reference/lookup-zasady.md) | Utrzymywana referencja |
 | Karty | [Schemat wzbogacania](./reference/wzbogacanie-karty-schemat.md) | Kontrakt etapów, historyczne czasy nie są SLA |
 | Języki | [Szablon LSP](./reference/lsp-manifest-template.yaml) | Szablon manifestu |
+| Prawo | [Projekty dokumentów prawnych](./reference/dokumenty-prawne/README.md) | Projekty ES/PL/EN do przeglądu, niewdrożone jako dokumenty usługi |
 | Testy UI | [Maestro E2E](../e2e/README.md) | Uruchomienie i ograniczenia istniejących scenariuszy |
 | Przypadki lookup | [Scenariusze](./testing/lookup/README.md) | Dane do świadomego wyboru testów |
 | Historia poza epikami | [Archiwum](./archive/README.md) | Dawne audyty i ręczna dystrybucja APK |

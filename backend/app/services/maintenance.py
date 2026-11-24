@@ -20,7 +20,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.core.config import get_settings, is_mail_address
 from app.db import session as db_session
 from app.models import AccountDeletion, ContentReport, MailOutbox, OpsAlert, OpsState
-from app.services import account_journal, ai_budget
+from app.services import account_journal, ai_budget, data_retention
 from app.services.mail_transport import OutgoingMail, get_transport
 
 logger = logging.getLogger(__name__)
@@ -260,10 +260,19 @@ async def _retention(now: datetime) -> None:
         await db.commit()
 
 
+async def _privacy_retention(now: datetime) -> None:
+    async with db_session.async_session_factory() as db:
+        await data_retention.purge_expired(db, now)
+        await db.commit()
+
+
 async def run_cycle(now: datetime | None = None) -> None:
     """One pass. A failing step is logged by class and never blocks the others."""
     clock = now or datetime.now(UTC)
-    steps = (beat, _review_budget, _review_mail, _review_purge, _review_reports, _retention, beat)
+    steps = (
+        beat, _review_budget, _review_mail, _review_purge, _review_reports,
+        _retention, _privacy_retention, beat,
+    )
     for step in steps:
         try:
             await step(clock)

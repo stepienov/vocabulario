@@ -18,6 +18,32 @@ Uzgodnić faktyczne dane, odbiorców, dostawców i retencję; przygotować publi
 
 Warunki korzystania/aviso legal są w [E-001/F-007/T-003](./T-003-warunki-i-informacje-prawne.md), bez dublowania polityki i statusów. Powyższe to lista analizy, nie gotowa polityka ani opinia o pełnej zgodności.
 
+### Aktualizacja retencji — 23.11.2026
+
+Właściciel zatwierdził czyszczenie historii wyszukiwania po 30 dniach, surowych danych importu
+po 30 dniach oraz nieużywanego wspólnego cache po 90 dniach. Implementacja jest w bieżącym
+kodzie, ale sama zmiana kodu nie oznacza wdrożenia ani wykonania czyszczenia na produkcji.
+
+- Maintenance co 15 minut usuwa partiami zdarzenia wyszukiwania starsze niż 30 dni. Fiszki
+  pozostają, a ich odwołanie do usuniętego zdarzenia zostaje wyczyszczone.
+- Po 30 dniach od zakończenia, błędu lub anulowania importu usuwane są surowe notatki,
+  tekst i metadane wejścia, etykiety, szczegóły błędów oraz payloady zdarzeń importu.
+  Aktywny import pozostaje nietknięty. Wyniki pozycji, fiszki, status i powiązania kolejki
+  zostają; wyniki mogą zawierać słowa pochodzące z importu.
+- Wpisy wspólnego cache są usuwane po 90 dniach od ostatniego zapisanego użycia lub zmiany.
+  To ograniczenie czasu, **nie dowód anonimowości ani publicznego charakteru treści**.
+- Sprzątanie jest okresowe i ograniczone rozmiarem partii; awaria lub duży backlog może
+  opóźnić wykonanie. Osobny zapis `lookup_more_operations` nadal zawiera zapytania i wyniki
+  potrzebne do bezpiecznego ponowienia operacji, bez automatycznego TTL. Nie deklarować
+  usunięcia wszystkich kopii wyszukiwań po 30 dniach przed rozstrzygnięciem tego przepływu.
+- Retencja markera usunięcia, kopii ręcznych i dostawców wymaga osobnego rozstrzygnięcia.
+  Ustalony wcześniej PITR pozostaje celem, a nie potwierdzonym stanem produkcji: przy
+  audycie Railway był wyłączony. Dzienny harmonogram kopii to 6 dni; kopia ręczna sprzed
+  migracji i lokalna kopia logiczna wymagają osobnego terminu.
+
+Poniższa mapa i luki są wcześniejszą analizą; aktualne zachowanie należy sprawdzać w kodzie
+i konfiguracji, w szczególności nie traktować jej historycznych wartości jako stanu produkcji.
+
 ### Wejście z zatwierdzonego F-006
 
 [Proces usuwania](../../F-006-zarzadzanie-kontem/tasks/T-002-usuwanie-konta.md) ma ustalone zachowanie: blokada od razu, 7 dni na wycofanie, potem do 7 dni na usunięcie aktywnych danych (maksymalnie 14 dni). Nie pytamy ponownie o te warianty. Tu trzeba zweryfikować zgodność zobowiązania i wypełnić konkretne okresy/wyjątki:
