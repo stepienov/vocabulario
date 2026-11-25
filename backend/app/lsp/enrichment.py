@@ -8,15 +8,22 @@ import re
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.ai.prompt_cache import pair_cache_key
 from app.ai.schemas.similar_words import MIN_SIMILAR_FOR_QUIZ, MIN_SIMILAR_WORDS
 from app.core.lemma_keys import canonical_lemma
 from app.core.text_repair import repair_strings
+from app.db.lifecycle import LifecycleBlocked
 from app.lsp.constants import CARD_SCHEMA_VERSION
 from app.lsp.lang_utils import articles_for
 from app.lsp.prompts import build_inflection_prompt_parts
 from app.lsp.registry import get_manifest
-from app.lsp.validate import apply_manifest_ui_labels, inflection_to_legacy_conjugation, validate_inflection
+from app.lsp.validate import (
+    apply_manifest_ui_labels,
+    inflection_to_legacy_conjugation,
+    validate_inflection,
+)
 from app.models import LanguageProfile
 from app.services.enrichment import (
     MAX_MEANINGS,
@@ -28,10 +35,10 @@ from app.services.enrichment import (
     filter_associations,
     strip_prepositional_construction_meanings,
 )
-from app.services.word_family_quality import filter_word_family
 from app.services.llm import LLMService
 from app.services.pos_normalize import normalize_pos_bucket
 from app.services.similar_words import fetch_similar_words
+from app.services.word_family_quality import filter_word_family
 
 logger = logging.getLogger(__name__)
 
@@ -724,15 +731,27 @@ async def run_lemma_enrichment(
         if task is not None:
             pending.discard(task)
 
+    async def _invoke_callback(callback: OnMeanings, payload: dict, name: str) -> None:
+        try:
+            await callback(payload)
+        except (SQLAlchemyError, LifecycleBlocked):
+            tasks = {
+                task for task in (meanings_task, related_task, similar_task, inflection_task, finish_task)
+                if task is not None
+            }
+            for task in tasks:
+                _cancel_if_pending(task)
+            await asyncio.gather(*tasks, return_exceptions=True)
+            raise
+        except Exception:
+            logger.exception("%s callback failed for %r", name, lemma_final)
+
     async def _emit_related() -> None:
         nonlocal card
         if related_part is None or card is None:
             return
         if on_related is not None and meanings_delivered:
-            try:
-                await on_related(dict(related_part))
-            except Exception:
-                logger.exception("on_related callback failed for %r", lemma_final)
+            await _invoke_callback(on_related, dict(related_part), "on_related")
             card.update(related_part)
             card.pop("related_pending", None)
         elif not meanings_delivered:
@@ -763,12 +782,7 @@ async def run_lemma_enrichment(
                     card.update(related_part)
                     card.pop("related_pending", None)
                 if on_meanings is not None:
-                    try:
-                        await on_meanings(dict(card))
-                    except Exception:
-                        logger.exception(
-                            "on_meanings callback failed for %r", lemma_final
-                        )
+                    await _invoke_callback(on_meanings, dict(card), "on_meanings")
                 meanings_delivered = True
 
                 retry_similar, retry_inflection = side_jobs_need_retry(
@@ -845,10 +859,7 @@ async def run_lemma_enrichment(
                 elif related_failed:
                     card.setdefault("related_pending", True)
                 if on_study is not None:
-                    try:
-                        await on_study(dict(card))
-                    except Exception:
-                        logger.exception("on_study callback failed for %r", lemma_final)
+                    await _invoke_callback(on_study, dict(card), "on_study")
                 study_delivered = True
                 continue
 

@@ -79,13 +79,37 @@ def test_support_reports_when_deletion_is_unavailable(client, monkeypatch):
     assert "Usuwanie konta możesz też rozpocząć" in client.get("/support?lang=pl").text
 
 
-def test_assetlinks_lists_only_configured_fingerprints(client, monkeypatch):
+def test_assetlinks_lists_only_configured_fingerprints(client, monkeypatch, tmp_path):
+    from app.public_web import site
+
+    monkeypatch.setattr(site, "ALPHA_APK", tmp_path / "missing.apk")
     monkeypatch.setattr(get_settings(), "android_cert_sha256", "")
     assert client.get("/.well-known/assetlinks.json").json() == []
     monkeypatch.setattr(get_settings(), "android_cert_sha256", "aa:bb, cc:dd")
     target = client.get("/.well-known/assetlinks.json").json()[0]["target"]
     assert target["package_name"] == "io.vocabulario.app"
     assert target["sha256_cert_fingerprints"] == ["AA:BB", "CC:DD"]
+
+
+def test_alpha_download_and_assetlinks(client, monkeypatch, tmp_path):
+    from app.public_web import site
+
+    apk = tmp_path / "Vocabulario-alpha.apk"
+    monkeypatch.setattr(site, "ALPHA_APK", apk)
+    monkeypatch.setattr(get_settings(), "android_cert_sha256", "")
+    assert client.get("/download/alpha").status_code == 503
+    assert client.get("/.well-known/assetlinks.json").json() == []
+
+    apk.write_bytes(b"synthetic-apk")
+    response = client.get("/download/alpha")
+    assert response.status_code == 200
+    assert response.content == b"synthetic-apk"
+    assert response.headers["content-type"] == "application/vnd.android.package-archive"
+    assert response.headers["content-disposition"] == 'attachment; filename="Vocabulario-alpha.apk"'
+    assert response.headers["cache-control"] == "no-store"
+    target = client.get("/.well-known/assetlinks.json").json()[0]["target"]
+    assert target["package_name"] == site.ALPHA_PACKAGE
+    assert target["sha256_cert_fingerprints"] == [site.ALPHA_CERT_SHA256]
 
 
 def test_every_text_exists_in_all_published_languages():

@@ -134,6 +134,72 @@ def test_learnable_side_retries_stop_after_three():
 
 
 @pytest.mark.pg
+@pytest.mark.parametrize("study_complete", [False, True])
+async def test_stale_enrichment_rolls_back_logs_original_error_and_schedules_retry(
+    pg, monkeypatch, study_complete
+):
+    from sqlalchemy import select
+
+    from app.models import AppLog, LearningCard, LexicalEntry
+    from app.services.background import drain_background
+    from app.services.card_jobs import _enrich_card_unlocked
+    from tests.pg_factories import create_card, create_profile, create_user
+
+    async with pg() as db:
+        user = await create_user(db)
+        profile = await create_profile(db, user, "pl", "es")
+        card = await create_card(db, profile, "inestable", "adjective")
+        card.gloss_primary = "niestabilny"
+        entry = LexicalEntry(
+            lang_pair="pl>es", lemma_l2="inestable", pos="adjective", content={"lemma": "inestable"}
+        )
+        db.add(entry)
+        await db.commit()
+        card_id, entry_id = card.id, entry.id
+
+    async def stale_projection(db, card, profile, content, *, source_card=None):
+        if study_complete:
+            card.enrichment_status = STATUS_LEARNABLE
+            card.content = {
+                "lemma": "inestable",
+                "meanings": [{"gloss_l1": "niestabilny", "examples": [{"l2": "a", "l1": "b"}]}],
+            }
+            await db.commit()
+        entry = await db.get(LexicalEntry, entry_id)
+        async with pg() as other:
+            fresh = await other.get(LexicalEntry, entry_id)
+            fresh.content = {"lemma": "inestable", "revision": "new"}
+            await other.commit()
+        entry.content = {"lemma": "inestable", "revision": "stale"}
+        await db.flush()
+
+    monkeypatch.setattr("app.services.card_jobs._enrich_lemma_staged", stale_projection)
+    await _enrich_card_unlocked(card_id)
+    await drain_background(2)
+
+    async with pg() as db:
+        stored = await db.get(LearningCard, card_id)
+        entry = await db.get(LexicalEntry, entry_id)
+        event = (
+            await db.execute(
+                select(AppLog).where(
+                    AppLog.entity_id == str(card_id),
+                    AppLog.event == "enrichment_failed",
+                )
+            )
+        ).scalar_one()
+        assert stored.enrichment_status == (STATUS_LEARNABLE if study_complete else STATUS_PREPARING)
+        assert stored.enrichment_error == "enrichment_database_error"
+        assert stored.enrichment_retry_at is not None
+        if study_complete:
+            assert stored.enrichment_side_retries == 1
+            assert stored.content["meanings"][0]["examples"]
+        assert entry.content["revision"] == "new"
+        assert event.error_type == "StaleDataError"
+        assert event.error_message is None
+
+
+@pytest.mark.pg
 async def test_exhausted_learnable_is_not_resumed(pg, monkeypatch):
     from app.services.card_jobs import _apply_enrich_retry, _resume_pending_enrichment
     from tests.pg_factories import create_card, create_profile, create_user

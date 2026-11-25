@@ -23,6 +23,8 @@ Materiały lokalne trzymaj w `.local/`. Dawny ignorowany `doc/` pozostaje zgodny
 
 Przejściowy wyjątek: współdzielony `android/keystore/debug.keystore` pozostaje dla zgodności obecnych APK. Jest celowo udostępnionym kluczem debug, **nie zabezpieczeniem produkcyjnego wydania**. Rozdzielenie od produkcyjnego podpisu należy do [E-001/F-002/T-001](docs/epics/E-001-google-play-beta/features/F-002-wydanie-play/tasks/T-001-release-i-aktualizacja.md); innych keystore'ów nie dodajemy do Git.
 
+Wyjątek dla publicznej alfy: `backend/app/public_web/downloads/Vocabulario-alpha.apk` jest jedynym APK w Git i jest aktualizowany przez PR. To osobny pakiet i prywatny podpis, nie wydanie Play; procedura i kontrola podpisu są w [instrukcji wydania](docs/setup/wydanie-android.md#publiczna-alpha-przed-play). Poprzednie pliki pozostają w historii Git.
+
 `.gitignore` nie usuwa już śledzonych plików ani historii. Wyciek prawdziwego sekretu wymaga jego odwołania/rotacji i osobnej decyzji o historii — nie wystarczy przenieść pliku.
 
 ## Dokumentacja bez bałaganu
