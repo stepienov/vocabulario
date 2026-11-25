@@ -55,6 +55,22 @@ def apk_version(apk: Path, aapt: Path) -> int:
     return version
 
 
+def verify_certificates(signatures: str, tools_name: str) -> None:
+    certificate_lines = [line for line in signatures.splitlines() if "certificate SHA-256 digest:" in line]
+    pattern = re.compile(
+        r"^(?:Signer #\d+|V[\d.]+ Signer(?: #\d+)?):? certificate SHA-256 digest: ([0-9a-fA-F]+)$"
+    )
+    fingerprints = [match.group(1).lower() for line in certificate_lines if (match := pattern.fullmatch(line))]
+    expected = ALPHA_CERT_SHA256.replace(":", "").lower()
+    if not fingerprints or len(fingerprints) != len(certificate_lines) or any(
+        fingerprint != expected for fingerprint in fingerprints
+    ):
+        raise ValueError(
+            f"APK is not signed with the alpha certificate (build-tools {tools_name}; "
+            f"certificate output: {certificate_lines})"
+        )
+
+
 def verify(apk: Path, previous: Path | None = None) -> None:
     tools = build_tools()
     aapt = tools / ("aapt.exe" if os.name == "nt" else "aapt")
@@ -62,13 +78,7 @@ def verify(apk: Path, previous: Path | None = None) -> None:
     if previous is not None and version <= apk_version(previous, aapt):
         raise ValueError("New alpha versionCode must be greater than the previous APK")
     signatures = run("java", "-jar", str(tools / "lib" / "apksigner.jar"), "verify", "--print-certs", str(apk))
-    fingerprints = re.findall(r"^Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]+)$", signatures, re.MULTILINE)
-    if len(fingerprints) != 1 or fingerprints[0].lower() != ALPHA_CERT_SHA256.replace(":", "").lower():
-        certificate_lines = [line for line in signatures.splitlines() if "SHA-256" in line]
-        raise ValueError(
-            f"APK is not signed with the alpha certificate (build-tools {tools.name}; "
-            f"certificate output: {certificate_lines})"
-        )
+    verify_certificates(signatures, tools.name)
     with zipfile.ZipFile(apk) as archive:
         if archive.testzip() is not None:
             raise ValueError("APK archive is corrupt")
