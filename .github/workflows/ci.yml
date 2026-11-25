@@ -65,9 +65,6 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Unit tests, lint, debug build and instrumentation test compilation
-        run: ./gradlew --console=plain :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
-
       - name: Verify published alpha APK
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -80,6 +77,9 @@ jobs:
             git show "$BASE_SHA:$previous_path" > "$RUNNER_TEMP/alpha-previous.apk"
             python ../scripts/check_alpha_apk.py "$apk" --previous "$RUNNER_TEMP/alpha-previous.apk"
           fi
+
+      - name: Unit tests, lint, debug build and instrumentation test compilation
+        run: ./gradlew --console=plain :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
 
       - name: Test release build and 16 KB alignment
         env:
