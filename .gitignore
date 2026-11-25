@@ -43,6 +43,7 @@ android/gradle-8.9/
 android/*.iml
 android/.idea/
 *.apk
+!backend/app/public_web/downloads/Vocabulario-alpha.apk
 *.aab
 *.ap_
 captures/

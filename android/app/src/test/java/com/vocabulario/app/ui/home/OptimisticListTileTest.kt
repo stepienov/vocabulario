@@ -5,6 +5,7 @@ import com.vocabulario.app.data.api.CardResponse
 import com.vocabulario.app.data.api.LookupCandidate
 import kotlinx.serialization.json.buildJsonObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -84,6 +85,39 @@ class OptimisticListTileTest {
         val uuid = pending.copy(id = "srv-mesa")
         val merged = mergeInFlightListWords(emptyList(), listOf(pending, uuid))
         assertEquals(listOf("srv-mesa"), merged.map { it.id })
+    }
+
+    @Test
+    fun switchingLists_doesNotCarryCreatingOrReadyCards() {
+        val creating = ready("inestable").copy(enrichment_status = EnrichmentStatus.PREPARING)
+        val state = HomeUiState(selectedListId = "old", listWords = listOf(creating, ready("casa")))
+
+        val switched = selectListState(state, "new")
+        val incoming = listOf(ready("mesa"))
+        val displayed = mergeInFlightListWords(incoming, switched.listWords)
+
+        assertEquals(listOf("mesa"), displayed.map { it.lemma_l2 })
+        assertTrue(switched.listWords.isEmpty())
+        assertTrue(mergeInFlightListWords(switched.listWords, emptyList()).isEmpty())
+    }
+
+    @Test
+    fun reselectingSameList_keepsCreatingCards() {
+        val creating = ready("inestable").copy(enrichment_status = EnrichmentStatus.PREPARING)
+        val state = HomeUiState(selectedListId = "same", listWords = listOf(creating))
+
+        val selected = selectListState(state, "same")
+
+        assertEquals(listOf(creating), selected.listWords)
+    }
+
+    @Test
+    fun lateListResult_isRejectedEvenAfterSwitchingBack() {
+        val state = HomeUiState(selectedListId = "old")
+
+        assertFalse(isCurrentListLoad(state, "new", 1, 2))
+        assertFalse(isCurrentListLoad(state, "old", 0, 2))
+        assertTrue(isCurrentListLoad(state, "old", 2, 2))
     }
 
     private fun ready(lemma: String) = CardResponse(

@@ -7,9 +7,10 @@ trackers, external fonts or embeds; request logs carry no query string (see AppL
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from app.core.config import get_settings
+from app.public_web.alpha import ALPHA_APK, ALPHA_CERT_SHA256, ALPHA_PACKAGE
 from app.public_web.router import ASSETS_PATH, SECURITY_HEADERS, page_locale, templates
 from app.public_web.site_texts import SITE_TEXTS
 from app.services import legal_docs
@@ -88,6 +89,18 @@ async def home_page(request: Request) -> HTMLResponse:
     return _render(request, "home", "home_title", intro=intro)
 
 
+@site_router.get("/download/alpha")
+async def download_alpha() -> FileResponse:
+    if not ALPHA_APK.is_file():
+        raise HTTPException(status_code=503, detail="Alpha APK is unavailable")
+    return FileResponse(
+        ALPHA_APK,
+        media_type="application/vnd.android.package-archive",
+        filename="Vocabulario-alpha.apk",
+        headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+    )
+
+
 @site_router.get("/privacy", response_class=HTMLResponse)
 async def privacy_page(request: Request) -> HTMLResponse:
     locale, fallback = _locale(request)
@@ -145,4 +158,15 @@ async def assetlinks() -> JSONResponse:
                 },
             }
         ]
+    if ALPHA_APK.is_file():
+        body.append(
+            {
+                "relation": ["delegate_permission/common.handle_all_urls"],
+                "target": {
+                    "namespace": "android_app",
+                    "package_name": ALPHA_PACKAGE,
+                    "sha256_cert_fingerprints": [ALPHA_CERT_SHA256],
+                },
+            }
+        )
     return JSONResponse(body, headers={"Cache-Control": "public, max-age=3600"})

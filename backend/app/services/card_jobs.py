@@ -14,7 +14,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, func, or_, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.schemas.similar_words import MIN_SIMILAR_FOR_QUIZ
@@ -25,13 +25,13 @@ from app.db.session import async_session_factory
 from app.lsp.enrichment import finish_side_jobs, has_required_inflection, run_lemma_enrichment
 from app.lsp.lang_utils import articles_for
 from app.models import LanguageProfile, LearningCard, LexicalEntry, User
+from app.services.ai_budget import AiBudgetExhausted, AiBudgetUnavailable
+from app.services.app_log import log_event
+from app.services.background import spawn_background
 from app.services.distractors import in_learning_lemma, lemma_keys
 from app.services.enrichment import enrich_adaptive_card_content, enrich_card_content
 from app.services.lexical import LexicalService
-from app.services.ai_budget import AiBudgetExhausted, AiBudgetUnavailable
 from app.services.llm import ProviderRefusal
-from app.services.app_log import log_event
-from app.services.background import spawn_background
 from app.services.llm_usage import bind_llm_usage_context
 from app.services.pos_normalize import infer_gender_from_lemma, normalize_pos_bucket
 from app.services.similar_words import ensure_similar_words
@@ -64,28 +64,33 @@ async def _log_enrich_pipeline(
     data = content if content is not None else dict(card.content or {})
     family = data.get("word_family_l2") or []
     syn = data.get("synonyms_l2") or []
+    user_id, profile_id, card_id = card.user_id, card.profile_id, card.id
+    lemma, pos = card.lemma_l2, card.pos
+    lookup_event_id = card.lookup_event_id
+    enrichment_status = card.enrichment_status
+    side_retries = int(getattr(card, "enrichment_side_retries", 0) or 0)
     spawn_background(
         lambda: log_event(
-        level="info",
-        category="enrichment",
-        event=event,
-        status="ok",
-        user_id=card.user_id,
-        profile_id=card.profile_id,
-        entity_type="card",
-        entity_id=str(card.id),
-        message=event,
-        payload={
-            "lemma": card.lemma_l2,
-            "pos": card.pos,
-            "family_len": len(family) if isinstance(family, list) else 0,
-            "synonym_len": len(syn) if isinstance(syn, list) else 0,
-            "source": source,
-            "lookup_event_id": str(card.lookup_event_id) if card.lookup_event_id else None,
-            "enrichment_status": card.enrichment_status,
-            "side_retries": int(getattr(card, "enrichment_side_retries", 0) or 0),
-        },
-    ),
+            level="info",
+            category="enrichment",
+            event=event,
+            status="ok",
+            user_id=user_id,
+            profile_id=profile_id,
+            entity_type="card",
+            entity_id=str(card_id),
+            message=event,
+            payload={
+                "lemma": lemma,
+                "pos": pos,
+                "family_len": len(family) if isinstance(family, list) else 0,
+                "synonym_len": len(syn) if isinstance(syn, list) else 0,
+                "source": source,
+                "lookup_event_id": str(lookup_event_id) if lookup_event_id else None,
+                "enrichment_status": enrichment_status,
+                "side_retries": side_retries,
+            },
+        ),
         name="enrich_pipeline",
     )
 
@@ -1011,6 +1016,7 @@ async def _enrich_card_unlocked(
                 )
             ).scalar_one_or_none()
 
+        user_id, profile_id = card.user_id, card.profile_id
         try:
             content0 = dict(card.content or {})
             if content_is_complete(content0, learning_lang=profile.learning_lang):
@@ -1114,21 +1120,28 @@ async def _enrich_card_unlocked(
             return
         except Exception as exc:
             logger.exception("Enrichment karty %s nie powiódł się", card_id)
-            from app.services.app_log import log_event
-
+            await db.rollback()
             await log_event(
                 level="error",
                 category="enrichment",
                 event="enrichment_failed",
                 status="error",
-                user_id=card.user_id,
-                profile_id=card.profile_id,
+                user_id=user_id,
+                profile_id=profile_id,
                 entity_type="card",
                 entity_id=str(card_id),
                 message="enrichment failed",
                 exc=exc,
             )
-            _apply_enrich_retry(card, exc)
+            card = await db.get(LearningCard, card_id, with_for_update=True)
+            if card is None or card.deleted_at is not None or card.enrichment_status in (
+                STATUS_READY, STATUS_FAILED, STATUS_PREPARATION_PROBLEM
+            ):
+                return
+            retry_error = RuntimeError("enrichment_database_error") if isinstance(
+                exc, SQLAlchemyError
+            ) else exc
+            _apply_enrich_retry(card, retry_error)
             await db.commit()
             return
 

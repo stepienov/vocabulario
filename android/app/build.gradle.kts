@@ -89,6 +89,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = releaseVersionCode ?: 1
         versionName = releaseVersionName ?: "0.1.0"
+        manifestPlaceholders["applicationLabel"] = "@string/app_name"
         // Emulator vs fizyczny telefon — wybór w runtime: ApiBaseUrl.resolve()
         buildConfigField("String", "API_EMULATOR_HOST", "\"$apiEmulatorHost\"")
         buildConfigField("String", "API_DEVICE_HOST", "\"$apiDeviceHost\"")
@@ -142,6 +143,9 @@ android {
         }
         getByName("release") {
             manifestPlaceholders["usesCleartextTraffic"] = "false"
+            if (releaseApplicationId == "io.vocabulario.alpha") {
+                manifestPlaceholders["applicationLabel"] = "Vocabulario Alpha"
+            }
             // Bez klucza uploadu release zostaje niepodpisany; nigdy nie podpisujemy go kluczem debug.
             if (uploadSigningReady) signingConfig = signingConfigs.getByName("upload")
         }

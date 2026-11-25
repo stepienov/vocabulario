@@ -53,6 +53,8 @@ jobs:
         working-directory: android
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: gradle/actions/wrapper-validation@v4
 
@@ -62,6 +64,19 @@ jobs:
           java-version: "17"
 
       - uses: gradle/actions/setup-gradle@v4
+
+      - name: Verify published alpha APK
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          apk=../backend/app/public_web/downloads/Vocabulario-alpha.apk
+          python ../scripts/check_alpha_apk.py "$apk"
+          previous_path=backend/app/public_web/downloads/Vocabulario-alpha.apk
+          if [ -n "$BASE_SHA" ] && git cat-file -e "$BASE_SHA:$previous_path" 2>/dev/null \
+             && ! git diff --quiet "$BASE_SHA" "$GITHUB_SHA" -- "$apk"; then
+            git show "$BASE_SHA:$previous_path" > "$RUNNER_TEMP/alpha-previous.apk"
+            python ../scripts/check_alpha_apk.py "$apk" --previous "$RUNNER_TEMP/alpha-previous.apk"
+          fi
 
       - name: Unit tests, lint, debug build and instrumentation test compilation
         run: ./gradlew --console=plain :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest

@@ -168,6 +168,8 @@ class HomeViewModel @Inject constructor(
 
     private var boundProfileId: String? = null
     private var pairGeneration = 0L
+    private var listSelectionGeneration = 0L
+    private var listLoadGeneration = 0L
     private var appliedLookupGeneration: Long = -1L
     private var listsObserverJob: Job? = null
     private var cardsObserverJob: Job? = null
@@ -311,6 +313,7 @@ class HomeViewModel @Inject constructor(
         clearSelection: Boolean = false,
     ) {
         val generation = pairGeneration
+        val selectionGeneration = listSelectionGeneration
         val lists = runCatching { repository.cachedWordLists() }.getOrNull() ?: return
         if (lists.isEmpty() && _state.value.lists.isNotEmpty()) return
         val visible = visibleLists(lists)
@@ -334,17 +337,22 @@ class HomeViewModel @Inject constructor(
         val stats = runCatching { repository.dashboardStats(7) }.getOrNull()
         val learningLemmas = runCatching { repository.learningLemmaSet() }.getOrNull()
         val relatedMembership = runCatching { repository.relatedMembershipIndex() }.getOrNull()
-        val publishedWords = words ?: _state.value.listWords
         val selectedId = selected ?: _state.value.selectedListId
-        val mergedWords = if (selectedId != null) {
-            mergeIncomingListWords(selectedId, publishedWords)
-        } else {
-            publishedWords
-        }
-        if (generation != pairGeneration) return
+        if (generation != pairGeneration || selectionGeneration != listSelectionGeneration) return
         val sameLogicalList = selectedId == _state.value.selectedListId ||
             (_state.value.lists.any { it.id == _state.value.selectedListId && it.is_pending_inbox } &&
                 visible.any { it.id == selectedId && it.is_pending_inbox })
+        val publishedWords = words ?: if (sameLogicalList) _state.value.listWords else emptyList()
+        val mergedWords = if (selectedId != null) {
+            mergeIncomingListWords(
+                selectedId,
+                publishedWords,
+                if (sameLogicalList) _state.value.listWords else emptyList(),
+            )
+        } else {
+            publishedWords
+        }
+        if (selectedId != _state.value.selectedListId) listSelectionGeneration++
         remapListViewPreferences(visible)
         _state.value = _state.value.copy(
             lists = visible,
@@ -369,6 +377,7 @@ class HomeViewModel @Inject constructor(
     /** Drop pair-scoped UI state immediately, then reload lists/cards/stats. */
     private fun onLanguagePairChanged(wipeUi: Boolean = true) {
         pairGeneration++
+        listSelectionGeneration++
         enrichmentPoller.reset()
         detailCardJob?.cancel()
         detailCardJob = null
@@ -486,9 +495,12 @@ class HomeViewModel @Inject constructor(
     }
 
     fun loadLists(selectId: String? = null) {
+        val selectionGeneration = listSelectionGeneration
+        val generation = pairGeneration
         viewModelScope.launch {
             runCatching { repository.listWordLists() }
                 .onSuccess { lists ->
+                    if (generation != pairGeneration || selectionGeneration != listSelectionGeneration) return@launch
                     val visible = visibleLists(lists)
                     val requested = selectId
                         ?: _state.value.selectedListId
@@ -518,27 +530,26 @@ class HomeViewModel @Inject constructor(
                         (selected == prevId || (prevIsPendingInbox && newIsPendingInbox))
                     val backgroundRefresh = sameLogicalList && _state.value.listWords.isNotEmpty()
                     remapListViewPreferences(visible)
+                    if (selected != prevId) listSelectionGeneration++
                     _state.value = _state.value.copy(
                         lists = visible,
                         selectedListId = selected,
+                        listWords = if (sameLogicalList) _state.value.listWords else emptyList(),
+                        selectedWordIds = if (sameLogicalList) _state.value.selectedWordIds else emptySet(),
                         listFilterOverride = if (sameLogicalList) _state.value.listFilterOverride else null,
                     )
                     selected?.let { loadListWords(it, background = backgroundRefresh) }
                 }
                 .onFailure {
+                    if (generation != pairGeneration || selectionGeneration != listSelectionGeneration) return@launch
                     _state.value = _state.value.copy(error = it.userMessage(strings, R.string.err_lists))
                 }
         }
     }
 
     fun selectList(listId: String) {
-        val switching = _state.value.selectedListId != listId
-        _state.value = _state.value.copy(
-            selectedListId = listId,
-            selectedWordIds = emptySet(),
-            listFilterOverride = if (switching) null else _state.value.listFilterOverride,
-            listQuery = if (switching) "" else _state.value.listQuery,
-        )
+        if (_state.value.selectedListId != listId) listSelectionGeneration++
+        _state.value = selectListState(_state.value, listId)
         loadListWords(listId)
     }
 
@@ -626,9 +637,9 @@ class HomeViewModel @Inject constructor(
     }
 
     fun openListTab(listId: String) {
-        _state.value = _state.value.copy(
+        if (_state.value.selectedListId != listId) listSelectionGeneration++
+        _state.value = selectListState(_state.value, listId).copy(
             tab = HomeTab.LISTS,
-            selectedListId = listId,
             listFilterOverride = null,
             error = null,
         )
@@ -653,6 +664,7 @@ class HomeViewModel @Inject constructor(
             ?: return
         val placeholder = placeholderCardFromCandidate(candidate)
         val sameList = _state.value.selectedListId == listId
+        if (!sameList) listSelectionGeneration++
         val seeded = upsertListWord(
             if (sameList) _state.value.listWords else emptyList(),
             placeholder,
@@ -668,9 +680,13 @@ class HomeViewModel @Inject constructor(
             selectedWordIds = emptySet(),
             error = null,
         )
+        val selectionGeneration = listSelectionGeneration
+        val generation = pairGeneration
         viewModelScope.launch {
             val cached = runCatching { repository.cachedListWords(listId) }.getOrNull() ?: return@launch
-            if (_state.value.selectedListId != listId) return@launch
+            if (generation != pairGeneration ||
+                !isCurrentListLoad(_state.value, listId, selectionGeneration, listSelectionGeneration)
+            ) return@launch
             val merged = mergeIncomingListWords(listId, cached)
             _state.value = _state.value.copy(
                 listWords = merged,
@@ -693,11 +709,19 @@ class HomeViewModel @Inject constructor(
      */
     @Suppress("UNUSED_PARAMETER")
     fun loadListWords(listId: String, background: Boolean = false) {
+        val selectionGeneration = listSelectionGeneration
+        val generation = pairGeneration
+        val loadGeneration = ++listLoadGeneration
         viewModelScope.launch {
+            fun isCurrent() = generation == pairGeneration &&
+                loadGeneration == listLoadGeneration &&
+                isCurrentListLoad(_state.value, listId, selectionGeneration, listSelectionGeneration)
             runCatching { repository.hydrateListIfEmpty(listId) }
                 .onSuccess { words ->
+                    if (!isCurrent()) return@launch
                     val lemmas = runCatching { repository.learningLemmaSet() }.getOrNull()
                     val membership = runCatching { repository.relatedMembershipIndex() }.getOrNull()
+                    if (!isCurrent()) return@launch
                     val merged = mergeIncomingListWords(listId, words)
                     _state.value = _state.value.copy(
                         listWords = merged,
@@ -710,11 +734,13 @@ class HomeViewModel @Inject constructor(
                     startPollingIfNeeded()
                 }
                 .onFailure {
+                    if (!isCurrent()) return@launch
                     _state.value = _state.value.copy(
                         error = it.userMessage(strings, R.string.err_list_words),
                     )
                 }
 
+            if (!isCurrent()) return@launch
             val pendingInbox = _state.value.lists.find { it.id == listId }?.is_pending_inbox == true ||
                 listId.startsWith("local-pending-inbox-")
             if (pendingInbox && networkMonitor.isCurrentlyOnline() &&
@@ -725,6 +751,7 @@ class HomeViewModel @Inject constructor(
                     runCatching { repository.flushPendingLookupsIfNeeded() }
                     runCatching { repository.cachedListWords(listId) }
                         .onSuccess { words ->
+                            if (!isCurrent()) return@onSuccess
                             val merged = mergeIncomingListWords(listId, words)
                             _state.value = _state.value.copy(listWords = merged, error = null)
                         }
@@ -1317,6 +1344,7 @@ class HomeViewModel @Inject constructor(
                     runCatching { repository.clearPendingInbox(listId) }
                         .onSuccess {
                             val fallback = _state.value.lists.firstOrNull { it.is_system }?.id
+                            if (_state.value.selectedListId != fallback) listSelectionGeneration++
                             _state.value = _state.value.copy(
                                 selectedWordIds = emptySet(),
                                 listWords = emptyList(),
@@ -1726,9 +1754,16 @@ class HomeViewModel @Inject constructor(
             else placeholderCardFromCandidate(candidate)
         }
 
-    private fun mergeIncomingListWords(listId: String, incoming: List<CardResponse>): List<CardResponse> {
+    private fun mergeIncomingListWords(
+        listId: String,
+        incoming: List<CardResponse>,
+        current: List<CardResponse> = if (_state.value.selectedListId == listId) {
+            _state.value.listWords
+        } else {
+            emptyList()
+        },
+    ): List<CardResponse> {
         val fromCandidates = cardsFromCandidatesForList(listId)
-        val current = if (_state.value.selectedListId == listId) _state.value.listWords else emptyList()
         if (incoming.isEmpty()) {
             return mergeInFlightListWords(current, fromCandidates)
         }
@@ -2030,6 +2065,24 @@ internal fun upsertListWord(words: List<CardResponse>, card: CardResponse): List
     }
     return listOf(card) + words
 }
+
+internal fun selectListState(state: HomeUiState, listId: String): HomeUiState {
+    val switching = state.selectedListId != listId
+    return state.copy(
+        selectedListId = listId,
+        listWords = if (switching) emptyList() else state.listWords,
+        selectedWordIds = emptySet(),
+        listFilterOverride = if (switching) null else state.listFilterOverride,
+        listQuery = if (switching) "" else state.listQuery,
+    )
+}
+
+internal fun isCurrentListLoad(
+    state: HomeUiState,
+    listId: String,
+    startedGeneration: Long,
+    currentGeneration: Long,
+): Boolean = state.selectedListId == listId && startedGeneration == currentGeneration
 
 /** Keep optimistic / still-creating tiles that a stale Room/API snapshot has not caught up with. */
 internal fun mergeInFlightListWords(

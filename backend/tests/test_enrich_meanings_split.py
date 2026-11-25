@@ -7,13 +7,14 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy.orm.exc import StaleDataError
 
 from app.lsp.enrichment import (
-    assemble_meanings_card,
-    run_lemma_enrichment,
     _force_locked_glosses,
     _glosses_match_locked,
     _locked_glosses,
+    assemble_meanings_card,
+    run_lemma_enrichment,
 )
 from app.services.card_jobs import content_is_learnable
 from app.services.llm import LLMService
@@ -173,6 +174,44 @@ def test_meanings_before_finish_callbacks(monkeypatch):
     assert events.index("on_meanings") < events.index("on_study")
     assert content_is_learnable(result)
     assert "examples_pending" not in result
+
+
+@pytest.mark.asyncio
+async def test_database_failure_in_meanings_stops_enrichment_and_cancels_side_jobs(monkeypatch):
+    from app.lsp import enrichment as enrich_mod
+
+    cancelled: list[str] = []
+    async def finish_wait(*args, **kwargs):
+        await asyncio.Event().wait()
+
+    finish = AsyncMock(side_effect=finish_wait)
+
+    async def meanings(*args, **kwargs):
+        return {"lemma": "hablar", "pos": "verb", "meanings": [{"gloss_l1": "mówić"}]}
+
+    async def side_job(name):
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.append(name)
+
+    async def on_meanings(card):
+        raise StaleDataError("stale lexical entry")
+
+    monkeypatch.setattr(enrich_mod, "_fetch_meanings", meanings)
+    monkeypatch.setattr(enrich_mod, "_fetch_study_finish", finish)
+    monkeypatch.setattr(enrich_mod, "_fetch_related_part", lambda *a, **k: side_job("related"))
+    monkeypatch.setattr(enrich_mod, "fetch_similar_words", lambda *a, **k: side_job("similar"))
+    monkeypatch.setattr(enrich_mod, "fetch_lsp_inflection", lambda *a, **k: side_job("inflection"))
+
+    with pytest.raises(StaleDataError, match="stale lexical entry"):
+        await asyncio.wait_for(
+            run_lemma_enrichment(_profile(), "hablar", "verb", on_meanings=on_meanings),
+            timeout=1,
+        )
+
+    finish.assert_not_awaited()
+    assert sorted(cancelled) == ["inflection", "related", "similar"]
 
 
 def test_related_before_meanings_merges_into_on_meanings(monkeypatch):

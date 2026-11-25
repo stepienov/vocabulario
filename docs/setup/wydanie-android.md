@@ -2,6 +2,32 @@
 
 Krótka instrukcja operatora. Nie zawiera kluczy ani haseł; klucz uploadu jest poza repozytorium.
 
+## Publiczna alpha przed Play
+
+Alpha to osobna, wczesna wersja z możliwymi błędami, pobierana po wdrożeniu przez `https://vocabulario.io/download/alpha`. Link jest publiczny, a aplikacja łączy się z produkcyjnym API. Pakiet `io.vocabulario.alpha` i prywatny klucz alfy są niezależne od `io.vocabulario.app` i przyszłego podpisu Play. Alpha ma nazwę „Vocabulario Alpha” i nie aktualizuje instalacji debug ani przyszłej instalacji z Play. Przed przejściem zsynchronizuj kolejki offline; nie odinstalowuj starej aplikacji przed sprawdzeniem danych.
+
+Klucz alfy jest lokalnie w ignorowanym `.local/alpha-signing/vocabulario-alpha.p12`. Hasło jest w `password.dpapi`, zaszyfrowane Windows DPAPI dla bieżącego konta Windows. Nie jest to kopia zapasowa: po utracie konta lub komputera nie da się go w ten sposób odszyfrować. **Zrób kopię klucza i hasła w osobnym bezpiecznym magazynie**; nie umieszczaj ich w Git, logach ani wiadomościach. Bez klucza i hasła nie podpiszesz aktualizacji alfy. Hasło można na tym samym koncie Windows skopiować bez wyświetlania, a następnie zapisać w menedżerze haseł i wyczyścić schowek:
+
+```powershell
+Add-Type -AssemblyName System.Security
+$encrypted = [IO.File]::ReadAllBytes((Resolve-Path .local\alpha-signing\password.dpapi))
+$plain = [Security.Cryptography.ProtectedData]::Unprotect($encrypted, $null, [Security.Cryptography.DataProtectionScope]::CurrentUser)
+[Text.Encoding]::UTF8.GetString($plain) | Set-Clipboard
+[Array]::Clear($plain, 0, $plain.Length)
+Remove-Variable plain, encrypted
+# Po zapisaniu hasła: Set-Clipboard -Value ''
+```
+
+Nowy APK przygotuj ze zmianami aplikacji, zwiększając `VersionCode` względem poprzedniego:
+
+```powershell
+.\build-alpha.ps1 -VersionCode 2 -VersionName "0.1.0-alpha.2"
+```
+
+Skrypt podpisuje release, sprawdza pakiet, certyfikat, produkcyjne API, wzrost `versionCode` i wyrównanie 16 KB, po czym aktualizuje `backend/app/public_web/downloads/Vocabulario-alpha.apk` i lokalny `dist/Vocabulario.apk`. Do PR trafia tylko pierwszy z nich; kolejne pliki binarne pozostają w historii Git. CI ponownie weryfikuje podpis i wersję, a po merge Railway buduje backend z `backend/` i serwuje plik z tego samego commita. Sam build ani PR nie wdrażają produkcji. Po wdrożeniu sprawdź pobranie i hash pliku. Gdy pliku brak, endpoint zwraca 503 zamiast starego APK.
+
+Logowanie Google wymaga osobnego klienta OAuth Android dla `io.vocabulario.alpha` i SHA-1 `9D:F0:82:D7:46:FC:19:63:9F:F1:E1:2E:9E:19:62:AC:B2:25:0A:8D` w projekcie Google Cloud. Samo dodanie APK ani App Links nie konfiguruje klienta OAuth; dopóki go nie dodano i nie sprawdzono, nie należy przedstawiać logowania Google jako działającego w alfie.
+
 ## Parametry release
 
 Build release **nie wystartuje**, dopóki nie podasz wszystkich poniższych wartości (debug i CI ich nie potrzebują):
