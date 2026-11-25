@@ -56,6 +56,10 @@ data class VocabExtraColors(
     val importLemma: Color,
     val practicePrompt: Color,
     val practicePromptBorder: Color,
+    val practiceWrong: Color,
+    val practiceWrongBackground: Color,
+    val onList: Color,
+    val onListBackground: Color,
 )
 
 val LocalVocabExtraColors = staticCompositionLocalOf {
@@ -67,6 +71,10 @@ val LocalVocabExtraColors = staticCompositionLocalOf {
         importLemma = BrandBlueLight,
         practicePrompt = Color(0xFFF2F8F6),
         practicePromptBorder = Color(0xFFDCE9E4),
+        practiceWrong = Color(0xFF9C5267),
+        practiceWrongBackground = Color(0xFFF7EFF1),
+        onList = Color(0xFF35735E),
+        onListBackground = Color(0xFFE1EEE7),
     )
 }
 
@@ -218,8 +226,12 @@ fun VocabularioTheme(
             chipStatusContainer = ChipStatusDark,
             chipStatusOnContainer = BrandCream,
             importLemma = BrandBlueDark,
-            practicePrompt = Color(0xFF302F38),
-            practicePromptBorder = Color(0xFF484650),
+            practicePrompt = Color(0xFF273934),
+            practicePromptBorder = Color(0xFF3D554B),
+            practiceWrong = Color(0xFFD89EB1),
+            practiceWrongBackground = Color(0xFF332C34),
+            onList = Color(0xFF91CBB0),
+            onListBackground = Color(0xFF2B4037),
         )
     } else {
         VocabExtraColors(
@@ -230,6 +242,10 @@ fun VocabularioTheme(
             importLemma = BrandBlueLight,
             practicePrompt = Color(0xFFF2F8F6),
             practicePromptBorder = Color(0xFFDCE9E4),
+            practiceWrong = Color(0xFF9C5267),
+            practiceWrongBackground = Color(0xFFF7EFF1),
+            onList = Color(0xFF35735E),
+            onListBackground = Color(0xFFE1EEE7),
         )
     }
     val view = LocalView.current

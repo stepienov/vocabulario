@@ -5,6 +5,11 @@ import android.view.WindowManager
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +20,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -36,14 +46,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -56,6 +69,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.vocabulario.app.ui.theme.ActionConfirm
 import com.vocabulario.app.ui.theme.ActionTeal
 
@@ -71,6 +86,7 @@ enum class AppDialogAction {
     CancelRed,
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppGrayField(
     value: String,
@@ -94,10 +110,21 @@ fun AppGrayField(
     val scheme = MaterialTheme.colorScheme
     val fill = containerColor ?: scheme.surfaceVariant
     val idleBorder = unfocusedBorderColor ?: Color.Transparent
+    val bringIntoView = remember { BringIntoViewRequester() }
+    var focused by remember { mutableStateOf(false) }
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+    LaunchedEffect(focused, imeBottom) {
+        if (focused && imeBottom > 0) {
+            withFrameNanos { }
+            bringIntoView.bringIntoView()
+        }
+    }
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth()
+            .bringIntoViewRequester(bringIntoView)
+            .onFocusChanged { focused = it.isFocused },
         enabled = enabled,
         readOnly = readOnly,
         singleLine = singleLine,
@@ -268,15 +295,29 @@ fun AppAlertDialog(
     dismissOnClickOutside: Boolean = true,
     dimAlpha: Float = 0.28f,
 ) {
+    val density = LocalDensity.current
+    val activityImeBottom = WindowInsets.ime.getBottom(density)
+    val activityView = LocalView.current
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnClickOutside = dismissOnClickOutside,
             dismissOnBackPress = dismissOnClickOutside,
+            decorFitsSystemWindows = false,
         ),
     ) {
-        AppDialogWindowChrome(dimAlpha = dimAlpha)
+        val dialogImeBottom = WindowInsets.ime.getBottom(density)
+        val extraImePadding = with(density) {
+            // Dialog and activity windows can report IME insets in different screen coordinates.
+            val statusBar = if (dialogImeBottom > 0) {
+                ViewCompat.getRootWindowInsets(activityView)?.getInsets(WindowInsetsCompat.Type.statusBars())?.top ?: 0
+            } else {
+                0
+            }
+            ((activityImeBottom - dialogImeBottom).coerceAtLeast(0) + statusBar).toDp()
+        }
+        AppDialogWindowChrome(dimAlpha = dimAlpha, edgeToEdge = true)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -288,42 +329,48 @@ fun AppAlertDialog(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            Surface(
-                modifier = modifier
-                    .fillMaxWidth(0.92f)
-                    .widthIn(max = 520.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {},
-                    ),
-                shape = AppDialogShape,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp,
+            Box(
+                modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
+                    .padding(bottom = extraImePadding),
+                contentAlignment = Alignment.Center,
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    if (titleContent != null) {
-                        titleContent()
-                    } else if (title != null) {
-                        Text(
-                            title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                    if (text != null) {
-                        Spacer(Modifier.height(if (warning) 6.dp else 8.dp))
-                        val scheme = MaterialTheme.colorScheme
-                        CompositionLocalProvider(
-                            LocalContentColor provides
-                                if (warning) scheme.error else scheme.onSurface,
-                        ) {
-                            text()
+                Surface(
+                    modifier = modifier
+                        .fillMaxWidth(0.92f)
+                        .widthIn(max = 520.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {},
+                        ),
+                    shape = AppDialogShape,
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp,
+                ) {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(20.dp)) {
+                        if (titleContent != null) {
+                            titleContent()
+                        } else if (title != null) {
+                            Text(
+                                title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
                         }
+                        if (text != null) {
+                            Spacer(Modifier.height(if (warning) 6.dp else 8.dp))
+                            val scheme = MaterialTheme.colorScheme
+                            CompositionLocalProvider(
+                                LocalContentColor provides
+                                    if (warning) scheme.error else scheme.onSurface,
+                            ) {
+                                text()
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        buttons()
                     }
-                    Spacer(Modifier.height(16.dp))
-                    buttons()
                 }
             }
         }

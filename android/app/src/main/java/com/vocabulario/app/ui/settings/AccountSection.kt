@@ -156,7 +156,7 @@ internal fun DeleteAccountDialog(
         title = stringResource(R.string.account_delete),
         dismissOnClickOutside = !form.busy,
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
+            Column {
                 Text(stringResource(R.string.account_delete_scope), style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -244,7 +244,7 @@ internal fun LinkGoogleDialog(
         title = stringResource(R.string.account_link_google),
         dismissOnClickOutside = !form.busy,
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
+            Column {
                 Text(
                     stringResource(R.string.account_link_google_hint, accountEmail.orEmpty()),
                     style = MaterialTheme.typography.bodyMedium,

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -38,6 +39,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +47,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,6 +93,8 @@ import com.vocabulario.app.ui.components.EmptyState
 import com.vocabulario.app.ui.components.GradeRow
 import com.vocabulario.app.ui.components.PracticeProgressBar
 import com.vocabulario.app.ui.components.PromptCard
+import com.vocabulario.app.ui.components.LemmaAddButton
+import com.vocabulario.app.ui.components.LemmaOnListIndicator
 import com.vocabulario.app.ui.home.listNameConflictMessage
 import com.vocabulario.app.ui.theme.GradeAgain
 import com.vocabulario.app.ui.theme.GradeKnown
@@ -283,42 +290,15 @@ fun PracticeScreen(
                                         }
                                     }
                                     AnswerMode.CHOICE -> {
-                                        BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                                            val choiceSpace = ChoiceMinHeight * 4 + ChoiceGap * 3 + ChoicePromptGap
-                                            val promptMaxHeight = (maxHeight - choiceSpace).coerceAtLeast(96.dp)
-                                            Column(Modifier.fillMaxSize()) {
-                                                Box(
-                                                    Modifier.heightIn(max = promptMaxHeight)
-                                                        .verticalScroll(rememberScrollState()),
-                                                ) {
-                                                    prompt?.let {
-                                                        PromptCard(
-                                                            it.first(),
-                                                            languageLabel = promptLanguage,
-                                                            meanings = it,
-                                                            highlighted = true,
-                                                        )
-                                                    }
-                                                }
-                                                Spacer(Modifier.height(ChoicePromptGap))
-                                                if (state.loadingChoices) {
-                                                    Box(
-                                                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                                                        contentAlignment = Alignment.Center,
-                                                    ) {
-                                                        CircularProgressIndicator()
-                                                    }
-                                                } else {
-                                                    PracticeChoices(
-                                                        state = state,
-                                                        direction = direction,
-                                                        onChoice = viewModel::submitChoice,
-                                                        onAddWrongChoice = viewModel::openAddWrongChoice,
-                                                        modifier = Modifier.weight(1f),
-                                                    )
-                                                }
-                                            }
-                                        }
+                                        PracticeQuiz(
+                                            state = state,
+                                            direction = direction,
+                                            prompt = prompt.orEmpty(),
+                                            promptLanguage = promptLanguage,
+                                            onChoice = viewModel::submitChoice,
+                                            onAddWrongChoice = viewModel::openAddWrongChoice,
+                                            modifier = Modifier.weight(1f),
+                                        )
                                     }
                                     AnswerMode.TYPE -> {
                                         Column(
@@ -585,64 +565,172 @@ fun PracticeScreen(
 }
 
 @Composable
+internal fun PracticeQuiz(
+    state: PracticeUiState,
+    direction: String,
+    prompt: List<String>,
+    promptLanguage: String?,
+    onChoice: (com.vocabulario.app.data.api.ChoiceOption) -> Unit,
+    onAddWrongChoice: (com.vocabulario.app.data.api.ChoiceOption) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val compact = maxHeight < 500.dp
+        val detailsHeight = if (compact) 58.dp else 67.dp
+        val choiceSpace = ChoiceMinHeight * 4 + ChoiceGap * 3 + ChoicePromptGap + detailsHeight + 9.dp
+        val promptMaxHeight = (maxHeight - choiceSpace).coerceAtLeast(40.dp)
+        Column(Modifier.fillMaxSize()) {
+            Box(
+                Modifier.heightIn(max = promptMaxHeight).verticalScroll(rememberScrollState()),
+            ) {
+                if (prompt.isNotEmpty()) {
+                    PromptCard(
+                        prompt.first(),
+                        languageLabel = promptLanguage,
+                        meanings = prompt,
+                        highlighted = true,
+                        compact = compact,
+                    )
+                }
+            }
+            Spacer(Modifier.height(ChoicePromptGap))
+            if (state.loadingChoices) {
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                PracticeChoices(
+                    state, direction, onChoice, onAddWrongChoice,
+                    modifier = Modifier.weight(1f),
+                    detailsHeight = detailsHeight,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 internal fun PracticeChoices(
     state: PracticeUiState,
     direction: String,
     onChoice: (com.vocabulario.app.data.api.ChoiceOption) -> Unit,
     onAddWrongChoice: (com.vocabulario.app.data.api.ChoiceOption) -> Unit,
     modifier: Modifier = Modifier,
+    detailsHeight: androidx.compose.ui.unit.Dp = 67.dp,
 ) {
-    val learningListLabel = stringResource(R.string.list_learning)
-    val rows = practiceChoiceRows(state.choices, state.disabledChoiceTexts)
-    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-        val spacing = ChoiceGap
-        val rowHeight = if (rows.isEmpty()) {
-            ChoiceMinHeight
-        } else {
-            ((maxHeight - spacing * (rows.size - 1)) / rows.size).coerceAtLeast(ChoiceMinHeight)
+    val cardId = state.queue.getOrNull(state.currentIndex)?.card_id
+    var focusedText by rememberSaveable(cardId, state.currentIndex, direction, state.disabledChoiceTexts) {
+        mutableStateOf(state.disabledChoiceTexts.lastOrNull())
+    }
+    val focused = state.choices.firstOrNull {
+        it.text == focusedText && it.text in state.disabledChoiceTexts
+    }
+    val rows = state.choices.chunked(2)
+    Column(modifier = modifier.fillMaxWidth()) {
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val rowHeight = if (rows.isEmpty()) ChoiceMinHeight else {
+                ((maxHeight - ChoiceGap * (rows.size - 1)) / rows.size).coerceAtLeast(ChoiceMinHeight)
+            }
+            Column(
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(ChoiceGap),
+            ) {
+                rows.forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(ChoiceGap),
+                    ) {
+                        row.forEach { choice ->
+                            val disabled = choice.text in state.disabledChoiceTexts
+                            ChoiceTile(
+                                text = choice.text,
+                                modifier = Modifier.weight(1f).height(rowHeight),
+                                selected = focused == choice,
+                                isCorrect = null,
+                                enabled = state.phase == PracticePhase.ANSWERING,
+                                dimmed = disabled,
+                                onClick = {
+                                    if (disabled) focusedText = choice.text else onChoice(choice)
+                                },
+                            )
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
         }
-        Column(
-            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(spacing),
+        Spacer(Modifier.height(9.dp))
+        PracticeChoiceDetails(
+            choice = focused,
+            state = state,
+            direction = direction,
+            onAdd = onAddWrongChoice,
+            modifier = Modifier.fillMaxWidth().height(detailsHeight),
+        )
+    }
+}
+
+@Composable
+private fun PracticeChoiceDetails(
+    choice: com.vocabulario.app.data.api.ChoiceOption?,
+    state: PracticeUiState,
+    direction: String,
+    onAdd: (com.vocabulario.app.data.api.ChoiceOption) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier.testTag(TestTags.PRACTICE_CHOICE_DETAILS)) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        Row(
+            modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 2.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            rows.forEach { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(spacing),
+            if (choice != null) {
+                Column(
+                    Modifier.weight(1f).verticalScroll(remember(choice.text) { ScrollState(0) }),
                 ) {
-                    row.forEach { choice ->
-                        val disabled = choice.text in state.disabledChoiceTexts
-                        val tileLemma = choice.lemma_l2 ?: choice.text
-                        val tileGloss = choice.gloss ?: if (direction == "l2_to_l1") choice.text else null
-                        val addLemma = choice.quizAddLemma()
-                        val showAdd = choice.showQuizAdd(disabled, state.learningLemmas)
-                        val listChip = choice.quizListChipLabel(
-                            revealedWrong = disabled,
-                            learningLemmas = state.learningLemmas,
-                            membership = state.relatedMembership,
-                            systemListLabel = learningListLabel,
-                        )
-                        ChoiceTile(
-                            text = if (disabled) tileLemma else choice.text,
-                            modifier = if (disabled) Modifier.fillMaxWidth() else Modifier.weight(1f).heightIn(min = rowHeight),
-                            selected = false,
-                            isCorrect = null,
-                            enabled = !disabled && state.phase == PracticePhase.ANSWERING,
-                            dimmed = disabled,
-                            gloss = if (disabled) tileGloss else null,
-                            showActions = disabled,
-                            onAddLearning = if (showAdd && addLemma != null) {
-                                { onAddWrongChoice(choice) }
-                            } else {
-                                null
-                            },
-                            listChip = listChip,
-                            onClick = { onChoice(choice) },
+                    Text(
+                        choice.lemma_l2 ?: choice.text,
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                    )
+                    val gloss = choice.gloss ?: if (direction == "l2_to_l1") choice.text else null
+                    if (!gloss.isNullOrBlank()) {
+                        Text(
+                            gloss,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    if (row.size == 1 && row.first().text !in state.disabledChoiceTexts) {
-                        Spacer(Modifier.weight(1f))
+                }
+                val listChip = choice.quizListChipLabel(
+                    revealedWrong = true,
+                    learningLemmas = state.learningLemmas,
+                    membership = state.relatedMembership,
+                    systemListLabel = stringResource(R.string.list_learning),
+                )
+                val onList = state.relatedMembership.find(choice.lemma_l2, choice.pos) != null
+                listChip?.let {
+                    Surface(
+                        shape = com.vocabulario.app.ui.components.AppChipShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.widthIn(max = 112.dp),
+                    ) {
+                        Text(
+                            it,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
+                }
+                when {
+                    choice.showQuizAdd(true, state.learningLemmas, onList) -> LemmaAddButton(
+                        onClick = { onAdd(choice) },
+                        contentDescription = stringResource(R.string.cd_add_to_list),
+                    )
+                    choice.showQuizOnList(true, state.learningLemmas, onList) -> LemmaOnListIndicator()
                 }
             }
         }

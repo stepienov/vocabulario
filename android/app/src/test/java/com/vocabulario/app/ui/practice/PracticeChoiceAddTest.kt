@@ -92,6 +92,8 @@ class PracticeChoiceAddTest {
             "Przymiotniki",
             choice.quizListChipLabel(true, emptySet(), membership, "Uczę się"),
         )
+        assertFalse(choice.showQuizAdd(true, emptySet(), onListByMembership = true))
+        assertTrue(choice.showQuizOnList(true, emptySet(), onListByMembership = true))
     }
 
     @Test

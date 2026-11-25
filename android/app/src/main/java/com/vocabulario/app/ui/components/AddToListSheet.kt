@@ -139,7 +139,7 @@ fun AddToListSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
-                        .padding(bottom = 28.dp, top = 4.dp),
+                        .padding(bottom = 28.dp, top = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(

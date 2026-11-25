@@ -668,8 +668,7 @@ fun ImportStartDialog(
         text = {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                    .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 AppGrayField(
