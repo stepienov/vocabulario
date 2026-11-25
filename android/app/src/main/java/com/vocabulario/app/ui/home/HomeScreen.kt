@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -134,6 +135,7 @@ import com.vocabulario.app.ui.components.BrandLogo
 import com.vocabulario.app.ui.components.ButtonLabel
 import com.vocabulario.app.ui.components.LemmaActionRow
 import com.vocabulario.app.ui.components.LemmaAddButton
+import com.vocabulario.app.ui.components.LemmaOnListIndicator
 import com.vocabulario.app.ui.components.TagChip
 import com.vocabulario.app.ui.components.PosTagChip
 import com.vocabulario.app.ui.theme.posChipContainer
@@ -192,7 +194,8 @@ fun HomeScreen(
             .fillMaxSize()
             .background(scheme.background)
             .statusBarsPadding()
-            .navigationBarsPadding(),
+            .navigationBarsPadding()
+            .imePadding(),
     ) {
         HomeHeader(
             onSettings = onSettings,
@@ -1444,12 +1447,7 @@ private fun CandidateRow(
                     )
                 }
                 candidate.onList -> {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = scheme.primary,
-                        modifier = Modifier.size(26.dp),
-                    )
+                    LemmaOnListIndicator()
                 }
                 else -> {
                     LemmaAddButton(

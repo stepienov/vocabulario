@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,7 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
@@ -152,7 +154,7 @@ fun AppScreenScaffold(
     content: @Composable (Modifier) -> Unit,
 ) {
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.imePadding(),
         containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
@@ -284,6 +286,25 @@ fun LemmaAddButton(
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Icon(Icons.Default.Add, contentDescription = contentDescription, modifier = Modifier.size(22.dp))
+        }
+    }
+}
+
+@Composable
+fun LemmaOnListIndicator(modifier: Modifier = Modifier) {
+    val extras = LocalVocabExtraColors.current
+    Surface(
+        shape = CircleShape,
+        color = extras.onListBackground,
+        contentColor = extras.onList,
+        modifier = modifier.size(40.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Icon(
+                Icons.Default.Check,
+                contentDescription = stringResource(R.string.cd_on_list),
+                modifier = Modifier.size(22.dp),
+            )
         }
     }
 }
@@ -517,6 +538,7 @@ fun PromptCard(
     languageLabel: String? = null,
     meanings: List<String> = listOf(text),
     highlighted: Boolean = false,
+    compact: Boolean = false,
 ) {
     val baseStyle = MaterialTheme.typography.displaySmall
     val isSingleWord = remember(text) {
@@ -526,7 +548,7 @@ fun PromptCard(
     var fontSize by remember(text, isSingleWord) { mutableStateOf(baseStyle.fontSize) }
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        if (languageLabel != null) {
+        if (languageLabel != null && !compact) {
             Surface(
                 shape = AppChipShape,
                 color = MaterialTheme.colorScheme.primaryContainer,
@@ -555,15 +577,25 @@ fun PromptCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = if (meanings.size > 1) 12.dp else 32.dp, horizontal = 20.dp),
+                    .padding(
+                        vertical = if (compact) 9.dp else if (meanings.size > 1) 10.dp else 32.dp,
+                        horizontal = if (compact) 5.dp else 14.dp,
+                    ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                if (meanings.size > 1) {
+                if (compact) {
+                    Text(
+                        meanings.joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                } else if (meanings.size > 1) {
                     meanings.forEachIndexed { index, meaning ->
                         if (index > 0) {
                             Spacer(
                                 Modifier
-                                    .padding(vertical = 5.dp)
+                                    .padding(vertical = 4.dp)
                                     .width(29.dp)
                                     .height(1.dp)
                                     .background(MaterialTheme.colorScheme.outline),
@@ -571,7 +603,11 @@ fun PromptCard(
                         }
                         Text(
                             meaning,
-                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontSize = 21.sp,
+                                lineHeight = 26.sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -610,103 +646,88 @@ fun ChoiceTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     dimmed: Boolean = false,
-    gloss: String? = null,
-    showActions: Boolean = false,
-    onAddLearning: (() -> Unit)? = null,
-    listChip: String? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
-    if (showActions) {
-        val chipText = listChip?.takeIf { it.isNotBlank() }
-        LemmaActionRow(
-            lemma = text,
-            gloss = gloss,
-            modifier = modifier.testTag(TestTags.PRACTICE_CHOICE),
-            belowGloss = if (chipText != null) {
-                {
-                    Spacer(Modifier.height(8.dp))
-                    TagChip(chipText)
-                }
-            } else {
-                null
-            },
-            trailing = {
-                when {
-                    onAddLearning != null -> {
-                        LemmaAddButton(
-                            onClick = onAddLearning,
-                            contentDescription = stringResource(R.string.cd_add_to_list),
-                        )
-                    }
-                    chipText != null -> {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = stringResource(R.string.cd_on_list),
-                            tint = scheme.primary,
-                            modifier = Modifier.size(26.dp),
-                        )
-                    }
-                }
-            },
-        )
-        return
-    }
-
+    val extras = LocalVocabExtraColors.current
     val borderColor = when {
         selected && isCorrect == true -> com.vocabulario.app.ui.theme.GradeKnown
-        dimmed -> scheme.outline.copy(alpha = 0.5f)
+        selected -> scheme.primary
         else -> scheme.outline
     }
     val bgColor = when {
         selected && isCorrect == true -> scheme.primaryContainer.copy(alpha = 0.45f)
-        dimmed -> scheme.surfaceVariant
+        dimmed -> extras.practiceWrongBackground
         else -> scheme.surface
     }
     Surface(
         onClick = onClick,
-        enabled = enabled && !dimmed,
+        enabled = enabled,
         modifier = modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(TestTags.PRACTICE_CHOICE),
-        shape = AppButtonShape,
+        shape = RoundedCornerShape(15.dp),
         color = bgColor,
         contentColor = scheme.onSurface,
         shadowElevation = 0.dp,
-        border = BorderStroke(1.dp, borderColor),
+        border = BorderStroke(if (selected) 2.dp else 1.dp, borderColor),
     ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 6.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            val textMeasurer = rememberTextMeasurer()
-            val baseStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
-            val width = constraints.maxWidth
-            val fittedSize = remember(text, width, baseStyle, textMeasurer) {
-                var size = baseStyle.fontSize.value
-                while (size > 10f) {
-                    val layout = textMeasurer.measure(
-                        text = text,
-                        style = baseStyle.copy(fontSize = size.sp),
-                        constraints = Constraints(maxWidth = width),
-                        maxLines = 1,
-                        softWrap = false,
-                    )
-                    if (!layout.hasVisualOverflow) break
-                    size = (size - 0.5f).coerceAtLeast(10f)
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                val textMeasurer = rememberTextMeasurer()
+                val baseStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                val width = constraints.maxWidth
+                val height = constraints.maxHeight
+                val fittedSize = remember(text, width, height, baseStyle, textMeasurer) {
+                    var size = baseStyle.fontSize.value
+                    while (size > 10f) {
+                        val style = baseStyle.copy(
+                            fontSize = size.sp,
+                            lineHeight = (size * 1.25f).sp,
+                            lineBreak = LineBreak.Heading,
+                        )
+                        val wholeWordsFit = text.split(Regex("\\s+")).all { word ->
+                            !textMeasurer.measure(
+                                text = word,
+                                style = style,
+                                constraints = Constraints(maxWidth = width),
+                                maxLines = 1,
+                                softWrap = false,
+                            ).hasVisualOverflow
+                        }
+                        val layout = textMeasurer.measure(
+                            text = text,
+                            style = style,
+                            constraints = Constraints(maxWidth = width, maxHeight = height),
+                        )
+                        if (wholeWordsFit && !layout.hasVisualOverflow) break
+                        size = (size - 0.5f).coerceAtLeast(10f)
+                    }
+                    size.sp
                 }
-                size.sp
+                Text(
+                    text,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = baseStyle.copy(
+                        fontSize = fittedSize,
+                        lineHeight = (fittedSize.value * 1.25f).sp,
+                        lineBreak = LineBreak.Heading,
+                    ),
+                    textAlign = TextAlign.Center,
+                    color = if (dimmed) scheme.onSurfaceVariant else scheme.onSurface,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-            Text(
-                text,
-                modifier = Modifier.fillMaxWidth(),
-                style = baseStyle.copy(
-                    fontSize = fittedSize,
-                    lineHeight = (fittedSize.value * 1.25f).sp,
-                    lineBreak = LineBreak.Heading,
-                ),
-                textAlign = TextAlign.Center,
-                color = scheme.onSurface.copy(alpha = if (dimmed) 0.7f else 1f),
-            )
+            if (dimmed) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.practice_error_title),
+                    tint = extras.practiceWrong,
+                    modifier = Modifier.align(Alignment.TopStart).padding(5.dp).size(12.dp),
+                )
+            }
         }
     }
 }

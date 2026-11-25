@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -54,6 +53,7 @@ import com.vocabulario.app.data.CardSectionWaiting
 import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.LanguagePacks
 import com.vocabulario.app.data.RelatedMembershipIndex
+import com.vocabulario.app.data.containsLemma
 import com.vocabulario.app.data.formatLemmaWithArticle
 import com.vocabulario.app.data.conjugationFromContent
 import com.vocabulario.app.data.asJsonArray
@@ -66,6 +66,7 @@ import com.vocabulario.app.ui.components.AppDialogShape
 import com.vocabulario.app.ui.components.AppDialogWindowChrome
 import com.vocabulario.app.ui.components.LemmaActionRow
 import com.vocabulario.app.ui.components.LemmaAddButton
+import com.vocabulario.app.ui.components.LemmaOnListIndicator
 import com.vocabulario.app.ui.components.SpeakIconButton
 import com.vocabulario.app.ui.components.TagChip
 import com.vocabulario.app.ui.components.PosTagChip
@@ -570,6 +571,11 @@ private fun RelatedWordsList(
                 lemma = hit?.displayLemma ?: formatLemmaWithArticle(word.lemma, word.article),
                 gloss = word.glossL1,
                 belowGloss = {
+                    if (!word.glossL1.isNullOrBlank() &&
+                        (!word.pos.isNullOrBlank() || hit != null || learningLemmas.containsLemma(word.lemma))
+                    ) {
+                        Spacer(Modifier.height(2.dp))
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         word.pos?.takeIf { it.isNotBlank() }?.let { pos ->
                             PosTagChip(pos)
@@ -579,18 +585,15 @@ private fun RelatedWordsList(
                                 if (hit.isSystemList) stringResource(R.string.list_learning)
                                 else hit.listName,
                             )
+                        } else if (learningLemmas.containsLemma(word.lemma)) {
+                            TagChip(stringResource(R.string.list_learning))
                         }
                     }
                 },
                 trailing = {
                     when {
-                        hit != null -> {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = stringResource(R.string.cd_on_list),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(26.dp),
-                            )
+                        hit != null || learningLemmas.containsLemma(word.lemma) -> {
+                            LemmaOnListIndicator()
                         }
                         onAdd != null -> {
                             LemmaAddButton(

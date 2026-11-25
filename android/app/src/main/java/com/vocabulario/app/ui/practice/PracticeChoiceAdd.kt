@@ -14,10 +14,11 @@ fun ChoiceOption.quizAddLemma(): String? =
 fun ChoiceOption.showQuizAdd(
     revealedWrong: Boolean,
     learningLemmas: Set<String>,
+    onListByMembership: Boolean = false,
 ): Boolean {
     if (!revealedWrong || is_correct) return false
     val lemma = quizAddLemma() ?: return false
-    return !in_learning && !learningLemmas.containsLemma(lemma)
+    return !onListByMembership && !in_learning && !learningLemmas.containsLemma(lemma)
 }
 
 fun ChoiceOption.showQuizOnList(

@@ -6,22 +6,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -52,6 +46,8 @@ import com.vocabulario.app.data.api.LanguageProfileResponse
 import com.vocabulario.app.data.resolveVisibleTenseKeys
 import com.vocabulario.app.i18n.localizedPosLabel
 import com.vocabulario.app.ui.components.AppCard
+import com.vocabulario.app.ui.components.LemmaAddButton
+import com.vocabulario.app.ui.components.LemmaOnListIndicator
 import com.vocabulario.app.ui.components.SpeakIconButton
 import com.vocabulario.app.ui.components.TagChip
 import com.vocabulario.app.ui.components.PosTagChip
@@ -797,32 +793,15 @@ private fun RelatedWordsSection(
                     val hit = relatedMembership.find(word.lemma, word.pos)
                     when {
                         hit != null -> {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = stringResource(R.string.cd_on_list),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(26.dp),
-                            )
+                            LemmaOnListIndicator()
                         }
                         onAdd != null -> {
-                            val scheme = MaterialTheme.colorScheme
-                            Surface(
+                            LemmaAddButton(
                                 onClick = {
                                     onAdd(if (joinWordFamily) word.copy(joinWordFamily = true) else word)
                                 },
-                                shape = CircleShape,
-                                color = scheme.primary,
-                                contentColor = scheme.onPrimary,
-                                modifier = Modifier.size(40.dp),
-                            ) {
-                                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                    Icon(
-                                        Icons.Default.Add,
-                                        contentDescription = stringResource(R.string.action_add),
-                                        modifier = Modifier.size(22.dp),
-                                    )
-                                }
-                            }
+                                contentDescription = stringResource(R.string.action_add),
+                            )
                         }
                     }
                 }

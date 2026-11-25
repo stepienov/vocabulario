@@ -1,6 +1,5 @@
 package com.vocabulario.app.ui.practice
 
-import com.vocabulario.app.data.api.ChoiceOption
 import com.vocabulario.app.data.api.SrsQueueItem
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -33,16 +32,5 @@ class PracticePromptTest {
         val empty = Json.parseToJsonElement("""{"meanings":[]}""").jsonObject
         assertEquals(listOf("tracić"), practicePromptMeanings(item.copy(content = empty), "l1_to_l2"))
         assertEquals(listOf("?"), practicePromptMeanings(item.copy(content = empty, gloss_primary = null), "l1_to_l2"))
-    }
-
-    @Test
-    fun choicesFormPairsAndKeepRevealedWrongChoicesFullWidth() {
-        val choices = (1..8).map { ChoiceOption(text = "choice$it") }
-        assertEquals(listOf(2, 2, 2, 2), practiceChoiceRows(choices, emptySet()).map { it.size })
-        val rows = practiceChoiceRows(choices, setOf("choice2", "choice6"))
-        assertEquals(choices, rows.flatten())
-        assertEquals(listOf("choice2"), rows.first { it.any { choice -> choice.text == "choice2" } }.map { it.text })
-        assertEquals(listOf("choice6"), rows.first { it.any { choice -> choice.text == "choice6" } }.map { it.text })
-        assertEquals(listOf(2, 1), practiceChoiceRows(choices.take(3), emptySet()).map { it.size })
     }
 }

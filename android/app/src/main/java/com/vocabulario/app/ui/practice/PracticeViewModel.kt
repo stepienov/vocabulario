@@ -12,7 +12,6 @@ import com.vocabulario.app.data.api.appLang
 import com.vocabulario.app.data.api.SrsQueueItem
 import com.vocabulario.app.data.api.SyncSrsState
 import com.vocabulario.app.data.api.WordListResponse
-import com.vocabulario.app.data.api.isWordAlreadyOnList
 import com.vocabulario.app.data.api.userMessage
 import com.vocabulario.app.data.RelatedMembershipIndex
 import com.vocabulario.app.data.containsLemma
@@ -515,32 +514,6 @@ class PracticeViewModel @Inject constructor(
         openAddRelated(RelatedWord(lemma, choice.gloss, choice.pos))
     }
 
-    fun addWrongToLearning(choice: ChoiceOption? = _state.value.selectedChoice) {
-        val c = choice ?: return
-        val lemma = c.lemma_l2?.trim()?.takeIf { it.isNotEmpty() } ?: return
-        if (c.in_learning || _state.value.learningLemmas.containsLemma(lemma)) {
-            markLemmaAdded(lemma)
-            return
-        }
-        markLemmaAdded(lemma)
-        viewModelScope.launch {
-            runCatching { repository.createCard(lemma, c.pos, c.gloss, null) }
-                .onSuccess { created ->
-                    markLemmaAdded(created.lemma_l2.ifBlank { lemma })
-                }
-                .onFailure { e ->
-                    if (e.isWordAlreadyOnList()) {
-                        markLemmaAdded(lemma)
-                    } else {
-                        unmarkLemma(lemma)
-                        _state.value = _state.value.copy(
-                            error = e.userMessage(strings, R.string.err_add),
-                        )
-                    }
-                }
-        }
-    }
-
     fun openAddRelated(word: RelatedWord) {
         if (!networkMonitor.isCurrentlyOnline()) {
             _state.value = _state.value.copy(error = strings.get(R.string.import_online_only))
@@ -549,7 +522,6 @@ class PracticeViewModel @Inject constructor(
         if (_state.value.relatedMembership.find(word.lemma, word.pos) != null ||
             _state.value.learningLemmas.containsLemma(word.lemma)
         ) {
-            markLemmaAdded(word.lemma)
             return
         }
         _state.value = _state.value.copy(
@@ -611,9 +583,9 @@ class PracticeViewModel @Inject constructor(
 
     fun addRelatedToLearning() {
         val word = _state.value.addTarget ?: return
+        if (blockingBusy.busy.value) return
         dismissAddSheet()
-        markLemmaAdded(word.lemma)
-        viewModelScope.launch {
+        blockingBusy.launchIn(viewModelScope) {
             runCatching {
                 repository.createCard(
                     formatLemmaWithArticle(word.lemma, word.article),
@@ -621,30 +593,19 @@ class PracticeViewModel @Inject constructor(
                     word.glossL1,
                     null,
                     sourceCardId = word.sourceCardId,
-                )
+                ).also { refreshRelatedMembership() }
             }
                 .onSuccess { created ->
                     markLemmaAdded(created.lemma_l2.ifBlank { word.lemma })
                 }
                 .onFailure { e ->
-                    if (e.isWordAlreadyOnList()) {
-                        markLemmaAdded(word.lemma)
-                    } else {
-                        unmarkLemma(word.lemma)
-                        _state.value = _state.value.copy(
-                            error = e.userMessage(strings, R.string.err_add),
-                        )
-                    }
+                    _state.value = _state.value.copy(error = e.userMessage(strings, R.string.err_add))
                 }
         }
     }
 
     private fun markLemmaAdded(lemma: String) {
         applyLemmaLearning(lemma, added = true)
-    }
-
-    private fun unmarkLemma(lemma: String) {
-        applyLemmaLearning(lemma, added = false)
     }
 
     private fun applyLemmaLearning(lemma: String, added: Boolean) {
@@ -677,6 +638,7 @@ class PracticeViewModel @Inject constructor(
 
     fun addRelatedToList(listId: String) {
         val word = _state.value.addTarget ?: return
+        if (blockingBusy.busy.value) return
         dismissAddSheet()
         blockingBusy.launchIn(viewModelScope) {
             runCatching {
@@ -688,6 +650,7 @@ class PracticeViewModel @Inject constructor(
                     null,
                     sourceCardId = word.sourceCardId,
                 )
+                refreshRelatedMembership()
             }.onFailure {
                 _state.value = _state.value.copy(
                     error = it.userMessage(strings, R.string.err_add),
@@ -698,6 +661,7 @@ class PracticeViewModel @Inject constructor(
 
     fun createListAndAddRelated() {
         val word = _state.value.addTarget ?: return
+        if (blockingBusy.busy.value) return
         val name = _state.value.createListName.trim()
         if (name.isBlank()) return
         listNameConflictMessage(strings, _state.value.lists, name)?.let {
@@ -706,22 +670,33 @@ class PracticeViewModel @Inject constructor(
         }
         dismissAddSheet()
         blockingBusy.launchIn(viewModelScope) {
-            runCatching {
-                val list = repository.createWordList(name)
-                repository.addWordToList(
-                    list.id,
-                    formatLemmaWithArticle(word.lemma, word.article),
-                    word.pos,
-                    word.glossL1,
-                    null,
-                    sourceCardId = word.sourceCardId,
-                )
+            runCatching { repository.createWordList(name) }.onSuccess { list ->
+                _state.value = _state.value.copy(lists = _state.value.lists + list)
+                runCatching {
+                    repository.addWordToList(
+                        list.id,
+                        formatLemmaWithArticle(word.lemma, word.article),
+                        word.pos,
+                        word.glossL1,
+                        null,
+                        sourceCardId = word.sourceCardId,
+                    )
+                    refreshRelatedMembership()
+                }.onFailure {
+                    _state.value = _state.value.copy(error = it.userMessage(strings, R.string.err_add))
+                }
             }.onFailure {
                 _state.value = _state.value.copy(
                     error = it.userMessage(strings, R.string.err_create_list),
                 )
             }
         }
+
+    }
+
+    private suspend fun refreshRelatedMembership() {
+        val membership = repository.relatedMembershipIndex()
+        _state.value = _state.value.copy(relatedMembership = membership)
     }
 
     fun grade(grade: String) {
