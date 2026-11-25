@@ -64,7 +64,11 @@ def verify(apk: Path, previous: Path | None = None) -> None:
     signatures = run("java", "-jar", str(tools / "lib" / "apksigner.jar"), "verify", "--print-certs", str(apk))
     fingerprints = re.findall(r"^Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]+)$", signatures, re.MULTILINE)
     if len(fingerprints) != 1 or fingerprints[0].lower() != ALPHA_CERT_SHA256.replace(":", "").lower():
-        raise ValueError("APK is not signed with the alpha certificate")
+        certificate_lines = [line for line in signatures.splitlines() if "SHA-256" in line]
+        raise ValueError(
+            f"APK is not signed with the alpha certificate (build-tools {tools.name}; "
+            f"certificate output: {certificate_lines})"
+        )
     with zipfile.ZipFile(apk) as archive:
         if archive.testzip() is not None:
             raise ValueError("APK archive is corrupt")
