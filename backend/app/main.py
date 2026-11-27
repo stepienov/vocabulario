@@ -22,6 +22,7 @@ from app.core.app_log_middleware import AppLogMiddleware
 from app.core.client_version import HEADER, update_required, update_required_response
 from app.core.config import get_settings
 from app.core.readiness import check_ready, mark_schema_ready
+from app.core.upload_limits import ImportUploadLimitMiddleware
 from app.db.base import Base
 from app.db.lifecycle import LifecycleBlocked
 from app.db.migrations import apply_schema
@@ -38,12 +39,12 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     config_errors = settings.deployment_errors()
     if config_errors:
-        # Field names only; /health/ready stays 503 until fixed.
         logger.error(
             "invalid settings for environment %r: %s",
             settings.environment,
             ", ".join(config_errors),
         )
+        raise RuntimeError("invalid deployment configuration")
     await apply_schema(engine, Base.metadata)
     mark_schema_ready()
     from app.services.account_purge import run_purge_worker
@@ -63,7 +64,6 @@ async def lifespan(app: FastAPI):
     yield
     from app.services.background import drain_background
 
-    await drain_background(5)
     maintenance_worker.cancel()
     purge_worker.cancel()
     mail_worker.cancel()
@@ -77,12 +77,26 @@ async def lifespan(app: FastAPI):
         watchdog,
         return_exceptions=True,
     )
+    await drain_background(90)
     await engine.dispose()
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="Vocabulario API", version="0.1.0", lifespan=lifespan)
+    app.add_middleware(ImportUploadLimitMiddleware)
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        if settings.is_deployed:
+            response.headers.setdefault(
+                "Strict-Transport-Security", "max-age=31536000"
+            )
+        return response
 
     @app.middleware("http")
     async def client_version_gate(request: Request, call_next):

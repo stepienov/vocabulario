@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -35,6 +36,7 @@ from app.admin_ui.helpers import (
 )
 from app.db.session import get_db
 from app.models import LearningCard
+from app.services import auth_limits
 
 HERE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(HERE / "templates"))
@@ -84,6 +86,16 @@ async def login_submit(
 ):
     if not panel_enabled():
         raise PanelDisabled()
+    ip = auth_limits.client_ip(request)
+    await auth_limits.enforce(
+        auth_limits.Rule("panel_login_ip", ip, 20, timedelta(minutes=15)),
+        auth_limits.Rule(
+            "panel_login_user",
+            username.strip().casefold(),
+            10,
+            timedelta(minutes=15),
+        ),
+    )
     if not verify_credentials(username, password):
         return templates.TemplateResponse(
             request,

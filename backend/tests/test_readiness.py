@@ -102,6 +102,10 @@ def test_unknown_environment_is_an_error():
         ({"support_email": ""}, "support_email"),
         ({"support_email": "help@localhost"}, "support_email"),
         ({"operator_alert_email": "not-an-address"}, "operator_alert_email"),
+        (
+            {"admin_username": "admin", "admin_password": "admin-password"},
+            "admin_cookie_secret",
+        ),
         ({"ai_monthly_hard_usd": "0"}, "ai_monthly_budget"),
         ({"ai_monthly_warn_usd": "0"}, "ai_monthly_budget"),
         ({"ai_monthly_warn_usd": "120"}, "ai_monthly_budget"),
@@ -189,6 +193,43 @@ async def test_ready_is_ok_with_database_and_schema(pg, monkeypatch):
     response = await _get_ready(Settings(_env_file=None), monkeypatch)
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+async def test_invalid_deployed_config_stops_startup_before_schema(monkeypatch, caplog):
+    from fastapi import FastAPI
+
+    from app import main
+
+    settings = _settings(debug=True)
+    monkeypatch.setattr(main, "get_settings", lambda: settings)
+    schema_called = False
+
+    async def apply_schema(*args, **kwargs):
+        nonlocal schema_called
+        schema_called = True
+
+    monkeypatch.setattr(main, "apply_schema", apply_schema)
+    with pytest.raises(RuntimeError, match="invalid deployment configuration"):
+        async with main.lifespan(FastAPI()):
+            pass
+
+    assert not schema_called
+    assert "debug" in caplog.text
+    assert SECRET not in caplog.text
+
+
+async def test_deployed_responses_include_security_headers(monkeypatch):
+    from app import main
+
+    settings = _settings()
+    monkeypatch.setattr(main, "get_settings", lambda: settings)
+    transport = ASGITransport(app=main.create_app())
+    async with AsyncClient(transport=transport, base_url="https://test") as client:
+        response = await client.get("/health")
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert response.headers["strict-transport-security"] == "max-age=31536000"
 
 
 @pytest.mark.parametrize(

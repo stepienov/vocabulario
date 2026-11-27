@@ -200,13 +200,16 @@ class LLMService:
             return data
         use_provider = (provider or "openai").strip().lower()
         schema_name = (json_schema or {}).get("name") or "chat_json"
+        output_limit = (
+            ai_budget.DEFAULT_OUTPUT_TOKENS if max_tokens is None else max_tokens
+        )
         prompt_len = len(prompt)
         if prompt_static is not None and prompt_dynamic is not None:
             prompt_len = len(prompt_static) + len(prompt_dynamic)
         started = time.perf_counter()
         usage = None
         reservation = await ai_budget.reserve(
-            model, purpose, prompt_len + len(system or ""), max_tokens
+            model, purpose, prompt_len + len(system or ""), output_limit
         )
         try:
             if use_provider == "anthropic" and self._anthropic is not None:
@@ -217,7 +220,7 @@ class LLMService:
                     else prompt,
                     system,
                     json_schema=json_schema,
-                    max_tokens=max_tokens,
+                    max_tokens=output_limit,
                 )
             else:
                 data, usage = await self._chat_json_openai(
@@ -225,7 +228,7 @@ class LLMService:
                     prompt,
                     system,
                     json_schema=json_schema,
-                    max_tokens=max_tokens,
+                    max_tokens=output_limit,
                     temperature=temperature,
                     cache_key=cache_key,
                     prompt_static=prompt_static,

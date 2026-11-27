@@ -3,13 +3,14 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from uuid import UUID
 
 import httpx
 import pytest
 from sqlalchemy import func, select, update
 
 from app.core.config import get_settings
-from app.models import AiBudgetPeriod, AiBudgetReservation
+from app.models import AiBudgetPeriod, AiBudgetReservation, LlmUsage
 from app.services import ai_budget
 from app.services.card_jobs import WAITING_BUDGET, _apply_enrich_retry
 from app.services.llm import LLMService, _settle_failed_call
@@ -144,6 +145,87 @@ async def test_months_are_counted_separately(pg, cap):
         await ai_budget.reserve(MODEL, "t", CHARS, MAX_TOKENS, now=june)
     assert await ai_budget.reserve(MODEL, "t", CHARS, MAX_TOKENS, now=july)
     assert (await _period(pg, "2026-07")).reserved_usd == _estimate()
+
+
+@pytest.mark.pg
+async def test_status_reads_current_and_older_unresolved_totals(pg, cap):
+    async with pg() as db:
+        db.add_all(
+            [
+                AiBudgetPeriod(
+                    period="2026-06",
+                    spent_usd=Decimal("1.25"),
+                    reserved_usd=Decimal("0.50"),
+                    unresolved_usd=Decimal("0.75"),
+                ),
+                AiBudgetPeriod(
+                    period="2026-07",
+                    spent_usd=Decimal("2.50"),
+                    reserved_usd=Decimal("0.25"),
+                    unresolved_usd=Decimal("1.00"),
+                ),
+            ]
+        )
+        await db.commit()
+
+    result = await ai_budget.status(datetime(2026, 7, 15, tzinfo=UTC))
+
+    assert result.period == "2026-07"
+    assert result.spent == Decimal("2.50")
+    assert result.reserved == Decimal("0.25")
+    assert result.unresolved == Decimal("1.00")
+    assert result.unresolved_older == Decimal("0.75")
+
+
+@pytest.mark.pg
+async def test_daily_account_cost_status_uses_utc_day_and_returns_aggregates_only(pg):
+    over = UUID("00000000-0000-0000-0000-000000000001")
+    under = UUID("00000000-0000-0000-0000-000000000002")
+    async with pg() as db:
+        db.add_all(
+            [
+                LlmUsage(
+                    user_id=over,
+                    created_at=datetime(2026, 7, 15, 1, tzinfo=UTC),
+                    provider="openai",
+                    model=MODEL,
+                    purpose="test",
+                    estimated_cost_usd=Decimal("1.25"),
+                ),
+                LlmUsage(
+                    user_id=over,
+                    created_at=datetime(2026, 7, 15, 2, tzinfo=UTC),
+                    provider="openai",
+                    model=MODEL,
+                    purpose="test",
+                    estimated_cost_usd=Decimal("0.80"),
+                ),
+                LlmUsage(
+                    user_id=under,
+                    created_at=datetime(2026, 7, 15, 3, tzinfo=UTC),
+                    provider="openai",
+                    model=MODEL,
+                    purpose="test",
+                    estimated_cost_usd=Decimal("1.99"),
+                ),
+                LlmUsage(
+                    user_id=over,
+                    created_at=datetime(2026, 7, 14, 23, 59, tzinfo=UTC),
+                    provider="openai",
+                    model=MODEL,
+                    purpose="test",
+                    estimated_cost_usd=Decimal("10.00"),
+                ),
+            ]
+        )
+        await db.commit()
+
+    max_cost, over_threshold = await ai_budget.daily_account_cost_status(
+        Decimal("2"), datetime(2026, 7, 15, 12, tzinfo=UTC)
+    )
+
+    assert max_cost == Decimal("2.05")
+    assert over_threshold == 1
 
 
 @pytest.mark.pg
