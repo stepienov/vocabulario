@@ -3,7 +3,6 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
-from uuid import UUID
 
 import httpx
 import pytest
@@ -15,6 +14,7 @@ from app.services import ai_budget
 from app.services.card_jobs import WAITING_BUDGET, _apply_enrich_retry
 from app.services.llm import LLMService, _settle_failed_call
 from app.services.llm_pricing import TokenUsage, estimate_max_cost_usd
+from tests.pg_factories import create_user
 
 MODEL = "gpt-5.6-luna"
 CHARS = 1000
@@ -179,9 +179,9 @@ async def test_status_reads_current_and_older_unresolved_totals(pg, cap):
 
 @pytest.mark.pg
 async def test_daily_account_cost_status_uses_utc_day_and_returns_aggregates_only(pg):
-    over = UUID("00000000-0000-0000-0000-000000000001")
-    under = UUID("00000000-0000-0000-0000-000000000002")
     async with pg() as db:
+        over = (await create_user(db)).id
+        under = (await create_user(db)).id
         db.add_all(
             [
                 LlmUsage(
