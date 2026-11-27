@@ -4,7 +4,7 @@ import json
 
 MAX_IMPORT_FILE_BYTES = 10 * 1024 * 1024
 MAX_IMPORT_REQUEST_BYTES = MAX_IMPORT_FILE_BYTES + 64 * 1024
-_IMPORT_UPLOAD_PATH = "/api/v1/imports/jobs/file"
+_IMPORT_UPLOAD_PATHS = frozenset({"/api/v1/imports/jobs/file", "/api/v1/imports/file"})
 _TOO_LARGE_BODY = json.dumps(
     {"detail": {"code": "import_too_large", "message": "Import file exceeds 10 MiB."}}
 ).encode("utf-8")
@@ -24,7 +24,7 @@ class ImportUploadLimitMiddleware:
         if (
             scope["type"] != "http"
             or scope.get("method") != "POST"
-            or scope.get("path") != _IMPORT_UPLOAD_PATH
+            or scope.get("path") not in _IMPORT_UPLOAD_PATHS
         ):
             await self.app(scope, receive, send)
             return

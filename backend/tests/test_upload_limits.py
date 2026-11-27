@@ -7,7 +7,7 @@ from app.core.upload_limits import (
 )
 
 
-async def _run_middleware(headers, chunks):
+async def _run_middleware(headers, chunks, path="/api/v1/imports/jobs/file"):
     sent = []
 
     async def app(scope, receive, send):
@@ -25,7 +25,7 @@ async def _run_middleware(headers, chunks):
     scope = {
         "type": "http",
         "method": "POST",
-        "path": "/api/v1/imports/jobs/file",
+        "path": path,
         "headers": headers,
     }
     await ImportUploadLimitMiddleware(app)(scope, receive, send)
@@ -43,7 +43,8 @@ async def test_import_upload_rejects_declared_oversized_body_without_reading_it(
 
 
 @pytest.mark.asyncio
-async def test_import_upload_rejects_chunked_oversized_body():
+@pytest.mark.parametrize("path", ["/api/v1/imports/jobs/file", "/api/v1/imports/file"])
+async def test_import_upload_rejects_chunked_oversized_body(path):
     sent = await _run_middleware(
         [],
         [
@@ -54,6 +55,7 @@ async def test_import_upload_rejects_chunked_oversized_body():
             },
             {"type": "http.request", "body": b"x", "more_body": False},
         ],
+        path,
     )
     assert sent[0]["status"] == 413
     assert b"import_too_large" in sent[1]["body"]

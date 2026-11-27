@@ -55,7 +55,13 @@ from app.services.card_jobs import (
 from app.services.distractors import generate_choice_options
 from app.services.import_ai import resolve_import_words
 from app.services.import_classify import resolve_import_vocabulario_entries
-from app.services.import_package import ImportPackageError, load_raw_import, load_text_import
+from app.core.upload_limits import MAX_IMPORT_FILE_BYTES
+from app.services.import_package import (
+    ImportPackageError,
+    ImportTooLargeError,
+    load_raw_import,
+    load_text_import,
+)
 from app.services.import_urls import ImportUrlError, detect_import_url, fetch_words_from_url
 from app.services.lexical import LexicalService, LookupOutcome
 from app.services.app_log import request_id_var
@@ -397,7 +403,12 @@ async def ingest_import_file(
     db: AsyncSession = Depends(get_db),
 ):
     """Import z pliku → karty Vocabulario (enrichment)."""
-    data = await file.read()
+    chunks = bytearray()
+    while chunk := await file.read(64 * 1024):
+        chunks.extend(chunk)
+        if len(chunks) > MAX_IMPORT_FILE_BYTES:
+            raise api_error(413, "import_too_large", "Plik jest za duży (max 10 MiB).")
+    data = bytes(chunks)
     service = LexicalService(db)
     try:
         profile = await service.get_profile(user.id, profile_id)
@@ -409,6 +420,8 @@ async def ingest_import_file(
         )
         if not valid_raw and not invalid:
             raise api_error(400, "import_empty", "No words to import")
+    except ImportTooLargeError as exc:
+        raise api_error(413, "import_too_large", str(exc)) from exc
     except ImportPackageError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except ValueError as exc:

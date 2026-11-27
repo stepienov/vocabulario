@@ -14,6 +14,7 @@ from collections.abc import Awaitable, Callable
 logger = logging.getLogger(__name__)
 
 _LIMIT = 1000
+_CANCEL_GRACE_S = 5.0
 _tasks: set[asyncio.Task[None]] = set()
 _skipped = 0
 _semaphore: asyncio.Semaphore | None = None
@@ -68,4 +69,8 @@ async def drain_background(timeout_s: float) -> None:
         logger.warning("background shutdown deadline; cancelling %s task(s)", len(pending))
         for task in pending:
             task.cancel()
-        await asyncio.gather(*pending, return_exceptions=True)
+        _, still_running = await asyncio.wait(pending, timeout=_CANCEL_GRACE_S)
+        if still_running:
+            logger.error(
+                "background shutdown: %s task(s) ignored cancellation", len(still_running)
+            )

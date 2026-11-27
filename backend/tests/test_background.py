@@ -76,6 +76,27 @@ async def test_drain_waits_for_short_task_and_cancels_pending_tasks_after_timeou
     assert not background._tasks
 
 
+async def test_drain_stays_bounded_when_a_task_ignores_cancellation(monkeypatch):
+    monkeypatch.setattr(background, "_CANCEL_GRACE_S", 0.05)
+    release = asyncio.Event()
+
+    async def stubborn() -> None:
+        while not release.is_set():
+            try:
+                await asyncio.sleep(10)
+            except asyncio.CancelledError:
+                continue
+
+    spawn_background(stubborn, name="stubborn")
+    await asyncio.sleep(0)
+    started = time.perf_counter()
+    await drain_background(0.01)
+    assert time.perf_counter() - started < 1
+    release.set()
+    for task in list(background._tasks):
+        task.cancel()
+
+
 async def test_spawn_keeps_request_id_after_context_is_cleared():
     seen: dict[str, object] = {}
 
