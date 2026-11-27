@@ -49,7 +49,14 @@ where = ["."]
 include = ["app*"]
 
 [tool.setuptools.package-data]
-app = ["admin_ui/templates/*", "admin_ui/static/*"]
+app = [
+    "admin_ui/templates/*",
+    "admin_ui/static/*",
+    "public_web/templates/*",
+    "public_web/static/*",
+    "public_web/downloads/*",
+    "lsp/*/manifest.yaml",
+]
 
 [tool.ruff]
 line-length = 100
