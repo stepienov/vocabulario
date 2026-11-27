@@ -34,6 +34,7 @@ PURGE_STUCK_AFTER = timedelta(hours=1)
 PURGE_DUE_SOON = timedelta(hours=24)
 REPORT_OVERDUE_AFTER = timedelta(hours=36)
 RESUME_MARGIN_USD = Decimal("0.05")
+ACCOUNT_DAILY_WARN_USD = Decimal("2")
 
 _WARN_LEVELS = ((Decimal("0.7"), 1), (Decimal("0.9"), 2))
 
@@ -190,6 +191,17 @@ async def _review_budget(now: datetime) -> None:
         from app.services.card_jobs import resume_waiting_budget
 
         await resume_waiting_budget()
+    max_account_cost, over_threshold = await ai_budget.daily_account_cost_status(
+        ACCOUNT_DAILY_WARN_USD, now
+    )
+    await raise_alert(
+        "ai_account_daily",
+        1 if over_threshold else 0,
+        f"{over_threshold} account(s) reached the daily AI warning threshold of "
+        f"{ACCOUNT_DAILY_WARN_USD} USD; highest estimated spend is {max_account_cost} USD. "
+        "No account is blocked.",
+        now,
+    )
 
 
 async def _review_mail(now: datetime) -> None:

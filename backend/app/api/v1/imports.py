@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_admin_user, get_verified_user
 from app.core.http_errors import api_error
+from app.core.upload_limits import MAX_IMPORT_FILE_BYTES
 from app.db.session import get_db
 from app.models import ImportJob, ImportJobEvent, ImportJobItem, LanguageProfile, User, WordList
 from app.schemas import (
@@ -31,7 +32,7 @@ from app.services.import_jobs import (
     request_commit,
     spawn_job,
 )
-from app.services.import_package import ImportPackageError
+from app.services.import_package import ImportPackageError, ImportTooLargeError
 from app.services.import_urls import ImportUrlError
 from app.services.lexical import LexicalService
 
@@ -225,7 +226,12 @@ async def create_import_job_file(
 ):
     profile = await _profile(db, user, profile_id)
     word_list = await _list_for(db, user, profile, list_id)
-    data = await file.read()
+    chunks = bytearray()
+    while chunk := await file.read(64 * 1024):
+        chunks.extend(chunk)
+        if len(chunks) > MAX_IMPORT_FILE_BYTES:
+            raise api_error(413, "import_too_large", "Plik jest za duży (max 10 MiB).")
+    data = bytes(chunks)
     try:
         job = await create_job_from_file(
             db,
@@ -264,6 +270,8 @@ async def create_import_job_file(
             "import_daily_limit",
             f"Daily import limit reached ({exc.used}/25)",
         ) from exc
+    except ImportTooLargeError as exc:
+        raise api_error(413, "import_too_large", str(exc)) from exc
     except ImportPackageError as exc:
         raise api_error(400, "import_empty", str(exc)) from exc
     used = await daily_import_used(db, profile.id)

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import HTTPException, Request, status
+from fastapi import Request
 from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt
 
@@ -11,7 +13,7 @@ from app.core.config import get_settings
 
 COOKIE_NAME = "vocabulario_admin"
 TOKEN_TYPE = "admin_panel"
-COOKIE_MAX_AGE = 14 * 24 * 3600
+COOKIE_MAX_AGE = 8 * 3600
 
 
 class LoginRequired(Exception):
@@ -27,11 +29,19 @@ def panel_enabled() -> bool:
     return get_settings().panel_enabled
 
 
+def _credential_fingerprint(username: str) -> str:
+    settings = get_settings()
+    value = f"{username}\0{settings.admin_password}".encode()
+    return hmac.new(settings.panel_cookie_secret.encode("utf-8"), value, hashlib.sha256).hexdigest()
+
+
 def _encode(username: str) -> str:
     settings = get_settings()
     payload: dict[str, Any] = {
         "sub": username,
         "type": TOKEN_TYPE,
+        "sv": settings.admin_session_version,
+        "cv": _credential_fingerprint(username),
         "exp": datetime.now(UTC) + timedelta(seconds=COOKIE_MAX_AGE),
     }
     return jwt.encode(payload, settings.panel_cookie_secret, algorithm=settings.jwt_algorithm)
@@ -50,7 +60,14 @@ def _decode(token: str) -> str | None:
     if payload.get("type") != TOKEN_TYPE:
         return None
     sub = payload.get("sub")
-    if not sub or sub != settings.admin_username:
+    if (
+        not sub
+        or sub != settings.admin_username
+        or payload.get("sv") != settings.admin_session_version
+        or not hmac.compare_digest(
+            str(payload.get("cv", "")), _credential_fingerprint(str(sub))
+        )
+    ):
         return None
     return str(sub)
 
@@ -68,14 +85,13 @@ def verify_credentials(username: str, password: str) -> bool:
 
 def set_session_cookie(response: RedirectResponse, username: str) -> None:
     settings = get_settings()
-    secure = (settings.environment or "").lower() == "production"
     response.set_cookie(
         COOKIE_NAME,
         _encode(username),
         max_age=COOKIE_MAX_AGE,
         httponly=True,
         samesite="lax",
-        secure=secure,
+        secure=settings.is_deployed,
         path="/admin",
     )
 

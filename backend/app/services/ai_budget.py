@@ -14,12 +14,12 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.config import get_settings
 from app.db import session as db_session
-from app.models import AiBudgetPeriod, AiBudgetReservation
+from app.models import AiBudgetPeriod, AiBudgetReservation, LlmUsage
 from app.services.llm_pricing import TokenUsage, estimate_cost_usd, estimate_max_cost_usd
 
 logger = logging.getLogger(__name__)
@@ -224,18 +224,50 @@ async def status(now: datetime | None = None) -> BudgetStatus:
     period = period_key(now)
     async with db_session.async_session_factory() as db:
         rows = (await db.execute(select(AiBudgetPeriod))).scalars().all()
+        amounts = [
+            (row.period, row.spent_usd, row.reserved_usd, row.unresolved_usd)
+            for row in rows
+        ]
         await db.rollback()
-    current = next((r for r in rows if r.period == period), None)
-    older = sum((r.unresolved_usd for r in rows if r.period != period), Decimal(0))
+    current = next((row for row in amounts if row[0] == period), None)
+    older = sum((row[3] for row in amounts if row[0] != period), Decimal())
     return BudgetStatus(
         period=period,
-        spent=current.spent_usd if current else Decimal(0),
-        reserved=current.reserved_usd if current else Decimal(0),
-        unresolved=current.unresolved_usd if current else Decimal(0),
+        spent=current[1] if current else Decimal(0),
+        reserved=current[2] if current else Decimal(0),
+        unresolved=current[3] if current else Decimal(0),
         warn=settings.ai_monthly_warn_usd,
         hard=settings.ai_monthly_hard_usd,
         unresolved_older=older,
     )
+
+
+async def daily_account_cost_status(
+    threshold: Decimal, now: datetime | None = None
+) -> tuple[Decimal, int]:
+    """Return max estimated UTC-day account spend and count above threshold, without IDs."""
+    clock = now or datetime.now(UTC)
+    day_start = clock.astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    daily = (
+        select(
+            LlmUsage.user_id.label("user_id"),
+            func.coalesce(func.sum(LlmUsage.estimated_cost_usd), Decimal(0)).label("cost"),
+        )
+        .where(LlmUsage.user_id.is_not(None), LlmUsage.created_at >= day_start)
+        .group_by(LlmUsage.user_id)
+        .subquery()
+    )
+    async with db_session.async_session_factory() as db:
+        max_cost, over_threshold = (
+            await db.execute(
+                select(
+                    func.coalesce(func.max(daily.c.cost), Decimal(0)),
+                    func.count().filter(daily.c.cost >= threshold),
+                )
+            )
+        ).one()
+        await db.rollback()
+    return max_cost, over_threshold
 
 
 async def resolve_unresolved(period: str, actual_total_usd: Decimal) -> Decimal:

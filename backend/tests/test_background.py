@@ -50,7 +50,7 @@ async def test_task_exception_does_not_escape():
     await drain_background(1)
 
 
-async def test_drain_waits_for_short_task_and_returns_on_timeout():
+async def test_drain_waits_for_short_task_and_cancels_pending_tasks_after_timeout():
     async def nap() -> None:
         await asyncio.sleep(0.1)
 
@@ -61,13 +61,40 @@ async def test_drain_waits_for_short_task_and_returns_on_timeout():
     assert elapsed >= 0.1
     assert elapsed < 1
 
-    async def long_sleep() -> None:
-        await asyncio.sleep(10)
+    cancelled = asyncio.Event()
 
-    started = time.perf_counter()
+    async def long_sleep() -> None:
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
     spawn_background(long_sleep, name="long")
-    await drain_background(1)
-    assert time.perf_counter() - started < 2
+    await drain_background(0.01)
+    assert cancelled.is_set()
+    assert not background._tasks
+
+
+async def test_drain_stays_bounded_when_a_task_ignores_cancellation(monkeypatch):
+    monkeypatch.setattr(background, "_CANCEL_GRACE_S", 0.05)
+    release = asyncio.Event()
+
+    async def stubborn() -> None:
+        while not release.is_set():
+            try:
+                await asyncio.sleep(10)
+            except asyncio.CancelledError:
+                continue
+
+    spawn_background(stubborn, name="stubborn")
+    await asyncio.sleep(0)
+    started = time.perf_counter()
+    await drain_background(0.01)
+    assert time.perf_counter() - started < 1
+    release.set()
+    for task in list(background._tasks):
+        task.cancel()
 
 
 async def test_spawn_keeps_request_id_after_context_is_cleared():
@@ -117,6 +144,9 @@ async def test_reasoning_effort_is_sent_only_for_reasoning_models(monkeypatch):
     assert captured[0]["reasoning_effort"] == "none"
     assert "reasoning_effort" not in captured[1]
     assert "reasoning_effort" not in captured[2]
+    assert captured[0]["max_completion_tokens"] == 8192
+    assert captured[1]["max_completion_tokens"] == 8192
+    assert captured[2]["max_tokens"] == 8192
 
 
 @pytest.mark.pg

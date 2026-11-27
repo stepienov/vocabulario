@@ -138,6 +138,7 @@ class Settings(BaseSettings):
     admin_username: str = ""
     admin_password: str = ""
     admin_cookie_secret: str = ""
+    admin_session_version: int = 1
 
     # AI spend cap (E-001/F-008/T-004), USD per UTC month. WARN raises alerts only; HARD stops new
     # paid calls. Deployed environments must set both (HARD >= WARN > 0): 0/empty never means
@@ -199,6 +200,21 @@ class Settings(BaseSettings):
             self.mail_outbox_key.strip(),
         }:
             errors.append("auth_rate_limit_key")
+        if self.panel_enabled:
+            panel_secret = self.admin_cookie_secret.strip()
+            if (
+                len(panel_secret) < 32
+                or panel_secret
+                in {
+                    secret.strip(),
+                    self.auth_refresh_retry_key.strip(),
+                    self.mail_outbox_key.strip(),
+                    self.auth_rate_limit_key.strip(),
+                }
+            ):
+                errors.append("admin_cookie_secret")
+            if self.admin_session_version < 1:
+                errors.append("admin_session_version")
         if self.trusted_proxy_hops < 1:
             errors.append("trusted_proxy_hops")
         if not _is_remote_database(self.database_url):

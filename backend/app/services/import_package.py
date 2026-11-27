@@ -12,12 +12,18 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.core.upload_limits import MAX_IMPORT_FILE_BYTES
+
 
 class ImportPackageError(ValueError):
     """Nie udało się odczytać pliku importu."""
 
 
-_MAX_BYTES = 80 * 1024 * 1024
+class ImportTooLargeError(ImportPackageError):
+    """The source exceeds the accepted upload size."""
+
+
+MAX_ANKI_DATABASE_BYTES = 100 * 1024 * 1024
 
 
 @dataclass
@@ -58,8 +64,8 @@ def extract_words_from_upload(filename: str | None, data: bytes) -> list[str]:
 def load_raw_import(filename: str | None, data: bytes) -> RawImportDeck:
     if not data:
         raise ImportPackageError("Pusty plik.")
-    if len(data) > _MAX_BYTES:
-        raise ImportPackageError("Plik jest za duży (max 80 MB).")
+    if len(data) > MAX_IMPORT_FILE_BYTES:
+        raise ImportTooLargeError("Plik jest za duży (max 10 MiB).")
 
     name = (filename or "").lower().strip()
     if name.endswith((".apkg", ".colpkg")) or (
@@ -152,6 +158,8 @@ def load_text_import(text: str) -> RawImportDeck:
 
 
 def load_anki_package(data: bytes) -> RawImportDeck:
+    if len(data) > MAX_IMPORT_FILE_BYTES:
+        raise ImportTooLargeError("Plik jest za duży (max 10 MiB).")
     with tempfile.TemporaryDirectory() as tmp:
         zpath = Path(tmp) / "deck.apkg"
         zpath.write_bytes(data)
@@ -323,17 +331,29 @@ def _read_best_anki_db(zf: zipfile.ZipFile) -> bytes:
     for candidate in ("collection.anki21", "collection.anki2"):
         if candidate not in names:
             continue
-        raw = zf.read(candidate)
+        raw = _read_zip_member_limited(zf, candidate)
         if _db_has_real_notes(raw):
             return raw
     if "collection.anki21b" in names:
-        db = _decompress_anki21b(zf.read("collection.anki21b"))
+        db = _decompress_anki21b(_read_zip_member_limited(zf, "collection.anki21b"))
         if _db_has_real_notes(db):
             return db
         raise ImportPackageError(
             "Pakiet anki21b nie zawiera odczytywalnych notatek."
         )
     raise ImportPackageError("To nie wygląda na prawidłowy plik .apkg / .colpkg.")
+
+
+def _read_zip_member_limited(zf: zipfile.ZipFile, name: str) -> bytes:
+    if zf.getinfo(name).file_size > MAX_ANKI_DATABASE_BYTES:
+        raise ImportTooLargeError("Baza w pakiecie Anki przekracza limit 100 MiB.")
+    chunks = bytearray()
+    with zf.open(name) as source:
+        while chunk := source.read(64 * 1024):
+            chunks.extend(chunk)
+            if len(chunks) > MAX_ANKI_DATABASE_BYTES:
+                raise ImportTooLargeError("Baza w pakiecie Anki przekracza limit 100 MiB.")
+    return bytes(chunks)
 
 
 def _decompress_anki21b(raw: bytes) -> bytes:
@@ -347,7 +367,13 @@ def _decompress_anki21b(raw: bytes) -> bytes:
         ) from exc
     try:
         # Frame often omits content size — stream_reader is required.
-        return zstd.ZstdDecompressor().stream_reader(io.BytesIO(raw)).read()
+        with zstd.ZstdDecompressor().stream_reader(io.BytesIO(raw)) as reader:
+            output = reader.read(MAX_ANKI_DATABASE_BYTES + 1)
+        if len(output) > MAX_ANKI_DATABASE_BYTES:
+            raise ImportTooLargeError("Baza w pakiecie Anki przekracza limit 100 MiB.")
+        return output
+    except ImportTooLargeError:
+        raise
     except Exception as exc:  # noqa: BLE001 — surface as import error
         raise ImportPackageError(
             "Nie udało się zdekompresować collection.anki21b."

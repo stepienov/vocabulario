@@ -127,6 +127,27 @@ async def test_budget_review_is_idle_without_a_limit(pg, transport, monkeypatch)
     assert transport.sent == []
 
 
+async def test_daily_account_warning_is_aggregate_and_does_not_block(pg, transport, monkeypatch):
+    settings = get_settings()
+    monkeypatch.setattr(settings, "ai_monthly_warn_usd", Decimal("70"))
+    monkeypatch.setattr(settings, "ai_monthly_hard_usd", Decimal("100"))
+
+    async def relaxed(now=None):
+        return _status("10")
+
+    async def daily(threshold, now=None):
+        assert threshold == Decimal("2")
+        return Decimal("2.50"), 1
+
+    monkeypatch.setattr(ai_budget, "status", relaxed)
+    monkeypatch.setattr(ai_budget, "daily_account_cost_status", daily)
+    await maintenance._review_budget(now_utc())
+    alert = next(mail for mail in transport.sent if "ai_account_daily" in mail.subject)
+    assert "1 account(s)" in alert.text and "highest estimated spend is 2.50 USD" in alert.text
+    assert "No account is blocked." in alert.text
+    assert "user_id" not in alert.text
+
+
 async def test_stuck_mail_and_overdue_reports_raise_alerts(pg, transport):
     now = now_utc()
     async with pg() as db:

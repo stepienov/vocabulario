@@ -2,9 +2,21 @@
 
 from __future__ import annotations
 
+import io
+import zipfile
 from pathlib import Path
 
-from app.services.import_package import load_raw_import, load_text_import
+import pytest
+
+from app.core.upload_limits import MAX_IMPORT_FILE_BYTES
+from app.services import import_package
+from app.services.import_package import (
+    ImportTooLargeError,
+    _decompress_anki21b,
+    _read_best_anki_db,
+    load_raw_import,
+    load_text_import,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures" / "import"
 
@@ -66,3 +78,27 @@ def test_apkg_anki21b_loads_real_notes():
         "Conjugation",
     ]
     assert deck.notes[0][0].strip()  # Spanish lemma
+
+
+def test_import_parser_rejects_files_over_10_mib():
+    with pytest.raises(ImportTooLargeError):
+        load_raw_import("large.txt", b"x" * (MAX_IMPORT_FILE_BYTES + 1))
+
+
+def test_anki_zip_member_expansion_is_capped(monkeypatch):
+    monkeypatch.setattr(import_package, "MAX_ANKI_DATABASE_BYTES", 100)
+    archive = io.BytesIO()
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("collection.anki2", b"x" * 101)
+    with zipfile.ZipFile(io.BytesIO(archive.getvalue())) as zf:
+        with pytest.raises(ImportTooLargeError):
+            _read_best_anki_db(zf)
+
+
+def test_anki21b_expansion_is_capped(monkeypatch):
+    import zstandard
+
+    monkeypatch.setattr(import_package, "MAX_ANKI_DATABASE_BYTES", 100)
+    compressed = zstandard.ZstdCompressor().compress(b"x" * 101)
+    with pytest.raises(ImportTooLargeError):
+        _decompress_anki21b(compressed)
