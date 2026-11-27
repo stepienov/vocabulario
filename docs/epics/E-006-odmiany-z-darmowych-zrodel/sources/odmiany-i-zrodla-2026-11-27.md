@@ -111,7 +111,7 @@ Japoński i koreański odmieniają się bardzo regularnie. Gdy zna się klasę s
 
 ### 2.3. Licencje w praktyce
 
-- **MIT, Apache, BSD, CC0:** wystarczy zachować informację o licencji. Brak ryzyka.
+- **MIT, Apache, BSD, CC0:** niskie ryzyko, ale nie zerowe. MIT, BSD i Apache wymagają zachowania informacji o prawach autorskich i tekstu licencji w dystrybucji (Apache także pliku NOTICE, jeśli istnieje). Apache 2.0 zawiera też postanowienia patentowe. CC0 nie ma tych obowiązków. Sposób atrybucji w apce opisuje [E-006/F-010](../features/F-010-atrybucja-zrodel/README.md).
 - **CC BY-SA (Wiktionary, UniMorph, OpenCorpora, JMdict):** wolno używać komercyjnie, ale trzeba podać źródło w apce, a dane pochodne udostępniać na tej samej licencji. Do konsultacji z prawnikiem: czy karta łącząca te dane z treścią AI to „utwór pochodny” i czy płatny dostęp nie koliduje z zakazem dodatkowych ograniczeń.
 - **GPL (Qutrub):** biblioteka działająca tylko na serwerze, bez rozpowszechniania, zwykle nie wymaga otwierania kodu. Wersja AGPL by tego wymagała; Qutrub nie jest na AGPL.
 

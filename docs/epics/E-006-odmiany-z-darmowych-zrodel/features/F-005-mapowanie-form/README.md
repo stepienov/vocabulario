@@ -15,7 +15,7 @@ Dla każdego języka istnieje mapowanie tagów źródła na pola siatki z [F-002
 ## Zakres / poza zakresem
 
 **Zakres:**
-- mapowanie tagów dla 13 odmiennych języków;
+- mapowanie tagów dla 14 odmiennych języków;
 - reguły form złożonych;
 - wybór wariantu, np. vosotros, BR/PT;
 - odrzucanie form archaicznych i dialektalnych, jeśli siatka ich nie zawiera.

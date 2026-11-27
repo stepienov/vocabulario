@@ -10,7 +10,7 @@ Część zapytań nie daje żadnego wyniku:
 - **Rzeczowniki i przymiotniki** trafiają do modelu, ale prompt opisuje tylko czasowniki i każe zwrócić dla nich `null`.
 - **Chiński i wietnamski** dostają „odmianę czasownika”, której te języki nie mają.
 
-Aplikacja odmienia **wyłącznie czasowniki**. W 13 z 16 języków nauki odmieniają się też rzeczowniki, przymiotniki, zaimki lub rodzajniki. Manifesty LSP deklarują ich przypadki, liczby i rodzaje, ale nic tych danych nie generuje, nie sprawdza ani nie wyświetla.
+Aplikacja odmienia **wyłącznie czasowniki**. W 14 z 16 języków nauki (wszystkich poza chińskim i wietnamskim) odmieniają się też rzeczowniki, przymiotniki, zaimki lub rodzajniki. Manifesty LSP deklarują ich przypadki, liczby i rodzaje, ale nic tych danych nie generuje, nie sprawdza ani nie wyświetla.
 
 **Rezultat:**
 1. Odmiana pochodzi najpierw z darmowego źródła. OpenAI uzupełnia tylko te formy, których źródło nie dało, oraz słowa, których źródło nie zna.

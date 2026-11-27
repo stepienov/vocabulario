@@ -20,7 +20,7 @@ Karta rzeczownika i przymiotnika w każdym odmiennym języku ma odmianę zgodną
 ## Zakres / poza zakresem
 
 **Zakres:**
-- rzeczownik i przymiotnik w 13 odmiennych językach;
+- rzeczownik i przymiotnik w 14 odmiennych językach;
 - zapis we wspólnej treści;
 - wymaganie odmiany w warunku pełnej karty.
 

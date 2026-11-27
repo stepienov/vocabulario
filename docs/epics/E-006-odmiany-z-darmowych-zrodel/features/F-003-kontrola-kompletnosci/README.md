@@ -13,7 +13,7 @@ Przez to nie da się odróżnić odmiany pełnej od niepełnej. Do zapytania o s
 ## Rezultat
 
 Jedna funkcja porównuje odmianę z siatką z [F-002](../F-002-siatki-odmian/README.md) i zwraca:
-- status: `complete`, `partial` albo `missing`;
+- status: `complete`, `partial`, `missing` albo `not_applicable` (język lub część mowy bez odmiany, np. chiński czasownik; zob. F-001 i F-006);
 - listę brakujących pól;
 - listę pól niezgodnych z siatką, czyli nieznanych kluczy.
 

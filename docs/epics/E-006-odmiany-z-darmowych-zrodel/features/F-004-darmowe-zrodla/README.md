@@ -4,7 +4,7 @@
 
 ## Problem
 
-Każda odmiana pochodzi dziś z płatnego zapytania. W otwartych słownikach jest za darmo dostępna i opisana gramatycznie dla popularnych słów w 13 odmiennych językach nauki. Pomiar na pojedynczych słowach jest w [zestawieniu](../../sources/odmiany-i-zrodla-2026-11-27.md). Przykład z tego pomiaru: Kaikki ma dla polskiego „kot” 20 form, a dla tureckiego „gelmek” 941.
+Każda odmiana pochodzi dziś z płatnego zapytania. W otwartych słownikach jest za darmo dostępna i opisana gramatycznie dla popularnych słów w 14 odmiennych językach nauki. Pomiar na pojedynczych słowach jest w [zestawieniu](../../sources/odmiany-i-zrodla-2026-11-27.md). Przykład z tego pomiaru: Kaikki ma dla polskiego „kot” 20 form, a dla tureckiego „gelmek” 941.
 
 ## Rezultat
 
@@ -15,7 +15,7 @@ Każda odmiana pochodzi dziś z płatnego zapytania. W otwartych słownikach jes
 ## Zakres / poza zakresem
 
 **Zakres:**
-- import danych Wiktionary/Kaikki (JSONL) dla 13 języków;
+- import danych Wiktionary/Kaikki (JSONL) dla 14 języków;
 - dla wybranych języków narzędzia specyficzne:
   - polski: Morfeusz 2/SGJP;
   - rosyjski: pymorphy3;
